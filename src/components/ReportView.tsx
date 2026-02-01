@@ -259,20 +259,15 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
             <div className="chart-container">
               <div className={`bar-chart ${hasNegative ? 'with-negative' : 'positive-only'}`}>
                 {report.monthlyStats.map((m) => {
-                  const heightPct = m.hasData ? (Math.abs(m.profitPct) / maxPct) * 100 : 2;
+                  const heightPct = m.hasData ? (Math.abs(m.profitPct) / maxPct) * 50 : 1;
                   const isNeg = m.profitPct < 0;
                   return (
                     <div key={m.month} className="bar-wrapper">
                       <span className="bar-value">{m.hasData ? `${m.profitPct.toFixed(1)}%` : '-'}</span>
-                      <div className="bar-container" style={hasNegative ? { justifyContent: 'center' } : { justifyContent: 'flex-end' }}>
+                      <div className="bar-container">
                         <div
                           className={`bar ${m.hasData ? (isNeg ? 'negative' : 'positive') : ''}`}
-                          style={{
-                            height: `${heightPct}%`,
-                            alignSelf: hasNegative ? (isNeg ? 'flex-start' : 'flex-end') : 'flex-end',
-                            marginTop: hasNegative && !isNeg ? 'auto' : undefined,
-                            marginBottom: hasNegative && isNeg ? 'auto' : undefined
-                          }}
+                          style={{ height: `${heightPct}%` }}
                         />
                       </div>
                       <span className="bar-label">{m.month}</span>

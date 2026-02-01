@@ -11,6 +11,8 @@ type Movement = { iso: string; type: 'increment' | 'decrement'; amount: number; 
 export function InformesView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const { snapshot } = usePortfolioStore();
   const [selectedClient, setSelectedClient] = useState<string>('');
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [sendingMultiple, setSendingMultiple] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (iso: string) => {
@@ -654,7 +656,7 @@ Su gestor de inversiones`
 
       <div className="informes-selector glass-card">
         <div className="selector-row">
-          <label htmlFor="client-select">Seleccionar cliente</label>
+          <label htmlFor="client-select">Seleccionar cliente (vista previa)</label>
           <div className="select-wrapper large">
             <select
               id="client-select"
@@ -669,6 +671,119 @@ Su gestor de inversiones`
               })}
             </select>
           </div>
+        </div>
+
+        <div className="selector-row" style={{ marginTop: 16 }}>
+          <label>Envío múltiple (selecciona varios clientes)</label>
+          <div className="multi-select-grid">
+            {CLIENTS.map((c) => {
+              const ct = contacts[c.id];
+              const hasEmail = ct?.email;
+              const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
+              const isSelected = selectedClients.includes(c.id);
+              return (
+                <label key={c.id} className={`multi-select-item ${isSelected ? 'selected' : ''} ${!hasEmail ? 'no-email' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    disabled={!hasEmail}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedClients([...selectedClients, c.id]);
+                      } else {
+                        setSelectedClients(selectedClients.filter((id) => id !== c.id));
+                      }
+                    }}
+                  />
+                  <span>{label}</span>
+                  {!hasEmail && <span className="no-email-badge">Sin email</span>}
+                </label>
+              );
+            })}
+          </div>
+          {selectedClients.length > 0 && (
+            <button
+              className="btn-action primary"
+              style={{ marginTop: 12 }}
+              disabled={sendingMultiple}
+              onClick={async () => {
+                setSendingMultiple(true);
+                for (const clientId of selectedClients) {
+                  const client = CLIENTS.find((c) => c.id === clientId);
+                  if (!client) continue;
+                  const ct = contacts[clientId];
+                  if (!ct?.email) continue;
+
+                  // Generar datos del cliente
+                  const rows = snapshot.clientRowsById[clientId] || [];
+                  const yearRows = rows.filter((r) => r.iso.startsWith(`${YEAR}-`));
+                  const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
+                  const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
+                  const validRows = [...yearRows].reverse();
+                  const lastWithFinal = validRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0);
+                  const lastWithBase = validRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0);
+                  const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
+                  const beneficioTotal = saldo + decrementos - incrementos;
+                  const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
+
+                  const displayName = ct && (ct.name || ct.surname) ? `${ct.name} ${ct.surname}`.trim() : client.name;
+
+                  // Guardar en Firestore
+                  const token = await saveReportLink({
+                    clientId: client.id,
+                    clientName: displayName,
+                    clientCode: client.name,
+                    incrementos: incrementos ?? 0,
+                    decrementos: decrementos ?? 0,
+                    saldo: saldo ?? 0,
+                    beneficioTotal: beneficioTotal ?? 0,
+                    rentabilidad: rentabilidad ?? 0,
+                    beneficioUltimoMes: 0,
+                    rentabilidadUltimoMes: 0,
+                    monthlyStats: [],
+                    patrimonioEvolution: [],
+                    movements: []
+                  });
+
+                  const baseUrl = window.location.origin;
+                  const reportUrl = `${baseUrl}?report=${token}`;
+                  const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+                  const to = encodeURIComponent(ct.email);
+                  const subject = encodeURIComponent(`Informe de Inversión - ${client.name} - ${fecha}`);
+                  const body = encodeURIComponent(
+`Estimado/a ${ct.name || 'cliente'},
+
+Le envío su Informe de Inversión actualizado a fecha ${fecha}.
+
+📊 RESUMEN:
+• Capital invertido: ${formatCurrency(incrementos)}
+• Saldo actual: ${formatCurrency(saldo)}
+• Beneficio total: ${formatCurrency(beneficioTotal)}
+• Rentabilidad: ${rentabilidad.toFixed(2)}%
+
+🔗 ACCEDER AL INFORME:
+${reportUrl}
+
+⚠️ Este enlace caduca en 24 horas.
+
+Atentamente,
+Su gestor de inversiones`
+                  );
+
+                  const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`;
+                  window.open(gmailUrl, '_blank');
+
+                  // Pequeña pausa entre envíos
+                  await new Promise((r) => setTimeout(r, 500));
+                }
+                setSendingMultiple(false);
+                window.dispatchEvent(new CustomEvent('show-toast', { detail: `${selectedClients.length} emails preparados en Gmail` }));
+              }}
+            >
+              <span className="btn-icon">✉️</span>
+              {sendingMultiple ? 'Enviando...' : `Enviar a ${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''}`}
+            </button>
+          )}
         </div>
       </div>
 
