@@ -568,12 +568,30 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'El cliente no tiene email configurado' }));
       return;
     }
+    
+    // Descargar PDF primero
     const doc = await generatePDF();
     if (doc) {
       doc.save(`Informe_${clientData.code}_${new Date().toISOString().slice(0, 10)}.pdf`);
-      window.location.href = `mailto:${clientData.contact.email}?subject=Informe de Inversión - ${clientData.name}&body=Adjunto encontrará su informe de inversión actualizado.`;
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Abre tu cliente de correo y adjunta el PDF descargado' }));
     }
+    
+    // Abrir Gmail con datos pre-rellenados
+    const to = encodeURIComponent(clientData.contact.email);
+    const subject = encodeURIComponent(`Informe de Inversión - ${clientData.name}`);
+    const body = encodeURIComponent(
+`Estimado/a ${clientData.contact.name || 'cliente'},
+
+Le adjunto su informe de inversión actualizado.
+
+⚠️ IMPORTANTE: Este enlace caduca en 24 horas. Por favor, descargue o imprima el informe antes de esa fecha.
+
+Saludos cordiales,
+Portfolio Manager`
+    );
+    
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`;
+    window.open(gmailUrl, '_blank');
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Gmail abierto. Adjunta el PDF descargado y envía.' }));
   };
 
   return (
