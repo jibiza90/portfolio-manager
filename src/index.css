@@ -1662,12 +1662,59 @@ input[type='number'] {
   font-weight: 500;
 }
 
+/* Multi-select section */
+.informes-multi {
+  padding: 20px 24px;
+}
+
+.multi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.multi-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.multi-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #0f6d7a;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+  background: #0a5561;
+}
+
+.btn-small.secondary {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.btn-small.secondary:hover {
+  background: #cbd5e1;
+}
+
 /* Multi-select grid for batch sending */
 .multi-select-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 8px;
-  margin-top: 8px;
 }
 
 .multi-select-item {
