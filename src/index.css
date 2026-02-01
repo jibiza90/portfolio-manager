@@ -1664,97 +1664,160 @@ input[type='number'] {
 
 /* Multi-select section */
 .informes-multi {
-  padding: 20px 24px;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+  border: 1px solid rgba(15, 109, 122, 0.1);
 }
 
 .multi-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(15, 109, 122, 0.1);
 }
 
 .multi-header h4 {
   margin: 0;
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: 700;
   color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.multi-header h4::before {
+  content: '📧';
+  font-size: 20px;
 }
 
 .multi-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .btn-small {
-  padding: 6px 12px;
+  padding: 8px 16px;
   font-size: 12px;
   font-weight: 600;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  background: #0f6d7a;
+  background: linear-gradient(135deg, #0f6d7a 0%, #0a5561 100%);
   color: white;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(15, 109, 122, 0.25);
 }
 
 .btn-small:hover {
-  background: #0a5561;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 109, 122, 0.35);
 }
 
 .btn-small.secondary {
-  background: #e2e8f0;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
   color: #475569;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .btn-small.secondary:hover {
-  background: #cbd5e1;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
 /* Multi-select grid for batch sending */
 .multi-select-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
 }
 
 .multi-select-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(15, 109, 122, 0.2);
-  border-radius: 8px;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%);
+  border: 1px solid rgba(15, 109, 122, 0.15);
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .multi-select-item:hover {
-  background: rgba(15, 109, 122, 0.1);
+  background: linear-gradient(135deg, rgba(15, 109, 122, 0.08) 0%, rgba(15, 109, 122, 0.04) 100%);
+  border-color: rgba(15, 109, 122, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(15, 109, 122, 0.1);
 }
 
 .multi-select-item.selected {
-  background: rgba(15, 109, 122, 0.15);
+  background: linear-gradient(135deg, rgba(15, 109, 122, 0.15) 0%, rgba(15, 109, 122, 0.08) 100%);
   border-color: #0f6d7a;
+  box-shadow: 0 2px 8px rgba(15, 109, 122, 0.2), inset 0 0 0 1px rgba(15, 109, 122, 0.1);
+}
+
+.multi-select-item.selected::after {
+  content: '✓';
+  margin-left: auto;
+  color: #0f6d7a;
+  font-weight: 700;
+  font-size: 14px;
 }
 
 .multi-select-item.no-email {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
+  background: rgba(241, 245, 249, 0.8);
+}
+
+.multi-select-item.no-email:hover {
+  transform: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .multi-select-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
   accent-color: #0f6d7a;
+  cursor: pointer;
 }
 
 .no-email-badge {
   font-size: 10px;
-  background: #fef3c7;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   color: #92400e;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
   margin-left: auto;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(146, 64, 14, 0.15);
+}
+
+.multi-select-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(15, 109, 122, 0.1);
+}
+
+.selected-count {
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.send-btn {
+  padding: 12px 24px;
+  font-size: 14px;
+  gap: 8px;
 }
 
 /* Movements Table */

@@ -718,12 +718,17 @@ Su gestor de inversiones`
             );
           })}
         </div>
-        {selectedClients.length > 0 && (
-          <button
-            className="btn-action primary"
-            style={{ marginTop: 16 }}
-            disabled={sendingMultiple}
-            onClick={async () => {
+        <div className="multi-select-count">
+          <span className="selected-count">
+            {selectedClients.length > 0 
+              ? `${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''} seleccionado${selectedClients.length > 1 ? 's' : ''}`
+              : 'Ningún cliente seleccionado'}
+          </span>
+          {selectedClients.length > 0 && (
+            <button
+              className="btn-action primary send-btn"
+              disabled={sendingMultiple}
+              onClick={async () => {
               setSendingMultiple(true);
               for (const clientId of selectedClients) {
                 const client = CLIENTS.find((c) => c.id === clientId);
@@ -793,10 +798,11 @@ Su gestor de inversiones`
               window.dispatchEvent(new CustomEvent('show-toast', { detail: `${selectedClients.length} emails preparados en Gmail` }));
             }}
           >
-            <span className="btn-icon">✉️</span>
-            {sendingMultiple ? 'Enviando...' : `Enviar a ${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''}`}
-          </button>
-        )}
+              <span className="btn-icon">✉️</span>
+              {sendingMultiple ? 'Enviando...' : `Enviar a ${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''}`}
+            </button>
+          )}
+        </div>
       </div>
 
       {clientData && (
