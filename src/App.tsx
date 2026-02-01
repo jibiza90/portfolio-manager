@@ -40,16 +40,26 @@ function ModernBarChart({
   onHover: (text: string, x: number, y: number) => void;
   valueFormatter?: (v?: number | null) => string;
 }) {
-  const baseMax = Math.max(1, ...data.map((d) => Math.abs(d.value)));
-  const maxVal = baseMax * 1.2; // headroom 20%
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * maxVal);
+  const hasNegative = data.some((d) => d.value < 0);
+  const maxPos = Math.max(0, ...data.map((d) => d.value));
+  const minNeg = Math.min(0, ...data.map((d) => d.value));
+  const range = Math.max(1, maxPos - minNeg);
+  const zeroOffset = hasNegative ? (maxPos / range) * 100 : 100; // % from top where zero line is
   const barWidth = Math.min(60, Math.max(30, 600 / data.length));
+
+  // Y-axis ticks
+  const tickCount = 5;
+  const ticks: number[] = [];
+  for (let i = 0; i < tickCount; i++) {
+    const val = maxPos - (i / (tickCount - 1)) * range;
+    ticks.push(val);
+  }
 
   return (
     <div className="modern-chart-container" style={{ height, padding: '20px 24px 40px 60px', position: 'relative' }}>
       {/* Y-axis */}
       <div className="modern-y-axis">
-        {ticks.reverse().map((t, i) => (
+        {ticks.map((t, i) => (
           <div key={i} className="modern-y-tick">
             <span>{valueFormatter(t)}</span>
           </div>
@@ -57,30 +67,43 @@ function ModernBarChart({
       </div>
       {/* Grid lines */}
       <div className="modern-grid">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="modern-grid-line" style={{ bottom: `${i * 25}%` }} />
+        {ticks.map((t, i) => (
+          <div key={i} className="modern-grid-line" style={{ top: `${(i / (tickCount - 1)) * 100}%` }} />
         ))}
       </div>
+      {/* Zero line if negative values exist */}
+      {hasNegative && (
+        <div className="modern-zero-line" style={{ top: `${zeroOffset}%` }} />
+      )}
       {/* Bars */}
-      <div className="modern-bars">
+      <div className="modern-bars" style={{ position: 'relative', height: '100%' }}>
         {data.map((d, i) => {
-          const heightPct = (Math.abs(d.value) / maxVal) * 100;
+          const heightPct = (Math.abs(d.value) / range) * 100;
           const isNeg = d.value < 0;
+          const barStyle: React.CSSProperties = {
+            width: barWidth,
+            height: `${heightPct}%`,
+            position: 'absolute',
+            left: `${(i / data.length) * 100}%`,
+            ...(isNeg
+              ? { top: `${zeroOffset}%` }
+              : { bottom: `${100 - zeroOffset}%` })
+          };
           return (
             <div
               key={i}
               className={`modern-bar ${isNeg ? 'negative' : ''}`}
-              style={{ height: `${heightPct}%`, width: barWidth }}
+              style={barStyle}
               onMouseMove={(e) => onHover(`${d.label}: ${valueFormatter(d.value)}`, e.clientX, e.clientY - 12)}
               onMouseLeave={() => onHover('', 0, 0)}
             >
-              <span className="modern-bar-label">{d.label}</span>
+              <span className="modern-bar-label" style={{ position: 'absolute', bottom: isNeg ? 'auto' : '-20px', top: isNeg ? '-20px' : 'auto', left: '50%', transform: 'translateX(-50%)' }}>{d.label}</span>
             </div>
           );
         })}
       </div>
       {/* X-axis line */}
-      <div className="modern-x-axis" />
+      <div className="modern-x-axis" style={{ top: hasNegative ? `${zeroOffset}%` : 'auto' }} />
     </div>
   );
 }
@@ -700,7 +723,7 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
                         <div className="table-row" key={i}>
                           <div>{monthLabel(m.month)}</div>
                           <div className={clsx(profit >= 0 ? 'positive' : 'negative')}>{formatCurrency(profit)}</div>
-                          <div>{formatPercent(stats.totalProfit ? profit / stats.totalProfit : 0)}</div>
+                          <div className={clsx(m.retPct >= 0 ? 'positive' : 'negative')}>{formatPercent(m.retPct)}</div>
                           <div>{formatCurrency(balance)}</div>
                         </div>
                       );
