@@ -1304,7 +1304,8 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
       const beneficioTotal = saldo + decrementos - incrementos;
       const beneficioRetirado = Math.max(0, decrementos - incrementos);
       const comisionRetirada = beneficioRetirado * 0.05;
-      const comisionSiRetiraHoy = saldo > 0 ? saldo * 0.05 : 0;
+      // Comisión si retira hoy: 5% del beneficio total, solo si es positivo (ya recuperó capital)
+      const comisionSiRetiraHoy = beneficioTotal > 0 ? beneficioTotal * 0.05 : 0;
 
       const comisionGenerada = comisionRetirada;
       const estadoCobrada = comisionEstado[c.id] ?? false;
