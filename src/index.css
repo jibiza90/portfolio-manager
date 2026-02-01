@@ -1592,7 +1592,8 @@ input[type='number'] {
 }
 
 .bar-chart.with-negative .bar-container {
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .bar-wrapper {
@@ -1609,6 +1610,21 @@ input[type='number'] {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  position: relative;
+}
+
+.bar-chart.with-negative .bar-container {
+  align-items: stretch;
+}
+
+.bar-chart.with-negative .bar-container::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(100, 116, 139, 0.3);
 }
 
 .bar {
@@ -1620,10 +1636,23 @@ input[type='number'] {
 
 .bar.positive {
   background: linear-gradient(180deg, #10b981, #059669);
+  align-self: flex-end;
 }
 
 .bar.negative {
-  background: linear-gradient(180deg, #ef4444, #dc2626);
+  background: linear-gradient(0deg, #ef4444, #dc2626);
+  border-radius: 0 0 4px 4px;
+  align-self: flex-start;
+}
+
+.bar-chart.with-negative .bar.positive {
+  position: absolute;
+  bottom: 50%;
+}
+
+.bar-chart.with-negative .bar.negative {
+  position: absolute;
+  top: 50%;
 }
 
 .bar-label {
