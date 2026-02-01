@@ -576,17 +576,28 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
     }
     
     // Abrir Gmail con datos pre-rellenados
+    const clientName = clientData.contact.name || clientData.name;
+    const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
     const to = encodeURIComponent(clientData.contact.email);
-    const subject = encodeURIComponent(`Informe de Inversión - ${clientData.name}`);
+    const subject = encodeURIComponent(`Informe de Inversión - ${clientData.name} - ${fecha}`);
     const body = encodeURIComponent(
-`Estimado/a ${clientData.contact.name || 'cliente'},
+`Estimado/a ${clientName},
 
-Le adjunto su informe de inversión actualizado.
+Adjunto a este correo encontrará su Informe de Inversión actualizado a fecha ${fecha}.
 
-⚠️ IMPORTANTE: Este enlace caduca en 24 horas. Por favor, descargue o imprima el informe antes de esa fecha.
+📊 RESUMEN:
+• Capital invertido: ${formatCurrency(clientData.incrementos)}
+• Capital retirado: ${formatCurrency(clientData.decrementos)}
+• Saldo actual: ${formatCurrency(clientData.saldo)}
+• Beneficio total: ${formatCurrency(clientData.beneficioTotal)}
+• Rentabilidad: ${(clientData.rentabilidad * 100).toFixed(2)}%
 
-Saludos cordiales,
-Portfolio Manager`
+⚠️ IMPORTANTE: Este informe es confidencial y está destinado únicamente a usted. El enlace de acceso caduca en 24 horas. Por favor, descargue o imprima el documento antes de esa fecha para conservarlo.
+
+Si tiene alguna pregunta sobre su inversión, no dude en contactarme.
+
+Atentamente,
+Su gestor de inversiones`
     );
     
     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`;
