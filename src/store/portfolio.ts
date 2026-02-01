@@ -2,30 +2,9 @@ import { create } from 'zustand';
 import { CLIENTS } from '../constants/clients';
 import { Movement, PersistedState, PortfolioSnapshot } from '../types';
 import { buildSnapshot } from '../utils/snapshot';
-
-const STORAGE_KEY = 'portfolio-manager-autosave-v1';
+import { fetchPortfolioState, savePortfolioState } from '../services/cloudPortfolio';
 
 const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {} };
-
-const loadPersistedState = (): PersistedState => {
-  if (typeof window === 'undefined') {
-    return emptyPersisted;
-  }
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return emptyPersisted;
-    }
-    const parsed = JSON.parse(raw);
-    return {
-      finalByDay: parsed.finalByDay ?? {},
-      movementsByClient: parsed.movementsByClient ?? {}
-    };
-  } catch (error) {
-    console.error('Failed to parse persisted state', error);
-    return emptyPersisted;
-  }
-};
 
 export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'success' | 'error';
 
@@ -47,21 +26,11 @@ interface PortfolioState {
   markError: () => void;
 }
 
-const persisted = loadPersistedState();
-
-const initialSnapshot = buildSnapshot(persisted.finalByDay, persisted.movementsByClient);
-
-const saveToStorage = (finalByDay: Record<string, number | undefined>, movementsByClient: Record<string, Record<string, Movement>>) => {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ finalByDay, movementsByClient }));
-  } catch (e) {
-    console.error('Failed to save to localStorage', e);
-  }
-};
+const initialSnapshot = buildSnapshot(emptyPersisted.finalByDay, emptyPersisted.movementsByClient);
 
 export const usePortfolioStore = create<PortfolioState>((set, get) => ({
-  finalByDay: persisted.finalByDay,
-  movementsByClient: persisted.movementsByClient,
+  finalByDay: emptyPersisted.finalByDay,
+  movementsByClient: emptyPersisted.movementsByClient,
   snapshot: initialSnapshot,
   saveStatus: 'idle',
   lastSavedAt: undefined,
@@ -73,16 +42,17 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
       } else {
         finalByDay[iso] = value;
       }
-
-      saveToStorage(finalByDay, state.movementsByClient);
-
       return {
         finalByDay,
         snapshot: buildSnapshot(finalByDay, state.movementsByClient),
-        saveStatus: 'success',
-        lastSavedAt: Date.now()
+        saveStatus: 'saving'
       };
     });
+
+    const { finalByDay, movementsByClient } = get();
+    savePortfolioState({ finalByDay, movementsByClient })
+      .then(() => set({ saveStatus: 'success', lastSavedAt: Date.now() }))
+      .catch(() => set({ saveStatus: 'error' }));
   },
   setClientMovement: (clientId, iso, field, value) => {
     set((state) => {
@@ -107,16 +77,17 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
       } else {
         movementsByClient[clientId] = clientDays;
       }
-
-      saveToStorage(state.finalByDay, movementsByClient);
-
       return {
         movementsByClient,
         snapshot: buildSnapshot(state.finalByDay, movementsByClient),
-        saveStatus: 'success',
-        lastSavedAt: Date.now()
+        saveStatus: 'saving'
       };
     });
+
+    const { finalByDay, movementsByClient } = get();
+    savePortfolioState({ finalByDay, movementsByClient })
+      .then(() => set({ saveStatus: 'success', lastSavedAt: Date.now() }))
+      .catch(() => set({ saveStatus: 'error' }));
   },
   markSaving: () => set({ saveStatus: 'saving' }),
   markSaved: () => set({ saveStatus: 'success', lastSavedAt: Date.now() }),
@@ -129,4 +100,14 @@ export const selectClientRows = (clientId: string) =>
 export const selectClientName = (clientId: string) =>
   CLIENTS.find((client) => client.id === clientId)?.name ?? clientId;
 
-export const getStorageKey = () => STORAGE_KEY;
+// Inicializar estado desde Firestore en arranque
+fetchPortfolioState()
+  .then((remote) => {
+    const finalByDay = remote.finalByDay ?? {};
+    const movementsByClient = remote.movementsByClient ?? {};
+    const snapshot = buildSnapshot(finalByDay, movementsByClient);
+    usePortfolioStore.setState({ finalByDay, movementsByClient, snapshot, saveStatus: 'success', lastSavedAt: Date.now() });
+  })
+  .catch((err) => {
+    console.error('No se pudo cargar el estado remoto', err);
+  });
