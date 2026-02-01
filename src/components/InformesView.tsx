@@ -590,7 +590,7 @@ Adjunto a este correo encontrará su Informe de Inversión actualizado a fecha $
 • Capital retirado: ${formatCurrency(clientData.decrementos)}
 • Saldo actual: ${formatCurrency(clientData.saldo)}
 • Beneficio total: ${formatCurrency(clientData.beneficioTotal)}
-• Rentabilidad: ${(clientData.rentabilidad * 100).toFixed(2)}%
+• Rentabilidad: ${clientData.rentabilidad.toFixed(2)}%
 
 ⚠️ IMPORTANTE: Este informe es confidencial y está destinado únicamente a usted. El enlace de acceso caduca en 24 horas. Por favor, descargue o imprima el documento antes de esa fecha para conservarlo.
 
