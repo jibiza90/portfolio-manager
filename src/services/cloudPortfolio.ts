@@ -1,5 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 import { PersistedState } from '../types';
 
 // Firebase config (proporcionado por el usuario)
@@ -12,16 +12,16 @@ const firebaseConfig = {
   appId: '1:286094409889:web:74337eabc0e336a02930e0'
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const portfolioRef = doc(db, 'portfolio', 'state');
+const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+const db = app.firestore();
+const portfolioRef = db.doc('portfolio/state');
 
 const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {} };
 
 export const fetchPortfolioState = async (): Promise<PersistedState> => {
   try {
-    const snap = await getDoc(portfolioRef);
-    if (snap.exists()) {
+    const snap = await portfolioRef.get();
+    if (snap.exists) {
       const data = snap.data() as PersistedState;
       return {
         finalByDay: data.finalByDay ?? {},
@@ -37,7 +37,7 @@ export const fetchPortfolioState = async (): Promise<PersistedState> => {
 
 export const savePortfolioState = async (state: PersistedState) => {
   try {
-    await setDoc(portfolioRef, state, { merge: true });
+    await portfolioRef.set(state, { merge: true });
   } catch (error) {
     console.error('Firestore save error', error);
   }
