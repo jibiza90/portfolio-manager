@@ -573,34 +573,35 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
     window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Generando enlace...' }));
     
     // Guardar informe en Firestore y obtener token
+    // Limpiar undefined para Firestore
     const token = await saveReportLink({
       clientId: clientData.id,
       clientName: clientData.name,
       clientCode: clientData.code,
-      incrementos: clientData.incrementos,
-      decrementos: clientData.decrementos,
-      saldo: clientData.saldo,
-      beneficioTotal: clientData.beneficioTotal,
-      rentabilidad: clientData.rentabilidad,
-      beneficioUltimoMes: clientData.beneficioUltimoMes,
-      rentabilidadUltimoMes: clientData.rentabilidadUltimoMes,
+      incrementos: clientData.incrementos ?? 0,
+      decrementos: clientData.decrementos ?? 0,
+      saldo: clientData.saldo ?? 0,
+      beneficioTotal: clientData.beneficioTotal ?? 0,
+      rentabilidad: clientData.rentabilidad ?? 0,
+      beneficioUltimoMes: clientData.beneficioUltimoMes ?? 0,
+      rentabilidadUltimoMes: clientData.rentabilidadUltimoMes ?? 0,
       monthlyStats: clientData.monthlyStats.map(m => ({
         month: m.month,
-        profit: m.profit,
-        profitPct: m.profitPct,
-        endBalance: m.endBalance,
-        hasData: m.hasData
+        profit: m.profit ?? 0,
+        profitPct: m.profitPct ?? 0,
+        endBalance: m.endBalance ?? 0,
+        hasData: m.hasData ?? false
       })),
       patrimonioEvolution: clientData.patrimonioEvolution.map(p => ({
         month: p.month,
-        balance: p.balance,
-        hasData: p.hasData
+        balance: p.balance ?? 0,
+        hasData: p.hasData ?? false
       })),
       movements: clientData.movements.map(m => ({
         iso: m.iso,
         type: m.type,
-        amount: m.amount,
-        balance: m.balance
+        amount: m.amount ?? 0,
+        balance: m.balance ?? 0
       }))
     });
     
