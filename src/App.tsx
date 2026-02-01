@@ -8,6 +8,7 @@ import { formatCurrency, formatPercent, formatNumberEs, parseNumberEs } from './
 import { YEAR } from './utils/dates';
 import { useFocusDate } from './hooks/useFocusDate';
 import { InformesView } from './components/InformesView';
+import { ReportView } from './components/ReportView';
 
 const INFO_VIEW = 'INFO_VIEW';
 const COMISIONES_VIEW = 'COMISIONES_VIEW';
@@ -796,6 +797,12 @@ function TotalsBanner() {
 }
 
 export default function App() {
+  // Check for report token in URL
+  const [reportToken, setReportToken] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('report');
+  });
+
   const [activeView, setActiveView] = useState<string>(GENERAL_OPTION);
   const [menuOpen, setMenuOpen] = useState(false);
   const [contacts, setContacts] = useState<Record<string, ContactInfo>>(() => {
@@ -985,7 +992,9 @@ export default function App() {
         )}
       </div>
 
-      {activeView === GENERAL_OPTION ? (
+      {reportToken ? (
+        <ReportView token={reportToken} />
+      ) : activeView === GENERAL_OPTION ? (
         <>
           <TotalsBanner />
           <DailyGrid focusDate={focusDate} setFocusDate={setFocusDate} />

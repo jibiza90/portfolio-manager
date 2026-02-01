@@ -3,6 +3,7 @@ import { CLIENTS } from '../constants/clients';
 import { usePortfolioStore } from '../store/portfolio';
 import { formatCurrency } from '../utils/format';
 import { YEAR } from '../utils/dates';
+import { saveReportLink } from '../services/reportLinks';
 
 type ContactInfo = { name: string; surname: string; email: string; phone: string };
 type Movement = { iso: string; type: 'increment' | 'decrement'; amount: number; balance: number };
@@ -569,11 +570,43 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       return;
     }
     
-    // Descargar PDF primero
-    const doc = await generatePDF();
-    if (doc) {
-      doc.save(`Informe_${clientData.code}_${new Date().toISOString().slice(0, 10)}.pdf`);
-    }
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Generando enlace...' }));
+    
+    // Guardar informe en Firestore y obtener token
+    const token = await saveReportLink({
+      clientId: clientData.id,
+      clientName: clientData.name,
+      clientCode: clientData.code,
+      incrementos: clientData.incrementos,
+      decrementos: clientData.decrementos,
+      saldo: clientData.saldo,
+      beneficioTotal: clientData.beneficioTotal,
+      rentabilidad: clientData.rentabilidad,
+      beneficioUltimoMes: clientData.beneficioUltimoMes,
+      rentabilidadUltimoMes: clientData.rentabilidadUltimoMes,
+      monthlyStats: clientData.monthlyStats.map(m => ({
+        month: m.month,
+        profit: m.profit,
+        profitPct: m.profitPct,
+        endBalance: m.endBalance,
+        hasData: m.hasData
+      })),
+      patrimonioEvolution: clientData.patrimonioEvolution.map(p => ({
+        month: p.month,
+        balance: p.balance,
+        hasData: p.hasData
+      })),
+      movements: clientData.movements.map(m => ({
+        iso: m.iso,
+        type: m.type,
+        amount: m.amount,
+        balance: m.balance
+      }))
+    });
+    
+    // Generar URL del informe
+    const baseUrl = window.location.origin;
+    const reportUrl = `${baseUrl}?report=${token}`;
     
     // Abrir Gmail con datos pre-rellenados
     const clientName = clientData.contact.name || clientData.name;
@@ -583,7 +616,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
     const body = encodeURIComponent(
 `Estimado/a ${clientName},
 
-Adjunto a este correo encontrará su Informe de Inversión actualizado a fecha ${fecha}.
+Le envío su Informe de Inversión actualizado a fecha ${fecha}.
 
 📊 RESUMEN:
 • Capital invertido: ${formatCurrency(clientData.incrementos)}
@@ -592,7 +625,10 @@ Adjunto a este correo encontrará su Informe de Inversión actualizado a fecha $
 • Beneficio total: ${formatCurrency(clientData.beneficioTotal)}
 • Rentabilidad: ${clientData.rentabilidad.toFixed(2)}%
 
-⚠️ IMPORTANTE: Este informe es confidencial y está destinado únicamente a usted. El enlace de acceso caduca en 24 horas. Por favor, descargue o imprima el documento antes de esa fecha para conservarlo.
+🔗 ACCEDER AL INFORME:
+${reportUrl}
+
+⚠️ IMPORTANTE: Este enlace es confidencial y caduca en 24 horas. Por favor, descargue o imprima el informe antes de esa fecha.
 
 Si tiene alguna pregunta sobre su inversión, no dude en contactarme.
 
@@ -602,7 +638,7 @@ Su gestor de inversiones`
     
     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`;
     window.open(gmailUrl, '_blank');
-    window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Gmail abierto. Adjunta el PDF descargado y envía.' }));
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Gmail abierto con el enlace del informe.' }));
   };
 
   return (
