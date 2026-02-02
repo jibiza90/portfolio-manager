@@ -984,7 +984,7 @@ Su gestor de inversiones`
               <div className="preview-patrimonio">
                 <h4>Evolución del Patrimonio {YEAR}</h4>
                 <div className="line-chart-container">
-                  <svg className="line-chart" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid meet">
+                  <svg className="line-chart" viewBox="0 0 500 220" preserveAspectRatio="xMidYMid meet">
                     {(() => {
                       const data = clientData.patrimonioEvolution;
                       const valid = data.filter((d) => d.balance !== undefined);
@@ -996,14 +996,14 @@ Su gestor de inversiones`
                       // Calcular puntos solo para meses con datos, pero posicionados en su lugar correcto (12 meses)
                       const validWithIndex = data.map((d, i) => ({ ...d, idx: i })).filter((d) => d.balance !== undefined);
                       const points = validWithIndex.map((d) => ({
-                        x: 30 + (d.idx / 11) * 340,
-                        y: 120 - (((d.balance as number) - minBal) / range) * 100,
+                        x: 35 + (d.idx / 11) * 420,
+                        y: 160 - (((d.balance as number) - minBal) / range) * 120,
                         balance: d.balance as number,
                         month: d.month
                       }));
                       
                       const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                      const areaD = points.length > 1 ? `${pathD} L ${points[points.length - 1].x} 120 L ${points[0].x} 120 Z` : '';
+                      const areaD = points.length > 1 ? `${pathD} L ${points[points.length - 1].x} 200 L ${points[0].x} 200 Z` : '';
                       
                       return (
                         <>
@@ -1024,7 +1024,7 @@ Su gestor de inversiones`
                             </g>
                           ))}
                           {data.map((d, i) => (
-                            <text key={i} x={30 + (i / 11) * 340} y="150" textAnchor="middle" fontSize="9" fill="#64748b">
+                            <text key={i} x={35 + (i / 11) * 420} y="200" textAnchor="middle" fontSize="10" fill="#64748b">
                               {d.month}
                             </text>
                           ))}
