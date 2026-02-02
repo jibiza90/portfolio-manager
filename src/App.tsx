@@ -521,6 +521,7 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
   }, [focusDate]);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [hoverOrigin, setHoverOrigin] = useState<'inc' | 'dec' | 'profit' | 'return' | null>(null);
   const [tooltip, setTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
   const movementsRef = useRef<HTMLDivElement>(null);
@@ -832,7 +833,21 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
                 <tr key={r.iso} data-iso={r.iso} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}>
                   <td><span>{r.label}</span><small>{r.weekday}</small></td>
                   <td>{r.isWeekend ? (r.increment === undefined ? '—' : formatCurrency(r.increment)) : <CurrencyCell value={r.increment} onChange={(v) => setClientMovement(clientId, r.iso, 'increment', v)} />}</td>
-                  <td>{r.isWeekend ? (r.decrement === undefined ? '—' : formatCurrency(r.decrement)) : <CurrencyCell value={r.decrement} onChange={(v) => setClientMovement(clientId, r.iso, 'decrement', v)} />}</td>
+                  <td>{r.isWeekend ? (r.decrement === undefined ? '—' : formatCurrency(r.decrement)) : (
+                    <CurrencyCell
+                      value={r.decrement}
+                      onChange={(v) => {
+                        const base = r.baseBalance ?? 0;
+                        const inc = r.increment ?? 0;
+                        const max = base + inc;
+                        if (v !== undefined && !Number.isNaN(v) && v > max) {
+                          setAlertMessage(`Saldo excedido. Máximo disponible: ${formatCurrency(max)}`);
+                          return;
+                        }
+                        setClientMovement(clientId, r.iso, 'decrement', v);
+                      }}
+                    />
+                  )}</td>
                   <td>{r.baseBalance === undefined ? '—' : formatCurrency(r.baseBalance)}</td>
                   <td>{r.finalBalance === undefined ? '—' : formatCurrency(r.finalBalance)}</td>
                   <td className={clsx(r.profit !== undefined && r.profit >= 0 ? 'profit' : 'loss')}>
@@ -1171,6 +1186,22 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {alertMessage && (
+        <div className="modal-backdrop" onClick={() => setAlertMessage(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <strong>Saldo excedido</strong>
+              <button onClick={() => setAlertMessage(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p>{alertMessage}</p>
+            </div>
+            <div className="modal-actions">
+              <button className="primary" onClick={() => setAlertMessage(null)}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div
         className="side-hover-zone"
         onMouseEnter={() => setMenuOpen(true)}
