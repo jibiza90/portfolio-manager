@@ -276,6 +276,17 @@
   gap: 14px;
 }
 
+.analytics-grid.two-row {
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  grid-auto-rows: 1fr;
+}
+
+@media (max-width: 960px) {
+  .analytics-grid.two-row {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+}
+
 .analytics-card {
   padding: 16px;
   border-radius: 18px;

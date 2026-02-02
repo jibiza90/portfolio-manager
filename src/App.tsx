@@ -495,7 +495,7 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
           </div>
         </div>
 
-        <div className="analytics-grid" style={{ marginBottom: 12 }}>
+        <div className="analytics-grid two-row" style={{ marginBottom: 12 }}>
           <div className="stat-card glow">
             <div className="stat-label">Saldo actual</div>
             <div className="stat-value">{formatCurrency(stats.estimatedBalance)}</div>
@@ -518,6 +518,9 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
               {formatPercent(stats.profitPct)}
             </div>
           </div>
+        </div>
+
+        <div className="analytics-grid two-row" style={{ marginBottom: 12 }}>
           <div className="stat-card glow">
             <div className="stat-label">Participación</div>
             <div className="stat-value">{formatPercent(stats.participation)}</div>
