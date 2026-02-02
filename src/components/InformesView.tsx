@@ -12,6 +12,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
   const { snapshot } = usePortfolioStore();
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [multiMode, setMultiMode] = useState(false);
   const [sendingMultiple, setSendingMultiple] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -679,98 +680,114 @@ Su gestor de inversiones`
           <h4>Envío múltiple</h4>
           <div className="multi-actions">
             <button
-              className="btn-small"
+              className={`btn-small ${multiMode ? '' : 'secondary'}`}
               onClick={() => {
-                const withEmail = CLIENTS.filter((c) => contacts[c.id]?.email).map((c) => c.id);
-                setSelectedClients(withEmail);
+                setMultiMode(!multiMode);
+                if (!multiMode) setSelectedClients([]);
               }}
             >
-              Seleccionar TODOS
+              {multiMode ? 'Ocultar selección' : 'Activar envío múltiple'}
             </button>
-            <button className="btn-small secondary" onClick={() => setSelectedClients([])}>
-              Limpiar
-            </button>
+            {multiMode && (
+              <>
+                <button
+                  className="btn-small"
+                  onClick={() => {
+                    const withEmail = CLIENTS.filter((c) => contacts[c.id]?.email).map((c) => c.id);
+                    setSelectedClients(withEmail);
+                  }}
+                >
+                  Seleccionar TODOS
+                </button>
+                <button className="btn-small secondary" onClick={() => setSelectedClients([])}>
+                  Limpiar
+                </button>
+              </>
+            )}
           </div>
         </div>
-        <div className="multi-select-grid">
-          {CLIENTS.map((c) => {
-            const ct = contacts[c.id];
-            const hasEmail = ct?.email;
-            const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
-            const isSelected = selectedClients.includes(c.id);
-            return (
-              <label key={c.id} className={`multi-select-item ${isSelected ? 'selected' : ''} ${!hasEmail ? 'no-email' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  disabled={!hasEmail}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedClients([...selectedClients, c.id]);
-                    } else {
-                      setSelectedClients(selectedClients.filter((id) => id !== c.id));
-                    }
-                  }}
-                />
-                <span>{label}</span>
-                {!hasEmail && <span className="no-email-badge">Sin email</span>}
-              </label>
-            );
-          })}
-        </div>
-        <div className="multi-select-count">
-          <span className="selected-count">
-            {selectedClients.length > 0 
-              ? `${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''} seleccionado${selectedClients.length > 1 ? 's' : ''}`
-              : 'Ningún cliente seleccionado'}
-          </span>
-          {selectedClients.length > 0 && (
-            <button
-              className="btn-action primary send-btn"
-              disabled={sendingMultiple}
-              onClick={async () => {
-              setSendingMultiple(true);
-              for (const clientId of selectedClients) {
-                const client = CLIENTS.find((c) => c.id === clientId);
-                if (!client) continue;
-                const ct = contacts[clientId];
-                if (!ct?.email) continue;
 
-                const rows = snapshot.clientRowsById[clientId] || [];
-                const yearRows = rows.filter((r) => r.iso.startsWith(`${YEAR}-`));
-                const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
-                const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
-                const validRows = [...yearRows].reverse();
-                const lastWithFinal = validRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0);
-                const lastWithBase = validRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0);
-                const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
-                const beneficioTotal = saldo + decrementos - incrementos;
-                const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
+        {multiMode && (
+          <>
+            <div className="multi-select-grid">
+              {CLIENTS.map((c) => {
+                const ct = contacts[c.id];
+                const hasEmail = ct?.email;
+                const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
+                const isSelected = selectedClients.includes(c.id);
+                return (
+                  <label key={c.id} className={`multi-select-item ${isSelected ? 'selected' : ''} ${!hasEmail ? 'no-email' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      disabled={!hasEmail}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedClients([...selectedClients, c.id]);
+                        } else {
+                          setSelectedClients(selectedClients.filter((id) => id !== c.id));
+                        }
+                      }}
+                    />
+                    <span>{label}</span>
+                    {!hasEmail && <span className="no-email-badge">Sin email</span>}
+                  </label>
+                );
+              })}
+            </div>
+            <div className="multi-select-count">
+              <span className="selected-count">
+                {selectedClients.length > 0 
+                  ? `${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''} seleccionado${selectedClients.length > 1 ? 's' : ''}`
+                  : 'Ningún cliente seleccionado'}
+              </span>
+              {selectedClients.length > 0 && (
+                <button
+                  className="btn-action primary send-btn"
+                  disabled={sendingMultiple}
+                  onClick={async () => {
+                  setSendingMultiple(true);
+                  for (const clientId of selectedClients) {
+                    const client = CLIENTS.find((c) => c.id === clientId);
+                    if (!client) continue;
+                    const ct = contacts[clientId];
+                    if (!ct?.email) continue;
 
-                const displayName = ct && (ct.name || ct.surname) ? `${ct.name} ${ct.surname}`.trim() : client.name;
+                    const rows = snapshot.clientRowsById[clientId] || [];
+                    const yearRows = rows.filter((r) => r.iso.startsWith(`${YEAR}-`));
+                    const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
+                    const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
+                    const validRows = [...yearRows].reverse();
+                    const lastWithFinal = validRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0);
+                    const lastWithBase = validRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0);
+                    const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
+                    const beneficioTotal = saldo + decrementos - incrementos;
+                    const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
 
-                const token = await saveReportLink({
-                  clientId: client.id,
-                  clientName: displayName,
-                  clientCode: client.name,
-                  incrementos: incrementos ?? 0,
-                  decrementos: decrementos ?? 0,
-                  saldo: saldo ?? 0,
-                  beneficioTotal: beneficioTotal ?? 0,
-                  rentabilidad: rentabilidad ?? 0,
-                  beneficioUltimoMes: 0,
-                  rentabilidadUltimoMes: 0,
-                  monthlyStats: [],
-                  patrimonioEvolution: [],
-                  movements: []
-                });
+                    const displayName = ct && (ct.name || ct.surname) ? `${ct.name} ${ct.surname}`.trim() : client.name;
 
-                const baseUrl = window.location.origin;
-                const reportUrl = `${baseUrl}?report=${token}`;
-                const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-                const to = encodeURIComponent(ct.email);
-                const subject = encodeURIComponent(`Informe de Inversión - ${client.name} - ${fecha}`);
-                const body = encodeURIComponent(
+                    const token = await saveReportLink({
+                      clientId: client.id,
+                      clientName: displayName,
+                      clientCode: client.name,
+                      incrementos: incrementos ?? 0,
+                      decrementos: decrementos ?? 0,
+                      saldo: saldo ?? 0,
+                      beneficioTotal: beneficioTotal ?? 0,
+                      rentabilidad: rentabilidad ?? 0,
+                      beneficioUltimoMes: 0,
+                      rentabilidadUltimoMes: 0,
+                      monthlyStats: [],
+                      patrimonioEvolution: [],
+                      movements: []
+                    });
+
+                    const baseUrl = window.location.origin;
+                    const reportUrl = `${baseUrl}?report=${token}`;
+                    const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+                    const to = encodeURIComponent(ct.email);
+                    const subject = encodeURIComponent(`Informe de Inversión - ${client.name} - ${fecha}`);
+                    const body = encodeURIComponent(
 `Estimado/a ${ct.name || 'cliente'},
 
 Le envío su Informe de Inversión actualizado a fecha ${fecha}.
@@ -788,21 +805,23 @@ ${reportUrl}
 
 Atentamente,
 Su gestor de inversiones`
-                );
+                    );
 
-                const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`;
-                window.open(gmailUrl, '_blank');
-                await new Promise((r) => setTimeout(r, 500));
-              }
-              setSendingMultiple(false);
-              window.dispatchEvent(new CustomEvent('show-toast', { detail: `${selectedClients.length} emails preparados en Gmail` }));
-            }}
-          >
-              <span className="btn-icon">✉️</span>
-              {sendingMultiple ? 'Enviando...' : `Enviar a ${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''}`}
-            </button>
-          )}
-        </div>
+                    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`;
+                    window.open(gmailUrl, '_blank');
+                    await new Promise((r) => setTimeout(r, 500));
+                  }
+                  setSendingMultiple(false);
+                  window.dispatchEvent(new CustomEvent('show-toast', { detail: `${selectedClients.length} emails preparados en Gmail` }));
+                }}
+              >
+                  <span className="btn-icon">✉️</span>
+                  {sendingMultiple ? 'Enviando...' : `Enviar a ${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''}`}
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {clientData && (
