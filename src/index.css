@@ -2849,29 +2849,29 @@ select {
 /* Mini popup for movements detail */
 .mini-popup {
   position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
+  top: calc(100% + 8px);
+  left: 0;
+  right: auto;
+  transform: none;
+  z-index: 1000;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-  min-width: 220px;
-  max-height: 300px;
-  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.22);
+  min-width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
   animation: popupFadeIn 0.15s ease;
   pointer-events: auto;
-  max-width: min(360px, 90vw);
+  border: 1px solid rgba(15, 109, 122, 0.15);
 }
 
 .mini-popup.wide {
-  min-width: 280px;
-  max-width: min(420px, 94vw);
+  min-width: 300px;
 }
 
 @keyframes popupFadeIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .mini-popup-header {
