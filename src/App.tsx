@@ -969,7 +969,7 @@ export default function App() {
               <div className="select-wrapper">
                 <select
                   id="hero-client-select"
-                  value={CLIENTS.find((c) => c.id === activeView)?.id || ''}
+                  value={activeView === GENERAL_OPTION ? GENERAL_OPTION : CLIENTS.find((c) => c.id === activeView)?.id || ''}
                   onChange={(e) => {
                     const v = e.target.value;
                     if (!v) return;
@@ -977,6 +977,7 @@ export default function App() {
                   }}
                 >
                   <option value="">Elige un cliente…</option>
+                  <option value={GENERAL_OPTION}>General (todos)</option>
                   {CLIENTS.map((c) => {
                     const ct = contacts[c.id];
                     const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
