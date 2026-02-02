@@ -336,11 +336,18 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
     () => clientRows.filter((r) => r.iso.startsWith(`${YEAR}-`)),
     [clientRows]
   );
-  const setRef = (iso: string) => (el: HTMLTableRowElement | null) => {
-    if (el && iso === focusDate) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const tableRef = useRef<HTMLTableElement>(null);
+  const lastScrolledRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!tableRef.current || !focusDate) return;
+    if (lastScrolledRef.current === focusDate) return;
+    const row = tableRef.current.querySelector<HTMLTableRowElement>(`tr[data-iso='${focusDate}']`);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      lastScrolledRef.current = focusDate;
     }
-  };
+  }, [focusDate]);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [hoverOrigin, setHoverOrigin] = useState<'inc' | 'dec' | 'profit' | 'return' | null>(null);
@@ -616,7 +623,7 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
         </div>
         
         <div className="table-scroll" style={{ overflowX: 'hidden' }}>
-          <table style={{ tableLayout: 'auto' }}>
+          <table style={{ tableLayout: 'auto' }} ref={tableRef}>
             <thead>
               <tr>
                 <th>Fecha</th>
@@ -632,7 +639,7 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
             </thead>
             <tbody>
               {yearRows.map(r => (
-                <tr key={r.iso} ref={setRef(r.iso)} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}>
+                <tr key={r.iso} data-iso={r.iso} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}>
                   <td><span>{r.label}</span><small>{r.weekday}</small></td>
                   <td>{r.isWeekend ? (r.increment === undefined ? '—' : formatCurrency(r.increment)) : <CurrencyCell value={r.increment} onChange={(v) => setClientMovement(clientId, r.iso, 'increment', v)} />}</td>
                   <td>{r.isWeekend ? (r.decrement === undefined ? '—' : formatCurrency(r.decrement)) : <CurrencyCell value={r.decrement} onChange={(v) => setClientMovement(clientId, r.iso, 'decrement', v)} />}</td>
