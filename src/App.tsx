@@ -286,7 +286,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const { snapshot } = usePortfolioStore();
   const setDayFinal = usePortfolioStore((s) => s.setDayFinal);
   const rows = useMemo(() => [...snapshot.dailyRows], [snapshot.dailyRows]);
-  const setRef = (iso: string) => (el: HTMLTableRowElement | null) => { if (el && iso === focusDate) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+  const setRef = (_iso: string) => (_el: HTMLTableRowElement | null) => {};
   const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '—' : formatPercent(v));
   return (
