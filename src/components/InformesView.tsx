@@ -682,8 +682,8 @@ Su gestor de inversiones`
             <button
               className={`btn-small ${multiMode ? '' : 'secondary'}`}
               onClick={() => {
+                if (multiMode) setSelectedClients([]);
                 setMultiMode(!multiMode);
-                if (!multiMode) setSelectedClients([]);
               }}
             >
               {multiMode ? 'Ocultar selección' : 'Activar envío múltiple'}
@@ -808,13 +808,15 @@ Su gestor de inversiones`
                     );
 
                     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`;
-                    window.open(gmailUrl, '_blank');
-                    await new Promise((r) => setTimeout(r, 500));
-                  }
-                  setSendingMultiple(false);
-                  window.dispatchEvent(new CustomEvent('show-toast', { detail: `${selectedClients.length} emails preparados en Gmail` }));
-                }}
-              >
+                  window.open(gmailUrl, '_blank');
+                  await new Promise((r) => setTimeout(r, 500));
+                }
+                setSendingMultiple(false);
+                setSelectedClients([]);
+                setMultiMode(false);
+                window.dispatchEvent(new CustomEvent('show-toast', { detail: `${selectedClients.length} emails preparados en Gmail` }));
+              }}
+            >
                   <span className="btn-icon">✉️</span>
                   {sendingMultiple ? 'Enviando...' : `Enviar a ${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''}`}
                 </button>
