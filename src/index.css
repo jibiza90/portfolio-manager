@@ -2850,14 +2850,15 @@ select {
 .mini-popup {
   position: absolute;
   top: calc(100% + 8px);
-  left: 0;
+  left: 50%;
   right: auto;
-  transform: none;
+  transform: translateX(-50%);
   z-index: 1000;
   background: white;
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(0,0,0,0.22);
   min-width: 240px;
+  max-width: min(460px, calc(100vw - 24px));
   max-height: 320px;
   overflow-y: auto;
   animation: popupFadeIn 0.15s ease;
@@ -2866,7 +2867,7 @@ select {
 }
 
 .mini-popup.wide {
-  min-width: 300px;
+  min-width: 320px;
 }
 
 @keyframes popupFadeIn {
