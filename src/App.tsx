@@ -9,6 +9,7 @@ import { YEAR } from './utils/dates';
 import { useFocusDate } from './hooks/useFocusDate';
 import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
+import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 
 const INFO_VIEW = 'INFO_VIEW';
 const COMISIONES_VIEW = 'COMISIONES_VIEW';
@@ -34,9 +35,18 @@ function EditableCell({ value, onChange, isPercent = false }: { value: number | 
 function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const { snapshot } = usePortfolioStore();
   const dailyRows = snapshot.dailyRows;
+  const [twrHover, setTwrHover] = useState(false);
+  const [twrExpanded, setTwrExpanded] = useState(false);
 
   const lastWithData = useMemo(() => [...dailyRows].reverse().find((r) => r.final !== undefined || r.profit !== undefined), [dailyRows]);
   const currentMonth = lastWithData?.iso?.slice(0, 7);
+
+  // Calcular TWR general
+  const twrData = useMemo(() => {
+    const ytdResult = calculateTWR(dailyRows);
+    const monthlyTWR = calculateAllMonthsTWR(dailyRows);
+    return { ytd: ytdResult, monthly: monthlyTWR };
+  }, [dailyRows]);
 
   const aggregates = useMemo(() => {
     const todayProfitPct = lastWithData?.profitPct ?? 0;
@@ -158,11 +168,59 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
           <div className="stat-sub">Sin cierre: {aggregates.missingClosures}</div>
           <div className="stat-sub">Rentabilidad extrema: {aggregates.extremeReturns}</div>
         </div>
-        <div className="stat-card glow">
-          <div className="stat-label">Contactos</div>
-          <div className="stat-sub">Clientes sin email: {aggregates.clientsNoEmail}</div>
+        <div
+          className="stat-card glow clickable"
+          style={{ position: 'relative', overflow: 'visible' }}
+          onMouseEnter={() => setTwrHover(true)}
+          onMouseLeave={() => setTwrHover(false)}
+          onClick={() => setTwrExpanded(!twrExpanded)}
+        >
+          <div className="stat-label">Rentabilidad TWR</div>
+          <div className={clsx('stat-value', twrData.ytd.twr >= 0 ? 'positive' : 'negative')}>
+            {formatPercent(twrData.ytd.twr)}
+          </div>
+          <div className="stat-sub">YTD · Click para detalle</div>
+          {twrHover && !twrExpanded && (
+            <div className="mini-popup wide popup-center" onClick={(e) => e.stopPropagation()}>
+              <div className="mini-popup-header">
+                <strong>¿Qué es TWR?</strong>
+                <button onClick={() => setTwrHover(false)}>×</button>
+              </div>
+              <div className="mini-popup-body" style={{ fontSize: 12, lineHeight: 1.5 }}>
+                <p style={{ margin: '0 0 8px' }}>La <strong>rentabilidad TWR</strong> (Time-Weighted Return) mide el rendimiento real eliminando el efecto de aportes y retiros.</p>
+                <p style={{ margin: 0 }}>Se calcula dividiendo el periodo en subperiodos entre cada flujo, calculando el retorno de cada uno y multiplicando los factores (1+r). Así puedes comparar rendimientos de forma justa.</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {twrExpanded && (
+        <div className="twr-detail glass-card" style={{ marginBottom: 16, padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h4 style={{ margin: 0 }}>Detalle TWR por mes (General)</h4>
+            <button className="ghost-btn" onClick={() => setTwrExpanded(false)}>Cerrar</button>
+          </div>
+          <div className="data-table compact">
+            <div className="table-header">
+              <div>Mes</div>
+              <div>TWR</div>
+              <div>Días con datos</div>
+            </div>
+            {twrData.monthly.length === 0 && <div className="table-row"><div>Sin datos</div></div>}
+            {twrData.monthly.map((m) => (
+              <div className="table-row" key={m.month}>
+                <div>{monthLabel(m.month)}</div>
+                <div className={clsx(m.twr >= 0 ? 'positive' : 'negative')}>{formatPercent(m.twr)}</div>
+                <div>{m.periods.length}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 12, marginBottom: 0 }}>
+            TWR elimina el efecto de aportes/retiros multiplicando los retornos de cada subperiodo: (1+r₁)×(1+r₂)×...−1
+          </p>
+        </div>
+      )}
 
       <div className="chart-card">
         <div className="chart-card-header">
@@ -526,7 +584,8 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   }, [focusDate]);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [hoverOrigin, setHoverOrigin] = useState<'inc' | 'dec' | 'profit' | 'return' | null>(null);
+  const [hoverOrigin, setHoverOrigin] = useState<'inc' | 'dec' | 'profit' | 'return' | 'twr' | null>(null);
+  const [twrExpanded, setTwrExpanded] = useState(false);
   const [tooltip, setTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
   const movementsRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -645,6 +704,13 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     }
     return analytics.monthly[analytics.monthly.length - 1];
   })();
+
+  // Calcular TWR (Time-Weighted Return)
+  const twrData = useMemo(() => {
+    const ytdResult = calculateTWR(yearRows);
+    const monthlyTWR = calculateAllMonthsTWR(yearRows);
+    return { ytd: ytdResult, monthly: monthlyTWR };
+  }, [yearRows]);
 
   const handleMouseMove = (e: React.MouseEvent, text: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -815,7 +881,59 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
               </div>
             )}
           </div>
+          <div
+            className="stat-card glow clickable"
+            style={{ position: 'relative', overflow: 'visible' }}
+            onMouseEnter={() => setHoverOrigin('twr')}
+            onMouseLeave={() => setHoverOrigin((v) => (v === 'twr' ? null : v))}
+            onClick={() => setTwrExpanded(!twrExpanded)}
+          >
+            <div className="stat-label">Rentabilidad TWR</div>
+            <div className={clsx('stat-value', twrData.ytd.twr >= 0 ? 'positive' : 'negative')}>
+              {formatPercent(twrData.ytd.twr)}
+            </div>
+            <div className="stat-sub">YTD · Click para detalle</div>
+            {hoverOrigin === 'twr' && !twrExpanded && (
+              <div className="mini-popup wide popup-center" onClick={(e) => e.stopPropagation()}>
+                <div className="mini-popup-header">
+                  <strong>¿Qué es TWR?</strong>
+                  <button onClick={() => setHoverOrigin(null)}>×</button>
+                </div>
+                <div className="mini-popup-body" style={{ fontSize: 12, lineHeight: 1.5 }}>
+                  <p style={{ margin: '0 0 8px' }}>La <strong>rentabilidad TWR</strong> (Time-Weighted Return) mide el rendimiento real eliminando el efecto de aportes y retiros.</p>
+                  <p style={{ margin: 0 }}>Se calcula dividiendo el periodo en subperiodos entre cada flujo, calculando el retorno de cada uno y multiplicando los factores (1+r). Así puedes comparar rendimientos de forma justa.</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+
+        {twrExpanded && (
+          <div className="twr-detail glass-card" style={{ marginBottom: 12, padding: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h4 style={{ margin: 0 }}>Detalle TWR por mes</h4>
+              <button className="ghost-btn" onClick={() => setTwrExpanded(false)}>Cerrar</button>
+            </div>
+            <div className="data-table compact">
+              <div className="table-header">
+                <div>Mes</div>
+                <div>TWR</div>
+                <div>Días con datos</div>
+              </div>
+              {twrData.monthly.length === 0 && <div className="table-row"><div>Sin datos</div></div>}
+              {twrData.monthly.map((m) => (
+                <div className="table-row" key={m.month}>
+                  <div>{monthLabel(m.month)}</div>
+                  <div className={clsx(m.twr >= 0 ? 'positive' : 'negative')}>{formatPercent(m.twr)}</div>
+                  <div>{m.periods.length}</div>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 12, marginBottom: 0 }}>
+              TWR elimina el efecto de aportes/retiros multiplicando los retornos de cada subperiodo: (1+r₁)×(1+r₂)×...−1
+            </p>
+          </div>
+        )}
         
         <div className="table-scroll" style={{ overflowX: 'hidden' }}>
           <table style={{ tableLayout: 'auto' }} ref={tableRef}>
