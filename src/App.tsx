@@ -343,7 +343,7 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
   };
 
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [hoverOrigin, setHoverOrigin] = useState<'inc' | 'dec' | null>(null);
+  const [hoverOrigin, setHoverOrigin] = useState<'inc' | 'dec' | 'profit' | 'return' | null>(null);
   const [tooltip, setTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
   const movementsRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -549,6 +549,64 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
                       <span>{m.label}</span>
                       <span className={clsx(m.increment > 0 && 'positive')}>{m.increment > 0 ? `+${formatCurrency(m.increment)}` : ''}</span>
                       <span className={clsx(m.decrement > 0 && 'negative')}>{m.decrement > 0 ? `-${formatCurrency(m.decrement)}` : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div
+            className="stat-card glow clickable"
+            style={{ position: 'relative', overflow: 'visible' }}
+            onMouseEnter={() => setHoverOrigin('profit')}
+            onMouseLeave={() => setHoverOrigin((v) => (v === 'profit' ? null : v))}
+          >
+            <div className="stat-label">Beneficio mensual</div>
+            <div className={clsx('stat-value', analytics.monthly.length > 0 && analytics.monthly[analytics.monthly.length - 1].profit >= 0 ? 'positive' : 'negative')}>
+              {formatCurrency(analytics.monthly.length > 0 ? analytics.monthly[analytics.monthly.length - 1].profit : 0)}
+            </div>
+            <div className="stat-sub">Último mes · Hover para ver todos</div>
+            {hoverOrigin === 'profit' && (
+              <div className="mini-popup wide" onClick={(e) => e.stopPropagation()}>
+                <div className="mini-popup-header">
+                  <strong>Beneficio por mes</strong>
+                  <button onClick={() => setHoverOrigin(null)}>×</button>
+                </div>
+                <div className="mini-popup-body">
+                  {analytics.monthly.length === 0 && <p className="muted">Sin datos</p>}
+                  {analytics.monthly.map((m) => (
+                    <div key={m.month} className="mini-row">
+                      <span>{monthLabel(m.month)}</span>
+                      <span className={clsx(m.profit >= 0 ? 'positive' : 'negative')}>{formatCurrency(m.profit)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div
+            className="stat-card glow clickable"
+            style={{ position: 'relative', overflow: 'visible' }}
+            onMouseEnter={() => setHoverOrigin('return')}
+            onMouseLeave={() => setHoverOrigin((v) => (v === 'return' ? null : v))}
+          >
+            <div className="stat-label">Rentabilidad mensual</div>
+            <div className={clsx('stat-value', analytics.monthly.length > 0 && analytics.monthly[analytics.monthly.length - 1].retPct >= 0 ? 'positive' : 'negative')}>
+              {formatPercent(analytics.monthly.length > 0 ? analytics.monthly[analytics.monthly.length - 1].retPct : 0)}
+            </div>
+            <div className="stat-sub">Último mes · Hover para ver todos</div>
+            {hoverOrigin === 'return' && (
+              <div className="mini-popup wide" onClick={(e) => e.stopPropagation()}>
+                <div className="mini-popup-header">
+                  <strong>Rentabilidad por mes</strong>
+                  <button onClick={() => setHoverOrigin(null)}>×</button>
+                </div>
+                <div className="mini-popup-body">
+                  {analytics.monthly.length === 0 && <p className="muted">Sin datos</p>}
+                  {analytics.monthly.map((m) => (
+                    <div key={m.month} className="mini-row">
+                      <span>{monthLabel(m.month)}</span>
+                      <span className={clsx(m.retPct >= 0 ? 'positive' : 'negative')}>{formatPercent(m.retPct)}</span>
                     </div>
                   ))}
                 </div>

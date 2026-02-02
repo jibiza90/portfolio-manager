@@ -2849,18 +2849,22 @@ select {
 /* Mini popup for movements detail */
 .mini-popup {
   position: absolute;
-  top: calc(100% + 36px);
+  top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  width: 300px;
-  background: #fff;
+  z-index: 100;
+  background: white;
   border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.12);
-  z-index: 999999;
-  max-height: 320px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  min-width: 220px;
+  max-height: 300px;
   overflow: hidden;
   animation: popupFadeIn 0.15s ease;
   pointer-events: auto;
+}
+
+.mini-popup.wide {
+  min-width: 280px;
 }
 
 @keyframes popupFadeIn {
