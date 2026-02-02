@@ -1983,6 +1983,48 @@ input[type='number'] {
   padding: 24px 32px;
 }
 
+.client-dropdown.glass-card {
+  padding: 16px 20px;
+}
+
+/* Global client picker */
+.global-client-picker {
+  margin: 12px 0 20px 0;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 20px;
+  align-items: center;
+  border: 1px solid rgba(15, 109, 122, 0.12);
+  box-shadow: 0 12px 30px rgba(15, 109, 122, 0.12);
+  background: radial-gradient(circle at 10% 10%, rgba(15, 109, 122, 0.08), transparent 45%),
+              linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.96));
+}
+
+.global-client-picker h3 {
+  margin: 4px 0;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.global-client-picker .muted {
+  color: #475569;
+  margin: 0;
+}
+
+.global-client-picker .picker-control select {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 109, 122, 0.2);
+  background: white;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.global-client-picker .picker-control select:focus {
+  outline: 2px solid rgba(15, 109, 122, 0.2);
+  border-color: #0f6d7a;
+}
 
 .grid-card {
   padding: 24px;
