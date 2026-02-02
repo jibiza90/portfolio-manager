@@ -499,7 +499,12 @@ function monthLabel(isoMonth: string): string {
   return `${months[parseInt(month) - 1]} ${year}`;
 }
 
-function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focusDate: string; contacts: Record<string, ContactInfo> }) {
+function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
+  clientId: string;
+  focusDate: string;
+  contacts: Record<string, ContactInfo>;
+  setAlertMessage: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
   const { snapshot } = usePortfolioStore();
   const setClientMovement = usePortfolioStore((s) => s.setClientMovement);
   const clientRows = useMemo(() => snapshot.clientRowsById[clientId] || [], [snapshot, clientId]);
@@ -521,7 +526,6 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
   }, [focusDate]);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [hoverOrigin, setHoverOrigin] = useState<'inc' | 'dec' | 'profit' | 'return' | null>(null);
   const [tooltip, setTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
   const movementsRef = useRef<HTMLDivElement>(null);
@@ -1075,6 +1079,7 @@ export default function App() {
 
   const [activeView, setActiveView] = useState<string>(GENERAL_OPTION);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [contacts, setContacts] = useState<Record<string, ContactInfo>>(() => {
     // Try loading from localStorage first
     const raw = localStorage.getItem('portfolio-contacts');
@@ -1307,7 +1312,7 @@ export default function App() {
       ) : activeView === STATS_VIEW ? (
         <StatsView contacts={contacts} />
       ) : (
-        <ClientPanel clientId={activeView} focusDate={focusDate} contacts={contacts} />
+        <ClientPanel clientId={activeView} focusDate={focusDate} contacts={contacts} setAlertMessage={setAlertMessage} />
       )}
       {toast && <div className="toast">{toast}</div>}
     </div>
