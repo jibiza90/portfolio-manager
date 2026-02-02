@@ -1,9 +1,10 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { CLIENTS } from '../constants/clients';
 import { usePortfolioStore } from '../store/portfolio';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatPercent } from '../utils/format';
 import { YEAR } from '../utils/dates';
 import { saveReportLink } from '../services/reportLinks';
+import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 
 type ContactInfo = { name: string; surname: string; email: string; phone: string };
 type Movement = { iso: string; type: 'increment' | 'decrement'; amount: number; balance: number };
@@ -129,6 +130,10 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
     const ct = contacts[selectedClient];
     const displayName = ct && (ct.name || ct.surname) ? `${ct.name} ${ct.surname}`.trim() : client.name;
 
+    // Calcular TWR
+    const twrYtd = calculateTWR(yearRows);
+    const twrMonthly = calculateAllMonthsTWR(yearRows);
+
     // Último mes
     const monthlyWithData = monthlyStats.filter((m) => m.hasData && (m.profit !== 0 || m.profitPct !== 0 || m.endBalance !== 0));
     const lastMonth = monthlyWithData.length > 0 ? monthlyWithData[monthlyWithData.length - 1] : null;
@@ -149,7 +154,9 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       movements,
       patrimonioEvolution,
       beneficioUltimoMes,
-      rentabilidadUltimoMes
+      rentabilidadUltimoMes,
+      twrYtd: twrYtd.twr,
+      twrMonthly
     };
   }, [selectedClient, snapshot, contacts]);
 
@@ -250,7 +257,8 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       { label: 'Beneficio Total', value: formatCurrency(clientData.beneficioTotal), accent: true, positive: clientData.beneficioTotal >= 0 },
       { label: 'Rentabilidad Total', value: `${clientData.rentabilidad.toFixed(2)}%`, accent: true, positive: clientData.rentabilidad >= 0 },
       { label: 'Beneficio Último Mes', value: formatCurrency(clientData.beneficioUltimoMes), accent: true, positive: clientData.beneficioUltimoMes >= 0 },
-      { label: 'Rentab. Último Mes', value: `${clientData.rentabilidadUltimoMes.toFixed(2)}%`, accent: true, positive: clientData.rentabilidadUltimoMes >= 0 }
+      { label: 'Rentab. Último Mes', value: `${clientData.rentabilidadUltimoMes.toFixed(2)}%`, accent: true, positive: clientData.rentabilidadUltimoMes >= 0 },
+      { label: 'Rentabilidad TWR', value: `${(clientData.twrYtd * 100).toFixed(2)}%`, accent: true, positive: clientData.twrYtd >= 0 }
     ];
 
     kpis.forEach((kpi, i) => {
@@ -324,8 +332,11 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       const barMaxHeight = hasNegative ? chartHeight / 2 - 8 : chartHeight - 15;
       monthlyData.forEach((m, i) => {
         const barX = margin + 2 + i * (barWidth + 4);
-        const barHeight = (Math.abs(m.profitPct) / maxPct) * barMaxHeight;
-        if (m.hasData) {
+        // Altura mínima de 2mm para barras con datos
+        const rawHeight = (Math.abs(m.profitPct) / maxPct) * barMaxHeight;
+        const barHeight = m.hasData && m.profitPct !== 0 ? Math.max(2, rawHeight) : 0;
+        
+        if (m.hasData && barHeight > 0) {
           if (m.profitPct >= 0) {
             doc.setFillColor(5, 150, 105);
             doc.roundedRect(barX, baseY - barHeight, barWidth, barHeight, 1, 1, 'F');
@@ -588,6 +599,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       rentabilidad: clientData.rentabilidad ?? 0,
       beneficioUltimoMes: clientData.beneficioUltimoMes ?? 0,
       rentabilidadUltimoMes: clientData.rentabilidadUltimoMes ?? 0,
+      twrYtd: clientData.twrYtd ?? 0,
       monthlyStats: clientData.monthlyStats.map(m => ({
         month: m.month,
         profit: m.profit ?? 0,
@@ -902,6 +914,12 @@ Su gestor de inversiones`
                   <span className="summary-label">Rentab. Último Mes</span>
                   <span className={`summary-value ${clientData.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}`}>
                     {clientData.rentabilidadUltimoMes.toFixed(2)}%
+                  </span>
+                </div>
+                <div className="summary-card" title="Rentabilidad tiempo-pesada: elimina el efecto de aportes/retiros">
+                  <span className="summary-label">Rentabilidad TWR</span>
+                  <span className={`summary-value ${clientData.twrYtd >= 0 ? 'positive' : 'negative'}`}>
+                    {(clientData.twrYtd * 100).toFixed(2)}%
                   </span>
                 </div>
               </div>

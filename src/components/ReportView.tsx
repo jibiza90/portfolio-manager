@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { getReportByToken, ReportData } from '../services/reportLinks';
 import { formatCurrency } from '../utils/format';
+import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 
 interface ReportViewProps {
   token: string;
@@ -71,7 +72,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
       { label: 'Beneficio Total', value: formatCurrency(report.beneficioTotal) },
       { label: 'Rentabilidad', value: `${report.rentabilidad.toFixed(2)}%` },
       { label: 'Beneficio Último Mes', value: formatCurrency(report.beneficioUltimoMes) },
-      { label: 'Rentab. Último Mes', value: `${report.rentabilidadUltimoMes.toFixed(2)}%` }
+      { label: 'Rentab. Último Mes', value: `${report.rentabilidadUltimoMes.toFixed(2)}%` },
+      { label: 'Rentabilidad TWR', value: `${((report.twrYtd ?? 0) * 100).toFixed(2)}%` }
     ];
 
     doc.setFontSize(10);
@@ -195,7 +197,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
       <div className="informe-preview glass-card" ref={reportRef}>
         <div className="preview-header">
           <div className="preview-logo">
-            <span className="logo-icon">�</span>
+            <span className="logo-icon">📊</span>
             <span className="logo-text">Portfolio Manager</span>
           </div>
           <div className="preview-title">
@@ -248,6 +250,12 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
               <span className="summary-label">Rentab. Último Mes</span>
               <span className={`summary-value ${report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}`}>
                 {report.rentabilidadUltimoMes.toFixed(2)}%
+              </span>
+            </div>
+            <div className="summary-card" title="Rentabilidad tiempo-pesada: elimina el efecto de aportes/retiros">
+              <span className="summary-label">Rentabilidad TWR</span>
+              <span className={`summary-value ${(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                {((report.twrYtd ?? 0) * 100).toFixed(2)}%
               </span>
             </div>
           </div>
