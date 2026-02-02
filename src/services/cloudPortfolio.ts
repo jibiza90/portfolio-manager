@@ -18,10 +18,7 @@ if (!firebase.apps.length) {
 } else {
   app = firebase.app();
 }
-const firestore = app.firestore();
-// Configurar Firestore ANTES de usarlo
-firestore.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false });
-export const db = firestore;
+export const db = app.firestore();
 const portfolioRef = db.doc('portfolio/state');
 
 const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {} };
