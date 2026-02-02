@@ -956,46 +956,40 @@ export default function App() {
         </button>
       </div>
 
-      {!reportToken && (
-        <div className="global-client-picker glass-card fade-in">
-          <div>
-            <p className="eyebrow">Navegar</p>
-            <h3>Selector rápido de clientes</h3>
-            <p className="muted">Accede a cualquier cliente o vista desde cualquier página.</p>
-          </div>
-          <div className="picker-control">
-            <select
-              value={activeView}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (!v) return;
-                setActiveView(v);
-              }}
-            >
-              <option value={GENERAL_OPTION}>Vista general</option>
-              <option value={INFO_VIEW}>Info clientes</option>
-              <option value={COMISIONES_VIEW}>Comisiones</option>
-              <option value={INFORMES_VIEW}>Informes</option>
-              <optgroup label="Clientes">
-                {CLIENTS.map((c) => {
-                  const ct = contacts[c.id];
-                  const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
-                  return (
-                    <option key={c.id} value={c.id}>{label}</option>
-                  );
-                })}
-              </optgroup>
-            </select>
-          </div>
-        </div>
-      )}
-
       <div className="hero glass-card fade-in">
         <div>
           <div className="eyebrow">Gestión de cartera</div>
           <h1>Portfolio Manager</h1>
           <p className="hero-copy">Seguimiento diario de inversiones y rentabilidad por cliente.</p>
         </div>
+        {!reportToken && (
+          <div className="hero-side">
+            <div className="hero-client-picker">
+              <label htmlFor="hero-client-select">Seleccionar cliente</label>
+              <div className="select-wrapper">
+                <select
+                  id="hero-client-select"
+                  value={CLIENTS.find((c) => c.id === activeView)?.id || ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (!v) return;
+                    setActiveView(v);
+                  }}
+                >
+                  <option value="">Elige un cliente…</option>
+                  {CLIENTS.map((c) => {
+                    const ct = contacts[c.id];
+                    const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
+                    return (
+                      <option key={c.id} value={c.id}>{label}</option>
+                    );
+                  })}
+                </select>
+              </div>
+              <p className="hero-helper">Visible en todas las vistas. Cambia rápido entre clientes.</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {reportToken ? (

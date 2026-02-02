@@ -1988,42 +1988,51 @@ input[type='number'] {
 }
 
 /* Global client picker */
-.global-client-picker {
-  margin: 12px 0 20px 0;
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 20px;
+
+/* Hero client picker (global, visible en todas las vistas) */
+.hero-side {
+  display: flex;
   align-items: center;
-  border: 1px solid rgba(15, 109, 122, 0.12);
-  box-shadow: 0 12px 30px rgba(15, 109, 122, 0.12);
-  background: radial-gradient(circle at 10% 10%, rgba(15, 109, 122, 0.08), transparent 45%),
-              linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.96));
+  gap: 12px;
 }
 
-.global-client-picker h3 {
-  margin: 4px 0;
-  font-size: 20px;
+.hero-client-picker {
+  min-width: 280px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(15,109,122,0.18), rgba(99,102,241,0.14));
+  box-shadow: 0 12px 28px rgba(15, 109, 122, 0.18);
+  border: 1px solid rgba(15, 109, 122, 0.35);
+}
+
+.hero-client-picker label {
+  display: block;
+  font-weight: 700;
   color: #0f172a;
+  margin-bottom: 8px;
 }
 
-.global-client-picker .muted {
-  color: #475569;
-  margin: 0;
-}
-
-.global-client-picker .picker-control select {
+.hero-client-picker .select-wrapper select {
   width: 100%;
   padding: 12px 14px;
   font-size: 14px;
   border-radius: 10px;
-  border: 1px solid rgba(15, 109, 122, 0.2);
+  border: 1px solid rgba(15, 109, 122, 0.3);
   background: white;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  font-weight: 600;
 }
 
-.global-client-picker .picker-control select:focus {
-  outline: 2px solid rgba(15, 109, 122, 0.2);
+.hero-client-picker .select-wrapper select:focus {
+  outline: 2px solid rgba(15, 109, 122, 0.25);
   border-color: #0f6d7a;
+}
+
+.hero-client-picker .hero-helper {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #0f172a;
+  font-weight: 600;
 }
 
 .grid-card {
