@@ -14,6 +14,8 @@ const firebaseConfig = {
 
 const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
 const db = app.firestore();
+// Forzar long-polling y evitar streaming bloqueado por extensiones/redes
+db.settings({ experimentalForceLongPolling: true });
 const portfolioRef = db.doc('portfolio/state');
 
 const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {} };
