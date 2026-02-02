@@ -2829,8 +2829,14 @@ select {
   color: #334155;
 }
 
-.movements-table .net-cell {
-  font-weight: 700;
+.movement.stats-view .stat-card {
+  min-height: 100px;
+}
+
+.stats-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .movements-table .table-row.empty {

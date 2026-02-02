@@ -1,8 +1,5 @@
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/firestore';
-
-// Reutilizar la instancia de Firebase ya inicializada
-const db = firebase.firestore();
+// Importar db desde cloudPortfolio para asegurar que Firebase está inicializado con settings
+import { db } from './cloudPortfolio';
 
 export interface ReportData {
   clientId: string;

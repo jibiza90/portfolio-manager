@@ -12,10 +12,15 @@ const firebaseConfig = {
   appId: '1:286094409889:web:74337eabc0e336a02930e0'
 };
 
-const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
-const db = app.firestore();
-// Forzar long-polling y evitar streaming bloqueado por extensiones/redes
-db.settings({ experimentalForceLongPolling: true });
+let app: firebase.app.App;
+if (!firebase.apps.length) {
+  app = firebase.initializeApp(firebaseConfig);
+  // Configurar Firestore ANTES de usarlo
+  app.firestore().settings({ experimentalForceLongPolling: true, merge: true });
+} else {
+  app = firebase.app();
+}
+export const db = app.firestore();
 const portfolioRef = db.doc('portfolio/state');
 
 const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {} };
