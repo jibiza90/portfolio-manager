@@ -13,6 +13,7 @@ import { ReportView } from './components/ReportView';
 const INFO_VIEW = 'INFO_VIEW';
 const COMISIONES_VIEW = 'COMISIONES_VIEW';
 const INFORMES_VIEW = 'INFORMES_VIEW';
+const STATS_VIEW = 'STATS_VIEW';
 type ContactInfo = { name: string; surname: string; email: string; phone: string };
 
 function EditableCell({ value, onChange, isPercent = false }: { value: number | undefined; onChange: (v: number | undefined) => void; isPercent?: boolean }) {
@@ -28,6 +29,164 @@ function EditableCell({ value, onChange, isPercent = false }: { value: number | 
   };
   if (editing) return <input ref={ref} className="cell-input" value={text} onChange={(e) => setText(e.target.value)} onBlur={save} onKeyDown={(e) => { if (e.key === 'Enter') save(); else if (e.key === 'Escape') setEditing(false); }} />;
   return <span className="cell-content" onClick={() => setEditing(true)}>{isPercent ? formatPercent(value) : formatNumberEs(value)}</span>;
+}
+
+function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
+  const { snapshot } = usePortfolioStore();
+  const dailyRows = snapshot.dailyRows;
+
+  const lastWithData = useMemo(() => [...dailyRows].reverse().find((r) => r.final !== undefined || r.profit !== undefined), [dailyRows]);
+  const currentMonth = lastWithData?.iso?.slice(0, 7);
+
+  const aggregates = useMemo(() => {
+    const todayProfitPct = lastWithData?.profitPct ?? 0;
+    const ytdProfit = snapshot.totals.ytdProfit ?? 0;
+    const ytdReturnPct = snapshot.totals.ytdReturnPct ?? 0;
+
+    let mtdProfit = 0;
+    let mtdReturnBase = 0;
+    let mtdReturn = 0;
+    const lastMonthIso = currentMonth;
+
+    const movementsToday = { inc: 0, dec: 0, countInc: 0, countDec: 0 };
+    const movementsWeek = { inc: 0, dec: 0, countInc: 0, countDec: 0 };
+    const todayIso = lastWithData?.iso;
+    const todayIndex = todayIso ? dailyRows.findIndex((r) => r.iso === todayIso) : -1;
+
+    dailyRows.forEach((r, idx) => {
+      const month = r.iso.slice(0, 7);
+      if (lastMonthIso && month === lastMonthIso && r.profit !== undefined) {
+        mtdProfit += r.profit;
+        const base = r.initial ?? 0;
+        if (base !== 0) {
+          mtdReturnBase += base;
+          mtdReturn += r.profit;
+        }
+      }
+      if (todayIndex !== -1 && idx >= todayIndex - 6 && idx <= todayIndex) {
+        if (r.increments !== undefined && r.increments !== 0) {
+          movementsWeek.inc += r.increments;
+          movementsWeek.countInc += 1;
+        }
+        if (r.decrements !== undefined && r.decrements !== 0) {
+          movementsWeek.dec += r.decrements;
+          movementsWeek.countDec += 1;
+        }
+      }
+    });
+
+    if (todayIndex !== -1) {
+      const r = dailyRows[todayIndex];
+      if (r.increments !== undefined && r.increments !== 0) {
+        movementsToday.inc = r.increments;
+        movementsToday.countInc = 1;
+      }
+      if (r.decrements !== undefined && r.decrements !== 0) {
+        movementsToday.dec = r.decrements;
+        movementsToday.countDec = 1;
+      }
+    }
+
+    const mtdReturnPct = mtdReturnBase !== 0 ? mtdReturn / mtdReturnBase : 0;
+
+    // Alertas
+    const clientsNoEmail = Object.entries(contacts).filter(([, c]) => !c.email).length;
+    const missingClosures = dailyRows.filter((r) => r.final === undefined && r.iso <= (lastWithData?.iso ?? '')).length;
+    const extremeReturns = dailyRows.filter((r) => r.profitPct !== undefined && Math.abs(r.profitPct) > 0.05).length;
+
+    // Evolución patrimonio por mes (último final de cada mes)
+    const byMonth = new Map<string, number>();
+    dailyRows.forEach((r) => {
+      if (r.final !== undefined) {
+        const month = r.iso.slice(0, 7);
+        byMonth.set(month, r.final);
+      }
+    });
+    const evolution = Array.from(byMonth.entries()).sort(([a], [b]) => (a > b ? 1 : -1)).map(([month, balance]) => ({ month, balance }));
+
+    return {
+      todayProfitPct,
+      mtdProfit,
+      mtdReturnPct,
+      ytdProfit,
+      ytdReturnPct,
+      movementsToday,
+      movementsWeek,
+      clientsNoEmail,
+      missingClosures,
+      extremeReturns,
+      evolution
+    };
+  }, [dailyRows, lastWithData, currentMonth, contacts, snapshot.totals]);
+
+  return (
+    <div className="stats-view">
+      <div className="analytics-grid two-row" style={{ marginBottom: 16 }}>
+        <div className="stat-card glow">
+          <div className="stat-label">Patrimonio total</div>
+          <div className="stat-value">{formatCurrency(snapshot.totals.assets)}</div>
+          <div className="stat-sub">YTD: {formatPercent(aggregates.ytdReturnPct)}</div>
+        </div>
+        <div className="stat-card glow">
+          <div className="stat-label">Beneficio YTD</div>
+          <div className={clsx('stat-value', aggregates.ytdProfit >= 0 ? 'positive' : 'negative')}>{formatCurrency(aggregates.ytdProfit)}</div>
+          <div className="stat-sub">Retorno YTD: {formatPercent(aggregates.ytdReturnPct)}</div>
+        </div>
+        <div className="stat-card glow">
+          <div className="stat-label">Rentabilidad diaria</div>
+          <div className={clsx('stat-value', aggregates.todayProfitPct >= 0 ? 'positive' : 'negative')}>{formatPercent(aggregates.todayProfitPct)}</div>
+          <div className="stat-sub">MTD: {formatPercent(aggregates.mtdReturnPct)}</div>
+        </div>
+        <div className="stat-card glow">
+          <div className="stat-label">Beneficio MTD</div>
+          <div className={clsx('stat-value', aggregates.mtdProfit >= 0 ? 'positive' : 'negative')}>{formatCurrency(aggregates.mtdProfit)}</div>
+          <div className="stat-sub">Mes: {currentMonth || '—'}</div>
+        </div>
+      </div>
+
+      <div className="analytics-grid two-row" style={{ marginBottom: 16 }}>
+        <div className="stat-card glow">
+          <div className="stat-label">Movimientos hoy</div>
+          <div className="stat-sub">Incr: {formatCurrency(aggregates.movementsToday.inc)} · Decr: {formatCurrency(aggregates.movementsToday.dec)}</div>
+        </div>
+        <div className="stat-card glow">
+          <div className="stat-label">Movimientos 7 días</div>
+          <div className="stat-sub">Incr: {formatCurrency(aggregates.movementsWeek.inc)} · Decr: {formatCurrency(aggregates.movementsWeek.dec)}</div>
+        </div>
+        <div className="stat-card glow">
+          <div className="stat-label">Alertas datos</div>
+          <div className="stat-sub">Sin cierre: {aggregates.missingClosures}</div>
+          <div className="stat-sub">Rentabilidad extrema: {aggregates.extremeReturns}</div>
+        </div>
+        <div className="stat-card glow">
+          <div className="stat-label">Contactos</div>
+          <div className="stat-sub">Clientes sin email: {aggregates.clientsNoEmail}</div>
+        </div>
+      </div>
+
+      <div className="chart-card">
+        <div className="chart-card-header">
+          <div>
+            <p className="eyebrow">Evolución patrimonio</p>
+            <h4>Saldo fin de mes</h4>
+          </div>
+        </div>
+        <div className="data-table compact">
+          <div className="table-header">
+            <div>Mes</div>
+            <div>Saldo</div>
+          </div>
+          {aggregates.evolution.map((e) => (
+            <div key={e.month} className="table-row">
+              <div>{monthLabel(e.month)}</div>
+              <div>{formatCurrency(e.balance)}</div>
+            </div>
+          ))}
+          {aggregates.evolution.length === 0 && <div className="table-row"><div>Sin datos</div></div>}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ModernBarChart({
@@ -1050,6 +1209,12 @@ export default function App() {
         >
           Informes
         </button>
+        <button
+          className={clsx('side-link', activeView === STATS_VIEW && 'active')}
+          onClick={() => { setActiveView(STATS_VIEW); setMenuOpen(false); }}
+        >
+          Estadísticas
+        </button>
       </div>
 
       <div className="hero glass-card fade-in">
@@ -1108,6 +1273,8 @@ export default function App() {
         />
       ) : activeView === INFORMES_VIEW ? (
         <InformesView contacts={contacts} />
+      ) : activeView === STATS_VIEW ? (
+        <StatsView contacts={contacts} />
       ) : (
         <ClientPanel clientId={activeView} focusDate={focusDate} contacts={contacts} />
       )}
@@ -1234,6 +1401,8 @@ function InfoClientes({ contacts, setContacts, guarantees, setGuarantees }: { co
           <input
             type="text"
             className="info-search"
+            id="info-search-clientes"
+            name="info-search-clientes"
             placeholder="Buscar cliente..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -1342,19 +1511,45 @@ function InfoClientes({ contacts, setContacts, guarantees, setGuarantees }: { co
           <div className="info-form">
             <label>
               <span>Nombre</span>
-              <input value={contact.name} onChange={(e) => { updateField('name', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }} />
+              <input
+                id="contact-name"
+                name="contact-name"
+                autoComplete="name"
+                value={contact.name}
+                onChange={(e) => { updateField('name', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+              />
             </label>
             <label>
               <span>Apellidos</span>
-              <input value={contact.surname} onChange={(e) => { updateField('surname', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }} />
+              <input
+                id="contact-surname"
+                name="contact-surname"
+                autoComplete="family-name"
+                value={contact.surname}
+                onChange={(e) => { updateField('surname', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+              />
             </label>
             <label>
               <span>Email</span>
-              <input type="email" value={contact.email} onChange={(e) => { updateField('email', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }} />
+              <input
+                id="contact-email"
+                name="contact-email"
+                type="email"
+                autoComplete="email"
+                value={contact.email}
+                onChange={(e) => { updateField('email', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+              />
             </label>
             <label>
               <span>Teléfono</span>
-              <input type="tel" value={contact.phone} onChange={(e) => { updateField('phone', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }} />
+              <input
+                id="contact-phone"
+                name="contact-phone"
+                type="tel"
+                autoComplete="tel"
+                value={contact.phone}
+                onChange={(e) => { updateField('phone', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+              />
             </label>
           </div>
         </section>
@@ -1366,6 +1561,8 @@ function InfoClientes({ contacts, setContacts, guarantees, setGuarantees }: { co
             <label>
               <span>Garantía inicial</span>
               <input
+                id="guarantee-inicial"
+                name="guarantee-inicial"
                 type="number"
                 value={Number.isNaN(guaranteeInitial) ? '' : guaranteeInitial}
                 onChange={(e) => {
@@ -1377,7 +1574,7 @@ function InfoClientes({ contacts, setContacts, guarantees, setGuarantees }: { co
             </label>
             <label>
               <span>Garantía actual</span>
-              <input value={formatCurrency(guaranteeActual)} disabled />
+              <input id="guarantee-actual" name="guarantee-actual" value={formatCurrency(guaranteeActual)} disabled />
             </label>
           </div>
         </section>
