@@ -590,7 +590,7 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
             </div>
             <div className="stat-sub">Último mes · Hover para ver todos</div>
             {hoverOrigin === 'profit' && (
-              <div className="mini-popup wide" onClick={(e) => e.stopPropagation()}>
+              <div className="mini-popup wide popup-left" onClick={(e) => e.stopPropagation()}>
                 <div className="mini-popup-header">
                   <strong>Beneficio por mes</strong>
                   <button onClick={() => setHoverOrigin(null)}>×</button>
@@ -619,7 +619,7 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
             </div>
             <div className="stat-sub">Último mes · Hover para ver todos</div>
             {hoverOrigin === 'return' && (
-              <div className="mini-popup wide" onClick={(e) => e.stopPropagation()}>
+              <div className="mini-popup wide popup-center" onClick={(e) => e.stopPropagation()}>
                 <div className="mini-popup-header">
                   <strong>Rentabilidad por mes</strong>
                   <button onClick={() => setHoverOrigin(null)}>×</button>
