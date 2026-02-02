@@ -286,7 +286,19 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const { snapshot } = usePortfolioStore();
   const setDayFinal = usePortfolioStore((s) => s.setDayFinal);
   const rows = useMemo(() => [...snapshot.dailyRows], [snapshot.dailyRows]);
-  const setRef = (_iso: string) => (_el: HTMLTableRowElement | null) => {};
+  const tableRef = useRef<HTMLTableElement>(null);
+  const lastScrolledRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!tableRef.current || !focusDate) return;
+    if (lastScrolledRef.current === focusDate) return;
+    const row = tableRef.current.querySelector<HTMLTableRowElement>(`tr[data-iso='${focusDate}']`);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      lastScrolledRef.current = focusDate;
+    }
+  }, [focusDate]);
+
   const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '—' : formatPercent(v));
   return (
@@ -300,11 +312,11 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
         <span className="badge">{rows.length} días</span>
       </div>
       <div className="table-scroll">
-        <table>
+        <table ref={tableRef}>
           <thead><tr><th>Fecha</th><th>Incr.</th><th>Decr.</th><th>Inicial</th><th>Final</th><th>Beneficio</th><th>%</th><th>Acumulado</th></tr></thead>
           <tbody>
             {rows.map(r => (
-              <tr key={r.iso} ref={setRef(r.iso)} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')} onClick={() => setFocusDate(r.iso)}>
+              <tr key={r.iso} data-iso={r.iso} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')} onClick={() => setFocusDate(r.iso)}>
                 <td><span>{r.label}</span><small>{r.weekday}</small></td>
                 <td>{showValue(r.increments)}</td>
                 <td>{showValue(r.decrements)}</td>
