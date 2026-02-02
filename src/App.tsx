@@ -454,6 +454,14 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
     };
   }, [yearRows]);
 
+  const latestProfitMonth = useMemo(() => {
+    return [...analytics.monthly].reverse().find((m) => (m.profit ?? 0) !== 0 || (m.finalEnd ?? 0) !== 0 || (m.baseStart ?? 0) !== 0) || analytics.monthly[analytics.monthly.length - 1];
+  }, [analytics.monthly]);
+
+  const latestReturnMonth = useMemo(() => {
+    return [...analytics.monthly].reverse().find((m) => (m.retPct ?? 0) !== 0) || analytics.monthly[analytics.monthly.length - 1];
+  }, [analytics.monthly]);
+
   const handleMouseMove = (e: React.MouseEvent, text: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setTooltip({ x: rect.left + rect.width / 2, y: rect.top - 8, text, visible: true });
@@ -569,8 +577,8 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
             onMouseLeave={() => setHoverOrigin((v) => (v === 'profit' ? null : v))}
           >
             <div className="stat-label">Beneficio mensual</div>
-            <div className={clsx('stat-value', analytics.monthly.length > 0 && analytics.monthly[analytics.monthly.length - 1].profit >= 0 ? 'positive' : 'negative')}>
-              {formatCurrency(analytics.monthly.length > 0 ? analytics.monthly[analytics.monthly.length - 1].profit : 0)}
+            <div className={clsx('stat-value', (latestProfitMonth?.profit ?? 0) >= 0 ? 'positive' : 'negative')}>
+              {formatCurrency(latestProfitMonth?.profit ?? 0)}
             </div>
             <div className="stat-sub">Último mes · Hover para ver todos</div>
             {hoverOrigin === 'profit' && (
@@ -598,8 +606,8 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
             onMouseLeave={() => setHoverOrigin((v) => (v === 'return' ? null : v))}
           >
             <div className="stat-label">Rentabilidad mensual</div>
-            <div className={clsx('stat-value', analytics.monthly.length > 0 && analytics.monthly[analytics.monthly.length - 1].retPct >= 0 ? 'positive' : 'negative')}>
-              {formatPercent(analytics.monthly.length > 0 ? analytics.monthly[analytics.monthly.length - 1].retPct : 0)}
+            <div className={clsx('stat-value', (latestReturnMonth?.retPct ?? 0) >= 0 ? 'positive' : 'negative')}>
+              {formatPercent(latestReturnMonth?.retPct ?? 0)}
             </div>
             <div className="stat-sub">Último mes · Hover para ver todos</div>
             {hoverOrigin === 'return' && (
