@@ -1583,19 +1583,21 @@ input[type='number'] {
 }
 
 /* Bar Chart */
- .chart-container {
+.chart-container {
   margin-bottom: 28px;
   padding: 24px;
   background: linear-gradient(135deg, #f8fafc, #f1f5f9);
   border-radius: 12px;
+  overflow: visible;
 }
 
 .bar-chart {
   display: flex;
   align-items: flex-end;
-  justify-content: space-around;
+  justify-content: space-between;
   height: 160px;
-  gap: 10px;
+  gap: 6px;
+  padding: 0 8px;
 }
 
 .bar-chart.positive-only .bar-container {
@@ -1612,7 +1614,7 @@ input[type='number'] {
   flex-direction: column;
   align-items: center;
   flex: 1;
-  max-width: 60px;
+  min-width: 50px;
 }
 
 .bar-container {
@@ -1907,7 +1909,7 @@ input[type='number'] {
 .line-chart {
   width: 100%;
   height: auto;
-  max-height: 200px;
+  min-height: 180px;
 }
 
 /* Toast notification */
