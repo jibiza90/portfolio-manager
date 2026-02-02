@@ -454,13 +454,8 @@ function ClientPanel({ clientId, focusDate, contacts }: { clientId: string; focu
     };
   }, [yearRows]);
 
-  const latestProfitMonth = useMemo(() => {
-    return [...analytics.monthly].reverse().find((m) => (m.profit ?? 0) !== 0 || (m.finalEnd ?? 0) !== 0 || (m.baseStart ?? 0) !== 0) || analytics.monthly[analytics.monthly.length - 1];
-  }, [analytics.monthly]);
-
-  const latestReturnMonth = useMemo(() => {
-    return [...analytics.monthly].reverse().find((m) => (m.retPct ?? 0) !== 0) || analytics.monthly[analytics.monthly.length - 1];
-  }, [analytics.monthly]);
+  const latestProfitMonth = analytics.monthly.length > 0 ? analytics.monthly[analytics.monthly.length - 1] : undefined;
+  const latestReturnMonth = analytics.monthly.length > 0 ? analytics.monthly[analytics.monthly.length - 1] : undefined;
 
   const handleMouseMove = (e: React.MouseEvent, text: string) => {
     const rect = e.currentTarget.getBoundingClientRect();

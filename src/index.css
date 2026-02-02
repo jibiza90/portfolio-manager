@@ -2861,10 +2861,12 @@ select {
   overflow: hidden;
   animation: popupFadeIn 0.15s ease;
   pointer-events: auto;
+  max-width: min(360px, 90vw);
 }
 
 .mini-popup.wide {
   min-width: 280px;
+  max-width: min(420px, 94vw);
 }
 
 @keyframes popupFadeIn {
