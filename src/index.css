@@ -1596,9 +1596,9 @@ input[type='number'] {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: 140px;
-  gap: 6px;
-  padding: 16px 8px 8px;
+  height: 180px;
+  gap: 8px;
+  padding: 18px 10px 12px;
 }
 
 .bar-chart.positive-only .bar-container {
@@ -1620,7 +1620,7 @@ input[type='number'] {
 
 .bar-container {
   width: 100%;
-  height: 120px;
+  height: 150px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
