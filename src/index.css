@@ -1596,9 +1596,9 @@ input[type='number'] {
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  height: 280px;
+  height: 260px;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 24px 12px 20px;
 }
 
 .bar-chart.positive-only .bar-container {
@@ -1613,8 +1613,9 @@ input[type='number'] {
 .bar-wrapper {
   flex: 1;
   min-width: 44px;
+  height: 100%;
   display: grid;
-  grid-template-rows: 28px 1fr 28px;
+  grid-template-rows: 24px 1fr 22px;
   align-items: center;
   justify-items: center;
 }
@@ -1625,6 +1626,7 @@ input[type='number'] {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  position: relative;
 }
 
 .bar-chart.with-negative .bar-container {
