@@ -110,7 +110,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
 
       doc.setFont('helvetica', 'normal');
       report.monthlyStats.forEach((m, i) => {
-        if (!m.hasData) return;
+        if (!m.hasData || m.profit === null || m.profitPct === null || m.endBalance === null) return;
         checkNewPage(8);
         if (i % 2 === 0) {
           doc.setFillColor(248, 250, 252);
@@ -118,8 +118,17 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
         }
         doc.setTextColor(60, 60, 60);
         doc.text(m.month, margin + 4, y);
-        doc.setTextColor(m.profit >= 0 ? 5 : 220, m.profit >= 0 ? 150 : 38, m.profit >= 0 ? 105 : 38);
+        if (m.profit >= 0) {
+          doc.setTextColor(15, 109, 122);
+        } else {
+          doc.setTextColor(220, 38, 38);
+        }
         doc.text(formatCurrency(m.profit), margin + 40, y);
+        if (m.profitPct >= 0) {
+          doc.setTextColor(15, 109, 122);
+        } else {
+          doc.setTextColor(220, 38, 38);
+        }
         doc.text(`${m.profitPct.toFixed(2)}%`, margin + 80, y);
         doc.setTextColor(15, 23, 42);
         doc.text(formatCurrency(m.endBalance), margin + 110, y);
