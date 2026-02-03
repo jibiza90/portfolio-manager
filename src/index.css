@@ -1952,6 +1952,50 @@ input[type='number'] {
   font-weight: 600;
 }
 
+/* Modern horizontal bar chart for patrimonio */
+.modern-bars-horizontal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.modern-bar-horizontal-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modern-bar-horizontal-label {
+  width: 60px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.modern-bar-horizontal-container {
+  flex: 1;
+  height: 16px;
+  background: rgba(15,109,122,0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modern-bar-horizontal {
+  height: 100%;
+  background: linear-gradient(90deg, #0f6d7a, #0da5b3);
+  border-radius: 8px;
+  transition: width 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.modern-bar-horizontal-value {
+  width: 80px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f6d7a;
+  text-align: right;
+}
+
 /* New patrimonio chart styles */
 .chart-header {
   display: flex;

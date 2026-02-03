@@ -986,76 +986,25 @@ Su gestor de inversiones`
             {clientData.patrimonioEvolution.length > 0 && (
               <div className="preview-patrimonio">
                 <h4>Evolución del Patrimonio {YEAR}</h4>
-                <div className="chart-container-modern patrimonio-shell">
-                  {(() => {
-                    const data = clientData.patrimonioEvolution;
-                    const valid = data.filter((d) => d.balance !== undefined);
-                    if (valid.length === 0) return null;
-                    const maxBal = Math.max(...valid.map((d) => d.balance as number), 1);
-                    const minBal = Math.min(...valid.map((d) => d.balance as number), 0);
-                    const range = maxBal - minBal || 1;
-
-                    const chartWidth = 460;
-                    const chartHeight = 140;
-                    const startX = 80;
-                    const startY = 180;
-
-                    const points = data.map((d, i) => ({
-                      x: startX + (i * chartWidth) / 11,
-                      y: d.balance !== undefined ? startY - (((d.balance as number) - minBal) / range) * chartHeight : null,
-                      balance: d.balance,
-                      month: d.month,
-                      hasData: d.balance !== undefined
-                    }));
-
-                    let pathD = '';
-                    points.forEach((p, i) => {
-                      if (!p.hasData) return;
-                      if (pathD === '') {
-                        pathD = `M ${p.x} ${p.y}`;
-                      } else {
-                        pathD += ` L ${p.x} ${p.y}`;
-                      }
-                    });
-
-                    const validPoints = points.filter((p) => p.hasData);
-                    const areaD = validPoints.length > 1
-                      ? `${pathD} L ${validPoints[validPoints.length - 1].x} ${startY + 20} L ${validPoints[0].x} ${startY + 20} Z`
-                      : '';
-
+                <div className="modern-bars-horizontal">
+                  {clientData.patrimonioEvolution.map((d, i) => {
+                    const balance = d.balance;
+                    if (balance === undefined) return null;
+                    const maxBal = Math.max(...clientData.patrimonioEvolution.filter(x => x.balance !== undefined).map(x => x.balance as number), 1);
+                    const widthPct = (balance / maxBal) * 100;
                     return (
-                      <>
-                        <div className="patrimonio-legend">€</div>
-                        <svg className="patrimonio-line-chart" viewBox="0 0 580 240" preserveAspectRatio="xMidYMid meet">
-                          <defs>
-                            <linearGradient id="patrimonioArea" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#0f6d7a" stopOpacity="0.2" />
-                              <stop offset="100%" stopColor="#0f6d7a" stopOpacity="0.02" />
-                            </linearGradient>
-                          </defs>
-                          {areaD && <path d={areaD} fill="url(#patrimonioArea)" />}
-                          {pathD && (
-                            <path d={pathD} fill="none" stroke="#0f6d7a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                          )}
-                          {points.map((p, i) =>
-                            p.hasData && p.y !== null ? (
-                              <g key={i}>
-                                <circle cx={p.x} cy={p.y} r="5" fill="#0f6d7a" stroke="white" strokeWidth="2" />
-                                <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="9" fill="#0f6d7a" fontWeight="600">
-                                  {formatCurrency(p.balance as number)}
-                                </text>
-                              </g>
-                            ) : null
-                          )}
-                          {points.map((p, i) => (
-                            <text key={`month-${i}`} x={p.x} y={startY + 35} textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="500">
-                              {p.month}
-                            </text>
-                          ))}
-                        </svg>
-                      </>
+                      <div key={i} className="modern-bar-horizontal-wrapper">
+                        <span className="modern-bar-horizontal-label">{d.month}</span>
+                        <div className="modern-bar-horizontal-container">
+                          <div 
+                            className="modern-bar-horizontal" 
+                            style={{ width: `${widthPct}%` }}
+                          />
+                        </div>
+                        <span className="modern-bar-horizontal-value">{formatCurrency(balance)}</span>
+                      </div>
                     );
-                  })()}
+                  })}
                 </div>
               </div>
             )}
