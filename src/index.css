@@ -1597,8 +1597,9 @@ input[type='number'] {
   align-items: flex-end;
   justify-content: space-between;
   height: 200px;
-  gap: 8px;
-  padding: 20px 12px 14px;
+  gap: 6px;
+  padding: 40px 8px 24px;
+  position: relative;
 }
 
 .bar-chart.positive-only .bar-container {
@@ -1615,16 +1616,20 @@ input[type='number'] {
   flex-direction: column;
   align-items: center;
   flex: 1;
-  min-width: 50px;
+  min-width: 44px;
+  height: 136px;
+  justify-content: flex-end;
+  position: relative;
 }
 
 .bar-container {
   width: 100%;
-  height: 170px;
+  height: 160px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   position: relative;
+  flex-shrink: 0;
 }
 
 .bar-chart.with-negative .bar-container {
@@ -1670,9 +1675,12 @@ input[type='number'] {
 }
 
 .bar-label {
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 11px;
   color: #64748b;
-  margin-top: 10px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -1890,11 +1898,17 @@ input[type='number'] {
 
 /* Bar value label */
 .bar-value {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 10px;
   font-weight: 600;
   color: #0f6d7a;
-  margin-bottom: 6px;
   white-space: nowrap;
+  background: rgba(255,255,255,0.9);
+  padding: 2px 4px;
+  border-radius: 4px;
 }
 
 /* Patrimonio line chart */

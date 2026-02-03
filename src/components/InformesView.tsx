@@ -936,7 +936,7 @@ Su gestor de inversiones`
                       <div className={`bar-chart ${hasNegative ? 'with-negative' : 'positive-only'}`}>
                         {clientData.monthlyStats.map((m) => {
                           // Limitar altura para que no invada título/labels
-                          const heightPct = m.hasData ? Math.min(75, (Math.abs(m.profitPct) / maxPct) * 100) : 4;
+                          const heightPct = m.hasData ? Math.min(70, (Math.abs(m.profitPct) / maxPct) * 100) : 4;
                           return (
                             <div key={m.month} className="bar-wrapper">
                               <span className="bar-value">{m.hasData ? `${m.profitPct.toFixed(1)}%` : '-'}</span>
