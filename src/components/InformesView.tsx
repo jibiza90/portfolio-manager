@@ -988,7 +988,7 @@ Su gestor de inversiones`
                 <h4>Evolución del Patrimonio {YEAR}</h4>
                 <div className="modern-line-chart-container">
                   <div className="chart-legend">€</div>
-                  <svg className="modern-line-chart" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet">
+                  <svg className="modern-line-chart" viewBox="0 0 560 260" preserveAspectRatio="xMidYMid meet">
                     {(() => {
                       const data = clientData.patrimonioEvolution;
                       const valid = data.filter((d) => d.balance !== undefined);
@@ -999,8 +999,8 @@ Su gestor de inversiones`
                       
                       const validWithIndex = data.map((d, i) => ({ ...d, idx: i })).filter((d) => d.balance !== undefined);
                       const points = validWithIndex.map((d) => ({
-                        x: 40 + (d.idx / 11) * 440,
-                        y: 180 - (((d.balance as number) - minBal) / range) * 140,
+                        x: 50 + (d.idx / 11) * 460,
+                        y: 190 - (((d.balance as number) - minBal) / range) * 150,
                         balance: d.balance as number,
                         month: d.month
                       }));
@@ -1017,7 +1017,7 @@ Su gestor de inversiones`
                         return `${acc} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p.x} ${p.y}`;
                       }, '');
                       
-                      const areaD = points.length > 1 ? `${smoothPath} L ${points[points.length - 1].x} 220 L ${points[0].x} 220 Z` : '';
+                      const areaD = points.length > 1 ? `${smoothPath} L ${points[points.length - 1].x} 240 L ${points[0].x} 240 Z` : '';
                       
                       return (
                         <>
@@ -1045,7 +1045,7 @@ Su gestor de inversiones`
                             </g>
                           ))}
                           {data.map((d, i) => (
-                            <text key={i} x={40 + (i / 11) * 440} y="220" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="500">
+                            <text key={i} x={50 + (i / 11) * 460} y="240" textAnchor="middle" fontSize="11" fill="#64748b" fontWeight="500">
                               {d.month}
                             </text>
                           ))}
