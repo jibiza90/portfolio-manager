@@ -264,21 +264,21 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
         {report.monthlyStats.length > 0 && (
           <div className="preview-monthly">
             <h4>Rendimiento Mensual (%)</h4>
-            <div className="chart-container">
-              <div className={`bar-chart ${hasNegative ? 'with-negative' : 'positive-only'}`}>
+            <div className="chart-container-modern">
+              <div className="modern-bar-chart">
                 {report.monthlyStats.map((m) => {
-                  const heightPct = m.hasData ? (Math.abs(m.profitPct) / maxPct) * 50 : 1;
+                  const heightPct = m.hasData ? Math.min(75, (Math.abs(m.profitPct) / maxPct) * 100) : 4;
                   const isNeg = m.profitPct < 0;
                   return (
-                    <div key={m.month} className="bar-wrapper">
-                      <span className="bar-value">{m.hasData ? `${m.profitPct.toFixed(1)}%` : '-'}</span>
-                      <div className="bar-container">
+                    <div key={m.month} className="modern-bar-wrapper">
+                      <span className="modern-bar-value">{m.hasData ? `${m.profitPct.toFixed(2)}%` : '-'}</span>
+                      <div className="modern-bar-container">
                         <div
-                          className={`bar ${m.hasData ? (isNeg ? 'negative' : 'positive') : ''}`}
+                          className={`modern-bar ${m.hasData ? (isNeg ? 'modern-bar-negative' : 'modern-bar-positive') : 'modern-bar-empty'}`}
                           style={{ height: `${heightPct}%` }}
                         />
                       </div>
-                      <span className="bar-label">{m.month}</span>
+                      <span className="modern-bar-label">{m.month}</span>
                     </div>
                   );
                 })}
@@ -314,47 +314,25 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
         {validPatrimonio.length > 0 && (
           <div className="preview-patrimonio">
             <h4>Evolución del Patrimonio</h4>
-            <div className="line-chart-container">
-              <svg className="line-chart" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid meet">
-                {(() => {
-                  const validWithIndex = patrimonioData.map((d, i) => ({ ...d, idx: i })).filter((d) => d.balance !== undefined && d.balance > 0);
-                  const points = validWithIndex.map((d) => ({
-                    x: 30 + (d.idx / 11) * 340,
-                    y: 120 - (((d.balance as number) - minBal) / range) * 100,
-                    balance: d.balance as number,
-                    month: d.month
-                  }));
-                  
-                  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                  const areaD = points.length > 1 ? `${pathD} L ${points[points.length - 1].x} 120 L ${points[0].x} 120 Z` : '';
-                  
-                  return (
-                    <>
-                      <defs>
-                        <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#0f6d7a" stopOpacity="0.3" />
-                          <stop offset="100%" stopColor="#0f6d7a" stopOpacity="0.05" />
-                        </linearGradient>
-                      </defs>
-                      {areaD && <path d={areaD} fill="url(#areaGradient)" />}
-                      <path d={pathD} fill="none" stroke="#0f6d7a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      {points.map((p, i) => (
-                        <g key={i}>
-                          <circle cx={p.x} cy={p.y} r="4" fill="#0f6d7a" />
-                          <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize="8" fill="#0f6d7a" fontWeight="600">
-                            {formatCurrency(p.balance)}
-                          </text>
-                        </g>
-                      ))}
-                      {patrimonioData.map((d, i) => (
-                        <text key={i} x={30 + (i / 11) * 340} y="150" textAnchor="middle" fontSize="9" fill="#64748b">
-                          {d.month}
-                        </text>
-                      ))}
-                    </>
-                  );
-                })()}
-              </svg>
+            <div className="modern-bars-horizontal">
+              {patrimonioData.map((d, i) => {
+                const balance = d.balance;
+                if (balance === undefined) return null;
+                const maxBal = Math.max(...patrimonioData.filter(x => x.balance !== undefined).map(x => x.balance as number), 1);
+                const widthPct = (balance / maxBal) * 100;
+                return (
+                  <div key={i} className="modern-bar-horizontal-wrapper">
+                    <span className="modern-bar-horizontal-label">{d.month}</span>
+                    <div className="modern-bar-horizontal-container">
+                      <div 
+                        className="modern-bar-horizontal" 
+                        style={{ width: `${widthPct}%` }}
+                      />
+                    </div>
+                    <span className="modern-bar-horizontal-value">{formatCurrency(balance)}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
