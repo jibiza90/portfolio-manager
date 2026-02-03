@@ -1672,6 +1672,21 @@ input[type='number'] {
   position: relative;
 }
 
+.modern-bar-positive {
+  background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+  box-shadow: 0 2px 8px rgba(14,165,233,0.25);
+}
+
+.modern-bar-negative {
+  background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
+  box-shadow: 0 2px 8px rgba(220,38,38,0.25);
+}
+
+.modern-bar-empty {
+  background: linear-gradient(180deg, #e5e7eb 0%, #d1d5db 100%);
+  opacity: 0.5;
+}
+
 .bar.positive {
   background: linear-gradient(180deg, #10b981, #059669);
   align-self: flex-end;

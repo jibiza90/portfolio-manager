@@ -179,8 +179,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
   if (!report) return null;
 
   const expiresIn = Math.max(0, Math.floor((report.expiresAt - Date.now()) / (1000 * 60 * 60)));
-  const hasNegative = report.monthlyStats.some((m) => m.hasData && m.profitPct < 0);
-  const maxPct = Math.max(...report.monthlyStats.map((s) => Math.abs(s.profitPct)), 1);
+  const monthlyWithData = report.monthlyStats.filter(
+    (m) => m.hasData && m.profit !== null && m.profitPct !== null && m.endBalance !== null
+  );
+  const hasNegative = monthlyWithData.some((m) => m.profitPct < 0);
+  const maxPct = Math.max(...monthlyWithData.map((s) => Math.abs(s.profitPct)), 1);
 
   // Patrimonio chart data
   const patrimonioData = report.patrimonioEvolution;
@@ -270,12 +273,12 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
           </div>
         </div>
 
-        {report.monthlyStats.length > 0 && (
+        {monthlyWithData.length > 0 && (
           <div className="preview-monthly">
             <h4>Rendimiento Mensual (%)</h4>
             <div className="chart-container-modern">
               <div className="modern-bar-chart">
-                {report.monthlyStats.map((m) => {
+                {monthlyWithData.map((m) => {
                   const heightPct = m.hasData ? Math.min(75, (Math.abs(m.profitPct) / maxPct) * 100) : 4;
                   const isNeg = m.profitPct < 0;
                   return (
@@ -303,16 +306,16 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
                 </tr>
               </thead>
               <tbody>
-                {report.monthlyStats.map((m) => (
+                {monthlyWithData.map((m) => (
                   <tr key={m.month}>
-                    <td>{m.hasData ? m.month : ''}</td>
-                    <td className={`text-right ${m.hasData && m.profit >= 0 ? 'positive' : m.hasData && m.profit < 0 ? 'negative' : ''}`}>
-                      {m.hasData ? formatCurrency(m.profit) : ''}
+                    <td>{m.month}</td>
+                    <td className={`text-right ${m.profit >= 0 ? 'positive' : 'negative'}`}>
+                      {formatCurrency(m.profit)}
                     </td>
-                    <td className={`text-right ${m.hasData && m.profitPct >= 0 ? 'positive' : m.hasData && m.profitPct < 0 ? 'negative' : ''}`}>
-                      {m.hasData ? `${m.profitPct.toFixed(2)}%` : ''}
+                    <td className={`text-right ${m.profitPct >= 0 ? 'positive' : 'negative'}`}>
+                      {`${m.profitPct.toFixed(2)}%`}
                     </td>
-                    <td className="text-right">{m.hasData ? formatCurrency(m.endBalance) : ''}</td>
+                    <td className="text-right">{formatCurrency(m.endBalance)}</td>
                   </tr>
                 ))}
               </tbody>
