@@ -262,7 +262,7 @@ function ModernBarChart({
   const maxPos = Math.max(0, ...data.map((d) => d.value));
   const minNeg = Math.min(0, ...data.map((d) => d.value));
   const range = Math.max(1, maxPos - minNeg);
-  const zeroOffset = hasNegative ? (maxPos / range) * 100 : 100; // % from top where zero line is
+  const zeroOffset = hasNegative ? Math.min(90, Math.max(10, (maxPos / range) * 100)) : 100; // % from top where zero line is
   const barWidth = Math.min(60, Math.max(30, 600 / data.length));
 
   // Y-axis ticks
@@ -274,7 +274,7 @@ function ModernBarChart({
   }
 
   return (
-    <div className="modern-chart-container" style={{ height, padding: '20px 24px 40px 60px', position: 'relative' }}>
+    <div className="modern-chart-container" style={{ height, padding: '32px 28px 52px 68px', position: 'relative' }}>
       {/* Y-axis */}
       <div className="modern-y-axis">
         {ticks.map((t, i) => (
@@ -296,7 +296,7 @@ function ModernBarChart({
       {/* Bars */}
       <div className="modern-bars" style={{ position: 'relative', height: '100%' }}>
         {data.map((d, i) => {
-          const heightPct = (Math.abs(d.value) / range) * 100;
+          const heightPct = Math.min(85, (Math.abs(d.value) / range) * 100); // cap to avoid overflow
           const isNeg = d.value < 0;
           const barStyle: React.CSSProperties = {
             width: barWidth,
