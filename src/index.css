@@ -1594,11 +1594,12 @@ input[type='number'] {
 
 .bar-chart {
   display: flex;
-  align-items: stretch;
+  align-items: flex-end;
   justify-content: space-between;
-  height: 320px;
-  gap: 4px;
-  padding: 0 8px;
+  height: 220px;
+  gap: 6px;
+  padding: 40px 12px 40px;
+  position: relative;
 }
 
 .bar-chart.positive-only .bar-container {
@@ -1611,22 +1612,21 @@ input[type='number'] {
 }
 
 .bar-wrapper {
-  display: grid;
-  grid-template-rows: 24px 1fr 24px;
   flex: 1;
-  min-width: 40px;
-  align-items: center;
-  justify-items: center;
+  min-width: 44px;
+  height: 140px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .bar-container {
   width: 100%;
   height: 100%;
-  min-height: 180px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  position: relative;
 }
 
 .bar-chart.with-negative .bar-container {
@@ -1672,11 +1672,14 @@ input[type='number'] {
 }
 
 .bar-label {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 11px;
   color: #64748b;
   font-weight: 500;
   white-space: nowrap;
-  align-self: start;
 }
 
 /* Multi-select section */
@@ -1892,11 +1895,18 @@ input[type='number'] {
 
 /* Bar value label */
 .bar-value {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 10px;
   font-weight: 600;
   color: #0f6d7a;
   white-space: nowrap;
-  align-self: end;
+  background: rgba(255,255,255,0.95);
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 5;
 }
 
 /* Patrimonio line chart */
