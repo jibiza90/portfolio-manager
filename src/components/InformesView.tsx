@@ -946,7 +946,7 @@ Su gestor de inversiones`
                                 />
                               </div>
                               <div className="modern-bar-info">
-                                <span className="modern-bar-value">{m.hasData ? `${m.profitPct.toFixed(1)}%` : '-'}</span>
+                                <span className="modern-bar-value">{m.hasData ? `${m.profitPct.toFixed(2)}%` : '-'}</span>
                                 <span className="modern-bar-label">{m.month}</span>
                               </div>
                             </div>
@@ -1005,8 +1005,19 @@ Su gestor de inversiones`
                         month: d.month
                       }));
                       
-                      const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                      const areaD = points.length > 1 ? `${pathD} L ${points[points.length - 1].x} 220 L ${points[0].x} 220 Z` : '';
+                      // Smooth curve using quadratic bezier curves
+                      const smoothPath = points.reduce((acc, p, i) => {
+                        if (i === 0) return `M ${p.x} ${p.y}`;
+                        if (i === 1) return `${acc} L ${p.x} ${p.y}`;
+                        const prev = points[i - 1];
+                        const cp1x = prev.x + (p.x - prev.x) * 0.5;
+                        const cp1y = prev.y;
+                        const cp2x = prev.x + (p.x - prev.x) * 0.5;
+                        const cp2y = p.y;
+                        return `${acc} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p.x} ${p.y}`;
+                      }, '');
+                      
+                      const areaD = points.length > 1 ? `${smoothPath} L ${points[points.length - 1].x} 220 L ${points[0].x} 220 Z` : '';
                       
                       return (
                         <>
@@ -1024,11 +1035,11 @@ Su gestor de inversiones`
                             </filter>
                           </defs>
                           {areaD && <path d={areaD} fill="url(#modernAreaGradient)" />}
-                          <path d={pathD} fill="none" stroke="#0f6d7a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" />
+                          <path d={smoothPath} fill="none" stroke="#0f6d7a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" />
                           {points.map((p, i) => (
                             <g key={i}>
-                              <circle cx={p.x} cy={p.y} r="4.5" fill="#0f6d7a" stroke="white" strokeWidth="1.5" />
-                              <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="9" fill="#0f6d7a" fontWeight="600">
+                              <circle cx={p.x} cy={p.y} r="5" fill="#0f6d7a" stroke="white" strokeWidth="2" />
+                              <text x={p.x} y={p.y - 14} textAnchor="middle" fontSize="10" fill="#0f6d7a" fontWeight="600">
                                 {formatCurrency(p.balance)}
                               </text>
                             </g>
