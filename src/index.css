@@ -1592,22 +1592,31 @@ input[type='number'] {
   overflow: visible;
 }
 
+.chart-container-modern {
+  padding: 24px 28px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+  border: 1px solid rgba(15,109,122,0.08);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(15,109,122,0.06);
+  margin-bottom: 32px;
+}
+
 .bar-chart {
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  height: 260px;
-  gap: 6px;
-  padding: 24px 12px 20px;
+  height: 300px;
+  gap: 8px;
+  padding: 32px 12px 32px;
 }
 
-.bar-chart.positive-only .bar-container {
+.modern-bar-chart {
+  display: flex;
   align-items: flex-end;
-}
-
-.bar-chart.with-negative .bar-container {
-  flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
+  height: 240px;
+  gap: 10px;
+  padding: 20px 16px 24px;
 }
 
 .bar-wrapper {
@@ -1615,9 +1624,18 @@ input[type='number'] {
   min-width: 44px;
   height: 100%;
   display: grid;
-  grid-template-rows: 24px 1fr 22px;
+  grid-template-rows: 28px 1fr 28px;
   align-items: center;
   justify-items: center;
+}
+
+.modern-bar-wrapper {
+  flex: 1;
+  min-width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
 .bar-container {
@@ -1629,18 +1647,13 @@ input[type='number'] {
   position: relative;
 }
 
-.bar-chart.with-negative .bar-container {
-  align-items: stretch;
-}
-
-.bar-chart.with-negative .bar-container::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 1px;
-  background: rgba(100, 116, 139, 0.3);
+.modern-bar-container {
+  width: 100%;
+  height: 160px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
 }
 
 .bar {
@@ -1650,15 +1663,63 @@ input[type='number'] {
   min-height: 2px;
 }
 
+.modern-bar {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+}
+
 .bar.positive {
   background: linear-gradient(180deg, #10b981, #059669);
   align-self: flex-end;
 }
 
-.bar.negative {
-  background: linear-gradient(0deg, #ef4444, #dc2626);
-  border-radius: 0 0 4px 4px;
-  align-self: flex-start;
+.modern-bar.positive {
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.modern-bar:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.modern-bar.negative {
+  background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.modern-bar.empty {
+  background: linear-gradient(180deg, #e5e7eb 0%, #d1d5db 100%);
+  opacity: 0.5;
+}
+
+.modern-bar-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 48px;
+}
+
+.modern-bar-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  background: rgba(255,255,255,0.9);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(15,109,122,0.1);
+}
+
+.modern-bar-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .bar-chart.with-negative .bar.positive {
@@ -1890,13 +1951,33 @@ input[type='number'] {
   font-weight: 600;
 }
 
-/* Bar value label */
-.bar-value {
-  font-size: 10px;
+/* Modern line chart styles */
+.modern-line-chart-container {
+  padding: 24px 28px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+  border: 1px solid rgba(15,109,122,0.08);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(15,109,122,0.06);
+  position: relative;
+  margin-bottom: 32px;
+}
+
+.chart-legend {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 13px;
   font-weight: 600;
   color: #0f6d7a;
-  white-space: nowrap;
-  align-self: end;
+  background: rgba(255,255,255,0.9);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(15,109,122,0.1);
+}
+
+.modern-line-chart {
+  width: 100%;
+  height: 240px;
 }
 
 /* Patrimonio line chart */

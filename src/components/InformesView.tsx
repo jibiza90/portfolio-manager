@@ -927,26 +927,28 @@ Su gestor de inversiones`
 
             {clientData.monthlyStats.length > 0 && (
               <div className="preview-monthly">
-                <h4>Rendimiento Mensual (%) {YEAR}</h4>
-                <div className="chart-container">
+                <h4>Rendimiento Mensual {YEAR}</h4>
+                <div className="chart-container-modern">
                   {(() => {
                     const hasNegative = clientData.monthlyStats.some((m) => m.hasData && m.profitPct < 0);
                     const maxPct = Math.max(...clientData.monthlyStats.map((s) => Math.abs(s.profitPct)), 1);
                     return (
-                      <div className={`bar-chart ${hasNegative ? 'with-negative' : 'positive-only'}`}>
-                        {clientData.monthlyStats.map((m) => {
-                          // Limitar altura para que no invada título/labels
-                          const heightPct = m.hasData ? Math.min(70, (Math.abs(m.profitPct) / maxPct) * 100) : 4;
+                      <div className={`modern-bar-chart ${hasNegative ? 'with-negative' : 'positive-only'}`}>
+                        {clientData.monthlyStats.map((m, idx) => {
+                          const heightPct = m.hasData ? Math.min(75, (Math.abs(m.profitPct) / maxPct) * 100) : 2;
                           return (
-                            <div key={m.month} className="bar-wrapper">
-                              <span className="bar-value">{m.hasData ? `${m.profitPct.toFixed(1)}%` : '-'}</span>
-                              <div className="bar-container">
+                            <div key={m.month} className="modern-bar-wrapper">
+                              <div className="modern-bar-container">
                                 <div
-                                  className={`bar ${m.hasData ? (m.profitPct >= 0 ? 'positive' : 'negative') : ''}`}
+                                  className={`modern-bar ${m.hasData ? (m.profitPct >= 0 ? 'positive' : 'negative') : 'empty'}`}
                                   style={{ height: `${heightPct}%` }}
+                                  title={`${m.month}: ${m.hasData ? `${m.profitPct.toFixed(2)}%` : 'Sin datos'}`}
                                 />
                               </div>
-                              <span className="bar-label">{m.month}</span>
+                              <div className="modern-bar-info">
+                                <span className="modern-bar-value">{m.hasData ? `${m.profitPct.toFixed(1)}%` : '-'}</span>
+                                <span className="modern-bar-label">{m.month}</span>
+                              </div>
                             </div>
                           );
                         })}
@@ -984,8 +986,9 @@ Su gestor de inversiones`
             {clientData.patrimonioEvolution.length > 0 && (
               <div className="preview-patrimonio">
                 <h4>Evolución del Patrimonio {YEAR}</h4>
-                <div className="line-chart-container">
-                  <svg className="line-chart" viewBox="0 0 500 220" preserveAspectRatio="xMidYMid meet">
+                <div className="modern-line-chart-container">
+                  <div className="chart-legend">€</div>
+                  <svg className="modern-line-chart" viewBox="0 0 520 240" preserveAspectRatio="xMidYMid meet">
                     {(() => {
                       const data = clientData.patrimonioEvolution;
                       const valid = data.filter((d) => d.balance !== undefined);
@@ -994,38 +997,44 @@ Su gestor de inversiones`
                       const minBal = Math.min(...valid.map((d) => d.balance as number), 0);
                       const range = maxBal - minBal || 1;
                       
-                      // Calcular puntos solo para meses con datos, pero posicionados en su lugar correcto (12 meses)
                       const validWithIndex = data.map((d, i) => ({ ...d, idx: i })).filter((d) => d.balance !== undefined);
                       const points = validWithIndex.map((d) => ({
-                        x: 35 + (d.idx / 11) * 420,
-                        y: 160 - (((d.balance as number) - minBal) / range) * 120,
+                        x: 40 + (d.idx / 11) * 440,
+                        y: 180 - (((d.balance as number) - minBal) / range) * 140,
                         balance: d.balance as number,
                         month: d.month
                       }));
                       
                       const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                      const areaD = points.length > 1 ? `${pathD} L ${points[points.length - 1].x} 200 L ${points[0].x} 200 Z` : '';
+                      const areaD = points.length > 1 ? `${pathD} L ${points[points.length - 1].x} 220 L ${points[0].x} 220 Z` : '';
                       
                       return (
                         <>
                           <defs>
-                            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#0f6d7a" stopOpacity="0.3" />
-                              <stop offset="100%" stopColor="#0f6d7a" stopOpacity="0.05" />
+                            <linearGradient id="modernAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#0f6d7a" stopOpacity="0.25" />
+                              <stop offset="100%" stopColor="#0f6d7a" stopOpacity="0.02" />
                             </linearGradient>
+                            <filter id="glow">
+                              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                              <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                              </feMerge>
+                            </filter>
                           </defs>
-                          {areaD && <path d={areaD} fill="url(#areaGradient)" />}
-                          <path d={pathD} fill="none" stroke="#0f6d7a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          {areaD && <path d={areaD} fill="url(#modernAreaGradient)" />}
+                          <path d={pathD} fill="none" stroke="#0f6d7a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" />
                           {points.map((p, i) => (
                             <g key={i}>
-                              <circle cx={p.x} cy={p.y} r="4" fill="#0f6d7a" />
-                              <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize="8" fill="#0f6d7a" fontWeight="600">
+                              <circle cx={p.x} cy={p.y} r="4.5" fill="#0f6d7a" stroke="white" strokeWidth="1.5" />
+                              <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="9" fill="#0f6d7a" fontWeight="600">
                                 {formatCurrency(p.balance)}
                               </text>
                             </g>
                           ))}
                           {data.map((d, i) => (
-                            <text key={i} x={35 + (i / 11) * 420} y="200" textAnchor="middle" fontSize="10" fill="#64748b">
+                            <text key={i} x={40 + (i / 11) * 440} y="220" textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="500">
                               {d.month}
                             </text>
                           ))}
