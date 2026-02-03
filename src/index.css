@@ -1596,9 +1596,9 @@ input[type='number'] {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: 220px;
+  height: 260px;
   gap: 6px;
-  padding: 40px 12px 40px;
+  padding: 48px 12px 48px;
   position: relative;
 }
 
