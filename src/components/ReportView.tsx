@@ -296,14 +296,14 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
               <tbody>
                 {report.monthlyStats.map((m) => (
                   <tr key={m.month}>
-                    <td>{m.hasData ? m.month : '-'}</td>
-                    <td className={`text-right ${m.hasData ? (m.profit >= 0 ? 'positive' : 'negative') : ''}`}>
-                      {m.hasData ? formatCurrency(m.profit) : '-'}
+                    <td>{m.hasData ? m.month : ''}</td>
+                    <td className={`text-right ${m.hasData && m.profit >= 0 ? 'positive' : m.hasData && m.profit < 0 ? 'negative' : ''}`}>
+                      {m.hasData ? formatCurrency(m.profit) : ''}
                     </td>
-                    <td className={`text-right ${m.hasData ? (m.profitPct >= 0 ? 'positive' : 'negative') : ''}`}>
-                      {m.hasData ? `${m.profitPct.toFixed(2)}%` : '-'}
+                    <td className={`text-right ${m.hasData && m.profitPct >= 0 ? 'positive' : m.hasData && m.profitPct < 0 ? 'negative' : ''}`}>
+                      {m.hasData ? `${m.profitPct.toFixed(2)}%` : ''}
                     </td>
-                    <td className="text-right">{m.hasData ? formatCurrency(m.endBalance) : '-'}</td>
+                    <td className="text-right">{m.hasData ? formatCurrency(m.endBalance) : ''}</td>
                   </tr>
                 ))}
               </tbody>
