@@ -986,73 +986,38 @@ Su gestor de inversiones`
             {clientData.patrimonioEvolution.length > 0 && (
               <div className="preview-patrimonio">
                 <h4>Evolución del Patrimonio {YEAR}</h4>
-                <div className="modern-line-chart-container">
-                  <div className="chart-legend">€</div>
-                  <svg className="modern-line-chart" viewBox="0 0 560 260" preserveAspectRatio="xMidYMid meet">
-                    {(() => {
-                      const data = clientData.patrimonioEvolution;
-                      const valid = data.filter((d) => d.balance !== undefined);
-                      if (valid.length === 0) return null;
-                      const maxBal = Math.max(...valid.map((d) => d.balance as number), 1);
-                      const minBal = Math.min(...valid.map((d) => d.balance as number), 0);
-                      const range = maxBal - minBal || 1;
-                      
-                      const validWithIndex = data.map((d, i) => ({ ...d, idx: i })).filter((d) => d.balance !== undefined);
-                      const points = validWithIndex.map((d) => ({
-                        x: 50 + (d.idx / 11) * 460,
-                        y: 190 - (((d.balance as number) - minBal) / range) * 150,
-                        balance: d.balance as number,
-                        month: d.month
-                      }));
-                      
-                      // Smooth curve using quadratic bezier curves
-                      const smoothPath = points.reduce((acc, p, i) => {
-                        if (i === 0) return `M ${p.x} ${p.y}`;
-                        if (i === 1) return `${acc} L ${p.x} ${p.y}`;
-                        const prev = points[i - 1];
-                        const cp1x = prev.x + (p.x - prev.x) * 0.5;
-                        const cp1y = prev.y;
-                        const cp2x = prev.x + (p.x - prev.x) * 0.5;
-                        const cp2y = p.y;
-                        return `${acc} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p.x} ${p.y}`;
-                      }, '');
-                      
-                      const areaD = points.length > 1 ? `${smoothPath} L ${points[points.length - 1].x} 240 L ${points[0].x} 240 Z` : '';
-                      
-                      return (
-                        <>
-                          <defs>
-                            <linearGradient id="modernAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#0f6d7a" stopOpacity="0.25" />
-                              <stop offset="100%" stopColor="#0f6d7a" stopOpacity="0.02" />
-                            </linearGradient>
-                            <filter id="glow">
-                              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                              <feMerge>
-                                <feMergeNode in="coloredBlur"/>
-                                <feMergeNode in="SourceGraphic"/>
-                              </feMerge>
-                            </filter>
-                          </defs>
-                          {areaD && <path d={areaD} fill="url(#modernAreaGradient)" />}
-                          <path d={smoothPath} fill="none" stroke="#0f6d7a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" />
-                          {points.map((p, i) => (
-                            <g key={i}>
-                              <circle cx={p.x} cy={p.y} r="5" fill="#0f6d7a" stroke="white" strokeWidth="2" />
-                              <text x={p.x} y={p.y - 14} textAnchor="middle" fontSize="10" fill="#0f6d7a" fontWeight="600">
-                                {formatCurrency(p.balance)}
-                              </text>
-                            </g>
-                          ))}
-                          {data.map((d, i) => (
-                            <text key={i} x={50 + (i / 11) * 460} y="240" textAnchor="middle" fontSize="11" fill="#64748b" fontWeight="500">
-                              {d.month}
-                            </text>
-                          ))}
-                        </>
-                      );
-                    })()}
-                  </svg>
+                <div className="chart-container-modern">
+                  <div className="chart-header">
+                    <div className="chart-legend">€</div>
+                  </div>
+                  <div className="patrimonio-chart">
+                    <div className="chart-area">
+                      <div className="chart-line">
+                        {clientData.patrimonioEvolution.map((d, i) => {
+                          const balance = d.balance;
+                          const hasData = balance !== undefined;
+                          if (!hasData) return null;
+                          
+                          const maxBal = Math.max(...clientData.patrimonioEvolution.filter(x => x.balance !== undefined).map(x => x.balance as number), 1);
+                          const minBal = Math.min(...clientData.patrimonioEvolution.filter(x => x.balance !== undefined).map(x => x.balance as number), 0);
+                          const range = maxBal - minBal || 1;
+                          const height = ((balance - minBal) / range) * 100;
+                          
+                          return (
+                            <div key={i} className="chart-point" style={{ left: `${(i / 11) * 100}%`, bottom: `${height}%` }}>
+                              <div className="point-dot"></div>
+                              <div className="point-label">{formatCurrency(balance)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="chart-months">
+                      {clientData.patrimonioEvolution.map((d, i) => (
+                        <div key={i} className="month-label">{d.month}</div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

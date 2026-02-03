@@ -1951,33 +1951,83 @@ input[type='number'] {
   font-weight: 600;
 }
 
-/* Modern line chart styles */
-.modern-line-chart-container {
-  padding: 24px 28px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
-  border: 1px solid rgba(15,109,122,0.08);
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(15,109,122,0.06);
-  position: relative;
-  margin-bottom: 32px;
+/* New patrimonio chart styles */
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
-.chart-legend {
+.patrimonio-chart {
+  position: relative;
+  height: 280px;
+  background: linear-gradient(180deg, rgba(15,109,122,0.03) 0%, rgba(15,109,122,0.01) 100%);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.chart-area {
+  position: relative;
+  height: 220px;
+  margin-bottom: 20px;
+}
+
+.chart-line {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.chart-point {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #0f6d7a;
-  background: rgba(255,255,255,0.9);
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.point-dot {
+  width: 12px;
+  height: 12px;
+  background: #0f6d7a;
+  border: 3px solid white;
+  border-radius: 50%;
+  margin: 0 auto;
+  box-shadow: 0 2px 8px rgba(15,109,122,0.3);
+  transition: transform 0.2s ease;
+}
+
+.chart-point:hover .point-dot {
+  transform: scale(1.2);
+}
+
+.point-label {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.95);
   padding: 4px 8px;
   border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f6d7a;
   border: 1px solid rgba(15,109,122,0.1);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.modern-line-chart {
-  width: 100%;
-  height: 240px;
+.chart-months {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.month-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  text-align: center;
+  flex: 1;
 }
 
 /* Patrimonio line chart */
