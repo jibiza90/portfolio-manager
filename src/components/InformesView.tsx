@@ -995,78 +995,61 @@ Su gestor de inversiones`
                     const minBal = Math.min(...valid.map((d) => d.balance as number), 0);
                     const range = maxBal - minBal || 1;
 
+                    const chartWidth = 460;
+                    const chartHeight = 140;
+                    const startX = 80;
+                    const startY = 180;
+
                     const points = data.map((d, i) => ({
-                      x: 70 + (i / 11) * 440,
-                      y: 200 - (((d.balance as number) - minBal) / range) * 140,
+                      x: startX + (i * chartWidth) / 11,
+                      y: d.balance !== undefined ? startY - (((d.balance as number) - minBal) / range) * chartHeight : null,
                       balance: d.balance,
                       month: d.month,
                       hasData: d.balance !== undefined
                     }));
 
-                    const smoothPath = points.reduce((acc, p, i) => {
-                      if (!p.hasData) return acc;
-                      if (i === 0) return `M ${p.x} ${p.y}`;
-                      const prevIndex = points.slice(0, i).reverse().find((pt) => pt.hasData);
-                      if (!prevIndex) return acc;
-                      const prev = prevIndex;
-                      const cp1x = prev.x + (p.x - prev.x) * 0.5;
-                      const cp1y = prev.y;
-                      const cp2x = prev.x + (p.x - prev.x) * 0.5;
-                      const cp2y = p.y;
-                      return acc ? `${acc} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p.x} ${p.y}` : `M ${p.x} ${p.y}`;
-                    }, '');
+                    let pathD = '';
+                    points.forEach((p, i) => {
+                      if (!p.hasData) return;
+                      if (pathD === '') {
+                        pathD = `M ${p.x} ${p.y}`;
+                      } else {
+                        pathD += ` L ${p.x} ${p.y}`;
+                      }
+                    });
 
-                    const areaD = smoothPath
-                      ? `${smoothPath} L ${points
-                          .slice()
-                          .reverse()
-                          .find((p) => p.hasData)!.x} 240 L ${points.find((p) => p.hasData)!.x} 240 Z`
+                    const validPoints = points.filter((p) => p.hasData);
+                    const areaD = validPoints.length > 1
+                      ? `${pathD} L ${validPoints[validPoints.length - 1].x} ${startY + 20} L ${validPoints[0].x} ${startY + 20} Z`
                       : '';
-
-                    const ticks = [maxBal, maxBal - range * 0.33, maxBal - range * 0.66, minBal];
 
                     return (
                       <>
                         <div className="patrimonio-legend">€</div>
-                        <svg className="patrimonio-line-chart" viewBox="0 0 560 260" preserveAspectRatio="xMidYMid meet">
+                        <svg className="patrimonio-line-chart" viewBox="0 0 580 240" preserveAspectRatio="xMidYMid meet">
                           <defs>
                             <linearGradient id="patrimonioArea" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#0f6d7a" stopOpacity="0.18" />
+                              <stop offset="0%" stopColor="#0f6d7a" stopOpacity="0.2" />
                               <stop offset="100%" stopColor="#0f6d7a" stopOpacity="0.02" />
                             </linearGradient>
                           </defs>
                           {areaD && <path d={areaD} fill="url(#patrimonioArea)" />}
-                          {smoothPath && (
-                            <path
-                              d={smoothPath}
-                              fill="none"
-                              stroke="#0f6d7a"
-                              strokeWidth={2.5}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
+                          {pathD && (
+                            <path d={pathD} fill="none" stroke="#0f6d7a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                           )}
                           {points.map((p, i) =>
-                            p.hasData ? (
+                            p.hasData && p.y !== null ? (
                               <g key={i}>
-                                <circle cx={p.x} cy={p.y} r={4.5} fill="#0f6d7a" stroke="white" strokeWidth={1.5} />
-                                <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize={9} fill="#0f6d7a" fontWeight="600">
+                                <circle cx={p.x} cy={p.y} r="5" fill="#0f6d7a" stroke="white" strokeWidth="2" />
+                                <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="9" fill="#0f6d7a" fontWeight="600">
                                   {formatCurrency(p.balance as number)}
                                 </text>
                               </g>
                             ) : null
                           )}
-                          {ticks.map((t, idx) => (
-                            <g key={idx}>
-                              <text x={20} y={60 + idx * 50} fontSize={10} fill="#475569" fontWeight="600">
-                                {formatCurrency(t)}
-                              </text>
-                              <line x1={60} x2={70} y1={60 + idx * 50} y2={60 + idx * 50} stroke="#cbd5e1" strokeWidth={1} />
-                            </g>
-                          ))}
-                          {data.map((d, i) => (
-                            <text key={i} x={70 + (i / 11) * 440} y={230} textAnchor="middle" fontSize={10} fill="#64748b" fontWeight="500">
-                              {d.month}
+                          {points.map((p, i) => (
+                            <text key={`month-${i}`} x={p.x} y={startY + 35} textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="500">
+                              {p.month}
                             </text>
                           ))}
                         </svg>
