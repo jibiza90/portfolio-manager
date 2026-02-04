@@ -1012,30 +1012,32 @@ Su gestor de inversiones`
             {clientData.movements.length > 0 && (
               <div className="preview-movements">
                 <h4>Historial de Movimientos</h4>
-                <table className="movements-table">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Tipo</th>
-                      <th className="text-right">Importe</th>
-                      <th className="text-right">Saldo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clientData.movements.map((mov, i) => (
-                      <tr key={`${mov.iso}-${i}`}>
-                        <td>{formatDate(mov.iso)}</td>
-                        <td className={mov.type === 'increment' ? 'positive' : 'negative'}>
-                          {mov.type === 'increment' ? 'Aportación' : 'Retirada'}
-                        </td>
-                        <td className={`text-right ${mov.type === 'increment' ? 'positive' : 'negative'}`}>
-                          {mov.type === 'increment' ? '+' : '-'}{formatCurrency(mov.amount)}
-                        </td>
-                        <td className="text-right">{formatCurrency(mov.balance)}</td>
+                <div className="table-scroll">
+                  <table className="movements-table">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th className="text-right">Importe</th>
+                        <th className="text-right">Saldo</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {clientData.movements.map((mov, i) => (
+                        <tr key={`${mov.iso}-${i}`}>
+                          <td>{formatDate(mov.iso)}</td>
+                          <td className={mov.type === 'increment' ? 'positive' : 'negative'}>
+                            {mov.type === 'increment' ? 'Aportación' : 'Retirada'}
+                          </td>
+                          <td className={`text-right ${mov.type === 'increment' ? 'positive' : 'negative'}`}>
+                            {mov.type === 'increment' ? '+' : '-'}{formatCurrency(mov.amount)}
+                          </td>
+                          <td className="text-right">{formatCurrency(mov.balance)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
