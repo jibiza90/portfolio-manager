@@ -504,7 +504,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const setDayFinal = usePortfolioStore((s) => s.setDayFinal);
   const rows = useMemo(() => [...snapshot.dailyRows], [snapshot.dailyRows]);
   const tableRef = useRef<HTMLTableElement>(null);
-  const lastScrolledRef = useRef<string | null>(null);
+  const initialScrollDoneRef = useRef(false);
   const movementByDate = useMemo(() => {
     const map: Record<string, { clientId: string; name: string; increment?: number; decrement?: number }[]> = {};
     CLIENTS.forEach((c) => {
@@ -523,7 +523,16 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const [movementPopup, setMovementPopup] = useState<{ iso: string; items: { clientId: string; name: string; increment?: number; decrement?: number }[] } | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Scroll manual: no auto scroll on focus change
+  // Scroll inicial sólo una vez al cargar para ir al día en foco
+  useEffect(() => {
+    if (initialScrollDoneRef.current) return;
+    if (!tableRef.current || !focusDate) return;
+    const row = tableRef.current.querySelector<HTMLTableRowElement>(`tr[data-iso='${focusDate}']`);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      initialScrollDoneRef.current = true;
+    }
+  }, [focusDate]);
 
   const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '—' : formatPercent(v));
@@ -632,9 +641,18 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     [clientRows]
   );
   const tableRef = useRef<HTMLTableElement>(null);
-  const lastScrolledRef = useRef<string | null>(null);
+  const initialScrollDoneRef = useRef(false);
 
-  // Scroll manual: no auto scroll on focus change
+  // Scroll inicial sólo una vez al cargar para ir al día en foco
+  useEffect(() => {
+    if (initialScrollDoneRef.current) return;
+    if (!tableRef.current || !focusDate) return;
+    const row = tableRef.current.querySelector<HTMLTableRowElement>(`tr[data-iso='${focusDate}']`);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      initialScrollDoneRef.current = true;
+    }
+  }, [focusDate]);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [hoverOrigin, setHoverOrigin] = useState<'inc' | 'dec' | 'profit' | 'return' | 'twr' | null>(null);
