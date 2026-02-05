@@ -521,6 +521,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
     return map;
   }, [snapshot.clientRowsById]);
   const [movementPopup, setMovementPopup] = useState<{ iso: string; items: { clientId: string; name: string; increment?: number; decrement?: number }[] } | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!tableRef.current || !focusDate) return;
@@ -535,15 +536,20 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '—' : formatPercent(v));
   const handleRowEnter = (r: typeof rows[number]) => {
-    setFocusDate(r.iso);
-    const items = movementByDate[r.iso];
-    if (items && items.length > 0) {
-      setMovementPopup({ iso: r.iso, items });
-    } else {
-      setMovementPopup(null);
-    }
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      setFocusDate(r.iso);
+      const items = movementByDate[r.iso];
+      if (items && items.length > 0) {
+        setMovementPopup({ iso: r.iso, items });
+      } else {
+        setMovementPopup(null);
+      }
+    }, 120);
   };
   const handleRowLeave = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = null;
     setMovementPopup(null);
   };
   return (
