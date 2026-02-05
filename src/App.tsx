@@ -534,7 +534,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
 
   const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '—' : formatPercent(v));
-  const handleRowClick = (r: typeof rows[number]) => {
+  const handleRowEnter = (r: typeof rows[number]) => {
     setFocusDate(r.iso);
     const items = movementByDate[r.iso];
     if (items && items.length > 0) {
@@ -542,6 +542,9 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
     } else {
       setMovementPopup(null);
     }
+  };
+  const handleRowLeave = () => {
+    setMovementPopup(null);
   };
   return (
     <div className="glass-card grid-card fade-in">
@@ -558,7 +561,13 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
           <thead><tr><th>Fecha</th><th>Incr.</th><th>Decr.</th><th>Inicial</th><th>Final</th><th>Beneficio</th><th>%</th><th>Acumulado</th></tr></thead>
           <tbody>
             {rows.map(r => (
-              <tr key={r.iso} data-iso={r.iso} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')} onClick={() => handleRowClick(r)}>
+              <tr
+                key={r.iso}
+                data-iso={r.iso}
+                className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}
+                onMouseEnter={() => handleRowEnter(r)}
+                onMouseLeave={handleRowLeave}
+              >
                 <td><span>{r.label}</span><small>{r.weekday}</small></td>
                 <td>{showValue(r.increments)}</td>
                 <td>{showValue(r.decrements)}</td>
@@ -573,7 +582,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
         </table>
       </div>
       {movementPopup && (
-        <div className="modal-backdrop" onClick={() => setMovementPopup(null)}>
+        <div className="modal-backdrop" onMouseEnter={() => {}} onMouseLeave={handleRowLeave} onClick={() => setMovementPopup(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <strong>Movimientos {movementPopup.iso}</strong>
