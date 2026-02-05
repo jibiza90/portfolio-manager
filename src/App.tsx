@@ -505,6 +505,22 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const rows = useMemo(() => [...snapshot.dailyRows], [snapshot.dailyRows]);
   const tableRef = useRef<HTMLTableElement>(null);
   const lastScrolledRef = useRef<string | null>(null);
+  const movementByDate = useMemo(() => {
+    const map: Record<string, { clientId: string; name: string; increment?: number; decrement?: number }[]> = {};
+    CLIENTS.forEach((c) => {
+      const clientRows = snapshot.clientRowsById[c.id] || [];
+      clientRows.forEach((r) => {
+        const inc = r.increment ?? 0;
+        const dec = r.decrement ?? 0;
+        if (inc !== 0 || dec !== 0) {
+          if (!map[r.iso]) map[r.iso] = [];
+          map[r.iso].push({ clientId: c.id, name: c.name, increment: r.increment, decrement: r.decrement });
+        }
+      });
+    });
+    return map;
+  }, [snapshot.clientRowsById]);
+  const [movementPopup, setMovementPopup] = useState<{ iso: string; items: { clientId: string; name: string; increment?: number; decrement?: number }[] } | null>(null);
 
   useEffect(() => {
     if (!tableRef.current || !focusDate) return;
@@ -518,6 +534,15 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
 
   const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '—' : formatPercent(v));
+  const handleRowClick = (r: typeof rows[number]) => {
+    setFocusDate(r.iso);
+    const items = movementByDate[r.iso];
+    if (items && items.length > 0) {
+      setMovementPopup({ iso: r.iso, items });
+    } else {
+      setMovementPopup(null);
+    }
+  };
   return (
     <div className="glass-card grid-card fade-in">
       <div className="grid-header">
@@ -533,7 +558,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
           <thead><tr><th>Fecha</th><th>Incr.</th><th>Decr.</th><th>Inicial</th><th>Final</th><th>Beneficio</th><th>%</th><th>Acumulado</th></tr></thead>
           <tbody>
             {rows.map(r => (
-              <tr key={r.iso} data-iso={r.iso} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')} onClick={() => setFocusDate(r.iso)}>
+              <tr key={r.iso} data-iso={r.iso} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')} onClick={() => handleRowClick(r)}>
                 <td><span>{r.label}</span><small>{r.weekday}</small></td>
                 <td>{showValue(r.increments)}</td>
                 <td>{showValue(r.decrements)}</td>
@@ -547,6 +572,35 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
           </tbody>
         </table>
       </div>
+      {movementPopup && (
+        <div className="modal-backdrop" onClick={() => setMovementPopup(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <strong>Movimientos {movementPopup.iso}</strong>
+              <button onClick={() => setMovementPopup(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              {movementPopup.items.map((item) => {
+                const inc = item.increment ?? 0;
+                const dec = item.decrement ?? 0;
+                return (
+                  <div key={`${item.clientId}-${item.name}-${movementPopup.iso}`} className="mini-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span>{item.name}</span>
+                      <small className="muted">{item.clientId}</small>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {inc !== 0 && <span className="positive">+{formatCurrency(inc)}</span>}
+                      {dec !== 0 && <span className="negative">-{formatCurrency(dec)}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              {movementPopup.items.length === 0 && <p className="muted">Sin movimientos</p>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
