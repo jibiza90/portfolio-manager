@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
 import { CLIENTS } from './constants/clients';
 import { GENERAL_OPTION } from './constants/generalOption';
@@ -539,6 +540,14 @@ function DailyGrid({
 
   const showValue = (v?: number) => (v === undefined ? '-' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '-' : formatPercent(v));
+  const showMovementTooltip = (e: React.MouseEvent<HTMLTableCellElement>, content: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({
+      x: rect.left,
+      y: rect.bottom + 6,
+      content
+    });
+  };
   return (
     <div className="glass-card grid-card fade-in">
       <div className="grid-header">
@@ -564,33 +573,33 @@ function DailyGrid({
                 <td
                   onMouseEnter={(e) => {
                     const clients = getMovementClients(r.iso, 'increment');
-                    const total = r.increments ?? 0;
-                    if (total !== 0) {
-                      const details = clients.map((item) => `${item.name} incremento ${formatCurrency(item.amount)}`).join('\n');
-                      const content = details ? `${details}\nTotal ${formatCurrency(total)}` : `Total ${formatCurrency(total)}`;
-                      setTooltip({ x: e.clientX, y: e.clientY, content });
-                    }
-                  }}
-                  onMouseLeave={() => setTooltip(null)}
-                  style={{ cursor: r.increments ? 'help' : 'default' }}
-                >
-                  {showValue(r.increments)}
-                </td>
+                      const total = r.increments ?? 0;
+                      if (total !== 0) {
+                        const details = clients.map((item) => `${item.name} incremento ${formatCurrency(item.amount)}`).join('\n');
+                        const content = details ? `${details}\nTotal ${formatCurrency(total)}` : `Total ${formatCurrency(total)}`;
+                        showMovementTooltip(e, content);
+                      }
+                    }}
+                    onMouseLeave={() => setTooltip(null)}
+                    style={{ cursor: r.increments ? 'pointer' : 'default' }}
+                  >
+                    {showValue(r.increments)}
+                  </td>
                 <td
                   onMouseEnter={(e) => {
                     const clients = getMovementClients(r.iso, 'decrement');
-                    const total = r.decrements ?? 0;
-                    if (total !== 0) {
-                      const details = clients.map((item) => `${item.name} decremento ${formatCurrency(item.amount)}`).join('\n');
-                      const content = details ? `${details}\nTotal ${formatCurrency(total)}` : `Total ${formatCurrency(total)}`;
-                      setTooltip({ x: e.clientX, y: e.clientY, content });
-                    }
-                  }}
-                  onMouseLeave={() => setTooltip(null)}
-                  style={{ cursor: r.decrements ? 'help' : 'default' }}
-                >
-                  {showValue(r.decrements)}
-                </td>
+                      const total = r.decrements ?? 0;
+                      if (total !== 0) {
+                        const details = clients.map((item) => `${item.name} decremento ${formatCurrency(item.amount)}`).join('\n');
+                        const content = details ? `${details}\nTotal ${formatCurrency(total)}` : `Total ${formatCurrency(total)}`;
+                        showMovementTooltip(e, content);
+                      }
+                    }}
+                    onMouseLeave={() => setTooltip(null)}
+                    style={{ cursor: r.decrements ? 'pointer' : 'default' }}
+                  >
+                    {showValue(r.decrements)}
+                  </td>
                 <td>{showValue(r.initial)}</td>
                 <td>{r.isWeekend ? showValue(r.final) : <CurrencyCell value={r.final} onChange={(v) => setDayFinal(r.iso, v)} />}</td>
                 <td className={clsx(r.profit !== undefined && r.profit >= 0 ? 'profit' : 'loss')}>{showValue(r.profit)}</td>
@@ -601,26 +610,29 @@ function DailyGrid({
           </tbody>
         </table>
       </div>
-      {tooltip && (
+      {tooltip && createPortal(
         <div
           style={{
             position: 'fixed',
-            top: tooltip.y + 10,
-            left: tooltip.x + 10,
+            top: tooltip.y,
+            left: tooltip.x,
             background: '#1e293b',
             color: '#e2e8f0',
             padding: '8px 12px',
             borderRadius: '6px',
             fontSize: '13px',
             fontWeight: 600,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            zIndex: 10000,
+            boxShadow: '0 10px 24px rgba(0,0,0,0.45)',
+            border: '1px solid rgba(148,163,184,0.35)',
+            zIndex: 2147483647,
             pointerEvents: 'none',
-            whiteSpace: 'pre-line'
+            whiteSpace: 'pre-line',
+            maxWidth: '420px'
           }}
         >
           {tooltip.content}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
