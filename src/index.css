@@ -2464,6 +2464,27 @@ input[type='number'] {
   color: #5f718d;
 }
 
+.report-pro-value-row {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  margin-top: 8px;
+  gap: 6px;
+}
+
+.report-pro-value-row span {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f2f4d;
+  background: rgba(15, 47, 77, 0.07);
+  border: 1px solid rgba(15, 47, 77, 0.12);
+  border-radius: 6px;
+  padding: 3px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .report-pro-table thead th {
   background: linear-gradient(135deg, #0a2740, #11466d);
 }
@@ -2649,6 +2670,10 @@ input[type='number'] {
   .report-pro-bars {
     grid-template-columns: repeat(6, minmax(0, 1fr));
     height: 320px;
+  }
+
+  .report-pro-value-row span {
+    font-size: 10px;
   }
 
   .report-pro-actions .btn-action {

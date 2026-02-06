@@ -244,7 +244,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
             style={{ gridTemplateColumns: `repeat(${Math.max(1, monthlyWithData.length)}, minmax(0, 1fr))` }}
           >
             {monthlyWithData.map((m) => {
-              const height = Math.max(6, (Math.abs(m.profitPct) / maxMonthPct) * 74);
+              const maxBarHeight = hasNegativeMonth ? 46 : 92;
+              const height = Math.min(maxBarHeight, Math.max(4, (Math.abs(m.profitPct) / maxMonthPct) * maxBarHeight));
               return (
                 <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${m.profitPct.toFixed(2)}%`}>
                   <span className={`report-pro-bar-value ${m.profitPct >= 0 ? 'positive' : 'negative'}`}>{m.profitPct.toFixed(2)}%</span>
@@ -278,18 +279,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
                 const x = patrimonioWithData.length <= 1 ? 8 : (idx / (patrimonioWithData.length - 1)) * 100;
                 const y = 92 - ((p.balance as number) / maxPatrimonio) * 78;
                 const pointY = Math.max(10, y);
-                const labelAbove = idx % 2 === 0 || pointY > 90;
                 return (
                   <g key={`${p.month}-${idx}`}>
-                    <text
-                      x={x}
-                      y={labelAbove ? Math.max(7, pointY - 3.8) : Math.min(98, pointY + 4.8)}
-                      className="report-pro-point-value"
-                      textAnchor="middle"
-                      dominantBaseline={labelAbove ? 'auto' : 'hanging'}
-                    >
-                      {formatCurrency(p.balance)}
-                    </text>
                     <circle cx={x} cy={pointY} r="1.7" className="report-pro-dot" />
                   </g>
                 );
@@ -301,6 +292,14 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
             style={{ gridTemplateColumns: `repeat(${Math.max(1, patrimonioWithData.length)}, minmax(0, 1fr))` }}
           >
             {patrimonioWithData.map((p) => <span key={p.month}>{p.month}</span>)}
+          </div>
+          <div
+            className="report-pro-value-row"
+            style={{ gridTemplateColumns: `repeat(${Math.max(1, patrimonioWithData.length)}, minmax(0, 1fr))` }}
+          >
+            {patrimonioWithData.map((p) => (
+              <span key={`${p.month}-value`}>{formatCurrency(p.balance)}</span>
+            ))}
           </div>
         </section>
 
