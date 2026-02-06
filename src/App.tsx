@@ -22,8 +22,8 @@ type ContactInfo = {
   surname: string;
   email: string;
   phone: string;
-  joinDate: string;
-  riskProfile: string;
+  waitlistAmount: string;
+  waitlistNote: string;
   notes: string;
 };
 type FollowUpTask = {
@@ -38,8 +38,8 @@ const EMPTY_CONTACT: ContactInfo = {
   surname: '',
   email: '',
   phone: '',
-  joinDate: '',
-  riskProfile: '',
+  waitlistAmount: '',
+  waitlistNote: '',
   notes: ''
 };
 const normalizeContact = (input?: Partial<ContactInfo>): ContactInfo => ({
@@ -2416,6 +2416,10 @@ function InfoClientes({
   const displayName = `${currentClient?.name || 'Cliente'}${contact.name || contact.surname ? ` - ${contact.name} ${contact.surname}` : ''}`.trim();
   const guaranteeInitial = guarantees[selectedId] ?? 0;
   const guaranteeActual = Math.max(0, guaranteeInitial - stats.capitalRetirado);
+  const firstIncrementDate = useMemo(
+    () => clientRows.find((r) => (r.increment ?? 0) > 0)?.iso ?? '',
+    [clientRows]
+  );
   const movementHistory = useMemo(
     () => [...yearRows]
       .filter((r) => (r.increment ?? 0) !== 0 || (r.decrement ?? 0) !== 0)
@@ -2424,14 +2428,38 @@ function InfoClientes({
       .map((r) => ({ iso: r.iso, label: r.label, increment: r.increment ?? 0, decrement: r.decrement ?? 0, net: (r.increment ?? 0) - (r.decrement ?? 0) })),
     [yearRows]
   );
+  const guaranteeCurrentTotal = useMemo(
+    () => CLIENTS.reduce((sum, c) => {
+      const rows = snapshot.clientRowsById[c.id] ?? [];
+      const withdrawn = rows.reduce((acc, r) => acc + (r.decrement ?? 0), 0);
+      const current = Math.max(0, (guarantees[c.id] ?? 0) - withdrawn);
+      return sum + current;
+    }, 0),
+    [snapshot.clientRowsById, guarantees]
+  );
+  const waitlistClients = useMemo(
+    () => CLIENTS.map((c) => {
+      const ct = normalizeContact(contacts[c.id]);
+      const amount = parseNumberEs(ct.waitlistAmount) ?? 0;
+      if (amount <= 0) return null;
+      const namePart = `${ct.name} ${ct.surname}`.trim();
+      return {
+        id: c.id,
+        name: namePart ? `${c.name} - ${namePart}` : c.name,
+        amount,
+        note: ct.waitlistNote
+      };
+    }).filter((x): x is { id: string; name: string; amount: number; note: string } => !!x).sort((a, b) => b.amount - a.amount),
+    [contacts]
+  );
   const checklist = useMemo(() => ([
     { label: 'Email informado', ok: !!contact.email && contact.email.includes('@') },
     { label: 'Telefono informado', ok: !!contact.phone },
-    { label: 'Fecha de alta', ok: !!contact.joinDate },
-    { label: 'Perfil de riesgo', ok: !!contact.riskProfile },
+    { label: 'Fecha de alta automatica', ok: !!firstIncrementDate },
     { label: 'Garantia inicial', ok: guaranteeInitial > 0 },
-    { label: 'Movimientos registrados', ok: movementHistory.length > 0 }
-  ]), [contact.email, contact.phone, contact.joinDate, contact.riskProfile, guaranteeInitial, movementHistory.length]);
+    { label: 'Movimientos registrados', ok: movementHistory.length > 0 },
+    { label: 'Peticion extra registrada', ok: (parseNumberEs(contact.waitlistAmount) ?? 0) > 0 || !!contact.waitlistNote }
+  ]), [contact.email, contact.phone, firstIncrementDate, guaranteeInitial, movementHistory.length, contact.waitlistAmount, contact.waitlistNote]);
 
   const updateField = (field: keyof ContactInfo, value: string) => {
     setContacts((prev) => ({ ...prev, [selectedId]: { ...contact, [field]: value } }));
@@ -2649,18 +2677,28 @@ function InfoClientes({
                 id="contact-join-date"
                 name="contact-join-date"
                 type="date"
-                value={contact.joinDate}
-                onChange={(e) => { updateField('joinDate', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+                value={firstIncrementDate}
+                disabled
               />
             </label>
             <label>
-              <span>Perfil de riesgo</span>
+              <span>Cliente quiere invertir mÃ¡s (€)</span>
               <input
-                id="contact-risk-profile"
-                name="contact-risk-profile"
-                placeholder="Conservador, Moderado, Agresivo..."
-                value={contact.riskProfile}
-                onChange={(e) => { updateField('riskProfile', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+                id="contact-waitlist-amount"
+                name="contact-waitlist-amount"
+                placeholder="Ej: 50000"
+                value={contact.waitlistAmount}
+                onChange={(e) => { updateField('waitlistAmount', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+              />
+            </label>
+            <label style={{ gridColumn: '1 / -1' }}>
+              <span>Nota peticion adicional</span>
+              <input
+                id="contact-waitlist-note"
+                name="contact-waitlist-note"
+                placeholder="Ej: Quiere meter 50k cuando haya hueco"
+                value={contact.waitlistNote}
+                onChange={(e) => { updateField('waitlistNote', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
               />
             </label>
             <label style={{ gridColumn: '1 / -1' }}>
@@ -2707,6 +2745,35 @@ function InfoClientes({
                 <input id="guarantee-actual" name="guarantee-actual" value={formatCurrency(guaranteeActual)} disabled />
               </div>
             </label>
+          </div>
+        </section>
+
+        <section className="info-section">
+          <h4>Resumen global inmediato</h4>
+          <div className="info-checklist">
+            <div className="info-check ok">
+              <span>Total</span>
+              <strong>Garantias actuales: {formatCurrency(guaranteeCurrentTotal)}</strong>
+            </div>
+            <div className={clsx('info-check', waitlistClients.length > 0 ? 'pending' : 'ok')}>
+              <span>{waitlistClients.length > 0 ? 'Pendiente' : 'OK'}</span>
+              <strong>Clientes pidiendo ampliar: {waitlistClients.length}</strong>
+            </div>
+          </div>
+          <div className="data-table compact" style={{ marginTop: 12 }}>
+            <div className="table-header" style={{ gridTemplateColumns: '1fr 160px 1fr' }}>
+              <div>Cliente</div>
+              <div>Importe pedido</div>
+              <div>Nota</div>
+            </div>
+            {waitlistClients.length === 0 && <div className="table-row"><div>No hay peticiones de ampliacion</div></div>}
+            {waitlistClients.map((w) => (
+              <div key={w.id} className="table-row" style={{ gridTemplateColumns: '1fr 160px 1fr' }}>
+                <div>{w.name}</div>
+                <div>{formatCurrency(w.amount)}</div>
+                <div>{w.note || '-'}</div>
+              </div>
+            ))}
           </div>
         </section>
 
