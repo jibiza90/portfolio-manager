@@ -776,6 +776,89 @@ Su gestor de inversiones`
                         const beneficioTotal = saldo + decrementos - incrementos;
                         const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
 
+                        // Build full report details (same depth as single-send flow)
+                        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                        const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number }>();
+                        let lastKnownFinal: number | undefined;
+
+                        yearRows.forEach((r) => {
+                          const month = r.iso.slice(0, 7);
+                          if (!byMonth.has(month)) {
+                            byMonth.set(month, { profit: 0, baseStart: undefined, finalEnd: undefined });
+                          }
+                          const entry = byMonth.get(month)!;
+                          if (r.profit !== undefined) entry.profit += r.profit;
+                          if (entry.baseStart === undefined && r.baseBalance !== undefined && r.baseBalance > 0) entry.baseStart = r.baseBalance;
+                          if (r.finalBalance !== undefined && r.finalBalance > 0) {
+                            entry.finalEnd = r.finalBalance;
+                            lastKnownFinal = r.finalBalance;
+                          }
+                        });
+
+                        const monthKeys = Array.from(byMonth.keys()).sort();
+                        const monthlyStats: { month: string; monthNum: number; profit: number; profitPct: number; endBalance: number; hasData: boolean }[] = [];
+
+                        monthKeys.forEach((monthKey) => {
+                          const entry = byMonth.get(monthKey)!;
+                          const { profit, finalEnd } = entry;
+                          let { baseStart } = entry;
+
+                          if (baseStart === undefined || baseStart === 0) {
+                            const idx = monthKeys.indexOf(monthKey);
+                            if (idx > 0) baseStart = byMonth.get(monthKeys[idx - 1])?.finalEnd;
+                          }
+                          if ((baseStart === undefined || baseStart === 0) && finalEnd !== undefined && finalEnd > 0) {
+                            baseStart = Math.max(1, finalEnd - profit);
+                          }
+
+                          const retPct = baseStart && baseStart > 0 ? (profit / baseStart) * 100 : 0;
+                          const monthNum = parseInt(monthKey.slice(5, 7));
+                          monthlyStats.push({
+                            month: monthNames[monthNum - 1],
+                            monthNum,
+                            profit,
+                            profitPct: retPct,
+                            endBalance: finalEnd ?? 0,
+                            hasData: true
+                          });
+                        });
+
+                        for (let m = 1; m <= 12; m++) {
+                          if (!monthlyStats.find((ms) => ms.monthNum === m)) {
+                            monthlyStats.push({ month: monthNames[m - 1], monthNum: m, profit: 0, profitPct: 0, endBalance: 0, hasData: false });
+                          }
+                        }
+                        monthlyStats.sort((a, b) => a.monthNum - b.monthNum);
+
+                        const patrimonioEvolution: { month: string; balance?: number; hasData: boolean }[] = [];
+                        let running = lastKnownFinal;
+                        for (let m = 1; m <= 12; m++) {
+                          const key = `${YEAR}-${m.toString().padStart(2, '0')}`;
+                          const entry = byMonth.get(key);
+                          if (entry?.finalEnd !== undefined) {
+                            running = entry.finalEnd;
+                            patrimonioEvolution.push({ month: monthNames[m - 1], balance: running, hasData: true });
+                          } else {
+                            patrimonioEvolution.push({ month: monthNames[m - 1], balance: undefined, hasData: false });
+                          }
+                        }
+
+                        const movements: Movement[] = [];
+                        [...yearRows].sort((a, b) => a.iso.localeCompare(b.iso)).forEach((r) => {
+                          if (r.increment && r.increment > 0) {
+                            movements.push({ iso: r.iso, type: 'increment', amount: r.increment, balance: r.finalBalance || 0 });
+                          }
+                          if (r.decrement && r.decrement > 0) {
+                            movements.push({ iso: r.iso, type: 'decrement', amount: r.decrement, balance: r.finalBalance || 0 });
+                          }
+                        });
+
+                        const twrYtd = calculateTWR(yearRows).twr;
+                        const monthlyWithData = monthlyStats.filter((m) => m.hasData && (m.profit !== 0 || m.profitPct !== 0 || m.endBalance !== 0));
+                        const lastMonth = monthlyWithData.length > 0 ? monthlyWithData[monthlyWithData.length - 1] : null;
+                        const beneficioUltimoMes = lastMonth?.profit ?? 0;
+                        const rentabilidadUltimoMes = lastMonth?.profitPct ?? 0;
+
                         const displayName = ct && (ct.name || ct.surname) ? `${ct.name} ${ct.surname}`.trim() : client.name;
 
                         const token = await saveReportLink({
@@ -787,11 +870,27 @@ Su gestor de inversiones`
                           saldo: saldo ?? 0,
                           beneficioTotal: beneficioTotal ?? 0,
                           rentabilidad: rentabilidad ?? 0,
-                          beneficioUltimoMes: 0,
-                          rentabilidadUltimoMes: 0,
-                          monthlyStats: [],
-                          patrimonioEvolution: [],
-                          movements: []
+                          beneficioUltimoMes: beneficioUltimoMes ?? 0,
+                          rentabilidadUltimoMes: rentabilidadUltimoMes ?? 0,
+                          twrYtd: twrYtd ?? 0,
+                          monthlyStats: monthlyStats.map((m) => ({
+                            month: m.month,
+                            profit: m.profit ?? 0,
+                            profitPct: m.profitPct ?? 0,
+                            endBalance: m.endBalance ?? 0,
+                            hasData: m.hasData ?? false
+                          })),
+                          patrimonioEvolution: patrimonioEvolution.map((p) => ({
+                            month: p.month,
+                            balance: p.balance ?? 0,
+                            hasData: p.hasData ?? false
+                          })),
+                          movements: movements.map((m) => ({
+                            iso: m.iso,
+                            type: m.type,
+                            amount: m.amount ?? 0,
+                            balance: m.balance ?? 0
+                          }))
                         });
 
                         const baseUrl = window.location.origin;
