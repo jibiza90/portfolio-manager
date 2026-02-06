@@ -426,6 +426,45 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
             </table>
           </div>
         </section>
+
+        {(report.movements ?? []).length > 0 && (
+          <section className="report-pro-panel">
+            <div className="report-pro-panel-head">
+              <h4>Historial de movimientos</h4>
+              <p>Detalle de incrementos y decrementos</p>
+            </div>
+            <div className="table-scroll">
+              <table className="movements-table report-pro-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th className="text-right">Importe</th>
+                    <th className="text-right">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(report.movements ?? []).map((mov, i) => {
+                    const [yy, mm, dd] = mov.iso.split('-');
+                    const isIncrement = mov.type === 'increment';
+                    return (
+                      <tr key={`${mov.iso}-${i}`}>
+                        <td>{`${dd}.${mm}.${yy}`}</td>
+                        <td className={isIncrement ? 'positive' : 'negative'}>
+                          {isIncrement ? 'Aportacion' : 'Retirada'}
+                        </td>
+                        <td className={`text-right ${isIncrement ? 'positive' : 'negative'}`}>
+                          {isIncrement ? '+' : '-'}{formatCurrency(mov.amount ?? 0)}
+                        </td>
+                        <td className="text-right">{formatCurrency(mov.balance ?? 0)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </article>
     </div>
   );
