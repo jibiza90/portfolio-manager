@@ -108,6 +108,17 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
 
       const monthlyData = report.monthlyStats.filter((m) => m.hasData && m.profit !== null && m.profitPct !== null && m.endBalance !== null);
       if (monthlyData.length > 0) {
+        const bestMonth = monthlyData.reduce((best, cur) => ((cur.profitPct ?? 0) > (best.profitPct ?? 0) ? cur : best), monthlyData[0]);
+        const worstMonth = monthlyData.reduce((worst, cur) => ((cur.profitPct ?? 0) < (worst.profitPct ?? 0) ? cur : worst), monthlyData[0]);
+        const avgMonth = monthlyData.reduce((s, m) => s + (m.profitPct ?? 0), 0) / Math.max(1, monthlyData.length);
+
+        doc.setFontSize(8);
+        doc.setTextColor(15, 23, 42);
+        doc.text(`Mejor mes: ${bestMonth.month} (${safePercent(bestMonth.profitPct ?? 0)})`, margin, y);
+        doc.text(`Peor mes: ${worstMonth.month} (${safePercent(worstMonth.profitPct ?? 0)})`, margin + 66, y);
+        doc.text(`Promedio: ${safePercent(avgMonth)}`, margin + 132, y);
+        y += 6;
+
         const chartWidth = pageWidth - margin * 2;
         const chartHeight = 70;
         const padLeft = 22;
@@ -235,6 +246,16 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
       const minAxis = Math.max(0, minVal - span * 0.08);
       const maxAxis = maxVal + span * 0.08;
       const axisSpan = Math.max(1, maxAxis - minAxis);
+
+      const firstVal = evoData[0].balance as number;
+      const lastVal = evoData[evoData.length - 1].balance as number;
+      const delta = lastVal - firstVal;
+      doc.setFontSize(8);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Min: ${safeCurrency(minVal)}`, margin, y);
+      doc.text(`Max: ${safeCurrency(maxVal)}`, margin + 62, y);
+      doc.text(`Ultimo: ${safeCurrency(lastVal)} (${delta >= 0 ? '+' : ''}${safeCurrency(delta)})`, margin + 118, y);
+      y += 6;
 
       doc.setFillColor(247, 250, 253);
       doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'F');
