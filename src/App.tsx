@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
@@ -1113,7 +1113,7 @@ function CurrencyCell({ value, onChange }: { value: number | undefined; onChange
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (editing) { setText(formatCurrency(value).replace('€', '').trim()); setTimeout(() => ref.current?.select(), 10); } }, [editing, value]);
+  useEffect(() => { if (editing) { setText(formatCurrency(value).replace('â‚¬', '').trim()); setTimeout(() => ref.current?.select(), 10); } }, [editing, value]);
   const save = () => { const v = parseNumberEs(text); onChange(v); setEditing(false); };
   if (editing) return <input ref={ref} className="cell-input" value={text} onChange={(e) => setText(e.target.value)} onBlur={save} onKeyDown={(e) => { if (e.key === 'Enter') save(); else if (e.key === 'Escape') setEditing(false); }} />;
   return <span className="cell-content currency" onClick={() => setEditing(true)}>{formatCurrency(value)}</span>;
@@ -1121,7 +1121,7 @@ function CurrencyCell({ value, onChange }: { value: number | undefined; onChange
 
 function AutosaveIndicator({ status }: { status: string }) {
   if (status === 'idle' || status === 'success') return null;
-  const label = status === 'saving' ? 'Guardando…' : status === 'dirty' ? 'Pendiente' : 'Error';
+  const label = status === 'saving' ? 'Guardandoâ€¦' : status === 'dirty' ? 'Pendiente' : 'Error';
   return <span className={clsx('badge', `status-${status}`)}>{label}</span>;
 }
 
@@ -1145,9 +1145,9 @@ function HeroHeader({ today }: { today: string }) {
   return (
     <section className="hero glass-card fade-in">
       <div>
-        <div className="eyebrow">Panel diario · {today}</div>
+        <div className="eyebrow">Panel diario Â· {today}</div>
         <h1>Portfolio Manager</h1>
-        <p className="hero-copy">Controla rentabilidad diaria, movimientos por cliente y guarda cambios automáticamente.</p>
+        <p className="hero-copy">Controla rentabilidad diaria, movimientos por cliente y guarda cambios automÃ¡ticamente.</p>
       </div>
     </section>
   );
@@ -1218,9 +1218,9 @@ function DailyGrid({
         <div>
           <div className="eyebrow">General</div>
           <h2>Grid diario</h2>
-          <p className="grid-copy">Valores finales, beneficio y % de cada día.</p>
+          <p className="grid-copy">Valores finales, beneficio y % de cada dÃ­a.</p>
         </div>
-        <span className="badge">{rows.length} días</span>
+        <span className="badge">{rows.length} dÃ­as</span>
       </div>
       <div className="table-scroll general-grid-scroll">
         <table ref={tableRef}>
@@ -1233,7 +1233,7 @@ function DailyGrid({
                 className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}
                 onClick={() => setFocusDate(r.iso)}
               >
-                <td><span>{r.label}</span><small>{r.weekday} · {r.iso.slice(0, 4)}</small></td>
+                <td><span>{r.label}</span><small>{r.weekday} Â· {r.iso.slice(0, 4)}</small></td>
                 <td
                   onMouseEnter={(e) => {
                     const clients = getMovementClients(r.iso, 'increment');
@@ -1335,7 +1335,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   const tableRef = useRef<HTMLTableElement>(null);
   const initialScrollDoneRef = useRef(false);
 
-  // Scroll inicial sólo una vez al cargar para ir al día en foco
+  // Scroll inicial sÃ³lo una vez al cargar para ir al dÃ­a en foco
   useEffect(() => {
     if (initialScrollDoneRef.current) return;
     if (!tableRef.current || !focusDate) return;
@@ -1426,7 +1426,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
       return { month, profit, retPct, finalEnd, baseStart };
     });
 
-    // Evolución de patrimonio: usar último final disponible por mes; si falta, mantener último conocido
+    // EvoluciÃ³n de patrimonio: usar Ãºltimo final disponible por mes; si falta, mantener Ãºltimo conocido
     let running = lastKnownFinal;
     const evolution = monthly.map((m) => {
       if (m.finalEnd !== undefined) {
@@ -1452,7 +1452,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     };
   }, [yearRows]);
 
-  // Buscar último mes con beneficio distinto de 0, o el último disponible
+  // Buscar Ãºltimo mes con beneficio distinto de 0, o el Ãºltimo disponible
   const latestProfitMonth = (() => {
     for (let i = analytics.monthly.length - 1; i >= 0; i--) {
       if (analytics.monthly[i].profit !== 0) return analytics.monthly[i];
@@ -1460,7 +1460,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     return analytics.monthly[analytics.monthly.length - 1];
   })();
   
-  // Buscar último mes con rentabilidad distinta de 0, o el último disponible
+  // Buscar Ãºltimo mes con rentabilidad distinta de 0, o el Ãºltimo disponible
   const latestReturnMonth = (() => {
     for (let i = analytics.monthly.length - 1; i >= 0; i--) {
       if (analytics.monthly[i].retPct !== 0) return analytics.monthly[i];
@@ -1496,7 +1496,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
           </div>
           <div className="panel-actions">
             <button className="ghost-btn" onClick={() => window.dispatchEvent(new CustomEvent('goto-general'))}>Volver a General</button>
-            <button className="primary" onClick={() => setShowAnalytics(true)}>Ver estadísticas</button>
+            <button className="primary" onClick={() => setShowAnalytics(true)}>Ver estadÃ­sticas</button>
           </div>
         </div>
 
@@ -1512,7 +1512,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
             </div>
           </div>
           <div className="stat-card glow">
-            <div className="stat-label">Beneficio día</div>
+            <div className="stat-label">Beneficio dÃ­a</div>
             <div className={clsx('stat-value', stats.dailyProfit >= 0 ? 'positive' : 'negative')}>
               {formatCurrency(stats.dailyProfit)}
             </div>
@@ -1527,7 +1527,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
 
         <div className="analytics-grid two-row" style={{ marginBottom: 12 }}>
           <div className="stat-card glow">
-            <div className="stat-label">Participación</div>
+            <div className="stat-label">ParticipaciÃ³n</div>
             <div className="stat-value">{formatPercent(stats.participation)}</div>
           </div>
           <div
@@ -1543,7 +1543,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
               <div className="mini-popup" ref={popupRef} onClick={(e) => e.stopPropagation()}>
                 <div className="mini-popup-header">
                   <strong>Detalle movimientos</strong>
-                  <button onClick={() => setHoverOrigin(null)}>×</button>
+                  <button onClick={() => setHoverOrigin(null)}>Ã—</button>
                 </div>
                 <div className="mini-popup-body">
                   {movementDetails.length === 0 && <p className="muted">Sin movimientos</p>}
@@ -1571,7 +1571,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
               <div className="mini-popup" ref={popupRef} onClick={(e) => e.stopPropagation()}>
                 <div className="mini-popup-header">
                   <strong>Detalle movimientos</strong>
-                  <button onClick={() => setHoverOrigin(null)}>×</button>
+                  <button onClick={() => setHoverOrigin(null)}>Ã—</button>
                 </div>
                 <div className="mini-popup-body">
                   {movementDetails.length === 0 && <p className="muted">Sin movimientos</p>}
@@ -1596,12 +1596,12 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
             <div className={clsx('stat-value', (latestProfitMonth?.profit ?? 0) >= 0 ? 'positive' : 'negative')}>
               {formatCurrency(latestProfitMonth?.profit ?? 0)}
             </div>
-            <div className="stat-sub">Último mes · Hover para ver todos</div>
+            <div className="stat-sub">Ãšltimo mes Â· Hover para ver todos</div>
             {hoverOrigin === 'profit' && (
               <div className="mini-popup wide popup-left" onClick={(e) => e.stopPropagation()}>
                 <div className="mini-popup-header">
                   <strong>Beneficio por mes</strong>
-                  <button onClick={() => setHoverOrigin(null)}>×</button>
+                  <button onClick={() => setHoverOrigin(null)}>Ã—</button>
                 </div>
                 <div className="mini-popup-body">
                   {analytics.monthly.length === 0 && <p className="muted">Sin datos</p>}
@@ -1625,12 +1625,12 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
             <div className={clsx('stat-value', (latestReturnMonth?.retPct ?? 0) >= 0 ? 'positive' : 'negative')}>
               {formatPercent(latestReturnMonth?.retPct ?? 0)}
             </div>
-            <div className="stat-sub">Último mes · Hover para ver todos</div>
+            <div className="stat-sub">Ãšltimo mes Â· Hover para ver todos</div>
             {hoverOrigin === 'return' && (
               <div className="mini-popup wide popup-center" onClick={(e) => e.stopPropagation()}>
                 <div className="mini-popup-header">
                   <strong>Rentabilidad por mes</strong>
-                  <button onClick={() => setHoverOrigin(null)}>×</button>
+                  <button onClick={() => setHoverOrigin(null)}>Ã—</button>
                 </div>
                 <div className="mini-popup-body">
                   {analytics.monthly.length === 0 && <p className="muted">Sin datos</p>}
@@ -1655,16 +1655,16 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
             <div className={clsx('stat-value', twrData.ytd.twr >= 0 ? 'positive' : 'negative')}>
               {formatPercent(twrData.ytd.twr)}
             </div>
-            <div className="stat-sub">YTD · Click para detalle</div>
+            <div className="stat-sub">YTD Â· Click para detalle</div>
             {hoverOrigin === 'twr' && !twrExpanded && (
               <div className="mini-popup wide popup-center" onClick={(e) => e.stopPropagation()}>
                 <div className="mini-popup-header">
-                  <strong>¿Qué es TWR?</strong>
-                  <button onClick={() => setHoverOrigin(null)}>×</button>
+                  <strong>Â¿QuÃ© es TWR?</strong>
+                  <button onClick={() => setHoverOrigin(null)}>Ã—</button>
                 </div>
                 <div className="mini-popup-body" style={{ fontSize: 12, lineHeight: 1.5 }}>
                   <p style={{ margin: '0 0 8px' }}>La <strong>rentabilidad TWR</strong> (Time-Weighted Return) mide el rendimiento real eliminando el efecto de aportes y retiros.</p>
-                  <p style={{ margin: 0 }}>Se calcula dividiendo el periodo en subperiodos entre cada flujo, calculando el retorno de cada uno y multiplicando los factores (1+r). Así puedes comparar rendimientos de forma justa.</p>
+                  <p style={{ margin: 0 }}>Se calcula dividiendo el periodo en subperiodos entre cada flujo, calculando el retorno de cada uno y multiplicando los factores (1+r). AsÃ­ puedes comparar rendimientos de forma justa.</p>
                 </div>
               </div>
             )}
@@ -1681,7 +1681,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
               <div className="table-header">
                 <div>Mes</div>
                 <div>TWR</div>
-                <div>Días con datos</div>
+                <div>DÃ­as con datos</div>
               </div>
               {twrData.monthly.length === 0 && <div className="table-row"><div>Sin datos</div></div>}
               {twrData.monthly.map((m) => (
@@ -1693,7 +1693,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
               ))}
             </div>
             <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 12, marginBottom: 0 }}>
-              TWR elimina el efecto de aportes/retiros multiplicando los retornos de cada subperiodo: (1+r₁)×(1+r₂)×...−1
+              TWR elimina el efecto de aportes/retiros multiplicando los retornos de cada subperiodo: (1+râ‚)Ã—(1+râ‚‚)Ã—...âˆ’1
             </p>
           </div>
         )}
@@ -1710,15 +1710,15 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 <th>Beneficio</th>
                 <th>%</th>
                 <th>Beneficio acum.</th>
-                <th>Participación</th>
+                <th>ParticipaciÃ³n</th>
               </tr>
             </thead>
             <tbody>
               {yearRows.map(r => (
                 <tr key={r.iso} data-iso={r.iso} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}>
                   <td><span>{r.label}</span><small>{r.weekday}</small></td>
-                  <td>{r.isWeekend ? (r.increment === undefined ? '—' : formatCurrency(r.increment)) : <CurrencyCell value={r.increment} onChange={(v) => setClientMovement(clientId, r.iso, 'increment', v)} />}</td>
-                  <td>{r.isWeekend ? (r.decrement === undefined ? '—' : formatCurrency(r.decrement)) : (
+                  <td>{r.isWeekend ? (r.increment === undefined ? 'â€”' : formatCurrency(r.increment)) : <CurrencyCell value={r.increment} onChange={(v) => setClientMovement(clientId, r.iso, 'increment', v)} />}</td>
+                  <td>{r.isWeekend ? (r.decrement === undefined ? 'â€”' : formatCurrency(r.decrement)) : (
                     <CurrencyCell
                       value={r.decrement}
                       onChange={(v) => {
@@ -1726,23 +1726,23 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                         const inc = r.increment ?? 0;
                         const max = base + inc;
                         if (v !== undefined && !Number.isNaN(v) && v > max) {
-                          setAlertMessage(`Saldo excedido. Máximo disponible: ${formatCurrency(max)}`);
+                          setAlertMessage(`Saldo excedido. MÃ¡ximo disponible: ${formatCurrency(max)}`);
                           return;
                         }
                         setClientMovement(clientId, r.iso, 'decrement', v);
                       }}
                     />
                   )}</td>
-                  <td>{r.baseBalance === undefined ? '—' : formatCurrency(r.baseBalance)}</td>
-                  <td>{r.finalBalance === undefined ? '—' : formatCurrency(r.finalBalance)}</td>
+                  <td>{r.baseBalance === undefined ? 'â€”' : formatCurrency(r.baseBalance)}</td>
+                  <td>{r.finalBalance === undefined ? 'â€”' : formatCurrency(r.finalBalance)}</td>
                   <td className={clsx(r.profit !== undefined && r.profit >= 0 ? 'profit' : 'loss')}>
-                    {r.profit === undefined ? '—' : formatCurrency(r.profit)}
+                    {r.profit === undefined ? 'â€”' : formatCurrency(r.profit)}
                   </td>
                   <td className={clsx(r.profitPct !== undefined && r.profitPct >= 0 ? 'profit' : 'loss')}>
-                    {r.profitPct === undefined ? '—' : formatPercent(r.profitPct)}
+                    {r.profitPct === undefined ? 'â€”' : formatPercent(r.profitPct)}
                   </td>
-                  <td>{r.cumulativeProfit === undefined ? '—' : formatCurrency(r.cumulativeProfit)}</td>
-                  <td>{r.sharePct === undefined ? '—' : formatPercent(r.sharePct)}</td>
+                  <td>{r.cumulativeProfit === undefined ? 'â€”' : formatCurrency(r.cumulativeProfit)}</td>
+                  <td>{r.sharePct === undefined ? 'â€”' : formatPercent(r.sharePct)}</td>
                 </tr>
               ))}
             </tbody>
@@ -1754,8 +1754,8 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
         <div className="client-analytics-overlay" onClick={() => setShowAnalytics(false)}>
           <div className="client-analytics-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Análisis de {CLIENTS.find((c) => c.id === clientId)?.name || 'Cliente'}</h3>
-              <button onClick={() => setShowAnalytics(false)}>×</button>
+              <h3>AnÃ¡lisis de {CLIENTS.find((c) => c.id === clientId)?.name || 'Cliente'}</h3>
+              <button onClick={() => setShowAnalytics(false)}>Ã—</button>
             </div>
 
             <div className="analytics-body">
@@ -1763,7 +1763,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 <div className="stat-card glow">
                   <div className="stat-label">Saldo actual</div>
                   <div className="stat-value">{formatCurrency(stats.estimatedBalance)}</div>
-                  <div className="stat-sub">Última fecha cerrada</div>
+                  <div className="stat-sub">Ãšltima fecha cerrada</div>
                 </div>
                 <div className="stat-card glow">
                   <div className="stat-label">Beneficio total</div>
@@ -1773,11 +1773,11 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                   <div className="stat-sub">Suma acumulada</div>
                 </div>
                 <div className="stat-card glow">
-                  <div className="stat-label">Beneficio día</div>
+                  <div className="stat-label">Beneficio dÃ­a</div>
                   <div className={clsx('stat-value', stats.dailyProfit >= 0 ? 'positive' : 'negative')}>
                     {formatCurrency(stats.dailyProfit)}
                   </div>
-                  <div className="stat-sub">Última entrada</div>
+                  <div className="stat-sub">Ãšltima entrada</div>
                 </div>
                 <div className="stat-card glow">
                   <div className="stat-label">% diario</div>
@@ -1786,7 +1786,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                   </div>
                 </div>
                 <div className="stat-card glow">
-                  <div className="stat-label">Participación</div>
+                  <div className="stat-label">ParticipaciÃ³n</div>
                   <div className="stat-value">{formatPercent(stats.participation)}</div>
                   <div className="stat-sub">Peso vs patrimonio</div>
                 </div>
@@ -1796,7 +1796,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 >
                   <div className="stat-label">Incrementos totales</div>
                   <div className="stat-value positive">{formatCurrency(stats.totalIncrements)}</div>
-                  <div className="stat-sub">Suma anual · <span className="link-text">Ver detalle</span></div>
+                  <div className="stat-sub">Suma anual Â· <span className="link-text">Ver detalle</span></div>
                 </div>
                 <div
                   className="stat-card glow clickable"
@@ -1804,7 +1804,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 >
                   <div className="stat-label">Decrementos totales</div>
                   <div className="stat-value negative">{formatCurrency(stats.totalDecrements)}</div>
-                  <div className="stat-sub">Suma anual · <span className="link-text">Ver detalle</span></div>
+                  <div className="stat-sub">Suma anual Â· <span className="link-text">Ver detalle</span></div>
                 </div>
               </div>
 
@@ -1812,7 +1812,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 <div className="chart-card">
                   <div className="chart-card-header">
                     <div>
-                      <p className="eyebrow">Beneficio mensual (€)</p>
+                      <p className="eyebrow">Beneficio mensual (â‚¬)</p>
                       <h4>Performance mensual</h4>
                       <p className="muted">Escala absoluta con eje cero visible.</p>
                     </div>
@@ -1830,9 +1830,9 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                     <div>
                       <p className="eyebrow">Rentabilidad mensual (%)</p>
                       <h4>Retorno por mes</h4>
-                      <p className="muted">Escala simétrica si hay negativos.</p>
+                      <p className="muted">Escala simÃ©trica si hay negativos.</p>
                     </div>
-                    <div className="badge-soft">Línea</div>
+                    <div className="badge-soft">LÃ­nea</div>
                   </div>
                   <ModernLineChart
                     data={analytics.monthly.map((m) => ({ label: monthLabel(m.month), value: m.retPct }))}
@@ -1846,11 +1846,11 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 <div className="chart-card">
                   <div className="chart-card-header">
                     <div>
-                      <p className="eyebrow">Evolución patrimonio</p>
+                      <p className="eyebrow">EvoluciÃ³n patrimonio</p>
                       <h4>Saldo a fin de mes</h4>
-                      <p className="muted">Usa el saldo del último día con dato en cada mes.</p>
+                      <p className="muted">Usa el saldo del Ãºltimo dÃ­a con dato en cada mes.</p>
                     </div>
-                    <div className="badge-soft">Línea</div>
+                    <div className="badge-soft">LÃ­nea</div>
                   </div>
                   <ModernLineChart
                     data={analytics.evolution.map((m) => ({ label: monthLabel(m.month), value: m.balance }))}
@@ -1863,7 +1863,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 <div className="chart-card compact">
                   <div className="chart-card-header">
                     <p className="eyebrow">Detalle mensual</p>
-                    <h4>Tabla rápida</h4>
+                    <h4>Tabla rÃ¡pida</h4>
                   </div>
                   <div className="data-table compact">
                     <div className="table-header">
@@ -1909,8 +1909,8 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                     {movementDetails.map((m) => (
                       <div className="table-row" key={m.iso}>
                         <div className="date-cell">{m.label}</div>
-                        <div className={clsx(m.increment > 0 && 'positive')}>{m.increment > 0 ? formatCurrency(m.increment) : '—'}</div>
-                        <div className={clsx(m.decrement > 0 && 'negative')}>{m.decrement > 0 ? formatCurrency(m.decrement) : '—'}</div>
+                        <div className={clsx(m.increment > 0 && 'positive')}>{m.increment > 0 ? formatCurrency(m.increment) : 'â€”'}</div>
+                        <div className={clsx(m.decrement > 0 && 'negative')}>{m.decrement > 0 ? formatCurrency(m.decrement) : 'â€”'}</div>
                       </div>
                     ))}
                   </div>
@@ -2132,7 +2132,7 @@ export default function App() {
 
 
   // Persist fecha cobro
-  // (fecha cobro ya no se persiste, se muestra la fecha del último decremento)
+  // (fecha cobro ya no se persiste, se muestra la fecha del Ãºltimo decremento)
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -2158,7 +2158,7 @@ export default function App() {
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <strong>Saldo excedido</strong>
-              <button onClick={() => setAlertMessage(null)}>×</button>
+              <button onClick={() => setAlertMessage(null)}>Ã—</button>
             </div>
             <div className="modal-body">
               <p>{alertMessage}</p>
@@ -2180,7 +2180,7 @@ export default function App() {
         onMouseLeave={() => setMenuOpen(false)}
       >
         <div className="side-rail-header">
-          <span className="eyebrow">Menú</span>
+          <span className="eyebrow">MenÃº</span>
           <h4>Accesos</h4>
         </div>
         <button
@@ -2211,7 +2211,7 @@ export default function App() {
           className={clsx('side-link', activeView === STATS_VIEW && 'active')}
           onClick={() => { setActiveView(STATS_VIEW); setMenuOpen(false); }}
         >
-          Estadísticas
+          EstadÃ­sticas
         </button>
         <button
           className={clsx('side-link', activeView === SEGUIMIENTO_VIEW && 'active')}
@@ -2223,7 +2223,7 @@ export default function App() {
 
       <div className="hero glass-card fade-in">
         <div>
-          <div className="eyebrow">Gestión de cartera</div>
+          <div className="eyebrow">GestiÃ³n de cartera</div>
           <h1>Portfolio Manager</h1>
           <p className="hero-copy">Seguimiento diario de inversiones y rentabilidad por cliente.</p>
         </div>
@@ -2241,7 +2241,7 @@ export default function App() {
                     setActiveView(v);
                   }}
                 >
-                  <option value="">Elige un cliente…</option>
+                  <option value="">Elige un clienteâ€¦</option>
                   <option value={GENERAL_OPTION}>General (todos)</option>
                   {CLIENTS.map((c) => {
                     const ct = contacts[c.id];
@@ -2252,7 +2252,7 @@ export default function App() {
                   })}
                 </select>
               </div>
-              <p className="hero-helper">Visible en todas las vistas. Cambia rápido entre clientes.</p>
+              <p className="hero-helper">Visible en todas las vistas. Cambia rÃ¡pido entre clientes.</p>
             </div>
           </div>
         )}
@@ -2369,7 +2369,7 @@ function InfoClientes({
     yearRows.forEach((r) => {
       const m = r.iso.slice(0, 7);
       profitByMonth.set(m, (profitByMonth.get(m) || 0) + (r.profit || 0));
-      // Solo guardar baseBalance si es > 0 (ignorar 0 como valor no válido)
+      // Solo guardar baseBalance si es > 0 (ignorar 0 como valor no vÃ¡lido)
       if (!firstBaseByMonth.has(m) && r.baseBalance !== undefined && r.baseBalance > 0) {
         firstBaseByMonth.set(m, r.baseBalance);
       }
@@ -2382,14 +2382,14 @@ function InfoClientes({
       const profit = profitByMonth.get(m) || 0;
       let base = firstBaseByMonth.get(m);
       if (base === undefined || base === 0) {
-        // fallback: último final del mes anterior
+        // fallback: Ãºltimo final del mes anterior
         const idx = months.indexOf(m);
         if (idx > 0) {
           base = lastFinalByMonth.get(months[idx - 1]);
         }
       }
       if (base === undefined || base === 0) {
-        // fallback: estimar base = último final del mes - beneficio
+        // fallback: estimar base = Ãºltimo final del mes - beneficio
         const lastFinal = lastFinalByMonth.get(m);
         if (lastFinal !== undefined && lastFinal > 0) {
           base = Math.max(1, lastFinal - profit);
@@ -2412,8 +2412,11 @@ function InfoClientes({
   }, [monthPopupKey]);
 
   const currentClient = CLIENTS.find((c) => c.id === selectedId);
+  const isGeneralView = selectedId === GENERAL_OPTION;
   const contact = normalizeContact(contacts[selectedId]);
-  const displayName = `${currentClient?.name || 'Cliente'}${contact.name || contact.surname ? ` - ${contact.name} ${contact.surname}` : ''}`.trim();
+  const displayName = isGeneralView
+    ? 'Vista general de clientes'
+    : `${currentClient?.name || 'Cliente'}${contact.name || contact.surname ? ` - ${contact.name} ${contact.surname}` : ''}`.trim();
   const guaranteeInitial = guarantees[selectedId] ?? 0;
   const guaranteeActual = Math.max(0, guaranteeInitial - stats.capitalRetirado);
   const firstIncrementDate = useMemo(
@@ -2452,6 +2455,50 @@ function InfoClientes({
     }).filter((x): x is { id: string; name: string; amount: number; note: string } => !!x).sort((a, b) => b.amount - a.amount),
     [contacts]
   );
+  const waitlistTotalAmount = useMemo(
+    () => waitlistClients.reduce((sum, w) => sum + w.amount, 0),
+    [waitlistClients]
+  );
+  const guaranteeInitialTotal = useMemo(
+    () => CLIENTS.reduce((sum, c) => sum + (guarantees[c.id] ?? 0), 0),
+    [guarantees]
+  );
+  const clientsWithEmail = useMemo(
+    () => CLIENTS.filter((c) => !!normalizeContact(contacts[c.id]).email).length,
+    [contacts]
+  );
+  const clientsWithPhone = useMemo(
+    () => CLIENTS.filter((c) => !!normalizeContact(contacts[c.id]).phone).length,
+    [contacts]
+  );
+  const topGuarantees = useMemo(
+    () => CLIENTS.map((c) => {
+      const ct = normalizeContact(contacts[c.id]);
+      const namePart = `${ct.name} ${ct.surname}`.trim();
+      const rows = snapshot.clientRowsById[c.id] ?? [];
+      const withdrawn = rows.reduce((acc, r) => acc + (r.decrement ?? 0), 0);
+      return {
+        id: c.id,
+        name: namePart ? `${c.name} - ${namePart}` : c.name,
+        value: Math.max(0, (guarantees[c.id] ?? 0) - withdrawn)
+      };
+    }).sort((a, b) => b.value - a.value).slice(0, 12),
+    [contacts, guarantees, snapshot.clientRowsById]
+  );
+  const generalMovementHistory = useMemo(
+    () => [...snapshot.dailyRows]
+      .filter((r) => (r.increments ?? 0) !== 0 || (r.decrements ?? 0) !== 0)
+      .slice(-12)
+      .reverse()
+      .map((r) => ({
+        iso: r.iso,
+        label: r.label,
+        increment: r.increments ?? 0,
+        decrement: r.decrements ?? 0,
+        net: (r.increments ?? 0) - (r.decrements ?? 0)
+      })),
+    [snapshot.dailyRows]
+  );
   const checklist = useMemo(() => ([
     { label: 'Email informado', ok: !!contact.email && contact.email.includes('@') },
     { label: 'Telefono informado', ok: !!contact.phone },
@@ -2474,7 +2521,7 @@ function InfoClientes({
   };
   const deleteSelectedClient = () => {
     if (!currentClient) return;
-    const confirmed = window.confirm(`¿Eliminar ${displayName}? Esta accion no se puede deshacer.`);
+    const confirmed = window.confirm(`Â¿Eliminar ${displayName}? Esta accion no se puede deshacer.`);
     if (!confirmed) return;
     const removed = onDeleteClient(currentClient.id);
     if (!removed) {
@@ -2517,7 +2564,7 @@ function InfoClientes({
               }}
             />
             <button type="button" className="info-add-btn" onClick={createClient}>
-              + Añadir
+              + AÃ±adir
             </button>
           </div>
         </div>
@@ -2526,7 +2573,7 @@ function InfoClientes({
             className={clsx('info-item', selectedId === GENERAL_OPTION && 'active')}
             onClick={() => setSelectedId(GENERAL_OPTION)}
           >
-            <span className="info-name">General</span>
+            <span className="info-name">Vista general</span>
             <span className="info-id">Vista</span>
           </button>
           {filteredClients.map((c) => {
@@ -2551,7 +2598,7 @@ function InfoClientes({
       <main className="info-detail">
         <header className="info-detail-header">
           <div>
-            <div className="eyebrow">Ficha de cliente</div>
+            <div className="eyebrow">{isGeneralView ? 'Consolidado' : 'Ficha de cliente'}</div>
             <h2>{displayName || 'Selecciona un cliente'}</h2>
           </div>
           {currentClient && (
@@ -2561,6 +2608,8 @@ function InfoClientes({
           )}
         </header>
 
+        {!isGeneralView && (
+        <>
         {/* KPIs */}
         <section className="info-kpis">
           <div className="kpi-card">
@@ -2582,8 +2631,8 @@ function InfoClientes({
             {monthPopupKey === 'profit' && (
               <div className="mini-popup fixed-popup" ref={popupRef}>
                 <div className="mini-popup-header">
-                  <strong>Beneficios mensuales (año)</strong>
-                  <button onClick={() => setMonthPopupKey(null)}>×</button>
+                  <strong>Beneficios mensuales (aÃ±o)</strong>
+                  <button onClick={() => setMonthPopupKey(null)}>Ã—</button>
                 </div>
                 <div className="mini-popup-body">
                   {monthlySummary.length === 0 && <p className="muted">Sin datos</p>}
@@ -2604,8 +2653,8 @@ function InfoClientes({
             {monthPopupKey === 'return' && (
               <div className="mini-popup fixed-popup" ref={popupRef}>
                 <div className="mini-popup-header">
-                  <strong>Rentabilidades mensuales (año)</strong>
-                  <button onClick={() => setMonthPopupKey(null)}>×</button>
+                  <strong>Rentabilidades mensuales (aÃ±o)</strong>
+                  <button onClick={() => setMonthPopupKey(null)}>Ã—</button>
                 </div>
                 <div className="mini-popup-body">
                   {monthlySummary.length === 0 && <p className="muted">Sin datos</p>}
@@ -2620,7 +2669,7 @@ function InfoClientes({
             )}
           </div>
           <div className="kpi-card">
-            <span className="kpi-label">Proporción del total</span>
+            <span className="kpi-label">ProporciÃ³n del total</span>
             <span className="kpi-value">{formatPercent(stats.proportion)}</span>
           </div>
         </section>
@@ -2661,7 +2710,7 @@ function InfoClientes({
               />
             </label>
             <label>
-              <span>Teléfono</span>
+              <span>TelÃ©fono</span>
               <input
                 id="contact-phone"
                 name="contact-phone"
@@ -2682,7 +2731,7 @@ function InfoClientes({
               />
             </label>
             <label>
-              <span>Cliente quiere invertir mÃ¡s (€)</span>
+              <span>Interes de ampliacion (€)</span>
               <input
                 id="contact-waitlist-amount"
                 name="contact-waitlist-amount"
@@ -2692,11 +2741,11 @@ function InfoClientes({
               />
             </label>
             <label style={{ gridColumn: '1 / -1' }}>
-              <span>Nota peticion adicional</span>
+              <span>Detalle de ampliacion</span>
               <input
                 id="contact-waitlist-note"
                 name="contact-waitlist-note"
-                placeholder="Ej: Quiere meter 50k cuando haya hueco"
+                placeholder="Ej: Disponible para entrar cuando se libere capacidad"
                 value={contact.waitlistNote}
                 onChange={(e) => { updateField('waitlistNote', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
               />
@@ -2715,12 +2764,12 @@ function InfoClientes({
           </div>
         </section>
 
-        {/* Garantías */}
+        {/* GarantÃ­as */}
         <section className="info-section">
-          <h4>Garantías</h4>
+          <h4>GarantÃ­as</h4>
           <div className="info-form two-cols">
             <label>
-              <span>Garantía inicial</span>
+              <span>GarantÃ­a inicial</span>
               <input
                 id="guarantee-inicial"
                 name="guarantee-inicial"
@@ -2734,7 +2783,7 @@ function InfoClientes({
               />
             </label>
             <label>
-              <span>Garantía actual</span>
+              <span>GarantÃ­a actual</span>
               <div
                 onMouseEnter={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -2747,26 +2796,52 @@ function InfoClientes({
             </label>
           </div>
         </section>
+        </>
+        )}
 
         <section className="info-section">
-          <h4>Resumen global inmediato</h4>
+          <h4>{isGeneralView ? 'Panel general de clientes' : 'Resumen global inmediato'}</h4>
           <div className="info-checklist">
             <div className="info-check ok">
               <span>Total</span>
               <strong>Garantias actuales: {formatCurrency(guaranteeCurrentTotal)}</strong>
             </div>
+            <div className="info-check ok">
+              <span>Total</span>
+              <strong>Garantias iniciales: {formatCurrency(guaranteeInitialTotal)}</strong>
+            </div>
             <div className={clsx('info-check', waitlistClients.length > 0 ? 'pending' : 'ok')}>
               <span>{waitlistClients.length > 0 ? 'Pendiente' : 'OK'}</span>
-              <strong>Clientes pidiendo ampliar: {waitlistClients.length}</strong>
+              <strong>Clientes en lista de ampliacion: {waitlistClients.length}</strong>
             </div>
+            <div className={clsx('info-check', waitlistTotalAmount > 0 ? 'pending' : 'ok')}>
+              <span>{waitlistTotalAmount > 0 ? 'Pendiente' : 'OK'}</span>
+              <strong>Capital solicitado: {formatCurrency(waitlistTotalAmount)}</strong>
+            </div>
+            {isGeneralView && (
+              <>
+                <div className="info-check ok">
+                  <span>Base</span>
+                  <strong>Clientes totales: {CLIENTS.length}</strong>
+                </div>
+                <div className="info-check ok">
+                  <span>Base</span>
+                  <strong>Con email: {clientsWithEmail}</strong>
+                </div>
+                <div className="info-check ok">
+                  <span>Base</span>
+                  <strong>Con telefono: {clientsWithPhone}</strong>
+                </div>
+              </>
+            )}
           </div>
           <div className="data-table compact" style={{ marginTop: 12 }}>
             <div className="table-header" style={{ gridTemplateColumns: '1fr 160px 1fr' }}>
               <div>Cliente</div>
-              <div>Importe pedido</div>
-              <div>Nota</div>
+              <div>Capital solicitado</div>
+              <div>Detalle</div>
             </div>
-            {waitlistClients.length === 0 && <div className="table-row"><div>No hay peticiones de ampliacion</div></div>}
+            {waitlistClients.length === 0 && <div className="table-row"><div>No hay solicitudes de ampliacion</div></div>}
             {waitlistClients.map((w) => (
               <div key={w.id} className="table-row" style={{ gridTemplateColumns: '1fr 160px 1fr' }}>
                 <div>{w.name}</div>
@@ -2775,8 +2850,43 @@ function InfoClientes({
               </div>
             ))}
           </div>
+          {isGeneralView && (
+            <>
+              <div className="data-table compact" style={{ marginTop: 12 }}>
+                <div className="table-header" style={{ gridTemplateColumns: '1fr 180px' }}>
+                  <div>Top garantias actuales</div>
+                  <div>Garantia actual</div>
+                </div>
+                {topGuarantees.length === 0 && <div className="table-row"><div>Sin datos</div></div>}
+                {topGuarantees.map((g) => (
+                  <div key={g.id} className="table-row" style={{ gridTemplateColumns: '1fr 180px' }}>
+                    <div>{g.name}</div>
+                    <div>{formatCurrency(g.value)}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="data-table compact" style={{ marginTop: 12 }}>
+                <div className="table-header" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+                  <div>Fecha</div>
+                  <div>Incrementos</div>
+                  <div>Decrementos</div>
+                  <div>Neto</div>
+                </div>
+                {generalMovementHistory.length === 0 && <div className="table-row"><div>Sin movimientos globales</div></div>}
+                {generalMovementHistory.map((m) => (
+                  <div key={m.iso} className="table-row" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+                    <div>{m.label}</div>
+                    <div>{formatCurrency(m.increment)}</div>
+                    <div>{formatCurrency(m.decrement)}</div>
+                    <div className={clsx(m.net >= 0 ? 'positive' : 'negative')}>{formatCurrency(m.net)}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </section>
 
+        {!isGeneralView && (
         <section className="info-section">
           <h4>Checklist operativo</h4>
           <div className="info-checklist">
@@ -2788,7 +2898,9 @@ function InfoClientes({
             ))}
           </div>
         </section>
+        )}
 
+        {!isGeneralView && (
         <section className="info-section">
           <h4>Historial de movimientos (ultimos 12)</h4>
           <div className="data-table compact">
@@ -2809,8 +2921,9 @@ function InfoClientes({
             ))}
           </div>
         </section>
+        )}
       </main>
-      {guaranteeTooltip && createPortal(
+      {!isGeneralView && guaranteeTooltip && createPortal(
         <div className="mini-popup info-guarantee-tip" style={{ position: 'fixed', top: guaranteeTooltip.y, left: guaranteeTooltip.x, zIndex: 2147483647 }}>
           <div className="mini-popup-header">
             <strong>Como se calcula garantia actual</strong>
@@ -2981,7 +3094,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
   }, [comisionEstadoRetiro]);
 
   const formatDate = (iso?: string) => {
-    if (!iso) return '—';
+    if (!iso) return 'â€”';
     const [y, m, d] = iso.split('-');
     if (!y || !m || !d) return iso;
     return `${d}.${m}.${y}`;
@@ -3001,7 +3114,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
       const beneficioTotal = saldo + decrementos - incrementos;
       const beneficioRetirado = Math.max(0, decrementos - incrementos);
       const comisionRetirada = beneficioRetirado * 0.05;
-      // Comisión si retira hoy: 5% del beneficio total, solo si es positivo (ya recuperó capital)
+      // ComisiÃ³n si retira hoy: 5% del beneficio total, solo si es positivo (ya recuperÃ³ capital)
       const comisionSiRetiraHoy = beneficioTotal > 0 ? beneficioTotal * 0.05 : 0;
 
       const comisionGenerada = comisionRetirada;
@@ -3082,7 +3195,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
       <div className="comisiones-header glass-card">
         <div className="comisiones-header-content">
           <div className="eyebrow">Panel de Comisiones</div>
-          <h1>Gestión de Comisiones</h1>
+          <h1>GestiÃ³n de Comisiones</h1>
           <p className="hero-copy">Control y seguimiento de comisiones del 5% sobre beneficios</p>
         </div>
       </div>
@@ -3090,17 +3203,17 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
       {/* KPIs principales */}
       <div className="comisiones-kpis">
         <div className="kpi-card-large">
-          <div className="kpi-icon">💰</div>
+          <div className="kpi-icon">ðŸ’°</div>
           <div className="kpi-content">
-            <span className="kpi-label">Comisión total generada</span>
+            <span className="kpi-label">ComisiÃ³n total generada</span>
             <span className="kpi-value-large">{formatCurrency(totals.comisionAcumuladaTotal)}</span>
             <span className="kpi-subtitle">5% sobre beneficios retirados</span>
           </div>
         </div>
         <div className="kpi-card-large warning">
-          <div className="kpi-icon">⏳</div>
+          <div className="kpi-icon">â³</div>
           <div className="kpi-content">
-            <span className="kpi-label">Comisión pendiente</span>
+            <span className="kpi-label">ComisiÃ³n pendiente</span>
             <span className="kpi-value-large">{formatCurrency(totals.totalPendiente)}</span>
             <span className="kpi-subtitle">Por cobrar de retiros realizados</span>
           </div>
@@ -3122,7 +3235,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                 <th className="text-right">Retirado</th>
                 <th className="text-right">Saldo actual</th>
                 <th className="text-right">Beneficio</th>
-                <th className="text-right">Comisión cobrada</th>
+                <th className="text-right">ComisiÃ³n cobrada</th>
                 <th className="text-right">Si retira hoy</th>
                 <th className="text-center">Estado</th>
               </tr>
@@ -3148,7 +3261,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                       {c.comisionPendiente > 0 ? (
                         <span className="status-badge pending">{formatCurrency(c.comisionPendiente)}</span>
                       ) : (
-                        <span className="status-badge paid">✓ Cobrada</span>
+                        <span className="status-badge paid">âœ“ Cobrada</span>
                       )}
                     </td>
                   </tr>
@@ -3157,10 +3270,10 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                       <td colSpan={8}>
                         <div className="detail-panel">
                           <div className="detail-info">
-                            <div className="eyebrow">Detalle de comisión</div>
+                            <div className="eyebrow">Detalle de comisiÃ³n</div>
                             <div className="detail-summary">
                               <div className="summary-item">
-                                <span className="label">Comisión generada</span>
+                                <span className="label">ComisiÃ³n generada</span>
                                 <span className="value">{formatCurrency(c.comisionGenerada)}</span>
                               </div>
                               <div className="summary-item">
@@ -3175,7 +3288,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                                     <tr>
                                       <th>Fecha</th>
                                       <th className="text-right">Retirado</th>
-                                      <th className="text-right">Comisión (5%)</th>
+                                      <th className="text-right">ComisiÃ³n (5%)</th>
                                       <th className="text-center">Estado</th>
                                     </tr>
                                   </thead>
@@ -3190,7 +3303,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                                             className={`btn-estado ${r.estado ? 'cobrada' : 'pendiente'}`}
                                             onClick={() => toggleEstadoRetiro(r.key, !r.estado)}
                                           >
-                                            {r.estado ? '✓ Cobrada' : 'Pendiente'}
+                                            {r.estado ? 'âœ“ Cobrada' : 'Pendiente'}
                                           </button>
                                         </td>
                                       </tr>
@@ -3220,7 +3333,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                   {totals.totalPendiente > 0 ? (
                     <span className="status-badge pending">{formatCurrency(totals.totalPendiente)}</span>
                   ) : (
-                    <span className="status-badge paid">✓</span>
+                    <span className="status-badge paid">âœ“</span>
                   )}
                 </td>
               </tr>
@@ -3231,6 +3344,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
     </div>
   );
 }
+
 
 
 
