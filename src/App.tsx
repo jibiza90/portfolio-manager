@@ -505,68 +505,24 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const setDayFinal = usePortfolioStore((s) => s.setDayFinal);
   const rows = useMemo(() => [...snapshot.dailyRows], [snapshot.dailyRows]);
   const tableRef = useRef<HTMLTableElement>(null);
-  const initialScrollDoneRef = useRef(false);
-  const movementByDate = useMemo(() => {
-    const map: Record<string, { clientId: string; name: string; increment?: number; decrement?: number }[]> = {};
-    CLIENTS.forEach((c) => {
-      const clientMovs = movementsByClient[c.id] || {};
-      Object.entries(clientMovs).forEach(([iso, mov]) => {
-        const inc = mov.increment ?? 0;
-        const dec = mov.decrement ?? 0;
-        if (inc !== 0 || dec !== 0) {
-          if (!map[iso]) map[iso] = [];
-          map[iso].push({ clientId: c.id, name: c.name, increment: mov.increment, decrement: mov.decrement });
-        }
-      });
-    });
-    console.log('[DailyGrid] movementByDate:', map);
-    console.log('[DailyGrid] movementsByClient:', movementsByClient);
-    return map;
-  }, [movementsByClient]);
-  const [movementPopup, setMovementPopup] = useState<{ iso: string; items: { clientId: string; name: string; increment?: number; decrement?: number }[]; pos?: { top: number; left: number } } | null>(null);
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
 
-  // Scroll inicial sólo una vez al cargar para ir al día en foco
-  useEffect(() => {
-    if (initialScrollDoneRef.current) return;
-    if (!tableRef.current || !focusDate) return;
-    const row = tableRef.current.querySelector<HTMLTableRowElement>(`tr[data-iso='${focusDate}']`);
-    if (row) {
-      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      initialScrollDoneRef.current = true;
-    }
-  }, [focusDate]);
+  const getMovementClients = (iso: string, type: 'increment' | 'decrement') => {
+    const clients: string[] = [];
+    CLIENTS.forEach((c) => {
+      const mov = movementsByClient[c.id]?.[iso];
+      if (mov) {
+        const amount = type === 'increment' ? mov.increment : mov.decrement;
+        if (amount && amount !== 0) {
+          clients.push(`${c.name}: ${formatCurrency(amount)}`);
+        }
+      }
+    });
+    return clients.join(', ');
+  };
 
   const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '—' : formatPercent(v));
-  const handleRowEnter = (r: typeof rows[number], e: React.MouseEvent<HTMLTableRowElement>) => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = null;
-    }
-    const clientX = e.clientX;
-    const clientY = e.clientY;
-    hoverTimerRef.current = setTimeout(() => {
-      setFocusDate(r.iso);
-      const items = movementByDate[r.iso];
-      console.log(`[handleRowEnter] iso=${r.iso}, items=`, items, 'increments=', r.increments, 'decrements=', r.decrements);
-      if (items && items.length > 0) {
-        const top = clientY + 8;
-        const left = clientX + 12;
-        console.log(`[handleRowEnter] Setting popup at top=${top}, left=${left}`);
-        setMovementPopup({ iso: r.iso, items, pos: { top, left } });
-      } else {
-        setMovementPopup(null);
-      }
-    }, 120);
-  };
-  const handleRowLeave = () => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    hoverTimerRef.current = null;
-    hideTimerRef.current = setTimeout(() => setMovementPopup(null), 120);
-  };
   return (
     <div className="glass-card grid-card fade-in">
       <div className="grid-header">
@@ -586,12 +542,29 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
                 key={r.iso}
                 data-iso={r.iso}
                 className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}
-                onMouseEnter={(e) => handleRowEnter(r, e)}
-                onMouseLeave={handleRowLeave}
+                onClick={() => setFocusDate(r.iso)}
               >
                 <td><span>{r.label}</span><small>{r.weekday}</small></td>
-                <td>{showValue(r.increments)}</td>
-                <td>{showValue(r.decrements)}</td>
+                <td
+                  onMouseEnter={(e) => {
+                    const content = getMovementClients(r.iso, 'increment');
+                    if (content) setTooltip({ x: e.clientX, y: e.clientY, content });
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{ cursor: r.increments ? 'help' : 'default' }}
+                >
+                  {showValue(r.increments)}
+                </td>
+                <td
+                  onMouseEnter={(e) => {
+                    const content = getMovementClients(r.iso, 'decrement');
+                    if (content) setTooltip({ x: e.clientX, y: e.clientY, content });
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{ cursor: r.decrements ? 'help' : 'default' }}
+                >
+                  {showValue(r.decrements)}
+                </td>
                 <td>{showValue(r.initial)}</td>
                 <td>{r.isWeekend ? showValue(r.final) : <CurrencyCell value={r.final} onChange={(v) => setDayFinal(r.iso, v)} />}</td>
                 <td className={clsx(r.profit !== undefined && r.profit >= 0 ? 'profit' : 'loss')}>{showValue(r.profit)}</td>
@@ -602,38 +575,25 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
           </tbody>
         </table>
       </div>
-      {movementPopup && (
+      {tooltip && (
         <div
-          className="movement-popover"
-          style={{ position: 'fixed', top: movementPopup.pos?.top ?? 0, left: movementPopup.pos?.left ?? 0, zIndex: 9999, pointerEvents: 'auto' }}
-          onMouseEnter={() => {
-            if (hideTimerRef.current) {
-              clearTimeout(hideTimerRef.current);
-              hideTimerRef.current = null;
-            }
-          }}
-          onMouseLeave={() => {
-            hideTimerRef.current = setTimeout(() => setMovementPopup(null), 120);
+          style={{
+            position: 'fixed',
+            top: tooltip.y + 10,
+            left: tooltip.x + 10,
+            background: '#1e293b',
+            color: '#e2e8f0',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: 600,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            zIndex: 10000,
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap'
           }}
         >
-          <div className="movement-popover-card">
-            <div className="movement-popover-header">{movementPopup.iso}</div>
-            <div className="movement-popover-body">
-              {movementPopup.items.map((item) => {
-                const inc = item.increment ?? 0;
-                const dec = item.decrement ?? 0;
-                return (
-                  <div key={`${item.clientId}-${item.name}-${movementPopup.iso}`} className="movement-popover-row">
-                    <span className="movement-client">{item.name}</span>
-                    <div className="movement-amounts">
-                      {inc !== 0 && <span className="positive">+{formatCurrency(inc)}</span>}
-                      {dec !== 0 && <span className="negative">-{formatCurrency(dec)}</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {tooltip.content}
         </div>
       )}
     </div>
