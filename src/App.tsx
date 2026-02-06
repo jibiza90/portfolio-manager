@@ -507,12 +507,18 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const tableRef = useRef<HTMLTableElement>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
 
+  useEffect(() => {
+    if (!tableRef.current || !focusDate) return;
+    const row = tableRef.current.querySelector<HTMLTableRowElement>(`tr[data-iso='${focusDate}']`);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [focusDate, rows.length]);
+
   const getMovementClients = (iso: string, type: 'increment' | 'decrement') => {
     const clients: string[] = [];
-    console.log(`[getMovementClients] iso=${iso}, type=${type}, movementsByClient=`, movementsByClient);
     CLIENTS.forEach((c) => {
       const mov = movementsByClient[c.id]?.[iso];
-      console.log(`[getMovementClients] client=${c.name}, mov=`, mov);
       if (mov) {
         const amount = type === 'increment' ? mov.increment : mov.decrement;
         if (amount && amount !== 0) {
@@ -520,9 +526,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
         }
       }
     });
-    const result = clients.join(', ');
-    console.log(`[getMovementClients] result='${result}'`);
-    return result;
+    return clients;
   };
 
   const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
@@ -551,11 +555,9 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
                 <td><span>{r.label}</span><small>{r.weekday}</small></td>
                 <td
                   onMouseEnter={(e) => {
-                    console.log(`[Incr hover] iso=${r.iso}, increments=${r.increments}`);
-                    const content = getMovementClients(r.iso, 'increment');
-                    console.log(`[Incr hover] content='${content}'`);
-                    if (content) {
-                      console.log(`[Incr hover] Setting tooltip at x=${e.clientX}, y=${e.clientY}`);
+                    const clients = getMovementClients(r.iso, 'increment');
+                    if (clients.length > 0) {
+                      const content = `Incremento (${r.label})\n${clients.join('\n')}`;
                       setTooltip({ x: e.clientX, y: e.clientY, content });
                     }
                   }}
@@ -566,11 +568,9 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
                 </td>
                 <td
                   onMouseEnter={(e) => {
-                    console.log(`[Decr hover] iso=${r.iso}, decrements=${r.decrements}`);
-                    const content = getMovementClients(r.iso, 'decrement');
-                    console.log(`[Decr hover] content='${content}'`);
-                    if (content) {
-                      console.log(`[Decr hover] Setting tooltip at x=${e.clientX}, y=${e.clientY}`);
+                    const clients = getMovementClients(r.iso, 'decrement');
+                    if (clients.length > 0) {
+                      const content = `Decremento (${r.label})\n${clients.join('\n')}`;
                       setTooltip({ x: e.clientX, y: e.clientY, content });
                     }
                   }}
@@ -604,7 +604,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
             boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
             zIndex: 10000,
             pointerEvents: 'none',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'pre-line'
           }}
         >
           {tooltip.content}
