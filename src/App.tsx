@@ -523,6 +523,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   }, [movementsByClient]);
   const [movementPopup, setMovementPopup] = useState<{ iso: string; items: { clientId: string; name: string; increment?: number; decrement?: number }[]; pos?: { top: number; left: number } } | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Scroll inicial sólo una vez al cargar para ir al día en foco
   useEffect(() => {
@@ -539,12 +540,18 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const showPercent = (v?: number) => (v === undefined ? '—' : formatPercent(v));
   const handleRowEnter = (r: typeof rows[number], e: React.MouseEvent<HTMLTableRowElement>) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    const { clientX, clientY } = e;
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
     hoverTimerRef.current = setTimeout(() => {
       setFocusDate(r.iso);
       const items = movementByDate[r.iso];
       if (items && items.length > 0) {
-        setMovementPopup({ iso: r.iso, items, pos: { top: clientY + 8, left: clientX + 12 } });
+        const rect = e.currentTarget.getBoundingClientRect();
+        const top = rect.top + window.scrollY + rect.height / 2;
+        const left = rect.right + window.scrollX + 12;
+        setMovementPopup({ iso: r.iso, items, pos: { top, left } });
       } else {
         setMovementPopup(null);
       }
@@ -553,7 +560,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const handleRowLeave = () => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     hoverTimerRef.current = null;
-    setMovementPopup(null);
+    hideTimerRef.current = setTimeout(() => setMovementPopup(null), 120);
   };
   return (
     <div className="glass-card grid-card fade-in">
@@ -593,8 +600,16 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
       {movementPopup && (
         <div
           className="movement-popover"
-          style={{ position: 'fixed', top: movementPopup.pos?.top ?? 0, left: movementPopup.pos?.left ?? 0, zIndex: 9999 }}
-          onMouseLeave={handleRowLeave}
+          style={{ position: 'fixed', top: movementPopup.pos?.top ?? 0, left: movementPopup.pos?.left ?? 0, zIndex: 9999, pointerEvents: 'auto' }}
+          onMouseEnter={() => {
+            if (hideTimerRef.current) {
+              clearTimeout(hideTimerRef.current);
+              hideTimerRef.current = null;
+            }
+          }}
+          onMouseLeave={() => {
+            hideTimerRef.current = setTimeout(() => setMovementPopup(null), 120);
+          }}
         >
           <div className="movement-popover-card">
             <div className="movement-popover-header">{movementPopup.iso}</div>

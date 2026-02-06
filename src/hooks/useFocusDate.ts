@@ -1,17 +1,15 @@
 import { usePortfolioStore } from '../store/portfolio';
-import { YEAR, YEAR_DAYS, findFocusDate } from '../utils/dates';
-
-const isCurrentYear = (iso: string) => iso.startsWith(`${YEAR}-`);
+import { YEAR_DAYS, findFocusDate } from '../utils/dates';
 
 export const useFocusDate = () =>
   usePortfolioStore((state) => {
     const fromFinals = (() => {
-      for (let i = YEAR_DAYS.length - 1; i >= 0; i -= 1) {
-        const iso = YEAR_DAYS[i].iso;
-        const value = state.finalByDay[iso];
-        if (value !== undefined && !Number.isNaN(value) && isCurrentYear(iso)) {
-          return iso;
-        }
+      const ordered = Object.entries(state.finalByDay)
+        .filter(([, value]) => value !== undefined && !Number.isNaN(value))
+        .map(([iso]) => iso)
+        .sort((a, b) => (a > b ? 1 : -1));
+      if (ordered.length) {
+        return ordered[ordered.length - 1];
       }
       return null;
     })();
@@ -20,7 +18,7 @@ export const useFocusDate = () =>
       const rows = state.snapshot.dailyRows || [];
       for (let i = rows.length - 1; i >= 0; i -= 1) {
         const r = rows[i];
-        if (r.final !== undefined && !Number.isNaN(r.final) && isCurrentYear(r.iso)) {
+        if (r.final !== undefined && !Number.isNaN(r.final)) {
           return r.iso;
         }
       }
