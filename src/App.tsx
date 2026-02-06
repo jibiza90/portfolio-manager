@@ -509,8 +509,10 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
 
   const getMovementClients = (iso: string, type: 'increment' | 'decrement') => {
     const clients: string[] = [];
+    console.log(`[getMovementClients] iso=${iso}, type=${type}, movementsByClient=`, movementsByClient);
     CLIENTS.forEach((c) => {
       const mov = movementsByClient[c.id]?.[iso];
+      console.log(`[getMovementClients] client=${c.name}, mov=`, mov);
       if (mov) {
         const amount = type === 'increment' ? mov.increment : mov.decrement;
         if (amount && amount !== 0) {
@@ -518,7 +520,9 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
         }
       }
     });
-    return clients.join(', ');
+    const result = clients.join(', ');
+    console.log(`[getMovementClients] result='${result}'`);
+    return result;
   };
 
   const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
@@ -547,8 +551,13 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
                 <td><span>{r.label}</span><small>{r.weekday}</small></td>
                 <td
                   onMouseEnter={(e) => {
+                    console.log(`[Incr hover] iso=${r.iso}, increments=${r.increments}`);
                     const content = getMovementClients(r.iso, 'increment');
-                    if (content) setTooltip({ x: e.clientX, y: e.clientY, content });
+                    console.log(`[Incr hover] content='${content}'`);
+                    if (content) {
+                      console.log(`[Incr hover] Setting tooltip at x=${e.clientX}, y=${e.clientY}`);
+                      setTooltip({ x: e.clientX, y: e.clientY, content });
+                    }
                   }}
                   onMouseLeave={() => setTooltip(null)}
                   style={{ cursor: r.increments ? 'help' : 'default' }}
@@ -557,8 +566,13 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
                 </td>
                 <td
                   onMouseEnter={(e) => {
+                    console.log(`[Decr hover] iso=${r.iso}, decrements=${r.decrements}`);
                     const content = getMovementClients(r.iso, 'decrement');
-                    if (content) setTooltip({ x: e.clientX, y: e.clientY, content });
+                    console.log(`[Decr hover] content='${content}'`);
+                    if (content) {
+                      console.log(`[Decr hover] Setting tooltip at x=${e.clientX}, y=${e.clientY}`);
+                      setTooltip({ x: e.clientX, y: e.clientY, content });
+                    }
                   }}
                   onMouseLeave={() => setTooltip(null)}
                   style={{ cursor: r.decrements ? 'help' : 'default' }}
