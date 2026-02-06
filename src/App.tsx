@@ -44,13 +44,14 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const [chartTooltip, setChartTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
 
   useEffect(() => {
-    const closeOnOutside = (e: PointerEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target?.closest('.stats-info-anchor')) return;
+    const closeOnOutside = (e: Event) => {
+      const path = (e as Event & { composedPath?: () => EventTarget[] }).composedPath?.() ?? [];
+      const insideInfo = path.some((node: EventTarget) => node instanceof HTMLElement && node.classList.contains('stats-info-anchor'));
+      if (insideInfo) return;
       setHelpKey(null);
     };
-    document.addEventListener('pointerdown', closeOnOutside);
-    return () => document.removeEventListener('pointerdown', closeOnOutside);
+    document.addEventListener('click', closeOnOutside);
+    return () => document.removeEventListener('click', closeOnOutside);
   }, []);
 
   const lastWithData = useMemo(
