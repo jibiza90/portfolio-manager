@@ -275,7 +275,20 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
                 {patrimonioWithData.map((p, idx) => {
                   const x = patrimonioWithData.length <= 1 ? 8 : (idx / (patrimonioWithData.length - 1)) * 100;
                   const y = 92 - ((p.balance as number) / maxPatrimonio) * 78;
-                  return <circle key={`${p.month}-${idx}`} cx={x} cy={Math.max(10, y)} r="1.6" className="report-pro-dot" />;
+                  const pointY = Math.max(10, y);
+                  return (
+                    <g key={`${p.month}-${idx}`}>
+                      <text
+                        x={x}
+                        y={Math.max(7, pointY - 2.8)}
+                        className="report-pro-point-value"
+                        textAnchor="middle"
+                      >
+                        {formatCurrency(p.balance)}
+                      </text>
+                      <circle cx={x} cy={pointY} r="1.6" className="report-pro-dot" />
+                    </g>
+                  );
                 })}
               </svg>
             </div>
