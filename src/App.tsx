@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
-import { CLIENTS } from './constants/clients';
+import { addClientProfile, CLIENTS } from './constants/clients';
 import { GENERAL_OPTION } from './constants/generalOption';
 import { usePortfolioStore } from './store/portfolio';
 import { formatCurrency, formatPercent, formatNumberEs, parseNumberEs } from './utils/format';
@@ -1996,6 +1996,26 @@ export default function App() {
   const derivedFocusDate = useFocusDate();
   const [focusDate, setFocusDate] = useState(derivedFocusDate);
   const [toast, setToast] = useState<string | null>(null);
+  const handleAddClient = (name?: string) => {
+    const created = addClientProfile(name);
+    setContacts((prev) => {
+      if (prev[created.id]) return prev;
+      return { ...prev, [created.id]: { name: '', surname: '', email: '', phone: '' } };
+    });
+    setGuarantees((prev) => {
+      if (created.id in prev) return prev;
+      return { ...prev, [created.id]: 0 };
+    });
+    setComisionesCobradas((prev) => {
+      if (created.id in prev) return prev;
+      return { ...prev, [created.id]: 0 };
+    });
+    setComisionEstado((prev) => {
+      if (created.id in prev) return prev;
+      return { ...prev, [created.id]: false };
+    });
+    return created;
+  };
   useEffect(() => {
     setFocusDate(derivedFocusDate);
   }, [derivedFocusDate]);
@@ -2150,7 +2170,13 @@ export default function App() {
           <DailyGrid focusDate={focusDate} setFocusDate={setFocusDate} contacts={contacts} />
         </>
       ) : activeView === INFO_VIEW ? (
-        <InfoClientes contacts={contacts} setContacts={setContacts} guarantees={guarantees} setGuarantees={setGuarantees} />
+        <InfoClientes
+          contacts={contacts}
+          setContacts={setContacts}
+          guarantees={guarantees}
+          setGuarantees={setGuarantees}
+          onAddClient={handleAddClient}
+        />
       ) : activeView === COMISIONES_VIEW ? (
         <ComisionesView
           contacts={contacts}
@@ -2171,10 +2197,23 @@ export default function App() {
   );
 }
 
-function InfoClientes({ contacts, setContacts, guarantees, setGuarantees }: { contacts: Record<string, ContactInfo>; setContacts: React.Dispatch<React.SetStateAction<Record<string, ContactInfo>>>; guarantees: Record<string, number>; setGuarantees: React.Dispatch<React.SetStateAction<Record<string, number>>>; }) {
+function InfoClientes({
+  contacts,
+  setContacts,
+  guarantees,
+  setGuarantees,
+  onAddClient
+}: {
+  contacts: Record<string, ContactInfo>;
+  setContacts: React.Dispatch<React.SetStateAction<Record<string, ContactInfo>>>;
+  guarantees: Record<string, number>;
+  setGuarantees: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  onAddClient: (name?: string) => { id: string; name: string };
+}) {
   const { snapshot } = usePortfolioStore();
   const [selectedId, setSelectedId] = useState(CLIENTS[0]?.id || '');
   const [search, setSearch] = useState('');
+  const [newClientName, setNewClientName] = useState('');
   const [monthPopupKey, setMonthPopupKey] = useState<'profit' | 'return' | null>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
@@ -2280,6 +2319,14 @@ function InfoClientes({ contacts, setContacts, guarantees, setGuarantees }: { co
     setContacts((prev) => ({ ...prev, [selectedId]: { ...contact, [field]: value } }));
   };
 
+  const createClient = () => {
+    const created = onAddClient(newClientName);
+    setNewClientName('');
+    setSearch('');
+    setSelectedId(created.id);
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: `${created.name} creado` }));
+  };
+
   return (
     <div className="info-clients-container fade-in">
       {/* Panel izquierdo: buscador + lista */}
@@ -2295,6 +2342,24 @@ function InfoClientes({ contacts, setContacts, guarantees, setGuarantees }: { co
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <div className="info-add-row">
+            <input
+              type="text"
+              className="info-add-input"
+              placeholder="Nombre del cliente (opcional)"
+              value={newClientName}
+              onChange={(e) => setNewClientName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  createClient();
+                }
+              }}
+            />
+            <button type="button" className="info-add-btn" onClick={createClient}>
+              + Añadir
+            </button>
+          </div>
         </div>
         <div className="info-list">
           <button

@@ -638,6 +638,46 @@ input[type='number'] {
   box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
 }
 
+.info-add-row {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.info-add-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(15,109,122,0.15);
+  background: #fff;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+
+.info-add-input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
+}
+
+.info-add-btn {
+  border: 1px solid rgba(15,109,122,0.18);
+  background: linear-gradient(135deg, #0f6d7a, #0ea5e9);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.info-add-btn:hover {
+  filter: brightness(1.04);
+  box-shadow: 0 4px 12px rgba(15,109,122,0.22);
+}
+
 .info-list {
   flex: 1;
   overflow-y: auto;

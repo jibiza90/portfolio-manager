@@ -8,15 +8,17 @@ export interface CalendarDay {
   isWeekend: boolean;
 }
 
-export const YEAR = 2026;
+export const START_YEAR = 2026;
+export const YEAR = dayjs().year();
+export const END_YEAR = YEAR + 3;
 
 dayjs.locale('es');
 
 export const YEAR_DAYS: CalendarDay[] = (() => {
-  const start = dayjs(`${YEAR}-01-01`);
+  const start = dayjs(`${START_YEAR}-01-01`);
+  const end = dayjs(`${END_YEAR}-12-31`);
   const days: CalendarDay[] = [];
-
-  const totalDays = dayjs(`${YEAR}-12-31`).diff(start, 'day') + 1;
+  const totalDays = end.diff(start, 'day') + 1;
 
   for (let i = 0; i < totalDays; i += 1) {
     const date = start.add(i, 'day');
@@ -33,17 +35,15 @@ export const YEAR_DAYS: CalendarDay[] = (() => {
 
 export const findFocusDate = (): string => {
   const today = dayjs();
-  const startOfTodayYear = today.startOf('year');
-  const dayOffset = today.diff(startOfTodayYear, 'day');
-  const startOfTargetYear = dayjs(`${YEAR}-01-01`);
-  const endOfTargetYear = dayjs(`${YEAR}-12-31`);
-  let target = startOfTargetYear.add(dayOffset, 'day');
+  const start = dayjs(`${START_YEAR}-01-01`);
+  const end = dayjs(`${END_YEAR}-12-31`);
+  let target = today;
 
-  if (target.isBefore(startOfTargetYear)) {
-    target = startOfTargetYear;
+  if (target.isBefore(start)) {
+    target = start;
   }
-  if (target.isAfter(endOfTargetYear)) {
-    target = endOfTargetYear;
+  if (target.isAfter(end)) {
+    target = end;
   }
 
   return target.format('YYYY-MM-DD');
