@@ -509,7 +509,6 @@ function DailyGrid({
   contacts: Record<string, ContactInfo>;
 }) {
   const { snapshot } = usePortfolioStore();
-  const movementsByClient = usePortfolioStore((s) => s.movementsByClient);
   const setDayFinal = usePortfolioStore((s) => s.setDayFinal);
   const rows = useMemo(() => [...snapshot.dailyRows], [snapshot.dailyRows]);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -526,22 +525,20 @@ function DailyGrid({
   const getMovementClients = (iso: string, type: 'increment' | 'decrement') => {
     const clients: { name: string; amount: number }[] = [];
     CLIENTS.forEach((c) => {
-      const mov = movementsByClient[c.id]?.[iso];
-      if (mov) {
-        const amount = type === 'increment' ? mov.increment : mov.decrement;
-        if (amount && amount !== 0) {
-          const ct = contacts[c.id];
-          const fullName = `${ct?.name ?? ''} ${ct?.surname ?? ''}`.trim();
-          const displayName = fullName || c.name;
-          clients.push({ name: displayName, amount });
-        }
+      const row = snapshot.clientRowsById[c.id]?.find((r) => r.iso === iso);
+      const amount = type === 'increment' ? row?.increment : row?.decrement;
+      if (amount && amount !== 0) {
+        const ct = contacts[c.id];
+        const fullName = `${ct?.name ?? ''} ${ct?.surname ?? ''}`.trim();
+        const displayName = fullName || c.name;
+        clients.push({ name: displayName, amount });
       }
     });
     return clients;
   };
 
-  const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
-  const showPercent = (v?: number) => (v === undefined ? '—' : formatPercent(v));
+  const showValue = (v?: number) => (v === undefined ? '-' : formatCurrency(v));
+  const showPercent = (v?: number) => (v === undefined ? '-' : formatPercent(v));
   return (
     <div className="glass-card grid-card fade-in">
       <div className="grid-header">
@@ -567,10 +564,10 @@ function DailyGrid({
                 <td
                   onMouseEnter={(e) => {
                     const clients = getMovementClients(r.iso, 'increment');
-                    if (clients.length > 0) {
-                      const total = clients.reduce((sum, item) => sum + item.amount, 0);
+                    const total = r.increments ?? 0;
+                    if (total !== 0) {
                       const details = clients.map((item) => `${item.name} incremento ${formatCurrency(item.amount)}`).join('\n');
-                      const content = `${details}\nTotal ${formatCurrency(total)}`;
+                      const content = details ? `${details}\nTotal ${formatCurrency(total)}` : `Total ${formatCurrency(total)}`;
                       setTooltip({ x: e.clientX, y: e.clientY, content });
                     }
                   }}
@@ -582,10 +579,10 @@ function DailyGrid({
                 <td
                   onMouseEnter={(e) => {
                     const clients = getMovementClients(r.iso, 'decrement');
-                    if (clients.length > 0) {
-                      const total = clients.reduce((sum, item) => sum + item.amount, 0);
+                    const total = r.decrements ?? 0;
+                    if (total !== 0) {
                       const details = clients.map((item) => `${item.name} decremento ${formatCurrency(item.amount)}`).join('\n');
-                      const content = `${details}\nTotal ${formatCurrency(total)}`;
+                      const content = details ? `${details}\nTotal ${formatCurrency(total)}` : `Total ${formatCurrency(total)}`;
                       setTooltip({ x: e.clientX, y: e.clientY, content });
                     }
                   }}
@@ -2093,3 +2090,4 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
     </div>
   );
 }
+
