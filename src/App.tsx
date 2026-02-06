@@ -521,7 +521,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
     });
     return map;
   }, [movementsByClient]);
-  const [movementPopup, setMovementPopup] = useState<{ iso: string; items: { clientId: string; name: string; increment?: number; decrement?: number }[] } | null>(null);
+  const [movementPopup, setMovementPopup] = useState<{ iso: string; items: { clientId: string; name: string; increment?: number; decrement?: number }[]; pos?: { top: number; left: number } } | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Scroll inicial sólo una vez al cargar para ir al día en foco
@@ -537,13 +537,14 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
 
   const showValue = (v?: number) => (v === undefined ? '—' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '—' : formatPercent(v));
-  const handleRowEnter = (r: typeof rows[number]) => {
+  const handleRowEnter = (r: typeof rows[number], e: React.MouseEvent<HTMLTableRowElement>) => {
     if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    const { clientX, clientY } = e;
     hoverTimerRef.current = setTimeout(() => {
       setFocusDate(r.iso);
       const items = movementByDate[r.iso];
       if (items && items.length > 0) {
-        setMovementPopup({ iso: r.iso, items });
+        setMovementPopup({ iso: r.iso, items, pos: { top: clientY + 8, left: clientX + 12 } });
       } else {
         setMovementPopup(null);
       }
@@ -573,7 +574,7 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
                 key={r.iso}
                 data-iso={r.iso}
                 className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}
-                onMouseEnter={() => handleRowEnter(r)}
+                onMouseEnter={(e) => handleRowEnter(r, e)}
                 onMouseLeave={handleRowLeave}
               >
                 <td><span>{r.label}</span><small>{r.weekday}</small></td>
@@ -590,30 +591,27 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
         </table>
       </div>
       {movementPopup && (
-        <div className="modal-backdrop" onMouseEnter={() => {}} onMouseLeave={handleRowLeave} onClick={() => setMovementPopup(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <strong>Movimientos {movementPopup.iso}</strong>
-              <button onClick={() => setMovementPopup(null)}>×</button>
-            </div>
-            <div className="modal-body">
+        <div
+          className="movement-popover"
+          style={{ position: 'fixed', top: movementPopup.pos?.top ?? 0, left: movementPopup.pos?.left ?? 0, zIndex: 9999 }}
+          onMouseLeave={handleRowLeave}
+        >
+          <div className="movement-popover-card">
+            <div className="movement-popover-header">{movementPopup.iso}</div>
+            <div className="movement-popover-body">
               {movementPopup.items.map((item) => {
                 const inc = item.increment ?? 0;
                 const dec = item.decrement ?? 0;
                 return (
-                  <div key={`${item.clientId}-${item.name}-${movementPopup.iso}`} className="mini-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span>{item.name}</span>
-                      <small className="muted">{item.clientId}</small>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div key={`${item.clientId}-${item.name}-${movementPopup.iso}`} className="movement-popover-row">
+                    <span className="movement-client">{item.name}</span>
+                    <div className="movement-amounts">
                       {inc !== 0 && <span className="positive">+{formatCurrency(inc)}</span>}
                       {dec !== 0 && <span className="negative">-{formatCurrency(dec)}</span>}
                     </div>
                   </div>
                 );
               })}
-              {movementPopup.items.length === 0 && <p className="muted">Sin movimientos</p>}
             </div>
           </div>
         </div>

@@ -2168,6 +2168,51 @@ input[type='number'] {
   font-weight: 600;
 }
 
+.movement-popover {
+  pointer-events: none;
+}
+
+.movement-popover-card {
+  min-width: 200px;
+  max-width: 240px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  padding: 10px 12px;
+}
+
+.movement-popover-header {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.movement-popover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.movement-popover-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.movement-client {
+  font-weight: 600;
+}
+
+.movement-amounts {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .hero {
   display: flex;
   flex-wrap: wrap;
