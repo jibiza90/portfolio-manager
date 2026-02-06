@@ -94,9 +94,12 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
 
     y += 10;
 
+    const safeCurrency = (v: number) => formatCurrency(Number.isFinite(v) ? v : 0);
+    const safePercent = (v: number) => `${(Number.isFinite(v) ? v : 0).toFixed(2)}%`;
+
     // Monthly performance with chart + table
     if (report.monthlyStats.length > 0) {
-      checkNewPage(95);
+      checkNewPage(120);
       doc.setTextColor(15, 109, 122);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -106,34 +109,70 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
       const monthlyData = report.monthlyStats.filter((m) => m.hasData && m.profit !== null && m.profitPct !== null && m.endBalance !== null);
       if (monthlyData.length > 0) {
         const chartWidth = pageWidth - margin * 2;
-        const chartHeight = 52;
-        const barGap = 3;
-        const barWidth = Math.max(3, chartWidth / Math.max(1, monthlyData.length) - barGap);
+        const chartHeight = 70;
+        const padLeft = 22;
+        const padRight = 8;
+        const padTop = 6;
+        const padBottom = 14;
+        const plotW = chartWidth - padLeft - padRight;
+        const plotH = chartHeight - padTop - padBottom;
+        const barGap = 2.5;
+        const barWidth = Math.max(2.8, plotW / Math.max(1, monthlyData.length) - barGap);
         const maxPct = Math.max(...monthlyData.map((m) => Math.abs(m.profitPct ?? 0)), 1);
         const hasNegative = monthlyData.some((m) => (m.profitPct ?? 0) < 0);
-        const baseY = hasNegative ? y + chartHeight / 2 : y + chartHeight - 4;
+        const plotTop = y + padTop;
+        const plotBottom = plotTop + plotH;
+        const baseY = hasNegative ? plotTop + plotH / 2 : plotBottom;
 
         doc.setFillColor(247, 250, 253);
         doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'F');
+        doc.setDrawColor(215, 223, 232);
+        doc.setLineWidth(0.25);
+        doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'S');
+
         doc.setDrawColor(220, 226, 235);
         doc.setLineWidth(0.3);
+        for (let t = 0; t <= 4; t++) {
+          const gy = plotTop + (t / 4) * plotH;
+          doc.line(margin + padLeft, gy, margin + chartWidth - padRight, gy);
+          const tickPct = maxPct - (t / 4) * (hasNegative ? maxPct * 2 : maxPct);
+          doc.setTextColor(120, 130, 145);
+          doc.setFontSize(6);
+          doc.text(`${tickPct.toFixed(1)}%`, margin + 1.5, gy + 1.8);
+        }
         if (hasNegative) {
-          doc.line(margin, baseY, margin + chartWidth, baseY);
+          doc.setDrawColor(160, 175, 190);
+          doc.setLineWidth(0.35);
+          doc.line(margin + padLeft, baseY, margin + chartWidth - padRight, baseY);
         }
 
-        const maxBarHeight = hasNegative ? chartHeight / 2 - 8 : chartHeight - 10;
+        const maxBarHeight = hasNegative ? plotH / 2 - 3 : plotH - 3;
         monthlyData.forEach((m, i) => {
           const pct = m.profitPct ?? 0;
           const h = Math.min(maxBarHeight, Math.max(2, (Math.abs(pct) / maxPct) * maxBarHeight));
-          const x = margin + 2 + i * (barWidth + barGap);
+          const x = margin + padLeft + 1 + i * (barWidth + barGap);
           if (pct >= 0) {
             doc.setFillColor(15, 109, 122);
             doc.roundedRect(x, baseY - h, barWidth, h, 1, 1, 'F');
+            doc.setTextColor(15, 109, 122);
+            doc.setFontSize(6);
+            doc.text(safePercent(pct), x + barWidth / 2, Math.max(plotTop + 2, baseY - h - 1.4), { align: 'center' });
           } else {
             doc.setFillColor(220, 38, 38);
             doc.roundedRect(x, baseY, barWidth, h, 1, 1, 'F');
+            doc.setTextColor(220, 38, 38);
+            doc.setFontSize(6);
+            doc.text(safePercent(pct), x + barWidth / 2, Math.min(plotBottom - 0.5, baseY + h + 2.2), { align: 'center' });
           }
+
+          doc.setTextColor(90, 105, 125);
+          doc.setFontSize(6);
+          doc.text(m.month, x + barWidth / 2, plotBottom + 4.8, { align: 'center' });
         });
+
+        doc.setFontSize(7);
+        doc.setTextColor(15, 109, 122);
+        doc.text('Leyenda: verde = rentabilidad positiva, rojo = rentabilidad negativa', margin + 2, y + chartHeight + 4);
 
         y += chartHeight + 10;
       }
@@ -180,7 +219,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
     const evoData = report.patrimonioEvolution.filter((p) => p.balance !== undefined && p.hasData);
     if (evoData.length > 0) {
       y += 12;
-      checkNewPage(88);
+      checkNewPage(106);
       doc.setTextColor(15, 109, 122);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -188,7 +227,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
       y += 10;
 
       const chartWidth = pageWidth - margin * 2;
-      const chartHeight = 58;
+      const chartHeight = 76;
       const values = evoData.map((d) => d.balance as number);
       const minVal = Math.min(...values);
       const maxVal = Math.max(...values);
@@ -199,20 +238,27 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
 
       doc.setFillColor(247, 250, 253);
       doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'F');
+      doc.setDrawColor(215, 223, 232);
+      doc.setLineWidth(0.25);
+      doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'S');
 
-      const innerLeft = margin + 8;
+      const innerLeft = margin + 24;
       const innerRight = margin + chartWidth - 6;
       const innerTop = y + 6;
-      const innerBottom = y + chartHeight - 10;
+      const innerBottom = y + chartHeight - 14;
       const innerW = innerRight - innerLeft;
       const innerH = innerBottom - innerTop;
 
-      // Grid lines
+      // Grid lines + Y labels
       doc.setDrawColor(220, 226, 235);
       doc.setLineWidth(0.2);
       for (let i = 0; i <= 4; i++) {
         const gy = innerTop + (i / 4) * innerH;
         doc.line(innerLeft, gy, innerRight, gy);
+        const tickValue = maxAxis - (i / 4) * axisSpan;
+        doc.setTextColor(120, 130, 145);
+        doc.setFontSize(6);
+        doc.text(safeCurrency(tickValue), margin + 1.5, gy + 1.8);
       }
 
       const points = evoData.map((d, i) => {
@@ -234,21 +280,28 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
 
       // Line
       doc.setDrawColor(15, 95, 138);
-      doc.setLineWidth(0.9);
+      doc.setLineWidth(1.1);
       for (let i = 0; i < points.length - 1; i++) {
         doc.line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
       }
 
-      // Points + labels
-      points.forEach((pt) => {
+      // Points + labels (exact values)
+      points.forEach((pt, idx) => {
         doc.setFillColor(11, 79, 115);
         doc.circle(pt.x, pt.y, 1.3, 'F');
-        doc.setFontSize(6);
+        doc.setFontSize(5.4);
         doc.setTextColor(71, 85, 105);
-        doc.text(pt.month, pt.x, innerBottom + 5, { align: 'center' });
+        doc.text(pt.month, pt.x, innerBottom + 5.2, { align: 'center' });
+        const labelY = idx % 2 === 0 ? pt.y - 2.4 : pt.y + 3.8;
+        doc.setTextColor(20, 55, 80);
+        doc.text(safeCurrency(pt.balance), pt.x, labelY, { align: 'center' });
       });
 
-      y += chartHeight + 8;
+      doc.setFontSize(7);
+      doc.setTextColor(15, 109, 122);
+      doc.text('Leyenda: linea azul = saldo de cierre mensual', margin + 2, y + chartHeight + 4);
+
+      y += chartHeight + 10;
     }
 
     // Movements table
