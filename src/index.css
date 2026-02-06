@@ -2456,6 +2456,147 @@ input[type='number'] {
   background: linear-gradient(135deg, #0a2740, #0f3f62);
 }
 
+/* Luxury polish */
+.report-pro-actions .btn-action {
+  min-width: 156px;
+  justify-content: center;
+  border-radius: 999px;
+  letter-spacing: 0.25px;
+}
+
+.report-pro-actions .btn-action:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.report-pro-actions .btn-action.secondary {
+  background: linear-gradient(145deg, #ffffff, #f5f9ff);
+  border-color: rgba(30, 64, 99, 0.2);
+}
+
+.report-pro-actions .btn-action.secondary:hover {
+  background: linear-gradient(145deg, #f8fbff, #eef5ff);
+}
+
+.report-pro-sheet > * {
+  animation: reportFadeSlide 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.report-pro-sheet > *:nth-child(2) { animation-delay: 40ms; }
+.report-pro-sheet > *:nth-child(3) { animation-delay: 80ms; }
+.report-pro-sheet > *:nth-child(4) { animation-delay: 120ms; }
+.report-pro-sheet > *:nth-child(5) { animation-delay: 160ms; }
+
+.report-pro-client-tag {
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.35);
+}
+
+.report-pro-executive > div,
+.report-pro-kpi,
+.report-pro-panel {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.report-pro-executive > div:hover,
+.report-pro-kpi:hover,
+.report-pro-panel:hover {
+  transform: translateY(-2px);
+  border-color: rgba(30, 64, 99, 0.26);
+  box-shadow: 0 10px 24px rgba(15, 30, 56, 0.08);
+}
+
+.report-pro-executive strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.report-pro-kpi strong,
+.report-pro-bar-value,
+.monthly-table .text-right,
+.movements-table .text-right {
+  font-variant-numeric: tabular-nums;
+}
+
+.report-pro-bar {
+  animation: reportBarIn 640ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.report-pro-line {
+  stroke-dasharray: 220;
+  stroke-dashoffset: 220;
+  animation: reportLineIn 900ms ease forwards 180ms;
+}
+
+.report-pro-dot {
+  opacity: 0;
+  animation: reportDotIn 260ms ease forwards;
+}
+
+.report-pro-dot:nth-of-type(1) { animation-delay: 220ms; }
+.report-pro-dot:nth-of-type(2) { animation-delay: 280ms; }
+.report-pro-dot:nth-of-type(3) { animation-delay: 340ms; }
+.report-pro-dot:nth-of-type(4) { animation-delay: 400ms; }
+.report-pro-dot:nth-of-type(5) { animation-delay: 460ms; }
+.report-pro-dot:nth-of-type(6) { animation-delay: 520ms; }
+
+.report-pro-table tbody tr {
+  transition: background-color 140ms ease;
+}
+
+.report-pro-table tbody tr:hover {
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.report-pro-table thead th {
+  letter-spacing: 0.65px;
+}
+
+.report-pro-month-row span {
+  padding: 2px 0;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.1);
+}
+
+@keyframes reportFadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reportBarIn {
+  from {
+    transform: scaleY(0.2);
+    transform-origin: center bottom;
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    transform-origin: center bottom;
+    opacity: 1;
+  }
+}
+
+@keyframes reportLineIn {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes reportDotIn {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @media (max-width: 1080px) {
   .report-pro-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2492,6 +2633,14 @@ input[type='number'] {
   .report-pro-bars {
     grid-template-columns: repeat(6, minmax(0, 1fr));
     height: 260px;
+  }
+
+  .report-pro-actions .btn-action {
+    width: 100%;
+  }
+
+  .report-pro-client-tag {
+    align-self: center;
   }
 }
 
