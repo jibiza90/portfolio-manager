@@ -44,6 +44,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
       return false;
     };
 
+    const formatDate = (iso: string) => {
+      const [yy, mm, dd] = iso.split('-');
+      return `${dd}.${mm}.${yy}`;
+    };
+
     // Header
     doc.setFillColor(15, 109, 122);
     doc.rect(0, 0, pageWidth, 45, 'F');
@@ -132,6 +137,53 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
         doc.text(`${m.profitPct.toFixed(2)}%`, margin + 80, y);
         doc.setTextColor(15, 23, 42);
         doc.text(formatCurrency(m.endBalance), margin + 110, y);
+        y += 7;
+      });
+    }
+
+    // Movements table
+    const pdfMovements = (report.movements ?? []).filter((m) => m.amount !== null && m.amount !== undefined && m.amount > 0);
+    if (pdfMovements.length > 0) {
+      y += 10;
+      checkNewPage(20);
+      doc.setTextColor(15, 109, 122);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('HISTORIAL DE MOVIMIENTOS', margin, y);
+      y += 9;
+
+      doc.setFontSize(9);
+      doc.setFillColor(15, 109, 122);
+      doc.roundedRect(margin, y - 5, pageWidth - margin * 2, 8, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.text('FECHA', margin + 4, y);
+      doc.text('TIPO', margin + 42, y);
+      doc.text('IMPORTE', margin + 84, y);
+      doc.text('SALDO', margin + 126, y);
+      y += 9;
+
+      doc.setFont('helvetica', 'normal');
+      pdfMovements.forEach((mov, i) => {
+        checkNewPage(8);
+        if (i % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(margin, y - 5, pageWidth - margin * 2, 7, 'F');
+        }
+
+        const isIncrement = mov.type === 'increment';
+        const moveLabel = isIncrement ? 'Aportacion' : 'Retirada';
+        const amountText = `${isIncrement ? '+' : '-'}${formatCurrency(mov.amount ?? 0)}`;
+
+        doc.setTextColor(60, 60, 60);
+        doc.text(formatDate(mov.iso), margin + 4, y);
+
+        if (isIncrement) doc.setTextColor(15, 109, 122);
+        else doc.setTextColor(220, 38, 38);
+        doc.text(moveLabel, margin + 42, y);
+        doc.text(amountText, margin + 84, y);
+
+        doc.setTextColor(15, 23, 42);
+        doc.text(formatCurrency(mov.balance ?? 0), margin + 126, y);
         y += 7;
       });
     }
