@@ -569,7 +569,7 @@ function DailyGrid({
         </div>
         <span className="badge">{rows.length} días</span>
       </div>
-      <div className="table-scroll">
+      <div className="table-scroll general-grid-scroll">
         <table ref={tableRef}>
           <thead><tr><th>Fecha</th><th>Incr.</th><th>Decr.</th><th>Inicial</th><th>Final</th><th>Beneficio</th><th>%</th><th>Acumulado</th></tr></thead>
           <tbody>

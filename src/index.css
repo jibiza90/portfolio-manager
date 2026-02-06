@@ -3343,3 +3343,23 @@ select {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+
+/* Expand General daily grid so it reaches much lower on screen */
+.general-grid-scroll {
+  height: calc(100vh - 310px);
+  max-height: calc(100vh - 310px);
+}
+
+@media (max-width: 1024px) {
+  .general-grid-scroll {
+    height: calc(100vh - 280px);
+    max-height: calc(100vh - 280px);
+  }
+}
+
+@media (max-width: 768px) {
+  .general-grid-scroll {
+    height: 62vh;
+    max-height: 62vh;
+  }
+}
