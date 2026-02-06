@@ -16,7 +16,36 @@ const INFO_VIEW = 'INFO_VIEW';
 const COMISIONES_VIEW = 'COMISIONES_VIEW';
 const INFORMES_VIEW = 'INFORMES_VIEW';
 const STATS_VIEW = 'STATS_VIEW';
-type ContactInfo = { name: string; surname: string; email: string; phone: string };
+const SEGUIMIENTO_VIEW = 'SEGUIMIENTO_VIEW';
+type ContactInfo = {
+  name: string;
+  surname: string;
+  email: string;
+  phone: string;
+  joinDate: string;
+  riskProfile: string;
+  notes: string;
+};
+type FollowUpTask = {
+  id: string;
+  title: string;
+  dueDate: string;
+  done: boolean;
+  notes: string;
+};
+const EMPTY_CONTACT: ContactInfo = {
+  name: '',
+  surname: '',
+  email: '',
+  phone: '',
+  joinDate: '',
+  riskProfile: '',
+  notes: ''
+};
+const normalizeContact = (input?: Partial<ContactInfo>): ContactInfo => ({
+  ...EMPTY_CONTACT,
+  ...(input ?? {})
+});
 
 function EditableCell({ value, onChange, isPercent = false }: { value: number | undefined; onChange: (v: number | undefined) => void; isPercent?: boolean }) {
   const [editing, setEditing] = useState(false);
@@ -1937,11 +1966,11 @@ export default function App() {
     const raw = localStorage.getItem('portfolio-contacts');
     if (raw) {
       try {
-        const parsed = JSON.parse(raw) as Record<string, ContactInfo>;
+        const parsed = JSON.parse(raw) as Record<string, Partial<ContactInfo>>;
         // Merge with defaults for any missing clients
         const merged: Record<string, ContactInfo> = {};
         CLIENTS.forEach((c) => {
-          merged[c.id] = parsed[c.id] || { name: '', surname: '', email: '', phone: '' };
+          merged[c.id] = normalizeContact(parsed[c.id]);
         });
         return merged;
       } catch (e) {
@@ -1951,7 +1980,7 @@ export default function App() {
     // Default: empty contact info
     const initial: Record<string, ContactInfo> = {};
     CLIENTS.forEach((c) => {
-      initial[c.id] = { name: '', surname: '', email: '', phone: '' };
+      initial[c.id] = { ...EMPTY_CONTACT };
     });
     return initial;
   });
@@ -1995,13 +2024,23 @@ export default function App() {
   });
   const derivedFocusDate = useFocusDate();
   const removeClientData = usePortfolioStore((s) => s.removeClientData);
+  const [followUpByClient, setFollowUpByClient] = useState<Record<string, FollowUpTask[]>>(() => {
+    const raw = localStorage.getItem('portfolio-followup-by-client');
+    if (!raw) return {};
+    try {
+      return JSON.parse(raw) as Record<string, FollowUpTask[]>;
+    } catch (e) {
+      console.warn('Failed to parse follow up tasks', e);
+      return {};
+    }
+  });
   const [focusDate, setFocusDate] = useState(derivedFocusDate);
   const [toast, setToast] = useState<string | null>(null);
   const handleAddClient = (name?: string) => {
     const created = addClientProfile(name);
     setContacts((prev) => {
       if (prev[created.id]) return prev;
-      return { ...prev, [created.id]: { name: '', surname: '', email: '', phone: '' } };
+      return { ...prev, [created.id]: { ...EMPTY_CONTACT } };
     });
     setGuarantees((prev) => {
       if (created.id in prev) return prev;
@@ -2015,6 +2054,7 @@ export default function App() {
       if (created.id in prev) return prev;
       return { ...prev, [created.id]: false };
     });
+    setFollowUpByClient((prev) => ({ ...prev, [created.id]: prev[created.id] ?? [] }));
     return created;
   };
   const handleDeleteClient = (clientId: string) => {
@@ -2040,6 +2080,12 @@ export default function App() {
       return next;
     });
     setComisionEstado((prev) => {
+      if (!(clientId in prev)) return prev;
+      const next = { ...prev };
+      delete next[clientId];
+      return next;
+    });
+    setFollowUpByClient((prev) => {
       if (!(clientId in prev)) return prev;
       const next = { ...prev };
       delete next[clientId];
@@ -2071,6 +2117,18 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('portfolio-comision-estado', JSON.stringify(comisionEstado));
   }, [comisionEstado]);
+  useEffect(() => {
+    localStorage.setItem('portfolio-followup-by-client', JSON.stringify(followUpByClient));
+  }, [followUpByClient]);
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const dueToday = Object.values(followUpByClient).flat().filter((t) => !t.done && t.dueDate === today).length;
+    if (dueToday <= 0) return;
+    const lastAlertDate = localStorage.getItem('portfolio-followup-last-alert-date');
+    if (lastAlertDate === today) return;
+    localStorage.setItem('portfolio-followup-last-alert-date', today);
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: `Tienes ${dueToday} seguimiento(s) para hoy` }));
+  }, [followUpByClient]);
 
 
   // Persist fecha cobro
@@ -2155,6 +2213,12 @@ export default function App() {
         >
           Estadísticas
         </button>
+        <button
+          className={clsx('side-link', activeView === SEGUIMIENTO_VIEW && 'active')}
+          onClick={() => { setActiveView(SEGUIMIENTO_VIEW); setMenuOpen(false); }}
+        >
+          Seguimiento
+        </button>
       </div>
 
       <div className="hero glass-card fade-in">
@@ -2222,6 +2286,8 @@ export default function App() {
         <InformesView contacts={contacts} />
       ) : activeView === STATS_VIEW ? (
         <StatsView contacts={contacts} />
+      ) : activeView === SEGUIMIENTO_VIEW ? (
+        <SeguimientoView contacts={contacts} followUpByClient={followUpByClient} setFollowUpByClient={setFollowUpByClient} />
       ) : (
         <ClientPanel clientId={activeView} focusDate={focusDate} contacts={contacts} setAlertMessage={setAlertMessage} />
       )}
@@ -2251,6 +2317,7 @@ function InfoClientes({
   const [newClientName, setNewClientName] = useState('');
   const [monthPopupKey, setMonthPopupKey] = useState<'profit' | 'return' | null>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const [guaranteeTooltip, setGuaranteeTooltip] = useState<{ x: number; y: number } | null>(null);
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -2345,10 +2412,26 @@ function InfoClientes({
   }, [monthPopupKey]);
 
   const currentClient = CLIENTS.find((c) => c.id === selectedId);
-  const contact = contacts[selectedId] || { name: '', surname: '', email: '', phone: '' };
+  const contact = normalizeContact(contacts[selectedId]);
   const displayName = `${currentClient?.name || 'Cliente'}${contact.name || contact.surname ? ` - ${contact.name} ${contact.surname}` : ''}`.trim();
   const guaranteeInitial = guarantees[selectedId] ?? 0;
   const guaranteeActual = Math.max(0, guaranteeInitial - stats.capitalRetirado);
+  const movementHistory = useMemo(
+    () => [...yearRows]
+      .filter((r) => (r.increment ?? 0) !== 0 || (r.decrement ?? 0) !== 0)
+      .slice(-12)
+      .reverse()
+      .map((r) => ({ iso: r.iso, label: r.label, increment: r.increment ?? 0, decrement: r.decrement ?? 0, net: (r.increment ?? 0) - (r.decrement ?? 0) })),
+    [yearRows]
+  );
+  const checklist = useMemo(() => ([
+    { label: 'Email informado', ok: !!contact.email && contact.email.includes('@') },
+    { label: 'Telefono informado', ok: !!contact.phone },
+    { label: 'Fecha de alta', ok: !!contact.joinDate },
+    { label: 'Perfil de riesgo', ok: !!contact.riskProfile },
+    { label: 'Garantia inicial', ok: guaranteeInitial > 0 },
+    { label: 'Movimientos registrados', ok: movementHistory.length > 0 }
+  ]), [contact.email, contact.phone, contact.joinDate, contact.riskProfile, guaranteeInitial, movementHistory.length]);
 
   const updateField = (field: keyof ContactInfo, value: string) => {
     setContacts((prev) => ({ ...prev, [selectedId]: { ...contact, [field]: value } }));
@@ -2560,6 +2643,37 @@ function InfoClientes({
                 onChange={(e) => { updateField('phone', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
               />
             </label>
+            <label>
+              <span>Fecha de alta</span>
+              <input
+                id="contact-join-date"
+                name="contact-join-date"
+                type="date"
+                value={contact.joinDate}
+                onChange={(e) => { updateField('joinDate', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+              />
+            </label>
+            <label>
+              <span>Perfil de riesgo</span>
+              <input
+                id="contact-risk-profile"
+                name="contact-risk-profile"
+                placeholder="Conservador, Moderado, Agresivo..."
+                value={contact.riskProfile}
+                onChange={(e) => { updateField('riskProfile', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+              />
+            </label>
+            <label style={{ gridColumn: '1 / -1' }}>
+              <span>Notas internas</span>
+              <textarea
+                id="contact-notes"
+                name="contact-notes"
+                className="info-textarea"
+                placeholder="Resumen de situacion del cliente, objetivos y recordatorios..."
+                value={contact.notes}
+                onChange={(e) => { updateField('notes', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+              />
+            </label>
           </div>
         </section>
 
@@ -2583,12 +2697,193 @@ function InfoClientes({
             </label>
             <label>
               <span>Garantía actual</span>
-              <input id="guarantee-actual" name="guarantee-actual" value={formatCurrency(guaranteeActual)} disabled />
+              <div
+                onMouseEnter={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setGuaranteeTooltip({ x: rect.left, y: rect.bottom + 6 });
+                }}
+                onMouseLeave={() => setGuaranteeTooltip(null)}
+              >
+                <input id="guarantee-actual" name="guarantee-actual" value={formatCurrency(guaranteeActual)} disabled />
+              </div>
             </label>
           </div>
         </section>
 
+        <section className="info-section">
+          <h4>Checklist operativo</h4>
+          <div className="info-checklist">
+            {checklist.map((item) => (
+              <div key={item.label} className={clsx('info-check', item.ok ? 'ok' : 'pending')}>
+                <span>{item.ok ? 'OK' : 'Pendiente'}</span>
+                <strong>{item.label}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="info-section">
+          <h4>Historial de movimientos (ultimos 12)</h4>
+          <div className="data-table compact">
+            <div className="table-header" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+              <div>Fecha</div>
+              <div>Incremento</div>
+              <div>Decremento</div>
+              <div>Neto</div>
+            </div>
+            {movementHistory.length === 0 && <div className="table-row"><div>Sin movimientos</div></div>}
+            {movementHistory.map((m) => (
+              <div key={m.iso} className="table-row" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr' }}>
+                <div>{m.label}</div>
+                <div>{formatCurrency(m.increment)}</div>
+                <div>{formatCurrency(m.decrement)}</div>
+                <div className={clsx(m.net >= 0 ? 'positive' : 'negative')}>{formatCurrency(m.net)}</div>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
+      {guaranteeTooltip && createPortal(
+        <div className="mini-popup info-guarantee-tip" style={{ position: 'fixed', top: guaranteeTooltip.y, left: guaranteeTooltip.x, zIndex: 2147483647 }}>
+          <div className="mini-popup-header">
+            <strong>Como se calcula garantia actual</strong>
+          </div>
+          <div className="mini-popup-body">
+            <div className="mini-row"><span>Garantia inicial</span><span>{formatCurrency(guaranteeInitial)}</span></div>
+            <div className="mini-row"><span>Capital retirado</span><span>{formatCurrency(stats.capitalRetirado)}</span></div>
+            <div className="mini-row"><span>Formula</span><span>max(0, inicial - retirado)</span></div>
+            <div className="mini-row"><strong>Resultado</strong><strong>{formatCurrency(guaranteeActual)}</strong></div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function SeguimientoView({
+  contacts,
+  followUpByClient,
+  setFollowUpByClient
+}: {
+  contacts: Record<string, ContactInfo>;
+  followUpByClient: Record<string, FollowUpTask[]>;
+  setFollowUpByClient: React.Dispatch<React.SetStateAction<Record<string, FollowUpTask[]>>>;
+}) {
+  const [selectedId, setSelectedId] = useState(CLIENTS[0]?.id || '');
+  const [title, setTitle] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [notes, setNotes] = useState('');
+  const today = new Date().toISOString().slice(0, 10);
+  const tasks = followUpByClient[selectedId] ?? [];
+  const sortedTasks = [...tasks].sort((a, b) => (a.dueDate > b.dueDate ? 1 : -1));
+  const dueToday = sortedTasks.filter((t) => !t.done && t.dueDate === today).length;
+  const overdue = sortedTasks.filter((t) => !t.done && t.dueDate < today).length;
+  const selectedClient = CLIENTS.find((c) => c.id === selectedId);
+  const ct = contacts[selectedId];
+  const label = ct && (ct.name || ct.surname) ? `${selectedClient?.name ?? selectedId} - ${ct.name} ${ct.surname}`.trim() : (selectedClient?.name ?? selectedId);
+
+  const addTask = () => {
+    const trimmed = title.trim();
+    if (!selectedId || !trimmed || !dueDate) return;
+    const task: FollowUpTask = {
+      id: `${selectedId}-${Date.now()}`,
+      title: trimmed,
+      dueDate,
+      done: false,
+      notes: notes.trim()
+    };
+    setFollowUpByClient((prev) => ({ ...prev, [selectedId]: [...(prev[selectedId] ?? []), task] }));
+    setTitle('');
+    setNotes('');
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Seguimiento creado' }));
+  };
+  const toggleDone = (taskId: string, done: boolean) => {
+    setFollowUpByClient((prev) => ({
+      ...prev,
+      [selectedId]: (prev[selectedId] ?? []).map((t) => t.id === taskId ? { ...t, done } : t)
+    }));
+  };
+  const removeTask = (taskId: string) => {
+    setFollowUpByClient((prev) => ({
+      ...prev,
+      [selectedId]: (prev[selectedId] ?? []).filter((t) => t.id !== taskId)
+    }));
+  };
+
+  return (
+    <div className="glass-card fade-in seguimiento-container">
+      <div className="seguimiento-header">
+        <div>
+          <div className="eyebrow">CRM interno</div>
+          <h2>Seguimiento de clientes</h2>
+          <p className="grid-copy">Recordatorios por fecha. Cuando llega el dia, salta aviso automatico.</p>
+        </div>
+        <div className="seguimiento-badges">
+          <span className="badge">Hoy: {dueToday}</span>
+          <span className={clsx('badge', overdue > 0 && 'status-error')}>Vencidas: {overdue}</span>
+        </div>
+      </div>
+      <div className="seguimiento-grid">
+        <section className="info-section">
+          <h4>Nuevo seguimiento</h4>
+          <div className="info-form">
+            <label>
+              <span>Cliente</span>
+              <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+                {CLIENTS.map((c) => {
+                  const ctc = contacts[c.id];
+                  const lbl = ctc && (ctc.name || ctc.surname) ? `${c.name} - ${ctc.name} ${ctc.surname}`.trim() : c.name;
+                  return <option key={c.id} value={c.id}>{lbl}</option>;
+                })}
+              </select>
+            </label>
+            <label>
+              <span>Fecha</span>
+              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </label>
+            <label style={{ gridColumn: '1 / -1' }}>
+              <span>Tarea</span>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: llamada trimestral / revisar garantia..." />
+            </label>
+            <label style={{ gridColumn: '1 / -1' }}>
+              <span>Notas</span>
+              <textarea className="info-textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Detalles opcionales..." />
+            </label>
+          </div>
+          <button className="info-add-btn seguimiento-add-btn" type="button" onClick={addTask}>Guardar seguimiento</button>
+        </section>
+        <section className="info-section">
+          <h4>Tareas de {label}</h4>
+          <div className="data-table compact">
+            <div className="table-header" style={{ gridTemplateColumns: '120px 1fr 120px 100px 80px' }}>
+              <div>Fecha</div>
+              <div>Tarea</div>
+              <div>Estado</div>
+              <div>Tipo</div>
+              <div></div>
+            </div>
+            {sortedTasks.length === 0 && <div className="table-row"><div>Sin seguimientos para este cliente</div></div>}
+            {sortedTasks.map((t) => {
+              const tag = t.done ? 'Completada' : t.dueDate < today ? 'Vencida' : t.dueDate === today ? 'Hoy' : 'Proxima';
+              return (
+                <div key={t.id} className="table-row" style={{ gridTemplateColumns: '120px 1fr 120px 100px 80px' }}>
+                  <div>{t.dueDate}</div>
+                  <div>
+                    <strong>{t.title}</strong>
+                    {t.notes && <div className="muted" style={{ fontSize: 12 }}>{t.notes}</div>}
+                  </div>
+                  <div>
+                    <input type="checkbox" checked={t.done} onChange={(e) => toggleDone(t.id, e.target.checked)} />
+                  </div>
+                  <div>{tag}</div>
+                  <div><button className="ghost small" onClick={() => removeTask(t.id)}>Eliminar</button></div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
@@ -2869,6 +3164,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
     </div>
   );
 }
+
 
 
 
