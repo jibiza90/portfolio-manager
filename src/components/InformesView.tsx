@@ -658,306 +658,307 @@ Su gestor de inversiones`
   };
 
   return (
-    <div className="informes-container fade-in">
-      <div className="informes-header glass-card">
-        <div className="informes-header-content">
-          <div className="eyebrow">Generación de informes</div>
-          <h1>Informes de Cliente</h1>
-          <p className="hero-copy">Genera informes profesionales para tus clientes</p>
-        </div>
-      </div>
+    <div className="informes-container informes-pro-page fade-in">
+      <section className="report-pro-hero glass-card">
+        <p className="report-pro-kicker">Desk de reporting</p>
+        <h1>Informes ejecutivos</h1>
+        <p>Diseno institucional para compartir resultados con clientes en formato premium.</p>
+      </section>
 
-      <div className="informes-selector glass-card">
-        <div className="selector-row">
-          <label htmlFor="client-select">Seleccionar cliente</label>
-          <div className="select-wrapper large">
-            <select
-              id="client-select"
-              value={selectedClient}
-              onChange={(e) => setSelectedClient(e.target.value)}
-            >
-              <option value="">Selecciona un cliente...</option>
-              {CLIENTS.map((c) => {
-                const ct = contacts[c.id];
-                const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
-                return <option key={c.id} value={c.id}>{label}</option>;
-              })}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="informes-multi glass-card">
-        <div className="multi-header">
-          <h4>Envío múltiple</h4>
-          <div className="multi-actions">
-            <button
-              className={`btn-small ${multiMode ? '' : 'secondary'}`}
-              onClick={() => {
-                if (multiMode) setSelectedClients([]);
-                setMultiMode(!multiMode);
-              }}
-            >
-              {multiMode ? 'Ocultar selección' : 'Activar envío múltiple'}
-            </button>
-            {multiMode && (
-              <>
-                <button
-                  className="btn-small"
-                  onClick={() => {
-                    const withEmail = CLIENTS.filter((c) => contacts[c.id]?.email).map((c) => c.id);
-                    setSelectedClients(withEmail);
-                  }}
-                >
-                  Seleccionar TODOS
-                </button>
-                <button className="btn-small secondary" onClick={() => setSelectedClients([])}>
-                  Limpiar
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {multiMode && (
-          <>
-            <div className="multi-select-grid">
-              {CLIENTS.map((c) => {
-                const ct = contacts[c.id];
-                const hasEmail = ct?.email;
-                const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
-                const isSelected = selectedClients.includes(c.id);
-                return (
-                  <label key={c.id} className={`multi-select-item ${isSelected ? 'selected' : ''} ${!hasEmail ? 'no-email' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      disabled={!hasEmail}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedClients([...selectedClients, c.id]);
-                        } else {
-                          setSelectedClients(selectedClients.filter((id) => id !== c.id));
-                        }
-                      }}
-                    />
-                    <span>{label}</span>
-                    {!hasEmail && <span className="no-email-badge">Sin email</span>}
-                  </label>
-                );
-              })}
+      <section className="report-pro-controls">
+        <div className="informes-selector glass-card report-pro-control-card">
+          <p className="report-pro-label">Cliente objetivo</p>
+          <div className="selector-row">
+            <label htmlFor="client-select">Seleccionar cliente</label>
+            <div className="select-wrapper large">
+              <select
+                id="client-select"
+                value={selectedClient}
+                onChange={(e) => setSelectedClient(e.target.value)}
+              >
+                <option value="">Selecciona un cliente...</option>
+                {CLIENTS.map((c) => {
+                  const ct = contacts[c.id];
+                  const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
+                  return <option key={c.id} value={c.id}>{label}</option>;
+                })}
+              </select>
             </div>
-            <div className="multi-select-count">
-              <span className="selected-count">
-                {selectedClients.length > 0 
-                  ? `${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''} seleccionado${selectedClients.length > 1 ? 's' : ''}`
-                  : 'Ningún cliente seleccionado'}
-              </span>
-              {selectedClients.length > 0 && (
-                <button
-                  className="btn-action primary send-btn"
-                  disabled={sendingMultiple}
-                  onClick={async () => {
-                  setSendingMultiple(true);
-                  for (const clientId of selectedClients) {
-                    const client = CLIENTS.find((c) => c.id === clientId);
-                    if (!client) continue;
-                    const ct = contacts[clientId];
-                    if (!ct?.email) continue;
+          </div>
+        </div>
 
-                    const rows = snapshot.clientRowsById[clientId] || [];
-                    const yearRows = rows.filter((r) => r.iso.startsWith(`${YEAR}-`));
-                    const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
-                    const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
-                    const validRows = [...yearRows].reverse();
-                    const lastWithFinal = validRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0);
-                    const lastWithBase = validRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0);
-                    const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
-                    const beneficioTotal = saldo + decrementos - incrementos;
-                    const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
+        <div className="informes-multi glass-card report-pro-control-card">
+          <div className="multi-header">
+            <h4>Envio multiple por email</h4>
+            <div className="multi-actions">
+              <button
+                className={`btn-small ${multiMode ? '' : 'secondary'}`}
+                onClick={() => {
+                  if (multiMode) setSelectedClients([]);
+                  setMultiMode(!multiMode);
+                }}
+              >
+                {multiMode ? 'Ocultar seleccion' : 'Activar envio multiple'}
+              </button>
+              {multiMode && (
+                <>
+                  <button
+                    className="btn-small"
+                    onClick={() => {
+                      const withEmail = CLIENTS.filter((c) => contacts[c.id]?.email).map((c) => c.id);
+                      setSelectedClients(withEmail);
+                    }}
+                  >
+                    Seleccionar todos
+                  </button>
+                  <button className="btn-small secondary" onClick={() => setSelectedClients([])}>
+                    Limpiar
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
 
-                    const displayName = ct && (ct.name || ct.surname) ? `${ct.name} ${ct.surname}`.trim() : client.name;
+          {multiMode && (
+            <>
+              <div className="multi-select-grid">
+                {CLIENTS.map((c) => {
+                  const ct = contacts[c.id];
+                  const hasEmail = ct?.email;
+                  const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
+                  const isSelected = selectedClients.includes(c.id);
+                  return (
+                    <label key={c.id} className={`multi-select-item ${isSelected ? 'selected' : ''} ${!hasEmail ? 'no-email' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={!hasEmail}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedClients([...selectedClients, c.id]);
+                          } else {
+                            setSelectedClients(selectedClients.filter((id) => id !== c.id));
+                          }
+                        }}
+                      />
+                      <span>{label}</span>
+                      {!hasEmail && <span className="no-email-badge">Sin email</span>}
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="multi-select-count">
+                <span className="selected-count">
+                  {selectedClients.length > 0
+                    ? `${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''} seleccionado${selectedClients.length > 1 ? 's' : ''}`
+                    : 'Ningun cliente seleccionado'}
+                </span>
+                {selectedClients.length > 0 && (
+                  <button
+                    className="btn-action primary send-btn"
+                    disabled={sendingMultiple}
+                    onClick={async () => {
+                      setSendingMultiple(true);
+                      for (const clientId of selectedClients) {
+                        const client = CLIENTS.find((c) => c.id === clientId);
+                        if (!client) continue;
+                        const ct = contacts[clientId];
+                        if (!ct?.email) continue;
 
-                    const token = await saveReportLink({
-                      clientId: client.id,
-                      clientName: displayName,
-                      clientCode: client.name,
-                      incrementos: incrementos ?? 0,
-                      decrementos: decrementos ?? 0,
-                      saldo: saldo ?? 0,
-                      beneficioTotal: beneficioTotal ?? 0,
-                      rentabilidad: rentabilidad ?? 0,
-                      beneficioUltimoMes: 0,
-                      rentabilidadUltimoMes: 0,
-                      monthlyStats: [],
-                      patrimonioEvolution: [],
-                      movements: []
-                    });
+                        const rows = snapshot.clientRowsById[clientId] || [];
+                        const yearRows = rows.filter((r) => r.iso.startsWith(`${YEAR}-`));
+                        const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
+                        const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
+                        const validRows = [...yearRows].reverse();
+                        const lastWithFinal = validRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0);
+                        const lastWithBase = validRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0);
+                        const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
+                        const beneficioTotal = saldo + decrementos - incrementos;
+                        const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
 
-                    const baseUrl = window.location.origin;
-                    const reportUrl = `${baseUrl}?report=${token}`;
-                    const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-                    const to = encodeURIComponent(ct.email);
-                    const subject = encodeURIComponent(`Informe de Inversión - ${client.name} - ${fecha}`);
-                    const body = encodeURIComponent(
+                        const displayName = ct && (ct.name || ct.surname) ? `${ct.name} ${ct.surname}`.trim() : client.name;
+
+                        const token = await saveReportLink({
+                          clientId: client.id,
+                          clientName: displayName,
+                          clientCode: client.name,
+                          incrementos: incrementos ?? 0,
+                          decrementos: decrementos ?? 0,
+                          saldo: saldo ?? 0,
+                          beneficioTotal: beneficioTotal ?? 0,
+                          rentabilidad: rentabilidad ?? 0,
+                          beneficioUltimoMes: 0,
+                          rentabilidadUltimoMes: 0,
+                          monthlyStats: [],
+                          patrimonioEvolution: [],
+                          movements: []
+                        });
+
+                        const baseUrl = window.location.origin;
+                        const reportUrl = `${baseUrl}?report=${token}`;
+                        const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+                        const to = encodeURIComponent(ct.email);
+                        const subject = encodeURIComponent(`Informe de Inversion - ${client.name} - ${fecha}`);
+                        const body = encodeURIComponent(
 `Estimado/a ${ct.name || 'cliente'},
 
-Le envío su Informe de Inversión actualizado a fecha ${fecha}.
+Le envio su Informe de Inversion actualizado a fecha ${fecha}.
 
-📊 RESUMEN:
-• Capital invertido: ${formatCurrency(incrementos)}
-• Saldo actual: ${formatCurrency(saldo)}
-• Beneficio total: ${formatCurrency(beneficioTotal)}
-• Rentabilidad: ${rentabilidad.toFixed(2)}%
+Resumen:
+- Capital invertido: ${formatCurrency(incrementos)}
+- Saldo actual: ${formatCurrency(saldo)}
+- Beneficio total: ${formatCurrency(beneficioTotal)}
+- Rentabilidad: ${rentabilidad.toFixed(2)}%
 
-🔗 ACCEDER AL INFORME:
+Acceder al informe:
 ${reportUrl}
 
-⚠️ Este enlace caduca en 24 horas.
+Este enlace caduca en 24 horas.
 
 Atentamente,
 Su gestor de inversiones`
-                    );
+                        );
 
-                    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`;
-                  window.open(gmailUrl, '_blank');
-                  await new Promise((r) => setTimeout(r, 500));
-                }
-                setSendingMultiple(false);
-                setSelectedClients([]);
-                setMultiMode(false);
-                window.dispatchEvent(new CustomEvent('show-toast', { detail: `${selectedClients.length} emails preparados en Gmail` }));
-              }}
-            >
-                  <span className="btn-icon">✉️</span>
-                  {sendingMultiple ? 'Enviando...' : `Enviar a ${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''}`}
-                </button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {clientData && (
-        <>
-          <div className="informe-actions glass-card">
-            <button className="btn-action primary" onClick={handleDownload}>
-              <span className="btn-icon">📥</span>
-              Descargar PDF
-            </button>
-            <button className="btn-action secondary" onClick={handlePrint}>
-              <span className="btn-icon">🖨️</span>
-              Imprimir
-            </button>
-            <button className="btn-action secondary" onClick={handleEmail}>
-              <span className="btn-icon">✉️</span>
-              Enviar por Email
-            </button>
-            <div className="actions-note">Enlace temporal: caduca en 24h. Descarga o imprime antes de esa fecha.</div>
-          </div>
-
-          <div className="informe-preview glass-card" ref={reportRef}>
-            <div className="preview-header">
-              <div className="preview-logo">
-                <span className="logo-icon">📊</span>
-                <span className="logo-text">Portfolio Manager</span>
+                        const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`;
+                        window.open(gmailUrl, '_blank');
+                        await new Promise((r) => setTimeout(r, 500));
+                      }
+                      setSendingMultiple(false);
+                      setSelectedClients([]);
+                      setMultiMode(false);
+                      window.dispatchEvent(new CustomEvent('show-toast', { detail: `${selectedClients.length} emails preparados en Gmail` }));
+                    }}
+                  >
+                    <span className="btn-icon">Mail</span>
+                    {sendingMultiple ? 'Enviando...' : `Enviar a ${selectedClients.length} cliente${selectedClients.length > 1 ? 's' : ''}`}
+                  </button>
+                )}
               </div>
-              <div className="preview-title">
-                <h2>INFORME DE INVERSIÓN</h2>
-                <p className="preview-date">{new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {clientData && (() => {
+        const monthlyWithData = clientData.monthlyStats.filter((m) => m.hasData);
+        const hasNegativeMonth = monthlyWithData.some((m) => m.profitPct < 0);
+        const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(m.profitPct)));
+        const patrimonioWithData = clientData.patrimonioEvolution.filter((p) => p.balance !== undefined);
+        const maxPatrimonio = Math.max(1, ...patrimonioWithData.map((p) => p.balance as number));
+        const patrimonioPoints = patrimonioWithData.map((p, idx) => {
+          const x = patrimonioWithData.length <= 1 ? 8 : (idx / (patrimonioWithData.length - 1)) * 100;
+          const y = 92 - ((p.balance as number) / maxPatrimonio) * 78;
+          return `${x},${Math.max(10, y)}`;
+        }).join(' ');
+
+        return (
+          <>
+            <div className="informe-actions glass-card report-pro-actions">
+              <button className="btn-action primary" onClick={handleDownload}>Descargar PDF</button>
+              <button className="btn-action secondary" onClick={handlePrint}>Imprimir</button>
+              <button className="btn-action secondary" onClick={handleEmail}>Enviar por email</button>
+              <div className="actions-note">El enlace compartido del informe caduca en 24 horas.</div>
             </div>
 
-            <div className="preview-client">
-              <div className="client-badge">{clientData.code}</div>
-              <div className="client-details">
+            <article className="informe-preview glass-card report-pro-sheet" ref={reportRef}>
+              <header className="report-pro-header">
+                <div>
+                  <p className="report-pro-kicker">Portfolio Manager</p>
+                  <h2>Investment Report</h2>
+                  <p className="report-pro-date">{new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                </div>
+                <div className="report-pro-client-tag">{clientData.code}</div>
+              </header>
+
+              <section className="report-pro-client">
                 <h3>{clientData.name}</h3>
-                {clientData.contact?.email && <p>{clientData.contact.email}</p>}
-                {clientData.contact?.phone && <p>{clientData.contact.phone}</p>}
-              </div>
-            </div>
+                <div>
+                  {clientData.contact?.email && <span>{clientData.contact.email}</span>}
+                  {clientData.contact?.phone && <span>{clientData.contact.phone}</span>}
+                </div>
+              </section>
 
-            <div className="preview-summary">
-              <h4>Resumen Financiero</h4>
-              <div className="summary-grid seven-cols">
-                <div className="summary-card">
-                  <span className="summary-label">Capital Invertido</span>
-                  <span className="summary-value">{formatCurrency(clientData.incrementos)}</span>
+              <section className="report-pro-executive">
+                <div>
+                  <p>Saldo actual</p>
+                  <strong>{formatCurrency(clientData.saldo)}</strong>
                 </div>
-                <div className="summary-card">
-                  <span className="summary-label">Capital Retirado</span>
-                  <span className="summary-value">{formatCurrency(clientData.decrementos)}</span>
+                <div>
+                  <p>Beneficio total</p>
+                  <strong className={clientData.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(clientData.beneficioTotal)}</strong>
                 </div>
-                <div className="summary-card highlight">
-                  <span className="summary-label">Saldo Actual</span>
-                  <span className="summary-value">{formatCurrency(clientData.saldo)}</span>
+                <div>
+                  <p>Rentabilidad total</p>
+                  <strong className={clientData.rentabilidad >= 0 ? 'positive' : 'negative'}>{clientData.rentabilidad.toFixed(2)}%</strong>
                 </div>
-                <div className="summary-card">
-                  <span className="summary-label">Beneficio Total</span>
-                  <span className={`summary-value ${clientData.beneficioTotal >= 0 ? 'positive' : 'negative'}`}>
-                    {formatCurrency(clientData.beneficioTotal)}
-                  </span>
-                </div>
-                <div className="summary-card">
-                  <span className="summary-label">Rentabilidad Total</span>
-                  <span className={`summary-value ${clientData.rentabilidad >= 0 ? 'positive' : 'negative'}`}>
-                    {clientData.rentabilidad.toFixed(2)}%
-                  </span>
-                </div>
-                <div className="summary-card">
-                  <span className="summary-label">Beneficio Último Mes</span>
-                  <span className={`summary-value ${clientData.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}`}>
-                    {formatCurrency(clientData.beneficioUltimoMes)}
-                  </span>
-                </div>
-                <div className="summary-card">
-                  <span className="summary-label">Rentab. Último Mes</span>
-                  <span className={`summary-value ${clientData.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}`}>
-                    {clientData.rentabilidadUltimoMes.toFixed(2)}%
-                  </span>
-                </div>
-                <div className="summary-card" title="Rentabilidad tiempo-pesada: elimina el efecto de aportes/retiros">
-                  <span className="summary-label">Rentabilidad TWR</span>
-                  <span className={`summary-value ${clientData.twrYtd >= 0 ? 'positive' : 'negative'}`}>
-                    {(clientData.twrYtd * 100).toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-            </div>
+              </section>
 
-            {clientData.monthlyStats.length > 0 && (
-              <div className="preview-monthly">
-                <h4>Rendimiento Mensual {YEAR}</h4>
-                <div className="chart-container-modern">
-                  {(() => {
-                    const hasNegative = clientData.monthlyStats.some((m) => m.hasData && m.profitPct < 0);
-                    const maxPct = Math.max(...clientData.monthlyStats.map((s) => Math.abs(s.profitPct)), 1);
-                    return (
-                      <div className={`modern-bar-chart ${hasNegative ? 'with-negative' : 'positive-only'}`}>
-                        {clientData.monthlyStats.map((m, idx) => {
-                          const heightPct = m.hasData ? Math.min(75, (Math.abs(m.profitPct) / maxPct) * 100) : 2;
-                          return (
-                            <div key={m.month} className="modern-bar-wrapper">
-                              <div className="modern-bar-container">
-                                <div
-                                  className={`modern-bar ${m.hasData ? (m.profitPct >= 0 ? 'positive' : 'negative') : 'empty'}`}
-                                  style={{ height: `${heightPct}%` }}
-                                  title={`${m.month}: ${m.hasData ? `${m.profitPct.toFixed(2)}%` : 'Sin datos'}`}
-                                />
-                              </div>
-                              <div className="modern-bar-info">
-                                <span className="modern-bar-value">{m.hasData ? `${m.profitPct.toFixed(2)}%` : '-'}</span>
-                                <span className="modern-bar-label">{m.month}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
+              <section className="report-pro-kpis">
+                <div className="report-pro-kpi"><span>Capital invertido</span><strong>{formatCurrency(clientData.incrementos)}</strong></div>
+                <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(clientData.decrementos)}</strong></div>
+                <div className="report-pro-kpi"><span>Beneficio ultimo mes</span><strong className={clientData.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(clientData.beneficioUltimoMes)}</strong></div>
+                <div className="report-pro-kpi"><span>Rentab. ultimo mes</span><strong className={clientData.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{clientData.rentabilidadUltimoMes.toFixed(2)}%</strong></div>
+                <div className="report-pro-kpi"><span>TWR</span><strong className={clientData.twrYtd >= 0 ? 'positive' : 'negative'}>{(clientData.twrYtd * 100).toFixed(2)}%</strong></div>
+              </section>
+
+              <section className="report-pro-grid">
+                <div className="report-pro-panel">
+                  <div className="report-pro-panel-head">
+                    <h4>Rendimiento mensual {YEAR}</h4>
+                    <p>Comparativa de rentabilidad por mes</p>
+                  </div>
+                  <div className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}>
+                    {monthlyWithData.map((m) => {
+                      const height = Math.max(6, (Math.abs(m.profitPct) / maxMonthPct) * 74);
+                      return (
+                        <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${m.profitPct.toFixed(2)}%`}>
+                          <span className={`report-pro-bar-value ${m.profitPct >= 0 ? 'positive' : 'negative'}`}>{m.profitPct.toFixed(2)}%</span>
+                          <div className="report-pro-bar-track">
+                            <div
+                              className={`report-pro-bar ${m.profitPct >= 0 ? 'positive' : 'negative'}`}
+                              style={{
+                                height: `${height}%`,
+                                ...(hasNegativeMonth
+                                  ? (m.profitPct >= 0 ? { bottom: '50%' } : { top: '50%' })
+                                  : { bottom: 0 })
+                              }}
+                            />
+                          </div>
+                          <span className="report-pro-bar-label">{m.month}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="report-pro-panel">
+                  <div className="report-pro-panel-head">
+                    <h4>Evolucion patrimonio</h4>
+                    <p>Linea de cierre mensual</p>
+                  </div>
+                  <div className="report-pro-line-wrap">
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="report-pro-line-chart">
+                      <polyline className="report-pro-line" points={patrimonioPoints} />
+                      {patrimonioWithData.map((p, idx) => {
+                        const x = patrimonioWithData.length <= 1 ? 8 : (idx / (patrimonioWithData.length - 1)) * 100;
+                        const y = 92 - ((p.balance as number) / maxPatrimonio) * 78;
+                        return <circle key={`${p.month}-${idx}`} cx={x} cy={Math.max(10, y)} r="1.6" className="report-pro-dot" />;
+                      })}
+                    </svg>
+                  </div>
+                  <div className="report-pro-month-row">
+                    {patrimonioWithData.map((p) => <span key={p.month}>{p.month}</span>)}
+                  </div>
+                </div>
+              </section>
+
+              <section className="report-pro-panel">
+                <div className="report-pro-panel-head">
+                  <h4>Tabla mensual</h4>
+                  <p>Resultado, rentabilidad y saldo por mes</p>
                 </div>
                 <div className="table-scroll">
-                  <table className="monthly-table">
+                  <table className="monthly-table report-pro-table">
                     <thead>
                       <tr>
                         <th>Mes</th>
@@ -982,74 +983,51 @@ Su gestor de inversiones`
                     </tbody>
                   </table>
                 </div>
-              </div>
-            )}
+              </section>
 
-            {clientData.patrimonioEvolution.length > 0 && (
-              <div className="preview-patrimonio">
-                <h4>Evolución del Patrimonio {YEAR}</h4>
-                <div className="modern-bars-horizontal">
-                  {clientData.patrimonioEvolution.map((d, i) => {
-                    const balance = d.balance;
-                    if (balance === undefined) return null;
-                    const maxBal = Math.max(...clientData.patrimonioEvolution.filter(x => x.balance !== undefined).map(x => x.balance as number), 1);
-                    const widthPct = (balance / maxBal) * 100;
-                    return (
-                      <div key={i} className="modern-bar-horizontal-wrapper">
-                        <span className="modern-bar-horizontal-label">{d.month}</span>
-                        <div className="modern-bar-horizontal-container">
-                          <div 
-                            className="modern-bar-horizontal" 
-                            style={{ width: `${widthPct}%` }}
-                          />
-                        </div>
-                        <span className="modern-bar-horizontal-value">{formatCurrency(balance)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {clientData.movements.length > 0 && (
-              <div className="preview-movements">
-                <h4>Historial de Movimientos</h4>
-                <div className="table-scroll">
-                  <table className="movements-table">
-                    <thead>
-                      <tr>
-                        <th>Fecha</th>
-                        <th>Tipo</th>
-                        <th className="text-right">Importe</th>
-                        <th className="text-right">Saldo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {clientData.movements.map((mov, i) => (
-                        <tr key={`${mov.iso}-${i}`}>
-                          <td>{formatDate(mov.iso)}</td>
-                          <td className={mov.type === 'increment' ? 'positive' : 'negative'}>
-                            {mov.type === 'increment' ? 'Aportación' : 'Retirada'}
-                          </td>
-                          <td className={`text-right ${mov.type === 'increment' ? 'positive' : 'negative'}`}>
-                            {mov.type === 'increment' ? '+' : '-'}{formatCurrency(mov.amount)}
-                          </td>
-                          <td className="text-right">{formatCurrency(mov.balance)}</td>
+              {clientData.movements.length > 0 && (
+                <section className="report-pro-panel">
+                  <div className="report-pro-panel-head">
+                    <h4>Historial de movimientos</h4>
+                    <p>Aportaciones y retiradas del periodo</p>
+                  </div>
+                  <div className="table-scroll">
+                    <table className="movements-table report-pro-table">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th>Tipo</th>
+                          <th className="text-right">Importe</th>
+                          <th className="text-right">Saldo</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+                      </thead>
+                      <tbody>
+                        {clientData.movements.map((mov, i) => (
+                          <tr key={`${mov.iso}-${i}`}>
+                            <td>{formatDate(mov.iso)}</td>
+                            <td className={mov.type === 'increment' ? 'positive' : 'negative'}>
+                              {mov.type === 'increment' ? 'Aportacion' : 'Retirada'}
+                            </td>
+                            <td className={`text-right ${mov.type === 'increment' ? 'positive' : 'negative'}`}>
+                              {mov.type === 'increment' ? '+' : '-'}{formatCurrency(mov.amount)}
+                            </td>
+                            <td className="text-right">{formatCurrency(mov.balance)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
 
-            <div className="preview-footer">
-              <p>Este informe es confidencial y está destinado únicamente al cliente indicado.</p>
-              <p>Generado el {new Date().toLocaleString('es-ES')}</p>
-            </div>
-          </div>
-        </>
-      )}
+              <footer className="preview-footer report-pro-footer">
+                <p>Documento confidencial para uso exclusivo del cliente.</p>
+                <p>Generado el {new Date().toLocaleString('es-ES')}</p>
+              </footer>
+            </article>
+          </>
+        );
+      })()}
     </div>
   );
 }

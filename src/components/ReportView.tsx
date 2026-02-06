@@ -155,8 +155,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
 
   if (loading) {
     return (
-      <div className="informes-container fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <div className="glass-card" style={{ padding: 40, textAlign: 'center' }}>
+      <div className="informes-container informes-pro-page fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <div className="glass-card report-pro-panel" style={{ padding: 40, textAlign: 'center' }}>
           <p>Cargando informe...</p>
         </div>
       </div>
@@ -165,11 +165,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
 
   if (expired) {
     return (
-      <div className="informes-container fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <div className="glass-card" style={{ padding: 40, textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>⏰</div>
+      <div className="informes-container informes-pro-page fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <div className="glass-card report-pro-panel" style={{ padding: 40, textAlign: 'center' }}>
           <h2>Enlace caducado</h2>
-          <p>Este enlace de informe ha caducado o no es válido.</p>
+          <p>Este enlace de informe ha caducado o no es valido.</p>
           <p className="muted">Los enlaces de informe tienen una validez de 24 horas.</p>
         </div>
       </div>
@@ -179,124 +178,120 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
   if (!report) return null;
 
   const expiresIn = Math.max(0, Math.floor((report.expiresAt - Date.now()) / (1000 * 60 * 60)));
-  const monthlyWithData = report.monthlyStats.filter(
-    (m) => m.hasData && m.profit !== null && m.profitPct !== null && m.endBalance !== null
-  );
-  const hasNegative = monthlyWithData.some((m) => m.profitPct < 0);
-  const maxPct = Math.max(...monthlyWithData.map((s) => Math.abs(s.profitPct)), 1);
-
-  // Patrimonio chart data
-  const patrimonioData = report.patrimonioEvolution;
-  const validPatrimonio = patrimonioData.filter((d) => d.balance !== undefined && d.balance > 0);
-  const maxBal = validPatrimonio.length > 0 ? Math.max(...validPatrimonio.map((d) => d.balance as number), 1) : 1;
-  const minBal = validPatrimonio.length > 0 ? Math.min(...validPatrimonio.map((d) => d.balance as number), 0) : 0;
-  const range = maxBal - minBal || 1;
+  const monthlyWithData = report.monthlyStats.filter((m) => m.hasData && m.profit !== null && m.profitPct !== null && m.endBalance !== null);
+  const hasNegativeMonth = monthlyWithData.some((m) => m.profitPct < 0);
+  const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(m.profitPct)));
+  const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.balance !== undefined);
+  const maxPatrimonio = Math.max(1, ...patrimonioWithData.map((p) => p.balance as number));
+  const patrimonioPoints = patrimonioWithData.map((p, idx) => {
+    const x = patrimonioWithData.length <= 1 ? 8 : (idx / (patrimonioWithData.length - 1)) * 100;
+    const y = 92 - ((p.balance as number) / maxPatrimonio) * 78;
+    return `${x},${Math.max(10, y)}`;
+  }).join(' ');
 
   return (
-    <div className="informes-container fade-in">
-      <div className="informe-actions glass-card">
-        <button className="btn-action primary" onClick={handleDownload}>
-          <span className="btn-icon">📥</span>
-          Descargar PDF
-        </button>
-        <button className="btn-action secondary" onClick={handlePrint}>
-          <span className="btn-icon">🖨️</span>
-          Imprimir
-        </button>
-        <div className="actions-note">⚠️ Este enlace caduca en {expiresIn} horas. Descarga o imprime antes.</div>
+    <div className="informes-container informes-pro-page fade-in">
+      <div className="informe-actions glass-card report-pro-actions">
+        <button className="btn-action primary" onClick={handleDownload}>Descargar PDF</button>
+        <button className="btn-action secondary" onClick={handlePrint}>Imprimir</button>
+        <div className="actions-note">Enlace temporal: caduca en {expiresIn} horas.</div>
       </div>
 
-      <div className="informe-preview glass-card" ref={reportRef}>
-        <div className="preview-header">
-          <div className="preview-logo">
-            <span className="logo-icon">📊</span>
-            <span className="logo-text">Portfolio Manager</span>
+      <article className="informe-preview glass-card report-pro-sheet" ref={reportRef}>
+        <header className="report-pro-header">
+          <div>
+            <p className="report-pro-kicker">Portfolio Manager</p>
+            <h2>Investment Report</h2>
+            <p className="report-pro-date">{new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
-          <div className="preview-title">
-            <h2>INFORME DE INVERSIÓN</h2>
-            <p className="preview-date">{new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-          </div>
-        </div>
+          <div className="report-pro-client-tag">{report.clientCode}</div>
+        </header>
 
-        <div className="preview-client">
-          <div className="client-badge">{report.clientCode}</div>
-          <div className="client-details">
-            <h3>{report.clientName}</h3>
-          </div>
-        </div>
+        <section className="report-pro-client">
+          <h3>{report.clientName}</h3>
+        </section>
 
-        <div className="preview-summary">
-          <h4>Resumen Financiero</h4>
-          <div className="summary-grid seven-cols">
-            <div className="summary-card">
-              <span className="summary-label">Capital Invertido</span>
-              <span className="summary-value">{formatCurrency(report.incrementos)}</span>
-            </div>
-            <div className="summary-card">
-              <span className="summary-label">Capital Retirado</span>
-              <span className="summary-value">{formatCurrency(report.decrementos)}</span>
-            </div>
-            <div className="summary-card highlight">
-              <span className="summary-label">Saldo Actual</span>
-              <span className="summary-value">{formatCurrency(report.saldo)}</span>
-            </div>
-            <div className="summary-card">
-              <span className="summary-label">Beneficio Total</span>
-              <span className={`summary-value ${report.beneficioTotal >= 0 ? 'positive' : 'negative'}`}>
-                {formatCurrency(report.beneficioTotal)}
-              </span>
-            </div>
-            <div className="summary-card">
-              <span className="summary-label">Rentabilidad Total</span>
-              <span className={`summary-value ${report.rentabilidad >= 0 ? 'positive' : 'negative'}`}>
-                {report.rentabilidad.toFixed(2)}%
-              </span>
-            </div>
-            <div className="summary-card">
-              <span className="summary-label">Beneficio Último Mes</span>
-              <span className={`summary-value ${report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}`}>
-                {formatCurrency(report.beneficioUltimoMes)}
-              </span>
-            </div>
-            <div className="summary-card">
-              <span className="summary-label">Rentab. Último Mes</span>
-              <span className={`summary-value ${report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}`}>
-                {report.rentabilidadUltimoMes.toFixed(2)}%
-              </span>
-            </div>
-            <div className="summary-card" title="Rentabilidad tiempo-pesada: elimina el efecto de aportes/retiros">
-              <span className="summary-label">Rentabilidad TWR</span>
-              <span className={`summary-value ${(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                {((report.twrYtd ?? 0) * 100).toFixed(2)}%
-              </span>
-            </div>
+        <section className="report-pro-executive">
+          <div>
+            <p>Saldo actual</p>
+            <strong>{formatCurrency(report.saldo)}</strong>
           </div>
-        </div>
+          <div>
+            <p>Beneficio total</p>
+            <strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong>
+          </div>
+          <div>
+            <p>Rentabilidad total</p>
+            <strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{report.rentabilidad.toFixed(2)}%</strong>
+          </div>
+        </section>
 
-        {monthlyWithData.length > 0 && (
-          <div className="preview-monthly">
-            <h4>Rendimiento Mensual (%)</h4>
-            <div className="chart-container-modern">
-              <div className="modern-bar-chart">
-                {monthlyWithData.map((m) => {
-                  const heightPct = m.hasData ? Math.min(75, (Math.abs(m.profitPct) / maxPct) * 100) : 4;
-                  const isNeg = m.profitPct < 0;
-                  return (
-                    <div key={m.month} className="modern-bar-wrapper">
-                      <span className="modern-bar-value">{m.hasData ? `${m.profitPct.toFixed(2)}%` : '-'}</span>
-                      <div className="modern-bar-container">
-                        <div
-                          className={`modern-bar ${m.hasData ? (isNeg ? 'modern-bar-negative' : 'modern-bar-positive') : 'modern-bar-empty'}`}
-                          style={{ height: `${heightPct}%` }}
-                        />
-                      </div>
-                      <span className="modern-bar-label">{m.month}</span>
+        <section className="report-pro-kpis">
+          <div className="report-pro-kpi"><span>Capital invertido</span><strong>{formatCurrency(report.incrementos)}</strong></div>
+          <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
+          <div className="report-pro-kpi"><span>Beneficio ultimo mes</span><strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioUltimoMes)}</strong></div>
+          <div className="report-pro-kpi"><span>Rentab. ultimo mes</span><strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{report.rentabilidadUltimoMes.toFixed(2)}%</strong></div>
+          <div className="report-pro-kpi"><span>TWR</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{((report.twrYtd ?? 0) * 100).toFixed(2)}%</strong></div>
+        </section>
+
+        <section className="report-pro-grid">
+          <div className="report-pro-panel">
+            <div className="report-pro-panel-head">
+              <h4>Rendimiento mensual</h4>
+              <p>Comparativa de rentabilidad por mes</p>
+            </div>
+            <div className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}>
+              {monthlyWithData.map((m) => {
+                const height = Math.max(6, (Math.abs(m.profitPct) / maxMonthPct) * 74);
+                return (
+                  <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${m.profitPct.toFixed(2)}%`}>
+                    <span className={`report-pro-bar-value ${m.profitPct >= 0 ? 'positive' : 'negative'}`}>{m.profitPct.toFixed(2)}%</span>
+                    <div className="report-pro-bar-track">
+                      <div
+                        className={`report-pro-bar ${m.profitPct >= 0 ? 'positive' : 'negative'}`}
+                        style={{
+                          height: `${height}%`,
+                          ...(hasNegativeMonth
+                            ? (m.profitPct >= 0 ? { bottom: '50%' } : { top: '50%' })
+                            : { bottom: 0 })
+                        }}
+                      />
                     </div>
-                  );
-                })}
-              </div>
+                    <span className="report-pro-bar-label">{m.month}</span>
+                  </div>
+                );
+              })}
             </div>
-            <table className="monthly-table">
+          </div>
+
+          <div className="report-pro-panel">
+            <div className="report-pro-panel-head">
+              <h4>Evolucion patrimonio</h4>
+              <p>Linea de cierre mensual</p>
+            </div>
+            <div className="report-pro-line-wrap">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="report-pro-line-chart">
+                <polyline className="report-pro-line" points={patrimonioPoints} />
+                {patrimonioWithData.map((p, idx) => {
+                  const x = patrimonioWithData.length <= 1 ? 8 : (idx / (patrimonioWithData.length - 1)) * 100;
+                  const y = 92 - ((p.balance as number) / maxPatrimonio) * 78;
+                  return <circle key={`${p.month}-${idx}`} cx={x} cy={Math.max(10, y)} r="1.6" className="report-pro-dot" />;
+                })}
+              </svg>
+            </div>
+            <div className="report-pro-month-row">
+              {patrimonioWithData.map((p) => <span key={p.month}>{p.month}</span>)}
+            </div>
+          </div>
+        </section>
+
+        <section className="report-pro-panel">
+          <div className="report-pro-panel-head">
+            <h4>Tabla mensual</h4>
+            <p>Resultado, rentabilidad y saldo por mes</p>
+          </div>
+          <div className="table-scroll">
+            <table className="monthly-table report-pro-table">
               <thead>
                 <tr>
                   <th>Mes</th>
@@ -306,49 +301,23 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
                 </tr>
               </thead>
               <tbody>
-                {monthlyWithData.map((m) => (
+                {report.monthlyStats.map((m) => (
                   <tr key={m.month}>
-                    <td>{m.month}</td>
-                    <td className={`text-right ${m.profit >= 0 ? 'positive' : 'negative'}`}>
-                      {formatCurrency(m.profit)}
+                    <td>{m.hasData ? m.month : '-'}</td>
+                    <td className={`text-right ${m.hasData ? ((m.profit ?? 0) >= 0 ? 'positive' : 'negative') : ''}`}>
+                      {m.hasData ? formatCurrency(m.profit ?? 0) : '-'}
                     </td>
-                    <td className={`text-right ${m.profitPct >= 0 ? 'positive' : 'negative'}`}>
-                      {`${m.profitPct.toFixed(2)}%`}
+                    <td className={`text-right ${m.hasData ? ((m.profitPct ?? 0) >= 0 ? 'positive' : 'negative') : ''}`}>
+                      {m.hasData ? `${(m.profitPct ?? 0).toFixed(2)}%` : '-'}
                     </td>
-                    <td className="text-right">{formatCurrency(m.endBalance)}</td>
+                    <td className="text-right">{m.hasData ? formatCurrency(m.endBalance ?? 0) : '-'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-
-        {validPatrimonio.length > 0 && (
-          <div className="preview-patrimonio">
-            <h4>Evolución del Patrimonio</h4>
-            <div className="modern-bars-horizontal">
-              {patrimonioData.map((d, i) => {
-                const balance = d.balance;
-                if (balance === undefined) return null;
-                const maxBal = Math.max(...patrimonioData.filter(x => x.balance !== undefined).map(x => x.balance as number), 1);
-                const widthPct = (balance / maxBal) * 100;
-                return (
-                  <div key={i} className="modern-bar-horizontal-wrapper">
-                    <span className="modern-bar-horizontal-label">{d.month}</span>
-                    <div className="modern-bar-horizontal-container">
-                      <div 
-                        className="modern-bar-horizontal" 
-                        style={{ width: `${widthPct}%` }}
-                      />
-                    </div>
-                    <span className="modern-bar-horizontal-value">{formatCurrency(balance)}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+        </section>
+      </article>
     </div>
   );
 };
