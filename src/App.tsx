@@ -386,9 +386,10 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
     return {
       equity: filteredPoints.map((p, i) => ({ label: labels[i], value: p.equity })),
       drawdown,
-      netFlows
+      netFlows,
+      monthlyEquity: metrics.monthly.map((m) => ({ label: monthLabel(m.month), value: m.end }))
     };
-  }, [filteredPoints]);
+  }, [filteredPoints, metrics.monthly]);
 
   const formatRatio = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : '-');
 
@@ -405,6 +406,8 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
     flow_card: 'Muestra cuanto dinero entra o sale cada mes y como se reparten los dias buenos y malos.',
     heatmap_card: 'Cada cuadro es un mes. Color y porcentaje te dicen si ese mes fue bueno o malo.',
     waterfall_card: 'Explica el saldo final paso a paso: inicio, dinero que entra, dinero que sale y resultado.',
+    monthly_equity_card: 'Muestra el saldo de cierre de cada mes para que veas la tendencia mensual de tu patrimonio.',
+    monthly_table_card: 'Tabla mensual con las cifras clave: beneficio, rentabilidad, entradas, salidas y saldo final.',
     ranking_card: 'Ordena clientes: quien tiene mas saldo y quien va peor en resultado acumulado.',
     alerts_card: 'Son avisos simples para detectar rapido riesgos o datos que conviene revisar.'
   };
@@ -576,6 +579,74 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </div>
+
+      <div className="stats-chart-grid">
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <div>
+              <p className="eyebrow">Seguimiento mensual</p>
+              <h4>Evolucion de patrimonio por cierre de mes</h4>
+              <p className="muted">Vista de tendencia mensual para comparar rapido cada cierre.</p>
+            </div>
+            <button
+              className="stats-help-btn stats-info-anchor"
+              onClick={(e) => openHelp(e, 'monthly_equity_card')}
+            >
+              i
+            </button>
+          </div>
+          <div style={{ padding: '0 16px 16px' }}>
+            <ModernLineChart
+              data={chartData.monthlyEquity}
+              color="#0b4f6c"
+              height={280}
+              valueFormatter={formatCurrency}
+              onHover={(text, x, y) => setChartTooltip({ x, y, text, visible: !!text })}
+            />
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <div>
+              <p className="eyebrow">Detalle mensual</p>
+              <h4>Resumen mensual global</h4>
+              <p className="muted">Incluye rendimiento, flujos y cierre de patrimonio.</p>
+            </div>
+            <button
+              className="stats-help-btn stats-info-anchor"
+              onClick={(e) => openHelp(e, 'monthly_table_card')}
+            >
+              i
+            </button>
+          </div>
+          <div className="data-table compact">
+            <div className="table-header" style={{ gridTemplateColumns: '1.1fr 1fr 0.9fr 1fr 1fr 1fr 0.9fr' }}>
+              <div>Mes</div>
+              <div>Beneficio</div>
+              <div>Rentab.</div>
+              <div>Aportes</div>
+              <div>Retiros</div>
+              <div>Flujo neto</div>
+              <div>Saldo</div>
+            </div>
+            {metrics.monthly.length === 0 && <div className="table-row"><div>Sin datos mensuales</div></div>}
+            {metrics.monthly.map((m) => (
+              <div className="table-row" key={m.month} style={{ gridTemplateColumns: '1.1fr 1fr 0.9fr 1fr 1fr 1fr 0.9fr' }}>
+                <div>{monthLabel(m.month)}</div>
+                <div className={clsx(m.profit >= 0 ? 'positive' : 'negative')}>{formatCurrency(m.profit)}</div>
+                <div className={clsx(m.returnPct >= 0 ? 'positive' : 'negative')}>{formatPercent(m.returnPct)}</div>
+                <div>{formatCurrency(m.increments)}</div>
+                <div>{formatCurrency(m.decrements)}</div>
+                <div className={clsx((m.increments - m.decrements) >= 0 ? 'positive' : 'negative')}>
+                  {formatCurrency(m.increments - m.decrements)}
+                </div>
+                <div>{formatCurrency(m.end)}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
