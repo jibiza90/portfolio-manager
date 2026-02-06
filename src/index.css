@@ -3249,3 +3249,97 @@ select {
   color: #dc2626;
   font-weight: 600;
 }
+
+/* General grid movement tooltip */
+.movement-tooltip {
+  width: min(420px, calc(100vw - 24px));
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 44px rgba(2, 8, 23, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  pointer-events: none;
+}
+
+.movement-tooltip-inc {
+  border-left: 5px solid #059669;
+}
+
+.movement-tooltip-dec {
+  border-left: 5px solid #dc2626;
+}
+
+.movement-tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.movement-tooltip-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #0f172a;
+}
+
+.movement-tooltip-date {
+  font-size: 12px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.movement-tooltip-body {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.movement-tooltip-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 14px;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.25);
+}
+
+.movement-tooltip-row:last-child {
+  border-bottom: none;
+}
+
+.movement-tooltip-client {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.movement-tooltip-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.movement-tooltip-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.8);
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.movement-tooltip-footer strong {
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}

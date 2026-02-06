@@ -509,11 +509,19 @@ function DailyGrid({
   setFocusDate: (d: string) => void;
   contacts: Record<string, ContactInfo>;
 }) {
+  type MovementTooltipState = {
+    x: number;
+    y: number;
+    kind: 'increment' | 'decrement';
+    dateLabel: string;
+    items: { name: string; amount: number }[];
+    total: number;
+  };
   const { snapshot } = usePortfolioStore();
   const setDayFinal = usePortfolioStore((s) => s.setDayFinal);
   const rows = useMemo(() => [...snapshot.dailyRows], [snapshot.dailyRows]);
   const tableRef = useRef<HTMLTableElement>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
+  const [tooltip, setTooltip] = useState<MovementTooltipState | null>(null);
 
   useEffect(() => {
     if (!tableRef.current || !focusDate) return;
@@ -540,12 +548,15 @@ function DailyGrid({
 
   const showValue = (v?: number) => (v === undefined ? '-' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '-' : formatPercent(v));
-  const showMovementTooltip = (e: React.MouseEvent<HTMLTableCellElement>, content: string) => {
+  const showMovementTooltip = (
+    e: React.MouseEvent<HTMLTableCellElement>,
+    data: Omit<MovementTooltipState, 'x' | 'y'>
+  ) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setTooltip({
       x: rect.left,
       y: rect.bottom + 6,
-      content
+      ...data
     });
   };
   return (
@@ -573,33 +584,39 @@ function DailyGrid({
                 <td
                   onMouseEnter={(e) => {
                     const clients = getMovementClients(r.iso, 'increment');
-                      const total = r.increments ?? 0;
-                      if (total !== 0) {
-                        const details = clients.map((item) => `${item.name} incremento ${formatCurrency(item.amount)}`).join('\n');
-                        const content = details ? `${details}\nTotal ${formatCurrency(total)}` : `Total ${formatCurrency(total)}`;
-                        showMovementTooltip(e, content);
-                      }
-                    }}
-                    onMouseLeave={() => setTooltip(null)}
-                    style={{ cursor: r.increments ? 'pointer' : 'default' }}
-                  >
-                    {showValue(r.increments)}
-                  </td>
+                    const total = r.increments ?? 0;
+                    if (total !== 0) {
+                      showMovementTooltip(e, {
+                        kind: 'increment',
+                        dateLabel: r.label,
+                        items: clients,
+                        total
+                      });
+                    }
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{ cursor: r.increments ? 'pointer' : 'default' }}
+                >
+                  {showValue(r.increments)}
+                </td>
                 <td
                   onMouseEnter={(e) => {
                     const clients = getMovementClients(r.iso, 'decrement');
-                      const total = r.decrements ?? 0;
-                      if (total !== 0) {
-                        const details = clients.map((item) => `${item.name} decremento ${formatCurrency(item.amount)}`).join('\n');
-                        const content = details ? `${details}\nTotal ${formatCurrency(total)}` : `Total ${formatCurrency(total)}`;
-                        showMovementTooltip(e, content);
-                      }
-                    }}
-                    onMouseLeave={() => setTooltip(null)}
-                    style={{ cursor: r.decrements ? 'pointer' : 'default' }}
-                  >
-                    {showValue(r.decrements)}
-                  </td>
+                    const total = r.decrements ?? 0;
+                    if (total !== 0) {
+                      showMovementTooltip(e, {
+                        kind: 'decrement',
+                        dateLabel: r.label,
+                        items: clients,
+                        total
+                      });
+                    }
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                  style={{ cursor: r.decrements ? 'pointer' : 'default' }}
+                >
+                  {showValue(r.decrements)}
+                </td>
                 <td>{showValue(r.initial)}</td>
                 <td>{r.isWeekend ? showValue(r.final) : <CurrencyCell value={r.final} onChange={(v) => setDayFinal(r.iso, v)} />}</td>
                 <td className={clsx(r.profit !== undefined && r.profit >= 0 ? 'profit' : 'loss')}>{showValue(r.profit)}</td>
@@ -612,25 +629,30 @@ function DailyGrid({
       </div>
       {tooltip && createPortal(
         <div
-          style={{
-            position: 'fixed',
-            top: tooltip.y,
-            left: tooltip.x,
-            background: '#1e293b',
-            color: '#e2e8f0',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontSize: '13px',
-            fontWeight: 600,
-            boxShadow: '0 10px 24px rgba(0,0,0,0.45)',
-            border: '1px solid rgba(148,163,184,0.35)',
-            zIndex: 2147483647,
-            pointerEvents: 'none',
-            whiteSpace: 'pre-line',
-            maxWidth: '420px'
-          }}
+          className={clsx('movement-tooltip', tooltip.kind === 'increment' ? 'movement-tooltip-inc' : 'movement-tooltip-dec')}
+          style={{ position: 'fixed', top: tooltip.y, left: tooltip.x, zIndex: 2147483647 }}
         >
-          {tooltip.content}
+          <div className="movement-tooltip-header">
+            <span className="movement-tooltip-title">{tooltip.kind === 'increment' ? 'Incrementos' : 'Decrementos'}</span>
+            <span className="movement-tooltip-date">{tooltip.dateLabel}</span>
+          </div>
+          <div className="movement-tooltip-body">
+            {tooltip.items.length > 0 ? tooltip.items.map((item) => (
+              <div className="movement-tooltip-row" key={`${item.name}-${item.amount}`}>
+                <span className="movement-tooltip-client">{item.name}</span>
+                <span className="movement-tooltip-amount">{formatCurrency(item.amount)}</span>
+              </div>
+            )) : (
+              <div className="movement-tooltip-row">
+                <span className="movement-tooltip-client">Sin detalle por cliente</span>
+                <span className="movement-tooltip-amount">-</span>
+              </div>
+            )}
+          </div>
+          <div className="movement-tooltip-footer">
+            <span>Total</span>
+            <strong>{formatCurrency(tooltip.total)}</strong>
+          </div>
         </div>,
         document.body
       )}
