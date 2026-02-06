@@ -36,177 +36,584 @@ function EditableCell({ value, onChange, isPercent = false }: { value: number | 
 function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const { snapshot } = usePortfolioStore();
   const dailyRows = snapshot.dailyRows;
-  const [twrHover, setTwrHover] = useState(false);
+  const [range, setRange] = useState<'30D' | '90D' | 'YTD' | 'ALL'>('YTD');
+  const [helpKey, setHelpKey] = useState<string | null>(null);
   const [twrExpanded, setTwrExpanded] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [chartTooltip, setChartTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
 
-  const lastWithData = useMemo(() => [...dailyRows].reverse().find((r) => r.final !== undefined || r.profit !== undefined), [dailyRows]);
-  const currentMonth = lastWithData?.iso?.slice(0, 7);
+  const lastWithData = useMemo(
+    () => [...dailyRows].reverse().find((r) => r.final !== undefined || r.profit !== undefined),
+    [dailyRows]
+  );
+  const lastIso = lastWithData?.iso ?? '';
 
-  // Calcular TWR general
+  const fullRows = useMemo(
+    () => dailyRows.filter((r) => !!lastIso && r.iso <= lastIso),
+    [dailyRows, lastIso]
+  );
+
+  const points = useMemo(() => {
+    type Point = {
+      iso: string;
+      label: string;
+      month: string;
+      initial: number;
+      equity: number;
+      profit: number;
+      ret: number;
+      increment: number;
+      decrement: number;
+    };
+    const out: Point[] = [];
+    let runningEquity: number | undefined;
+
+    fullRows.forEach((r) => {
+      if (r.final !== undefined) runningEquity = r.final;
+      if (runningEquity === undefined) return;
+
+      const profit = r.profit ?? 0;
+      const initial = r.initial ?? 0;
+      const ret = r.profitPct ?? (initial !== 0 ? profit / initial : 0);
+
+      out.push({
+        iso: r.iso,
+        label: r.label,
+        month: r.iso.slice(0, 7),
+        initial,
+        equity: runningEquity,
+        profit,
+        ret,
+        increment: r.increments ?? 0,
+        decrement: r.decrements ?? 0
+      });
+    });
+
+    return out;
+  }, [fullRows]);
+
+  const filteredPoints = useMemo(() => {
+    if (range === 'ALL' || range === 'YTD') return points;
+    const size = range === '30D' ? 30 : 90;
+    return points.slice(-size);
+  }, [points, range]);
+
+  const filteredRows = useMemo(() => {
+    const selected = new Set(filteredPoints.map((p) => p.iso));
+    return fullRows
+      .filter((r) => selected.has(r.iso))
+      .map((r) => ({ ...r, increment: r.increments, decrement: r.decrements }));
+  }, [fullRows, filteredPoints]);
+
   const twrData = useMemo(() => {
-    const ytdResult = calculateTWR(dailyRows);
-    const monthlyTWR = calculateAllMonthsTWR(dailyRows);
-    return { ytd: ytdResult, monthly: monthlyTWR };
-  }, [dailyRows]);
+    const periodResult = calculateTWR(filteredRows);
+    const monthlyTWR = calculateAllMonthsTWR(filteredRows);
+    return { period: periodResult, monthly: monthlyTWR };
+  }, [filteredRows]);
 
-  const aggregates = useMemo(() => {
-    const todayProfitPct = lastWithData?.profitPct ?? 0;
-    const ytdProfit = snapshot.totals.ytdProfit ?? 0;
-    const ytdReturnPct = snapshot.totals.ytdReturnPct ?? 0;
+  const metrics = useMemo(() => {
+    const stdDev = (values: number[]) => {
+      if (values.length <= 1) return 0;
+      const mean = values.reduce((s, v) => s + v, 0) / values.length;
+      const variance = values.reduce((s, v) => s + (v - mean) ** 2, 0) / (values.length - 1);
+      return Math.sqrt(Math.max(0, variance));
+    };
 
-    let mtdProfit = 0;
-    let mtdReturnBase = 0;
-    let mtdReturn = 0;
-    const lastMonthIso = currentMonth;
+    const returns = filteredPoints.map((p) => p.ret).filter((v) => Number.isFinite(v));
+    const profits = filteredPoints.map((p) => p.profit);
+    const increments = filteredPoints.reduce((s, p) => s + p.increment, 0);
+    const decrements = filteredPoints.reduce((s, p) => s + p.decrement, 0);
+    const totalProfit = profits.reduce((s, v) => s + v, 0);
+    const assets = filteredPoints[filteredPoints.length - 1]?.equity ?? snapshot.totals.assets ?? 0;
 
-    const movementsToday = { inc: 0, dec: 0, countInc: 0, countDec: 0 };
-    const movementsWeek = { inc: 0, dec: 0, countInc: 0, countDec: 0 };
-    const todayIso = lastWithData?.iso;
-    const todayIndex = todayIso ? dailyRows.findIndex((r) => r.iso === todayIso) : -1;
+    const positives = profits.filter((v) => v > 0);
+    const negatives = profits.filter((v) => v < 0);
+    const sumPos = positives.reduce((s, v) => s + v, 0);
+    const sumNegAbs = Math.abs(negatives.reduce((s, v) => s + v, 0));
 
-    dailyRows.forEach((r, idx) => {
-      const month = r.iso.slice(0, 7);
-      if (lastMonthIso && month === lastMonthIso && r.profit !== undefined) {
-        mtdProfit += r.profit;
-        const base = r.initial ?? 0;
-        if (base !== 0) {
-          mtdReturnBase += base;
-          mtdReturn += r.profit;
-        }
+    const hitRate = positives.length + negatives.length > 0 ? positives.length / (positives.length + negatives.length) : 0;
+    const meanRet = returns.length ? returns.reduce((s, v) => s + v, 0) / returns.length : 0;
+    const volDaily = stdDev(returns);
+    const volAnnual = volDaily * Math.sqrt(252);
+    const downside = returns.filter((v) => v < 0);
+    const downsideStd = stdDev(downside);
+    const sharpe = volDaily > 0 ? (meanRet / volDaily) * Math.sqrt(252) : 0;
+    const sortino = downsideStd > 0 ? (meanRet / downsideStd) * Math.sqrt(252) : 0;
+    const profitFactor = sumNegAbs > 0 ? sumPos / sumNegAbs : sumPos > 0 ? 99 : 0;
+
+    let peak = 0;
+    let maxDrawdown = 0;
+    let currentDrawdown = 0;
+    let drawdownDuration = 0;
+    let longestDrawdownDuration = 0;
+    filteredPoints.forEach((p) => {
+      if (p.equity > peak) {
+        peak = p.equity;
+        drawdownDuration = 0;
       }
-      if (todayIndex !== -1 && idx >= todayIndex - 6 && idx <= todayIndex) {
-        if (r.increments !== undefined && r.increments !== 0) {
-          movementsWeek.inc += r.increments;
-          movementsWeek.countInc += 1;
-        }
-        if (r.decrements !== undefined && r.decrements !== 0) {
-          movementsWeek.dec += r.decrements;
-          movementsWeek.countDec += 1;
-        }
+      const dd = peak > 0 ? (p.equity - peak) / peak : 0;
+      if (dd < 0) {
+        drawdownDuration += 1;
+        longestDrawdownDuration = Math.max(longestDrawdownDuration, drawdownDuration);
+      } else {
+        drawdownDuration = 0;
+      }
+      currentDrawdown = dd;
+      maxDrawdown = Math.min(maxDrawdown, dd);
+    });
+
+    const byMonth = new Map<string, {
+      month: string;
+      profit: number;
+      increments: number;
+      decrements: number;
+      start: number;
+      end: number;
+      days: number;
+      positiveDays: number;
+    }>();
+
+    filteredPoints.forEach((p) => {
+      if (!byMonth.has(p.month)) {
+        byMonth.set(p.month, {
+          month: p.month,
+          profit: 0,
+          increments: 0,
+          decrements: 0,
+          start: p.initial !== 0 ? p.initial : Math.max(1, p.equity - p.profit),
+          end: p.equity,
+          days: 0,
+          positiveDays: 0
+        });
+      }
+      const m = byMonth.get(p.month)!;
+      m.profit += p.profit;
+      m.increments += p.increment;
+      m.decrements += p.decrement;
+      m.end = p.equity;
+      m.days += 1;
+      if (p.profit > 0) m.positiveDays += 1;
+    });
+
+    const twrMonthMap = new Map(twrData.monthly.map((m) => [m.month, m.twr]));
+    const monthly = Array.from(byMonth.values())
+      .sort((a, b) => (a.month > b.month ? 1 : -1))
+      .map((m) => ({
+        ...m,
+        returnPct: m.start !== 0 ? m.profit / m.start : 0,
+        hitRate: m.days > 0 ? m.positiveDays / m.days : 0,
+        twr: twrMonthMap.get(m.month) ?? 0
+      }));
+
+    const bestDay = filteredPoints.reduce((best, p) => (best === null || p.profit > best.profit ? p : best), null as (typeof filteredPoints[number] | null));
+    const worstDay = filteredPoints.reduce((worst, p) => (worst === null || p.profit < worst.profit ? p : worst), null as (typeof filteredPoints[number] | null));
+    const bestMonth = monthly.reduce((best, m) => (best === null || m.profit > best.profit ? m : best), null as (typeof monthly[number] | null));
+    const worstMonth = monthly.reduce((worst, m) => (worst === null || m.profit < worst.profit ? m : worst), null as (typeof monthly[number] | null));
+
+    let losingStreak = 0;
+    let maxLosingStreak = 0;
+    filteredPoints.forEach((p) => {
+      if (p.profit < 0) {
+        losingStreak += 1;
+        maxLosingStreak = Math.max(maxLosingStreak, losingStreak);
+      } else {
+        losingStreak = 0;
       }
     });
 
-    if (todayIndex !== -1) {
-      const r = dailyRows[todayIndex];
-      if (r.increments !== undefined && r.increments !== 0) {
-        movementsToday.inc = r.increments;
-        movementsToday.countInc = 1;
+    const movementToday = filteredPoints[filteredPoints.length - 1]
+      ? {
+        increment: filteredPoints[filteredPoints.length - 1].increment,
+        decrement: filteredPoints[filteredPoints.length - 1].decrement
       }
-      if (r.decrements !== undefined && r.decrements !== 0) {
-        movementsToday.dec = r.decrements;
-        movementsToday.countDec = 1;
-      }
-    }
+      : { increment: 0, decrement: 0 };
 
-    const mtdReturnPct = mtdReturnBase !== 0 ? mtdReturn / mtdReturnBase : 0;
+    const movementWeek = filteredPoints.slice(-7).reduce(
+      (acc, p) => ({ increment: acc.increment + p.increment, decrement: acc.decrement + p.decrement }),
+      { increment: 0, decrement: 0 }
+    );
 
-    // Alertas
-    const clientsNoEmail = Object.entries(contacts).filter(([, c]) => !c.email).length;
-    const missingClosures = dailyRows.filter((r) => r.final === undefined && r.iso <= (lastWithData?.iso ?? '')).length;
-    const extremeReturns = dailyRows.filter((r) => r.profitPct !== undefined && Math.abs(r.profitPct) > 0.05).length;
+    const clientsNoEmail = Object.values(contacts).filter((c) => !c.email).length;
+    const missingClosures = fullRows.filter((r) => r.final === undefined).length;
+    const extremeReturns = filteredPoints.filter((p) => Math.abs(p.ret) > 0.03).length;
 
-    // Evolución patrimonio por mes (último final de cada mes)
-    const byMonth = new Map<string, number>();
-    dailyRows.forEach((r) => {
-      if (r.final !== undefined) {
-        const month = r.iso.slice(0, 7);
-        byMonth.set(month, r.final);
-      }
+    const clientSnapshot = CLIENTS.map((c) => {
+      const rows = snapshot.clientRowsById[c.id] ?? [];
+      const last = [...rows]
+        .reverse()
+        .find((r) => r.iso <= lastIso && (r.finalBalance !== undefined || r.baseBalance !== undefined || r.cumulativeProfit !== undefined));
+
+      const balance = last?.finalBalance ?? last?.baseBalance ?? 0;
+      const cumulative = last?.cumulativeProfit ?? 0;
+      const ct = contacts[c.id];
+      const fullName = `${ct?.name ?? ''} ${ct?.surname ?? ''}`.trim();
+
+      return {
+        id: c.id,
+        name: fullName || c.name,
+        balance,
+        cumulative,
+        share: assets > 0 ? balance / assets : 0
+      };
     });
-    const evolution = Array.from(byMonth.entries()).sort(([a], [b]) => (a > b ? 1 : -1)).map(([month, balance]) => ({ month, balance }));
+
+    const topClients = [...clientSnapshot].sort((a, b) => b.balance - a.balance).slice(0, 5);
+    const laggards = [...clientSnapshot].sort((a, b) => a.cumulative - b.cumulative).slice(0, 5);
+    const top3Concentration = assets > 0 ? topClients.slice(0, 3).reduce((s, c) => s + c.balance, 0) / assets : 0;
+
+    const startBalance = filteredPoints[0] ? Math.max(0, filteredPoints[0].equity - filteredPoints[0].profit) : 0;
+    const endBalance = filteredPoints[filteredPoints.length - 1]?.equity ?? 0;
+    const netFlow = increments - decrements;
+    const performanceContribution = endBalance - startBalance - netFlow;
+
+    const monthlyComparison = monthly.length >= 2
+      ? monthly[monthly.length - 1].profit - monthly[monthly.length - 2].profit
+      : 0;
+
+    const alerts: { level: 'high' | 'medium' | 'info'; text: string }[] = [];
+    if (maxDrawdown <= -0.12) alerts.push({ level: 'high', text: `Drawdown maximo elevado: ${formatPercent(maxDrawdown)}` });
+    if (maxLosingStreak >= 4) alerts.push({ level: 'medium', text: `Racha negativa: ${maxLosingStreak} dias seguidos` });
+    if (volAnnual >= 0.35) alerts.push({ level: 'medium', text: `Volatilidad anualizada alta: ${formatPercent(volAnnual)}` });
+    if (top3Concentration >= 0.6) alerts.push({ level: 'medium', text: `Concentracion Top 3 alta: ${formatPercent(top3Concentration)}` });
+    if (clientsNoEmail > 0) alerts.push({ level: 'info', text: `Clientes sin email configurado: ${clientsNoEmail}` });
+    if (alerts.length === 0) alerts.push({ level: 'info', text: 'Sin alertas criticas en el periodo seleccionado' });
+
+    const insights: string[] = [];
+    insights.push(`Aporte neto del periodo: ${formatCurrency(netFlow)}.`);
+    insights.push(`Contribucion por rendimiento (sin flujos): ${formatCurrency(performanceContribution)}.`);
+    if (monthly.length >= 2) insights.push(`Variacion de beneficio mensual vs mes previo: ${formatCurrency(monthlyComparison)}.`);
+    if (bestDay && worstDay) insights.push(`Mejor dia: ${bestDay.label} (${formatCurrency(bestDay.profit)}), peor dia: ${worstDay.label} (${formatCurrency(worstDay.profit)}).`);
+    if (bestMonth && worstMonth) insights.push(`Mejor mes: ${monthLabel(bestMonth.month)} (${formatCurrency(bestMonth.profit)}), peor mes: ${monthLabel(worstMonth.month)} (${formatCurrency(worstMonth.profit)}).`);
+
+    const histogramBins = [
+      { label: '< -3%', min: Number.NEGATIVE_INFINITY, max: -0.03, count: 0 },
+      { label: '-3% a -1.5%', min: -0.03, max: -0.015, count: 0 },
+      { label: '-1.5% a -0.5%', min: -0.015, max: -0.005, count: 0 },
+      { label: '-0.5% a 0.5%', min: -0.005, max: 0.005, count: 0 },
+      { label: '0.5% a 1.5%', min: 0.005, max: 0.015, count: 0 },
+      { label: '1.5% a 3%', min: 0.015, max: 0.03, count: 0 },
+      { label: '> 3%', min: 0.03, max: Number.POSITIVE_INFINITY, count: 0 }
+    ];
+
+    returns.forEach((r) => {
+      const bucket = histogramBins.find((b) => r >= b.min && r < b.max);
+      if (bucket) bucket.count += 1;
+    });
 
     return {
-      todayProfitPct,
-      mtdProfit,
-      mtdReturnPct,
-      ytdProfit,
-      ytdReturnPct,
-      movementsToday,
-      movementsWeek,
-      clientsNoEmail,
+      assets,
+      totalProfit,
+      twr: twrData.period.twr,
+      maxDrawdown,
+      currentDrawdown,
+      longestDrawdownDuration,
+      volatility: volAnnual,
+      sharpe,
+      sortino,
+      hitRate,
+      profitFactor,
+      movementToday,
+      movementWeek,
       missingClosures,
       extremeReturns,
-      evolution
+      clientsNoEmail,
+      top3Concentration,
+      monthly,
+      topClients,
+      laggards,
+      alerts,
+      insights,
+      histogramBins,
+      startBalance,
+      endBalance,
+      increments,
+      decrements,
+      netFlow,
+      performanceContribution,
+      bestDay,
+      worstDay,
+      bestMonth,
+      worstMonth
     };
-  }, [dailyRows, lastWithData, currentMonth, contacts, snapshot.totals]);
+  }, [filteredPoints, snapshot, contacts, lastIso, fullRows, twrData]);
+
+  const chartData = useMemo(() => {
+    const labels = filteredPoints.map((p) => p.label);
+
+    const drawdown = (() => {
+      let peak = 0;
+      return filteredPoints.map((p) => {
+        peak = Math.max(peak, p.equity);
+        const dd = peak > 0 ? (p.equity - peak) / peak : 0;
+        return { label: p.label, value: dd };
+      });
+    })();
+
+    const netFlows = (() => {
+      const byMonth = new Map<string, number>();
+      filteredPoints.forEach((p) => {
+        byMonth.set(p.month, (byMonth.get(p.month) ?? 0) + (p.increment - p.decrement));
+      });
+      return Array.from(byMonth.entries())
+        .sort(([a], [b]) => (a > b ? 1 : -1))
+        .map(([month, value]) => ({ label: monthLabel(month), value }));
+    })();
+
+    return {
+      equity: filteredPoints.map((p, i) => ({ label: labels[i], value: p.equity })),
+      drawdown,
+      netFlows
+    };
+  }, [filteredPoints]);
+
+  const formatRatio = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : '-');
+
+  const helpTexts: Record<string, string> = {
+    patrimonio: 'Valor actual del portfolio en la ultima fecha con datos.',
+    pnl: 'Suma de beneficios/perdidas diarios del periodo filtrado.',
+    twr: 'Rentabilidad Time-Weighted: elimina el efecto de aportes y retiros.',
+    drawdown: 'Caida maxima desde un pico previo del patrimonio.',
+    vol: 'Desviacion estandar anualizada de retornos diarios.',
+    sharpe: 'Retorno medio dividido por volatilidad (con ajuste anual).',
+    hit: 'Porcentaje de dias en positivo sobre dias con variacion real.',
+    pf: 'Suma de dias ganadores / suma absoluta de dias perdedores.'
+  };
+
+  const kpis = [
+    { key: 'patrimonio', label: 'Patrimonio', value: formatCurrency(metrics.assets), tone: 'neutral', sub: `Periodo ${range}` },
+    { key: 'pnl', label: 'P&L periodo', value: formatCurrency(metrics.totalProfit), tone: metrics.totalProfit >= 0 ? 'positive' : 'negative', sub: `Flujo neto ${formatCurrency(metrics.netFlow)}` },
+    { key: 'twr', label: 'TWR', value: formatPercent(metrics.twr), tone: metrics.twr >= 0 ? 'positive' : 'negative', sub: 'Rentabilidad real' },
+    { key: 'drawdown', label: 'Max Drawdown', value: formatPercent(metrics.maxDrawdown), tone: metrics.maxDrawdown >= -0.08 ? 'positive' : 'negative', sub: `Actual ${formatPercent(metrics.currentDrawdown)}` },
+    { key: 'vol', label: 'Volatilidad', value: formatPercent(metrics.volatility), tone: metrics.volatility <= 0.2 ? 'positive' : 'negative', sub: 'Anualizada' },
+    { key: 'sharpe', label: 'Sharpe / Sortino', value: `${formatRatio(metrics.sharpe)} / ${formatRatio(metrics.sortino)}`, tone: metrics.sharpe >= 1 ? 'positive' : 'neutral', sub: 'Riesgo ajustado' },
+    { key: 'hit', label: 'Hit ratio', value: formatPercent(metrics.hitRate), tone: metrics.hitRate >= 0.5 ? 'positive' : 'negative', sub: 'Dias en positivo' },
+    { key: 'pf', label: 'Profit factor', value: formatRatio(metrics.profitFactor), tone: metrics.profitFactor >= 1 ? 'positive' : 'negative', sub: 'Ganancias / perdidas' }
+  ];
+
+  const monthRows = selectedMonth ? filteredPoints.filter((p) => p.month === selectedMonth) : [];
 
   return (
-    <div className="stats-view">
-      <div className="analytics-grid two-row" style={{ marginBottom: 16 }}>
-        <div className="stat-card glow">
-          <div className="stat-label">Patrimonio total</div>
-          <div className="stat-value">{formatCurrency(snapshot.totals.assets)}</div>
-          <div className="stat-sub">YTD: {formatPercent(aggregates.ytdReturnPct)}</div>
+    <div className="stats-view stats-pro">
+      <div className="chart-toolbar">
+        <div>
+          <p className="eyebrow">Analitica avanzada</p>
+          <h3>Panel estadistico general</h3>
+          <p className="stat-sub">Riesgo, rendimiento, distribucion y concentracion por cliente</p>
         </div>
-        <div className="stat-card glow">
-          <div className="stat-label">Beneficio YTD</div>
-          <div className={clsx('stat-value', aggregates.ytdProfit >= 0 ? 'positive' : 'negative')}>{formatCurrency(aggregates.ytdProfit)}</div>
-          <div className="stat-sub">Retorno YTD: {formatPercent(aggregates.ytdReturnPct)}</div>
-        </div>
-        <div className="stat-card glow">
-          <div className="stat-label">Rentabilidad diaria</div>
-          <div className={clsx('stat-value', aggregates.todayProfitPct >= 0 ? 'positive' : 'negative')}>{formatPercent(aggregates.todayProfitPct)}</div>
-          <div className="stat-sub">MTD: {formatPercent(aggregates.mtdReturnPct)}</div>
-        </div>
-        <div className="stat-card glow">
-          <div className="stat-label">Beneficio MTD</div>
-          <div className={clsx('stat-value', aggregates.mtdProfit >= 0 ? 'positive' : 'negative')}>{formatCurrency(aggregates.mtdProfit)}</div>
-          <div className="stat-sub">Mes: {currentMonth || '—'}</div>
+        <div className="pill-group">
+          {(['30D', '90D', 'YTD', 'ALL'] as const).map((r) => (
+            <button key={r} className={clsx('pill', range === r && 'active')} onClick={() => setRange(r)}>
+              {r}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="analytics-grid two-row" style={{ marginBottom: 16 }}>
-        <div className="stat-card glow">
-          <div className="stat-label">Movimientos hoy</div>
-          <div className="stat-sub">Incr: {formatCurrency(aggregates.movementsToday.inc)} · Decr: {formatCurrency(aggregates.movementsToday.dec)}</div>
-        </div>
-        <div className="stat-card glow">
-          <div className="stat-label">Movimientos 7 días</div>
-          <div className="stat-sub">Incr: {formatCurrency(aggregates.movementsWeek.inc)} · Decr: {formatCurrency(aggregates.movementsWeek.dec)}</div>
-        </div>
-        <div className="stat-card glow">
-          <div className="stat-label">Alertas datos</div>
-          <div className="stat-sub">Sin cierre: {aggregates.missingClosures}</div>
-          <div className="stat-sub">Rentabilidad extrema: {aggregates.extremeReturns}</div>
-        </div>
-        <div
-          className="stat-card glow clickable"
-          style={{ position: 'relative', overflow: 'visible' }}
-          onMouseEnter={() => setTwrHover(true)}
-          onMouseLeave={() => setTwrHover(false)}
-          onClick={() => setTwrExpanded(!twrExpanded)}
-        >
-          <div className="stat-label">Rentabilidad TWR</div>
-          <div className={clsx('stat-value', twrData.ytd.twr >= 0 ? 'positive' : 'negative')}>
-            {formatPercent(twrData.ytd.twr)}
-          </div>
-          <div className="stat-sub">YTD · Click para detalle</div>
-          {twrHover && !twrExpanded && (
-            <div className="mini-popup wide popup-center" onClick={(e) => e.stopPropagation()}>
-              <div className="mini-popup-header">
-                <strong>¿Qué es TWR?</strong>
-                <button onClick={() => setTwrHover(false)}>×</button>
-              </div>
-              <div className="mini-popup-body" style={{ fontSize: 12, lineHeight: 1.5 }}>
-                <p style={{ margin: '0 0 8px' }}>La <strong>rentabilidad TWR</strong> (Time-Weighted Return) mide el rendimiento real eliminando el efecto de aportes y retiros.</p>
-                <p style={{ margin: 0 }}>Se calcula dividiendo el periodo en subperiodos entre cada flujo, calculando el retorno de cada uno y multiplicando los factores (1+r). Así puedes comparar rendimientos de forma justa.</p>
-              </div>
+      <div className="stats-kpi-grid">
+        {kpis.map((k) => (
+          <div
+            key={k.key}
+            className={clsx('stat-card glow stats-kpi-card', k.tone === 'positive' && 'kpi-positive', k.tone === 'negative' && 'kpi-negative')}
+            onMouseEnter={() => setHelpKey(k.key)}
+            onMouseLeave={() => setHelpKey((v) => (v === k.key ? null : v))}
+          >
+            <div className="stats-kpi-top">
+              <div className="stat-label">{k.label}</div>
+              <button className="stats-help-btn" onClick={() => setHelpKey((v) => (v === k.key ? null : k.key))}>i</button>
             </div>
-          )}
+            <div className={clsx('stat-value', k.tone === 'positive' && 'positive', k.tone === 'negative' && 'negative')}>
+              {k.value}
+            </div>
+            <div className="stat-sub">{k.sub}</div>
+            {helpKey === k.key && <div className="stats-help-pop">{helpTexts[k.key]}</div>}
+          </div>
+        ))}
+      </div>
+
+      <div className="stats-chart-grid">
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <div>
+              <p className="eyebrow">Patrimonio y caida</p>
+              <h4>Equity curve y drawdown</h4>
+              <p className="muted">Click en TWR para abrir el detalle mensual.</p>
+            </div>
+            <button className="ghost-btn" onClick={() => setTwrExpanded((v) => !v)}>
+              {twrExpanded ? 'Ocultar TWR' : 'Ver TWR'}
+            </button>
+          </div>
+          <div style={{ padding: '0 16px 16px' }}>
+            <ModernLineChart
+              data={chartData.equity}
+              color="#0f6d7a"
+              height={280}
+              valueFormatter={formatCurrency}
+              onHover={(text, x, y) => setChartTooltip({ x, y, text, visible: !!text })}
+            />
+          </div>
+          <div style={{ padding: '0 16px 20px' }}>
+            <ModernLineChart
+              data={chartData.drawdown}
+              color="#dc2626"
+              height={180}
+              valueFormatter={formatPercent}
+              onHover={(text, x, y) => setChartTooltip({ x, y, text, visible: !!text })}
+            />
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <div>
+              <p className="eyebrow">Flujos y distribucion</p>
+              <h4>Flujo neto mensual y retorno diario</h4>
+              <p className="muted">Aportes - retiros por mes y frecuencia de retornos.</p>
+            </div>
+            <span className="badge-soft">Riesgo</span>
+          </div>
+          <div style={{ padding: '0 16px 16px' }}>
+            <ModernBarChart
+              data={chartData.netFlows}
+              height={250}
+              valueFormatter={formatCurrency}
+              onHover={(text, x, y) => setChartTooltip({ x, y, text, visible: !!text })}
+            />
+          </div>
+          <div className="stats-histogram-wrap">
+            {metrics.histogramBins.map((b) => {
+              const maxCount = Math.max(1, ...metrics.histogramBins.map((x) => x.count));
+              const width = `${(b.count / maxCount) * 100}%`;
+              return (
+                <div key={b.label} className="stats-hist-row">
+                  <span>{b.label}</span>
+                  <div className="stats-hist-track">
+                    <div className="stats-hist-bar" style={{ width }} />
+                  </div>
+                  <strong>{b.count}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="stats-chart-grid">
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <div>
+              <p className="eyebrow">Heatmap mensual</p>
+              <h4>Retorno mensual y TWR</h4>
+              <p className="muted">Pulsa un mes para ver el detalle diario.</p>
+            </div>
+          </div>
+          <div className="stats-heatmap">
+            {metrics.monthly.map((m) => {
+              const intensity = Math.min(1, Math.abs(m.returnPct) / 0.08);
+              const bg = m.returnPct >= 0
+                ? `rgba(5,150,105,${0.15 + intensity * 0.65})`
+                : `rgba(220,38,38,${0.15 + intensity * 0.65})`;
+
+              return (
+                <button key={m.month} className="stats-heat-cell" style={{ background: bg }} onClick={() => setSelectedMonth(m.month)}>
+                  <span>{monthLabel(m.month)}</span>
+                  <strong>{formatPercent(m.returnPct)}</strong>
+                  <small>TWR {formatPercent(m.twr)}</small>
+                </button>
+              );
+            })}
+            {metrics.monthly.length === 0 && <p className="muted" style={{ margin: 0 }}>Sin datos mensuales en este rango.</p>}
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <div>
+              <p className="eyebrow">Waterfall y operativa</p>
+              <h4>Descomposicion del crecimiento</h4>
+            </div>
+          </div>
+          <div className="stats-waterfall">
+            <div className="stats-water-row"><span>Saldo inicial</span><strong>{formatCurrency(metrics.startBalance)}</strong></div>
+            <div className="stats-water-row"><span>Aportes</span><strong className="positive">+{formatCurrency(metrics.increments)}</strong></div>
+            <div className="stats-water-row"><span>Retiros</span><strong className="negative">-{formatCurrency(metrics.decrements)}</strong></div>
+            <div className="stats-water-row"><span>Rendimiento puro</span><strong className={clsx(metrics.performanceContribution >= 0 ? 'positive' : 'negative')}>{formatCurrency(metrics.performanceContribution)}</strong></div>
+            <div className="stats-water-row total"><span>Saldo final</span><strong>{formatCurrency(metrics.endBalance)}</strong></div>
+          </div>
+          <div className="stats-mini-kpis">
+            <div><span>Mov. hoy</span><strong>+{formatCurrency(metrics.movementToday.increment)} / -{formatCurrency(metrics.movementToday.decrement)}</strong></div>
+            <div><span>Mov. 7 dias</span><strong>+{formatCurrency(metrics.movementWeek.increment)} / -{formatCurrency(metrics.movementWeek.decrement)}</strong></div>
+            <div><span>Concentracion Top 3</span><strong>{formatPercent(metrics.top3Concentration)}</strong></div>
+            <div><span>Duracion max DD</span><strong>{metrics.longestDrawdownDuration} dias</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="stats-chart-grid">
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <div>
+              <p className="eyebrow">Ranking de clientes</p>
+              <h4>Top por balance y laggards por P&L</h4>
+            </div>
+          </div>
+          <div className="stats-rank-grid">
+            <div>
+              <p className="stats-rank-title">Top balance</p>
+              {metrics.topClients.map((c) => (
+                <div key={c.id} className="stats-rank-row">
+                  <span>{c.name}</span>
+                  <strong>{formatCurrency(c.balance)}</strong>
+                </div>
+              ))}
+            </div>
+            <div>
+              <p className="stats-rank-title">Bottom P&L acumulado</p>
+              {metrics.laggards.map((c) => (
+                <div key={c.id} className="stats-rank-row">
+                  <span>{c.name}</span>
+                  <strong className={clsx(c.cumulative >= 0 ? 'positive' : 'negative')}>{formatCurrency(c.cumulative)}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <div>
+              <p className="eyebrow">Alertas e insights</p>
+              <h4>Lectura automatica del periodo</h4>
+            </div>
+          </div>
+          <div className="stats-alerts">
+            {metrics.alerts.map((a, idx) => (
+              <div key={`${a.text}-${idx}`} className={clsx('stats-alert', `alert-${a.level}`)}>
+                {a.text}
+              </div>
+            ))}
+          </div>
+          <div className="stats-insights">
+            {metrics.insights.map((text, idx) => (
+              <p key={`${text}-${idx}`}>{text}</p>
+            ))}
+            <p>Sin cierre de dia: {metrics.missingClosures} | Retornos extremos: {metrics.extremeReturns} | Clientes sin email: {metrics.clientsNoEmail}</p>
+            <p>Mejor dia: {metrics.bestDay ? `${metrics.bestDay.label} (${formatCurrency(metrics.bestDay.profit)})` : '-'} | Peor dia: {metrics.worstDay ? `${metrics.worstDay.label} (${formatCurrency(metrics.worstDay.profit)})` : '-'}</p>
+            <p>Mejor mes: {metrics.bestMonth ? `${monthLabel(metrics.bestMonth.month)} (${formatCurrency(metrics.bestMonth.profit)})` : '-'} | Peor mes: {metrics.worstMonth ? `${monthLabel(metrics.worstMonth.month)} (${formatCurrency(metrics.worstMonth.profit)})` : '-'}</p>
+          </div>
         </div>
       </div>
 
       {twrExpanded && (
         <div className="twr-detail glass-card" style={{ marginBottom: 16, padding: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h4 style={{ margin: 0 }}>Detalle TWR por mes (General)</h4>
+            <h4 style={{ margin: 0 }}>Detalle TWR por mes</h4>
             <button className="ghost-btn" onClick={() => setTwrExpanded(false)}>Cerrar</button>
           </div>
           <div className="data-table compact">
             <div className="table-header">
               <div>Mes</div>
               <div>TWR</div>
-              <div>Días con datos</div>
+              <div>Dias con datos</div>
             </div>
             {twrData.monthly.length === 0 && <div className="table-row"><div>Sin datos</div></div>}
             {twrData.monthly.map((m) => (
@@ -217,37 +624,49 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
               </div>
             ))}
           </div>
-          <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 12, marginBottom: 0 }}>
-            TWR elimina el efecto de aportes/retiros multiplicando los retornos de cada subperiodo: (1+r₁)×(1+r₂)×...−1
-          </p>
         </div>
       )}
 
-      <div className="chart-card">
-        <div className="chart-card-header">
-          <div>
-            <p className="eyebrow">Evolución patrimonio</p>
-            <h4>Saldo fin de mes</h4>
-          </div>
-        </div>
-        <div className="data-table compact">
-          <div className="table-header">
-            <div>Mes</div>
-            <div>Saldo</div>
-          </div>
-          {aggregates.evolution.map((e) => (
-            <div key={e.month} className="table-row">
-              <div>{monthLabel(e.month)}</div>
-              <div>{formatCurrency(e.balance)}</div>
+      {selectedMonth && (
+        <div className="client-analytics-overlay" onClick={() => setSelectedMonth(null)}>
+          <div className="client-analytics-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Detalle diario de {monthLabel(selectedMonth)}</h3>
+              <button onClick={() => setSelectedMonth(null)}>x</button>
             </div>
-          ))}
-          {aggregates.evolution.length === 0 && <div className="table-row"><div>Sin datos</div></div>}
+            <div className="data-table compact">
+              <div className="table-header">
+                <div>Fecha</div>
+                <div>Incr.</div>
+                <div>Decr.</div>
+                <div>Beneficio</div>
+                <div>Retorno</div>
+                <div>Saldo</div>
+              </div>
+              {monthRows.map((r) => (
+                <div className="table-row" key={r.iso}>
+                  <div>{r.label}</div>
+                  <div>{formatCurrency(r.increment)}</div>
+                  <div>{formatCurrency(r.decrement)}</div>
+                  <div className={clsx(r.profit >= 0 ? 'positive' : 'negative')}>{formatCurrency(r.profit)}</div>
+                  <div className={clsx(r.ret >= 0 ? 'positive' : 'negative')}>{formatPercent(r.ret)}</div>
+                  <div>{formatCurrency(r.equity)}</div>
+                </div>
+              ))}
+              {monthRows.length === 0 && <div className="table-row"><div>Sin datos para este mes</div></div>}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {chartTooltip.visible && (
+        <div className="chart-tooltip" style={{ left: chartTooltip.x + 12, top: chartTooltip.y + 12 }}>
+          {chartTooltip.text}
+        </div>
+      )}
     </div>
   );
 }
-
 function ModernBarChart({
   data,
   height = 300,
