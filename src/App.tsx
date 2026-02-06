@@ -519,6 +519,8 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
         }
       });
     });
+    console.log('[DailyGrid] movementByDate:', map);
+    console.log('[DailyGrid] movementsByClient:', movementsByClient);
     return map;
   }, [movementsByClient]);
   const [movementPopup, setMovementPopup] = useState<{ iso: string; items: { clientId: string; name: string; increment?: number; decrement?: number }[]; pos?: { top: number; left: number } } | null>(null);
@@ -547,10 +549,12 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
     hoverTimerRef.current = setTimeout(() => {
       setFocusDate(r.iso);
       const items = movementByDate[r.iso];
+      console.log(`[handleRowEnter] iso=${r.iso}, items=`, items, 'increments=', r.increments, 'decrements=', r.decrements);
       if (items && items.length > 0) {
         const rect = e.currentTarget.getBoundingClientRect();
         const top = rect.top + window.scrollY + rect.height / 2;
         const left = rect.right + window.scrollX + 12;
+        console.log(`[handleRowEnter] Setting popup at top=${top}, left=${left}`);
         setMovementPopup({ iso: r.iso, items, pos: { top, left } });
       } else {
         setMovementPopup(null);
