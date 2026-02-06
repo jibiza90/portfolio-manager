@@ -39,9 +39,21 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const [periodMode, setPeriodMode] = useState<'annual' | 'month'>('annual');
   const [selectedFilterMonth, setSelectedFilterMonth] = useState<string>('');
   const [helpKey, setHelpKey] = useState<string | null>(null);
+  const [helpPopover, setHelpPopover] = useState<{ key: string; x: number; y: number } | null>(null);
   const [twrExpanded, setTwrExpanded] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [chartTooltip, setChartTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
+
+  useEffect(() => {
+    const closeHelp = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.stats-help-btn') || target?.closest('.stats-global-help')) return;
+      setHelpKey(null);
+      setHelpPopover(null);
+    };
+    document.addEventListener('pointerdown', closeHelp);
+    return () => document.removeEventListener('pointerdown', closeHelp);
+  }, []);
 
   const lastWithData = useMemo(
     () => [...dailyRows].reverse().find((r) => r.final !== undefined || r.profit !== undefined),
@@ -416,6 +428,23 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
 
   const monthRows = selectedMonth ? filteredPoints.filter((p) => p.month === selectedMonth) : [];
 
+  const openHelp = (e: React.MouseEvent<HTMLButtonElement>, key: string) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const isSame = helpPopover?.key === key;
+    if (isSame) {
+      setHelpKey(null);
+      setHelpPopover(null);
+      return;
+    }
+    setHelpKey(key);
+    setHelpPopover({
+      key,
+      x: Math.min(window.innerWidth - 340, Math.max(12, rect.left)),
+      y: rect.bottom + 8
+    });
+  };
+
   return (
     <div className="stats-view stats-pro">
       <div className="chart-toolbar">
@@ -455,7 +484,7 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
               <div className="stat-label">{k.label}</div>
               <button
                 className="stats-help-btn stats-info-anchor"
-                onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === k.key ? null : k.key)); }}
+                onClick={(e) => openHelp(e, k.key)}
               >
                 i
               </button>
@@ -464,7 +493,6 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
               {k.value}
             </div>
             <div className="stat-sub">{k.sub}</div>
-            {helpKey === k.key && <div className="stats-help-pop stats-info-anchor">{helpTexts[k.key]}</div>}
           </div>
         ))}
       </div>
@@ -480,7 +508,7 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
             <div className="stats-header-actions">
               <button
                 className="stats-help-btn stats-info-anchor"
-                onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'equity_card' ? null : 'equity_card')); }}
+                onClick={(e) => openHelp(e, 'equity_card')}
               >
                 i
               </button>
@@ -489,7 +517,6 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
               </button>
             </div>
           </div>
-          {helpKey === 'equity_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.equity_card}</div>}
           <div style={{ padding: '0 16px 16px' }}>
             <ModernLineChart
               data={chartData.equity}
@@ -520,14 +547,13 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
             <div className="stats-header-actions">
               <button
                 className="stats-help-btn stats-info-anchor"
-                onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'flow_card' ? null : 'flow_card')); }}
+                onClick={(e) => openHelp(e, 'flow_card')}
               >
                 i
               </button>
               <span className="badge-soft">Riesgo</span>
             </div>
           </div>
-          {helpKey === 'flow_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.flow_card}</div>}
           <div style={{ padding: '0 16px 16px' }}>
             <ModernBarChart
               data={chartData.netFlows}
@@ -564,12 +590,11 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
             </div>
             <button
               className="stats-help-btn stats-info-anchor"
-              onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'heatmap_card' ? null : 'heatmap_card')); }}
+              onClick={(e) => openHelp(e, 'heatmap_card')}
             >
               i
             </button>
           </div>
-          {helpKey === 'heatmap_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.heatmap_card}</div>}
           <div className="stats-heatmap">
             {metrics.monthly.map((m) => {
               const intensity = Math.min(1, Math.abs(m.returnPct) / 0.08);
@@ -597,12 +622,11 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
             </div>
             <button
               className="stats-help-btn stats-info-anchor"
-              onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'waterfall_card' ? null : 'waterfall_card')); }}
+              onClick={(e) => openHelp(e, 'waterfall_card')}
             >
               i
             </button>
           </div>
-          {helpKey === 'waterfall_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.waterfall_card}</div>}
           <div className="stats-waterfall">
             <div className="stats-water-row"><span>Saldo inicial</span><strong>{formatCurrency(metrics.startBalance)}</strong></div>
             <div className="stats-water-row"><span>Aportes</span><strong className="positive">+{formatCurrency(metrics.increments)}</strong></div>
@@ -628,12 +652,11 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
             </div>
             <button
               className="stats-help-btn stats-info-anchor"
-              onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'ranking_card' ? null : 'ranking_card')); }}
+              onClick={(e) => openHelp(e, 'ranking_card')}
             >
               i
             </button>
           </div>
-          {helpKey === 'ranking_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.ranking_card}</div>}
           <div className="stats-rank-grid">
             <div>
               <p className="stats-rank-title">Top balance</p>
@@ -664,12 +687,11 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
             </div>
             <button
               className="stats-help-btn stats-info-anchor"
-              onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'alerts_card' ? null : 'alerts_card')); }}
+              onClick={(e) => openHelp(e, 'alerts_card')}
             >
               i
             </button>
           </div>
-          {helpKey === 'alerts_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.alerts_card}</div>}
           <div className="stats-alerts">
             {metrics.alerts.map((a, idx) => (
               <div key={`${a.text}-${idx}`} className={clsx('stats-alert', `alert-${a.level}`)}>
@@ -748,6 +770,15 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
         <div className="chart-tooltip" style={{ left: chartTooltip.x + 12, top: chartTooltip.y + 12 }}>
           {chartTooltip.text}
         </div>
+      )}
+      {helpPopover && helpKey && createPortal(
+        <div
+          className="stats-global-help"
+          style={{ left: helpPopover.x, top: helpPopover.y }}
+        >
+          {helpTexts[helpKey]}
+        </div>,
+        document.body
       )}
     </div>
   );
