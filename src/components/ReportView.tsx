@@ -94,14 +94,49 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
 
     y += 10;
 
-    // Monthly table
+    // Monthly performance with chart + table
     if (report.monthlyStats.length > 0) {
-      checkNewPage(60);
+      checkNewPage(95);
       doc.setTextColor(15, 109, 122);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('RENDIMIENTO MENSUAL', margin, y);
       y += 10;
+
+      const monthlyData = report.monthlyStats.filter((m) => m.hasData && m.profit !== null && m.profitPct !== null && m.endBalance !== null);
+      if (monthlyData.length > 0) {
+        const chartWidth = pageWidth - margin * 2;
+        const chartHeight = 52;
+        const barGap = 3;
+        const barWidth = Math.max(3, chartWidth / Math.max(1, monthlyData.length) - barGap);
+        const maxPct = Math.max(...monthlyData.map((m) => Math.abs(m.profitPct ?? 0)), 1);
+        const hasNegative = monthlyData.some((m) => (m.profitPct ?? 0) < 0);
+        const baseY = hasNegative ? y + chartHeight / 2 : y + chartHeight - 4;
+
+        doc.setFillColor(247, 250, 253);
+        doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'F');
+        doc.setDrawColor(220, 226, 235);
+        doc.setLineWidth(0.3);
+        if (hasNegative) {
+          doc.line(margin, baseY, margin + chartWidth, baseY);
+        }
+
+        const maxBarHeight = hasNegative ? chartHeight / 2 - 8 : chartHeight - 10;
+        monthlyData.forEach((m, i) => {
+          const pct = m.profitPct ?? 0;
+          const h = Math.min(maxBarHeight, Math.max(2, (Math.abs(pct) / maxPct) * maxBarHeight));
+          const x = margin + 2 + i * (barWidth + barGap);
+          if (pct >= 0) {
+            doc.setFillColor(15, 109, 122);
+            doc.roundedRect(x, baseY - h, barWidth, h, 1, 1, 'F');
+          } else {
+            doc.setFillColor(220, 38, 38);
+            doc.roundedRect(x, baseY, barWidth, h, 1, 1, 'F');
+          }
+        });
+
+        y += chartHeight + 10;
+      }
 
       doc.setFontSize(9);
       doc.setFillColor(15, 109, 122);
@@ -139,6 +174,81 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
         doc.text(formatCurrency(m.endBalance), margin + 110, y);
         y += 7;
       });
+    }
+
+    // Patrimonio evolution chart
+    const evoData = report.patrimonioEvolution.filter((p) => p.balance !== undefined && p.hasData);
+    if (evoData.length > 0) {
+      y += 12;
+      checkNewPage(88);
+      doc.setTextColor(15, 109, 122);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('EVOLUCION DEL PATRIMONIO', margin, y);
+      y += 10;
+
+      const chartWidth = pageWidth - margin * 2;
+      const chartHeight = 58;
+      const values = evoData.map((d) => d.balance as number);
+      const minVal = Math.min(...values);
+      const maxVal = Math.max(...values);
+      const span = Math.max(1, maxVal - minVal);
+      const minAxis = Math.max(0, minVal - span * 0.08);
+      const maxAxis = maxVal + span * 0.08;
+      const axisSpan = Math.max(1, maxAxis - minAxis);
+
+      doc.setFillColor(247, 250, 253);
+      doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'F');
+
+      const innerLeft = margin + 8;
+      const innerRight = margin + chartWidth - 6;
+      const innerTop = y + 6;
+      const innerBottom = y + chartHeight - 10;
+      const innerW = innerRight - innerLeft;
+      const innerH = innerBottom - innerTop;
+
+      // Grid lines
+      doc.setDrawColor(220, 226, 235);
+      doc.setLineWidth(0.2);
+      for (let i = 0; i <= 4; i++) {
+        const gy = innerTop + (i / 4) * innerH;
+        doc.line(innerLeft, gy, innerRight, gy);
+      }
+
+      const points = evoData.map((d, i) => {
+        const x = evoData.length <= 1 ? innerLeft + innerW / 2 : innerLeft + (i / (evoData.length - 1)) * innerW;
+        const yPos = innerTop + (1 - (((d.balance as number) - minAxis) / axisSpan)) * innerH;
+        return { x, y: yPos, balance: d.balance as number, month: d.month };
+      });
+
+      // Area under line (simple polygon)
+      if (points.length > 1) {
+        doc.setFillColor(225, 242, 252);
+        for (let i = 0; i < points.length - 1; i++) {
+          const p1 = points[i];
+          const p2 = points[i + 1];
+          doc.triangle(p1.x, p1.y, p2.x, p2.y, p1.x, innerBottom, 'F');
+          doc.triangle(p2.x, p2.y, p1.x, innerBottom, p2.x, innerBottom, 'F');
+        }
+      }
+
+      // Line
+      doc.setDrawColor(15, 95, 138);
+      doc.setLineWidth(0.9);
+      for (let i = 0; i < points.length - 1; i++) {
+        doc.line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
+      }
+
+      // Points + labels
+      points.forEach((pt) => {
+        doc.setFillColor(11, 79, 115);
+        doc.circle(pt.x, pt.y, 1.3, 'F');
+        doc.setFontSize(6);
+        doc.setTextColor(71, 85, 105);
+        doc.text(pt.month, pt.x, innerBottom + 5, { align: 'center' });
+      });
+
+      y += chartHeight + 8;
     }
 
     // Movements table
