@@ -52,3 +52,11 @@ export const addClientProfile = (name?: string): ClientProfile => {
   persistClients(CLIENTS);
   return profile;
 };
+
+export const removeClientProfile = (clientId: string): boolean => {
+  const idx = CLIENTS.findIndex((c) => c.id === clientId);
+  if (idx < 0) return false;
+  CLIENTS.splice(idx, 1);
+  persistClients(CLIENTS);
+  return true;
+};

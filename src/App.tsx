@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
-import { addClientProfile, CLIENTS } from './constants/clients';
+import { addClientProfile, CLIENTS, removeClientProfile } from './constants/clients';
 import { GENERAL_OPTION } from './constants/generalOption';
 import { usePortfolioStore } from './store/portfolio';
 import { formatCurrency, formatPercent, formatNumberEs, parseNumberEs } from './utils/format';
@@ -1994,6 +1994,7 @@ export default function App() {
     return {};
   });
   const derivedFocusDate = useFocusDate();
+  const removeClientData = usePortfolioStore((s) => s.removeClientData);
   const [focusDate, setFocusDate] = useState(derivedFocusDate);
   const [toast, setToast] = useState<string | null>(null);
   const handleAddClient = (name?: string) => {
@@ -2015,6 +2016,37 @@ export default function App() {
       return { ...prev, [created.id]: false };
     });
     return created;
+  };
+  const handleDeleteClient = (clientId: string) => {
+    const removed = removeClientProfile(clientId);
+    if (!removed) return false;
+    removeClientData(clientId);
+    setContacts((prev) => {
+      if (!(clientId in prev)) return prev;
+      const next = { ...prev };
+      delete next[clientId];
+      return next;
+    });
+    setGuarantees((prev) => {
+      if (!(clientId in prev)) return prev;
+      const next = { ...prev };
+      delete next[clientId];
+      return next;
+    });
+    setComisionesCobradas((prev) => {
+      if (!(clientId in prev)) return prev;
+      const next = { ...prev };
+      delete next[clientId];
+      return next;
+    });
+    setComisionEstado((prev) => {
+      if (!(clientId in prev)) return prev;
+      const next = { ...prev };
+      delete next[clientId];
+      return next;
+    });
+    if (activeView === clientId) setActiveView(GENERAL_OPTION);
+    return true;
   };
   useEffect(() => {
     setFocusDate(derivedFocusDate);
@@ -2176,6 +2208,7 @@ export default function App() {
           guarantees={guarantees}
           setGuarantees={setGuarantees}
           onAddClient={handleAddClient}
+          onDeleteClient={handleDeleteClient}
         />
       ) : activeView === COMISIONES_VIEW ? (
         <ComisionesView
@@ -2202,13 +2235,15 @@ function InfoClientes({
   setContacts,
   guarantees,
   setGuarantees,
-  onAddClient
+  onAddClient,
+  onDeleteClient
 }: {
   contacts: Record<string, ContactInfo>;
   setContacts: React.Dispatch<React.SetStateAction<Record<string, ContactInfo>>>;
   guarantees: Record<string, number>;
   setGuarantees: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   onAddClient: (name?: string) => { id: string; name: string };
+  onDeleteClient: (clientId: string) => boolean;
 }) {
   const { snapshot } = usePortfolioStore();
   const [selectedId, setSelectedId] = useState(CLIENTS[0]?.id || '');
@@ -2326,6 +2361,20 @@ function InfoClientes({
     setSelectedId(created.id);
     window.dispatchEvent(new CustomEvent('show-toast', { detail: `${created.name} creado` }));
   };
+  const deleteSelectedClient = () => {
+    if (!currentClient) return;
+    const confirmed = window.confirm(`¿Eliminar ${displayName}? Esta accion no se puede deshacer.`);
+    if (!confirmed) return;
+    const removed = onDeleteClient(currentClient.id);
+    if (!removed) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'No se pudo eliminar el cliente' }));
+      return;
+    }
+    setSelectedId(GENERAL_OPTION);
+    setSearch('');
+    setMonthPopupKey(null);
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: `${displayName} eliminado` }));
+  };
 
   return (
     <div className="info-clients-container fade-in">
@@ -2387,11 +2436,18 @@ function InfoClientes({
         </div>
       </aside>
 
-      {/* Panel derecho: detalle */}
+        {/* Panel derecho: detalle */}
       <main className="info-detail">
         <header className="info-detail-header">
-          <div className="eyebrow">Ficha de cliente</div>
-          <h2>{displayName || 'Selecciona un cliente'}</h2>
+          <div>
+            <div className="eyebrow">Ficha de cliente</div>
+            <h2>{displayName || 'Selecciona un cliente'}</h2>
+          </div>
+          {currentClient && (
+            <button type="button" className="info-delete-btn" onClick={deleteSelectedClient}>
+              Eliminar cliente
+            </button>
+          )}
         </header>
 
         {/* KPIs */}

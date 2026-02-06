@@ -21,6 +21,7 @@ interface PortfolioState {
     field: keyof Movement,
     value?: number
   ) => void;
+  removeClientData: (clientId: string) => void;
   markSaving: () => void;
   markSaved: () => void;
   markError: () => void;
@@ -77,6 +78,22 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
       } else {
         movementsByClient[clientId] = clientDays;
       }
+      return {
+        movementsByClient,
+        snapshot: buildSnapshot(state.finalByDay, movementsByClient),
+        saveStatus: 'saving'
+      };
+    });
+
+    const { finalByDay, movementsByClient } = get();
+    savePortfolioState({ finalByDay, movementsByClient })
+      .then(() => set({ saveStatus: 'success', lastSavedAt: Date.now() }))
+      .catch(() => set({ saveStatus: 'error' }));
+  },
+  removeClientData: (clientId) => {
+    set((state) => {
+      const movementsByClient = { ...state.movementsByClient };
+      delete movementsByClient[clientId];
       return {
         movementsByClient,
         snapshot: buildSnapshot(state.finalByDay, movementsByClient),
