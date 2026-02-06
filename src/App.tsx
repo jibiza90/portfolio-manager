@@ -36,7 +36,8 @@ function EditableCell({ value, onChange, isPercent = false }: { value: number | 
 function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const { snapshot } = usePortfolioStore();
   const dailyRows = snapshot.dailyRows;
-  const [range, setRange] = useState<'30D' | '90D' | 'YTD' | 'ALL'>('YTD');
+  const [periodMode, setPeriodMode] = useState<'annual' | 'month'>('annual');
+  const [selectedFilterMonth, setSelectedFilterMonth] = useState<string>('');
   const [helpKey, setHelpKey] = useState<string | null>(null);
   const [twrExpanded, setTwrExpanded] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -102,11 +103,22 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
     return out;
   }, [fullRows]);
 
+  const availableMonths = useMemo(
+    () => Array.from(new Set(points.map((p) => p.month))).sort((a, b) => (a > b ? 1 : -1)),
+    [points]
+  );
+
+  useEffect(() => {
+    if (!selectedFilterMonth && availableMonths.length > 0) {
+      setSelectedFilterMonth(availableMonths[availableMonths.length - 1]);
+    }
+  }, [availableMonths, selectedFilterMonth]);
+
   const filteredPoints = useMemo(() => {
-    if (range === 'ALL' || range === 'YTD') return points;
-    const size = range === '30D' ? 30 : 90;
-    return points.slice(-size);
-  }, [points, range]);
+    if (periodMode === 'annual') return points;
+    if (!selectedFilterMonth) return points;
+    return points.filter((p) => p.month === selectedFilterMonth);
+  }, [points, periodMode, selectedFilterMonth]);
 
   const filteredRows = useMemo(() => {
     const selected = new Set(filteredPoints.map((p) => p.iso));
@@ -379,14 +391,14 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const formatRatio = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : '-');
 
   const helpTexts: Record<string, string> = {
-    patrimonio: 'Valor actual del portfolio en la ultima fecha con datos.',
-    pnl: 'Suma de beneficios/perdidas diarios del periodo filtrado.',
-    twr: 'Rentabilidad Time-Weighted: elimina el efecto de aportes y retiros.',
-    drawdown: 'Caida maxima desde un pico previo del patrimonio.',
-    vol: 'Desviacion estandar anualizada de retornos diarios.',
-    sharpe: 'Retorno medio dividido por volatilidad (con ajuste anual).',
-    hit: 'Porcentaje de dias en positivo sobre dias con variacion real.',
-    pf: 'Suma de dias ganadores / suma absoluta de dias perdedores.',
+    patrimonio: 'Patrimonio actual en el periodo seleccionado. Es el ultimo saldo (Final) registrado.',
+    pnl: 'Beneficio/Perdida del periodo. Formula: suma de beneficios diarios = Σ(Final - Inicial).',
+    twr: 'Rentabilidad real sin sesgo de flujos. Formula: TWR = [(1+r1)*(1+r2)*...*(1+rn)] - 1.',
+    drawdown: 'Caida desde maximos. Formula diaria: (Saldo actual - Pico previo) / Pico previo. Se muestra el peor valor.',
+    vol: 'Riesgo por dispersion de retornos. Formula: desviacion estandar diaria * sqrt(252).',
+    sharpe: 'Retorno ajustado a riesgo. Sharpe = media(retornos)/volatilidad * sqrt(252). Sortino usa solo volatilidad negativa.',
+    hit: 'Consistencia operativa. Formula: dias positivos / (dias positivos + dias negativos).',
+    pf: 'Calidad de resultados. Formula: suma ganancias / suma absoluta de perdidas.',
     equity_card: 'Muestra la evolucion del patrimonio y el drawdown. Drawdown = (saldo actual - pico historico) / pico historico.',
     flow_card: 'Flujo neto mensual = aportes - retiros de cada mes. La distribucion muestra cuantas sesiones caen en cada rango de retorno diario.',
     heatmap_card: 'Cada bloque mensual enseña retorno del mes y TWR mensual. Retorno mensual = beneficio mensual / base del mes.',
@@ -395,8 +407,14 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
     alerts_card: 'Genera alertas con reglas simples: drawdown alto, racha negativa, volatilidad alta y concentracion elevada.'
   };
 
+  const periodLabel = periodMode === 'annual'
+    ? 'Anual (todos los meses)'
+    : selectedFilterMonth
+      ? monthLabel(selectedFilterMonth)
+      : 'Mes';
+
   const kpis = [
-    { key: 'patrimonio', label: 'Patrimonio', value: formatCurrency(metrics.assets), tone: 'neutral', sub: `Periodo ${range}` },
+    { key: 'patrimonio', label: 'Patrimonio', value: formatCurrency(metrics.assets), tone: 'neutral', sub: `Periodo ${periodLabel}` },
     { key: 'pnl', label: 'P&L periodo', value: formatCurrency(metrics.totalProfit), tone: metrics.totalProfit >= 0 ? 'positive' : 'negative', sub: `Flujo neto ${formatCurrency(metrics.netFlow)}` },
     { key: 'twr', label: 'TWR', value: formatPercent(metrics.twr), tone: metrics.twr >= 0 ? 'positive' : 'negative', sub: 'Rentabilidad real' },
     { key: 'drawdown', label: 'Max Drawdown', value: formatPercent(metrics.maxDrawdown), tone: metrics.maxDrawdown >= -0.08 ? 'positive' : 'negative', sub: `Actual ${formatPercent(metrics.currentDrawdown)}` },
@@ -416,12 +434,24 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
           <h3>Panel estadistico general</h3>
           <p className="stat-sub">Riesgo, rendimiento, distribucion y concentracion por cliente</p>
         </div>
-        <div className="pill-group">
-          {(['30D', '90D', 'YTD', 'ALL'] as const).map((r) => (
-            <button key={r} className={clsx('pill', range === r && 'active')} onClick={() => setRange(r)}>
-              {r}
+        <div className="stats-period-controls">
+          <div className="pill-group">
+            <button className={clsx('pill', periodMode === 'annual' && 'active')} onClick={() => setPeriodMode('annual')}>
+              Anual
             </button>
-          ))}
+            <button className={clsx('pill', periodMode === 'month' && 'active')} onClick={() => setPeriodMode('month')}>
+              Mensual
+            </button>
+          </div>
+          {periodMode === 'month' && (
+            <div className="select-wrapper stats-month-select">
+              <select value={selectedFilterMonth} onChange={(e) => setSelectedFilterMonth(e.target.value)}>
+                {availableMonths.map((m) => (
+                  <option key={m} value={m}>{monthLabel(m)}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 

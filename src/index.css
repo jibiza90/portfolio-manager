@@ -3447,6 +3447,23 @@ select {
   gap: 16px;
 }
 
+.stats-period-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stats-month-select select {
+  min-width: 190px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 109, 122, 0.25);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .stats-histogram-wrap {
   padding: 0 18px 18px;
   display: flex;
