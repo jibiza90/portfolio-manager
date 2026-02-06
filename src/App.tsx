@@ -501,6 +501,7 @@ function HeroHeader({ today }: { today: string }) {
 
 function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDate: (d: string) => void }) {
   const { snapshot } = usePortfolioStore();
+  const movementsByClient = usePortfolioStore((s) => s.movementsByClient);
   const setDayFinal = usePortfolioStore((s) => s.setDayFinal);
   const rows = useMemo(() => [...snapshot.dailyRows], [snapshot.dailyRows]);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -508,18 +509,18 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   const movementByDate = useMemo(() => {
     const map: Record<string, { clientId: string; name: string; increment?: number; decrement?: number }[]> = {};
     CLIENTS.forEach((c) => {
-      const clientRows = snapshot.clientRowsById[c.id] || [];
-      clientRows.forEach((r) => {
-        const inc = r.increment ?? 0;
-        const dec = r.decrement ?? 0;
+      const clientMovs = movementsByClient[c.id] || {};
+      Object.entries(clientMovs).forEach(([iso, mov]) => {
+        const inc = mov.increment ?? 0;
+        const dec = mov.decrement ?? 0;
         if (inc !== 0 || dec !== 0) {
-          if (!map[r.iso]) map[r.iso] = [];
-          map[r.iso].push({ clientId: c.id, name: c.name, increment: r.increment, decrement: r.decrement });
+          if (!map[iso]) map[iso] = [];
+          map[iso].push({ clientId: c.id, name: c.name, increment: mov.increment, decrement: mov.decrement });
         }
       });
     });
     return map;
-  }, [snapshot.clientRowsById]);
+  }, [movementsByClient]);
   const [movementPopup, setMovementPopup] = useState<{ iso: string; items: { clientId: string; name: string; increment?: number; decrement?: number }[] } | null>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
