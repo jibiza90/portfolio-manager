@@ -393,20 +393,20 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const formatRatio = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : '-');
 
   const helpTexts: Record<string, string> = {
-    patrimonio: 'Patrimonio actual en el periodo seleccionado. Es el ultimo saldo (Final) registrado.',
-    pnl: 'Beneficio/Perdida del periodo. Formula: suma de beneficios diarios = Σ(Final - Inicial).',
-    twr: 'Rentabilidad real sin sesgo de flujos. Formula: TWR = [(1+r1)*(1+r2)*...*(1+rn)] - 1.',
-    drawdown: 'Caida desde maximos. Formula diaria: (Saldo actual - Pico previo) / Pico previo. Se muestra el peor valor.',
-    vol: 'Riesgo por dispersion de retornos. Formula: desviacion estandar diaria * sqrt(252).',
-    sharpe: 'Retorno ajustado a riesgo. Sharpe = media(retornos)/volatilidad * sqrt(252). Sortino usa solo volatilidad negativa.',
-    hit: 'Consistencia operativa. Formula: dias positivos / (dias positivos + dias negativos).',
-    pf: 'Calidad de resultados. Formula: suma ganancias / suma absoluta de perdidas.',
-    equity_card: 'Muestra la evolucion del patrimonio y el drawdown. Drawdown = (saldo actual - pico historico) / pico historico.',
-    flow_card: 'Flujo neto mensual = aportes - retiros de cada mes. La distribucion muestra cuantas sesiones caen en cada rango de retorno diario.',
-    heatmap_card: 'Cada bloque mensual enseña retorno del mes y TWR mensual. Retorno mensual = beneficio mensual / base del mes.',
-    waterfall_card: 'Descompone el crecimiento: saldo inicial + aportes - retiros + rendimiento puro = saldo final.',
-    ranking_card: 'Lista clientes con mayor balance y los de peor P&L acumulado, usando el ultimo saldo y beneficio acumulado por cliente.',
-    alerts_card: 'Genera alertas con reglas simples: drawdown alto, racha negativa, volatilidad alta y concentracion elevada.'
+    patrimonio: 'Es el dinero total que tienes ahora en la cartera.',
+    pnl: 'Es lo que has ganado o perdido en este periodo. Si sale en verde, vas ganando.',
+    twr: 'Mide si la cartera lo ha hecho bien por rendimiento, sin que las entradas o salidas de dinero distorsionen el resultado.',
+    drawdown: 'Es la mayor bajada desde un punto alto. Sirve para ver el peor bache que has tenido.',
+    vol: 'Mide cuanto se mueve la cartera. Mas alto = mas altibajos.',
+    sharpe: 'Resume si el resultado compensa el riesgo. Cuanto mas alto, mejor equilibrio.',
+    hit: 'Porcentaje de dias en positivo. Ejemplo: 60% = 6 de cada 10 dias en verde.',
+    pf: 'Compara lo ganado frente a lo perdido. Mas de 1 significa que ganas mas de lo que pierdes.',
+    equity_card: 'Aqui ves como ha ido subiendo o bajando tu cartera y cuanto cae en los peores momentos.',
+    flow_card: 'Muestra cuanto dinero entra o sale cada mes y como se reparten los dias buenos y malos.',
+    heatmap_card: 'Cada cuadro es un mes. Color y porcentaje te dicen si ese mes fue bueno o malo.',
+    waterfall_card: 'Explica el saldo final paso a paso: inicio, dinero que entra, dinero que sale y resultado.',
+    ranking_card: 'Ordena clientes: quien tiene mas saldo y quien va peor en resultado acumulado.',
+    alerts_card: 'Son avisos simples para detectar rapido riesgos o datos que conviene revisar.'
   };
 
   const periodLabel = periodMode === 'annual'
@@ -798,10 +798,8 @@ function ModernBarChart({
   const maxPos = Math.max(0, ...data.map((d) => d.value));
   const minNeg = Math.min(0, ...data.map((d) => d.value));
   const range = Math.max(1, maxPos - minNeg);
-  const zeroOffset = hasNegative ? Math.min(90, Math.max(10, (maxPos / range) * 100)) : 100; // % from top where zero line is
-  const barWidth = Math.min(60, Math.max(30, 600 / data.length));
+  const zeroOffset = hasNegative ? Math.min(90, Math.max(10, (maxPos / range) * 100)) : 100;
 
-  // Y-axis ticks
   const tickCount = 5;
   const ticks: number[] = [];
   for (let i = 0; i < tickCount; i++) {
@@ -810,8 +808,7 @@ function ModernBarChart({
   }
 
   return (
-    <div className="modern-chart-container" style={{ height, padding: '32px 28px 52px 68px', position: 'relative' }}>
-      {/* Y-axis */}
+    <div className="modern-chart-container" style={{ height, padding: '32px 28px 56px 68px', position: 'relative' }}>
       <div className="modern-y-axis">
         {ticks.map((t, i) => (
           <div key={i} className="modern-y-tick">
@@ -819,49 +816,70 @@ function ModernBarChart({
           </div>
         ))}
       </div>
-      {/* Grid lines */}
+
       <div className="modern-grid">
-        {ticks.map((t, i) => (
+        {ticks.map((_, i) => (
           <div key={i} className="modern-grid-line" style={{ top: `${(i / (tickCount - 1)) * 100}%` }} />
         ))}
       </div>
-      {/* Zero line if negative values exist */}
-      {hasNegative && (
-        <div className="modern-zero-line" style={{ top: `${zeroOffset}%` }} />
-      )}
-      {/* Bars */}
-      <div className="modern-bars" style={{ position: 'relative', height: '100%' }}>
+
+      {hasNegative && <div className="modern-zero-line" style={{ top: `${zeroOffset}%` }} />}
+
+      <div
+        className="modern-bars"
+        style={{
+          position: 'relative',
+          height: '100%',
+          display: 'grid',
+          gridTemplateColumns: `repeat(${Math.max(1, data.length)}, minmax(0, 1fr))`,
+          gap: 6,
+          alignItems: 'stretch'
+        }}
+      >
         {data.map((d, i) => {
-          const heightPct = Math.min(85, (Math.abs(d.value) / range) * 100); // cap to avoid overflow
+          const heightPct = Math.min(85, (Math.abs(d.value) / range) * 100);
           const isNeg = d.value < 0;
-          const barStyle: React.CSSProperties = {
-            width: barWidth,
-            height: `${heightPct}%`,
-            position: 'absolute',
-            left: `${(i / data.length) * 100}%`,
-            ...(isNeg
-              ? { top: `${zeroOffset}%` }
-              : { bottom: `${100 - zeroOffset}%` })
-          };
           return (
             <div
               key={i}
-              className={`modern-bar ${isNeg ? 'negative' : ''}`}
-              style={barStyle}
+              style={{ position: 'relative' }}
               onMouseMove={(e) => onHover(`${d.label}: ${valueFormatter(d.value)}`, e.clientX, e.clientY - 12)}
               onMouseLeave={() => onHover('', 0, 0)}
             >
-              <span className="modern-bar-label" style={{ position: 'absolute', bottom: isNeg ? 'auto' : '-20px', top: isNeg ? '-20px' : 'auto', left: '50%', transform: 'translateX(-50%)' }}>{d.label}</span>
+              <div
+                className={`modern-bar ${isNeg ? 'negative' : ''}`}
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 'min(42px, 90%)',
+                  height: `${heightPct}%`,
+                  ...(isNeg ? { top: `${zeroOffset}%` } : { bottom: `${100 - zeroOffset}%` })
+                }}
+              >
+                <span
+                  className="modern-bar-label"
+                  style={{
+                    position: 'absolute',
+                    bottom: isNeg ? 'auto' : '-22px',
+                    top: isNeg ? '-22px' : 'auto',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {d.label}
+                </span>
+              </div>
             </div>
           );
         })}
       </div>
-      {/* X-axis line */}
+
       <div className="modern-x-axis" style={{ top: hasNegative ? `${zeroOffset}%` : 'auto' }} />
     </div>
   );
 }
-
 function ModernLineChart({
   data,
   color = '#0ea5e9',
@@ -2659,4 +2677,6 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
     </div>
   );
 }
+
+
 
