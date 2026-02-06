@@ -3427,6 +3427,20 @@ select {
   line-height: 1.35;
 }
 
+.stats-help-pop-inline {
+  position: relative;
+  left: auto;
+  right: auto;
+  top: auto;
+  margin: 0 16px 10px;
+}
+
+.stats-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .stats-chart-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(320px, 1fr));

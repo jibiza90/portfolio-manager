@@ -42,6 +42,16 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [chartTooltip, setChartTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
 
+  useEffect(() => {
+    const closeOnOutside = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.stats-info-anchor')) return;
+      setHelpKey(null);
+    };
+    document.addEventListener('pointerdown', closeOnOutside);
+    return () => document.removeEventListener('pointerdown', closeOnOutside);
+  }, []);
+
   const lastWithData = useMemo(
     () => [...dailyRows].reverse().find((r) => r.final !== undefined || r.profit !== undefined),
     [dailyRows]
@@ -376,7 +386,13 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
     vol: 'Desviacion estandar anualizada de retornos diarios.',
     sharpe: 'Retorno medio dividido por volatilidad (con ajuste anual).',
     hit: 'Porcentaje de dias en positivo sobre dias con variacion real.',
-    pf: 'Suma de dias ganadores / suma absoluta de dias perdedores.'
+    pf: 'Suma de dias ganadores / suma absoluta de dias perdedores.',
+    equity_card: 'Muestra la evolucion del patrimonio y el drawdown. Drawdown = (saldo actual - pico historico) / pico historico.',
+    flow_card: 'Flujo neto mensual = aportes - retiros de cada mes. La distribucion muestra cuantas sesiones caen en cada rango de retorno diario.',
+    heatmap_card: 'Cada bloque mensual enseña retorno del mes y TWR mensual. Retorno mensual = beneficio mensual / base del mes.',
+    waterfall_card: 'Descompone el crecimiento: saldo inicial + aportes - retiros + rendimiento puro = saldo final.',
+    ranking_card: 'Lista clientes con mayor balance y los de peor P&L acumulado, usando el ultimo saldo y beneficio acumulado por cliente.',
+    alerts_card: 'Genera alertas con reglas simples: drawdown alto, racha negativa, volatilidad alta y concentracion elevada.'
   };
 
   const kpis = [
@@ -414,18 +430,21 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
           <div
             key={k.key}
             className={clsx('stat-card glow stats-kpi-card', k.tone === 'positive' && 'kpi-positive', k.tone === 'negative' && 'kpi-negative')}
-            onMouseEnter={() => setHelpKey(k.key)}
-            onMouseLeave={() => setHelpKey((v) => (v === k.key ? null : v))}
           >
             <div className="stats-kpi-top">
               <div className="stat-label">{k.label}</div>
-              <button className="stats-help-btn" onClick={() => setHelpKey((v) => (v === k.key ? null : k.key))}>i</button>
+              <button
+                className="stats-help-btn stats-info-anchor"
+                onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === k.key ? null : k.key)); }}
+              >
+                i
+              </button>
             </div>
             <div className={clsx('stat-value', k.tone === 'positive' && 'positive', k.tone === 'negative' && 'negative')}>
               {k.value}
             </div>
             <div className="stat-sub">{k.sub}</div>
-            {helpKey === k.key && <div className="stats-help-pop">{helpTexts[k.key]}</div>}
+            {helpKey === k.key && <div className="stats-help-pop stats-info-anchor">{helpTexts[k.key]}</div>}
           </div>
         ))}
       </div>
@@ -438,10 +457,19 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
               <h4>Equity curve y drawdown</h4>
               <p className="muted">Click en TWR para abrir el detalle mensual.</p>
             </div>
-            <button className="ghost-btn" onClick={() => setTwrExpanded((v) => !v)}>
-              {twrExpanded ? 'Ocultar TWR' : 'Ver TWR'}
-            </button>
+            <div className="stats-header-actions">
+              <button
+                className="stats-help-btn stats-info-anchor"
+                onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'equity_card' ? null : 'equity_card')); }}
+              >
+                i
+              </button>
+              <button className="ghost-btn" onClick={() => setTwrExpanded((v) => !v)}>
+                {twrExpanded ? 'Ocultar TWR' : 'Ver TWR'}
+              </button>
+            </div>
           </div>
+          {helpKey === 'equity_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.equity_card}</div>}
           <div style={{ padding: '0 16px 16px' }}>
             <ModernLineChart
               data={chartData.equity}
@@ -469,8 +497,17 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
               <h4>Flujo neto mensual y retorno diario</h4>
               <p className="muted">Aportes - retiros por mes y frecuencia de retornos.</p>
             </div>
-            <span className="badge-soft">Riesgo</span>
+            <div className="stats-header-actions">
+              <button
+                className="stats-help-btn stats-info-anchor"
+                onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'flow_card' ? null : 'flow_card')); }}
+              >
+                i
+              </button>
+              <span className="badge-soft">Riesgo</span>
+            </div>
           </div>
+          {helpKey === 'flow_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.flow_card}</div>}
           <div style={{ padding: '0 16px 16px' }}>
             <ModernBarChart
               data={chartData.netFlows}
@@ -505,7 +542,14 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
               <h4>Retorno mensual y TWR</h4>
               <p className="muted">Pulsa un mes para ver el detalle diario.</p>
             </div>
+            <button
+              className="stats-help-btn stats-info-anchor"
+              onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'heatmap_card' ? null : 'heatmap_card')); }}
+            >
+              i
+            </button>
           </div>
+          {helpKey === 'heatmap_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.heatmap_card}</div>}
           <div className="stats-heatmap">
             {metrics.monthly.map((m) => {
               const intensity = Math.min(1, Math.abs(m.returnPct) / 0.08);
@@ -531,7 +575,14 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
               <p className="eyebrow">Waterfall y operativa</p>
               <h4>Descomposicion del crecimiento</h4>
             </div>
+            <button
+              className="stats-help-btn stats-info-anchor"
+              onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'waterfall_card' ? null : 'waterfall_card')); }}
+            >
+              i
+            </button>
           </div>
+          {helpKey === 'waterfall_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.waterfall_card}</div>}
           <div className="stats-waterfall">
             <div className="stats-water-row"><span>Saldo inicial</span><strong>{formatCurrency(metrics.startBalance)}</strong></div>
             <div className="stats-water-row"><span>Aportes</span><strong className="positive">+{formatCurrency(metrics.increments)}</strong></div>
@@ -555,7 +606,14 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
               <p className="eyebrow">Ranking de clientes</p>
               <h4>Top por balance y laggards por P&L</h4>
             </div>
+            <button
+              className="stats-help-btn stats-info-anchor"
+              onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'ranking_card' ? null : 'ranking_card')); }}
+            >
+              i
+            </button>
           </div>
+          {helpKey === 'ranking_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.ranking_card}</div>}
           <div className="stats-rank-grid">
             <div>
               <p className="stats-rank-title">Top balance</p>
@@ -584,7 +642,14 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
               <p className="eyebrow">Alertas e insights</p>
               <h4>Lectura automatica del periodo</h4>
             </div>
+            <button
+              className="stats-help-btn stats-info-anchor"
+              onClick={(e) => { e.stopPropagation(); setHelpKey((v) => (v === 'alerts_card' ? null : 'alerts_card')); }}
+            >
+              i
+            </button>
           </div>
+          {helpKey === 'alerts_card' && <div className="stats-help-pop stats-help-pop-inline stats-info-anchor">{helpTexts.alerts_card}</div>}
           <div className="stats-alerts">
             {metrics.alerts.map((a, idx) => (
               <div key={`${a.text}-${idx}`} className={clsx('stats-alert', `alert-${a.level}`)}>
