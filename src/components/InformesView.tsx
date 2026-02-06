@@ -844,12 +844,40 @@ Su gestor de inversiones`
         const hasNegativeMonth = monthlyWithData.some((m) => m.profitPct < 0);
         const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(m.profitPct)));
         const patrimonioWithData = clientData.patrimonioEvolution.filter((p) => p.balance !== undefined);
-        const maxPatrimonio = Math.max(1, ...patrimonioWithData.map((p) => p.balance as number));
-        const patrimonioPoints = patrimonioWithData.map((p, idx) => {
-          const x = patrimonioWithData.length <= 1 ? 8 : (idx / (patrimonioWithData.length - 1)) * 100;
-          const y = 92 - ((p.balance as number) / maxPatrimonio) * 78;
-          return `${x},${Math.max(10, y)}`;
-        }).join(' ');
+        const chartW = 1000;
+        const chartH = 360;
+        const padL = 78;
+        const padR = 24;
+        const padT = 20;
+        const padB = 52;
+        const plotW = chartW - padL - padR;
+        const plotH = chartH - padT - padB;
+        const plotBottom = padT + plotH;
+        const patrValues = patrimonioWithData.map((p) => p.balance as number);
+        const minPat = patrValues.length ? Math.min(...patrValues) : 0;
+        const maxPat = patrValues.length ? Math.max(...patrValues) : 1;
+        const rawSpan = Math.max(1, maxPat - minPat);
+        const minAxis = Math.max(0, minPat - rawSpan * 0.08);
+        const maxAxis = maxPat + rawSpan * 0.08;
+        const axisSpan = Math.max(1, maxAxis - minAxis);
+        const patrPoints = patrimonioWithData.map((p, idx) => {
+          const value = p.balance as number;
+          const x = patrimonioWithData.length <= 1
+            ? padL + plotW / 2
+            : padL + (idx / (patrimonioWithData.length - 1)) * plotW;
+          const y = padT + (1 - (value - minAxis) / axisSpan) * plotH;
+          return { x, y, value, month: p.month };
+        });
+        const patrLinePoints = patrPoints.map((pt) => `${pt.x},${pt.y}`).join(' ');
+        const patrAreaPath = patrPoints.length > 1
+          ? `M ${patrPoints[0].x},${plotBottom} L ${patrLinePoints} L ${patrPoints[patrPoints.length - 1].x},${plotBottom} Z`
+          : '';
+        const yTicks = Array.from({ length: 5 }, (_, i) => {
+          const ratio = i / 4;
+          const value = maxAxis - ratio * axisSpan;
+          const y = padT + ratio * plotH;
+          return { y, value };
+        });
 
         return (
           <>
@@ -940,18 +968,29 @@ Su gestor de inversiones`
                   <p>Linea de cierre mensual con importe en cada punto</p>
                 </div>
                 <div className="report-pro-line-wrap">
-                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="report-pro-line-chart">
-                    <polyline className="report-pro-line" points={patrimonioPoints} />
-                    {patrimonioWithData.map((p, idx) => {
-                      const x = patrimonioWithData.length <= 1 ? 8 : (idx / (patrimonioWithData.length - 1)) * 100;
-                      const y = 92 - ((p.balance as number) / maxPatrimonio) * 78;
-                      const pointY = Math.max(10, y);
-                      return (
-                        <g key={`${p.month}-${idx}`}>
-                          <circle cx={x} cy={pointY} r="1.7" className="report-pro-dot" />
-                        </g>
-                      );
-                    })}
+                  <svg viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="none" className="report-pro-line-chart">
+                    <defs>
+                      <linearGradient id="patrimonyAreaInformes" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="rgba(14,165,233,0.30)" />
+                        <stop offset="100%" stopColor="rgba(14,165,233,0.03)" />
+                      </linearGradient>
+                    </defs>
+                    {yTicks.map((tick, idx) => (
+                      <g key={`tick-${idx}`}>
+                        <line className="report-pro-grid-line" x1={padL} y1={tick.y} x2={chartW - padR} y2={tick.y} />
+                        <text className="report-pro-y-label" x={padL - 10} y={tick.y + 4} textAnchor="end">
+                          {formatCurrency(tick.value)}
+                        </text>
+                      </g>
+                    ))}
+                    {patrAreaPath && <path d={patrAreaPath} className="report-pro-area" fill="url(#patrimonyAreaInformes)" />}
+                    {patrPoints.length > 1 && <polyline className="report-pro-line" points={patrLinePoints} />}
+                    {patrPoints.map((pt, idx) => (
+                      <g key={`${pt.month}-${idx}`}>
+                        <circle cx={pt.x} cy={pt.y} r="4.2" className="report-pro-dot" />
+                        <title>{`${pt.month}: ${formatCurrency(pt.value)}`}</title>
+                      </g>
+                    ))}
                   </svg>
                 </div>
                 <div
