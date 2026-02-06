@@ -3399,6 +3399,8 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  position: relative;
+  z-index: 30;
 }
 
 .stats-help-btn {
@@ -3412,6 +3414,9 @@ select {
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+  pointer-events: auto;
+  position: relative;
+  z-index: 80;
 }
 
 .stats-help-pop {

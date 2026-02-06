@@ -43,17 +43,6 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [chartTooltip, setChartTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
 
-  useEffect(() => {
-    const closeOnOutside = (e: Event) => {
-      const path = (e as Event & { composedPath?: () => EventTarget[] }).composedPath?.() ?? [];
-      const insideInfo = path.some((node: EventTarget) => node instanceof HTMLElement && node.classList.contains('stats-info-anchor'));
-      if (insideInfo) return;
-      setHelpKey(null);
-    };
-    document.addEventListener('click', closeOnOutside);
-    return () => document.removeEventListener('click', closeOnOutside);
-  }, []);
-
   const lastWithData = useMemo(
     () => [...dailyRows].reverse().find((r) => r.final !== undefined || r.profit !== undefined),
     [dailyRows]
