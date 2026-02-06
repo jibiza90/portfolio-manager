@@ -234,67 +234,73 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
           <div className="report-pro-kpi"><span>TWR</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{((report.twrYtd ?? 0) * 100).toFixed(2)}%</strong></div>
         </section>
 
-        <section className="report-pro-grid">
-          <div className="report-pro-panel">
-            <div className="report-pro-panel-head">
-              <h4>Rendimiento mensual</h4>
-              <p>Comparativa de rentabilidad por mes</p>
-            </div>
-            <div className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}>
-              {monthlyWithData.map((m) => {
-                const height = Math.max(6, (Math.abs(m.profitPct) / maxMonthPct) * 74);
-                return (
-                  <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${m.profitPct.toFixed(2)}%`}>
-                    <span className={`report-pro-bar-value ${m.profitPct >= 0 ? 'positive' : 'negative'}`}>{m.profitPct.toFixed(2)}%</span>
-                    <div className="report-pro-bar-track">
-                      <div
-                        className={`report-pro-bar ${m.profitPct >= 0 ? 'positive' : 'negative'}`}
-                        style={{
-                          height: `${height}%`,
-                          ...(hasNegativeMonth
-                            ? (m.profitPct >= 0 ? { bottom: '50%' } : { top: '50%' })
-                            : { bottom: 0 })
-                        }}
-                      />
-                    </div>
-                    <span className="report-pro-bar-label">{m.month}</span>
+        <section className="report-pro-panel report-pro-panel-xl">
+          <div className="report-pro-panel-head">
+            <h4>Rendimiento mensual</h4>
+            <p>Comparativa de rentabilidad por mes</p>
+          </div>
+          <div
+            className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}
+            style={{ gridTemplateColumns: `repeat(${Math.max(1, monthlyWithData.length)}, minmax(0, 1fr))` }}
+          >
+            {monthlyWithData.map((m) => {
+              const height = Math.max(6, (Math.abs(m.profitPct) / maxMonthPct) * 74);
+              return (
+                <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${m.profitPct.toFixed(2)}%`}>
+                  <span className={`report-pro-bar-value ${m.profitPct >= 0 ? 'positive' : 'negative'}`}>{m.profitPct.toFixed(2)}%</span>
+                  <div className="report-pro-bar-track">
+                    <div
+                      className={`report-pro-bar ${m.profitPct >= 0 ? 'positive' : 'negative'}`}
+                      style={{
+                        height: `${height}%`,
+                        ...(hasNegativeMonth
+                          ? (m.profitPct >= 0 ? { bottom: '50%' } : { top: '50%' })
+                          : { bottom: 0 })
+                      }}
+                    />
                   </div>
+                  <span className="report-pro-bar-label">{m.month}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="report-pro-panel report-pro-panel-xl">
+          <div className="report-pro-panel-head">
+            <h4>Evolucion patrimonio</h4>
+            <p>Linea de cierre mensual con importe en cada punto</p>
+          </div>
+          <div className="report-pro-line-wrap">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="report-pro-line-chart">
+              <polyline className="report-pro-line" points={patrimonioPoints} />
+              {patrimonioWithData.map((p, idx) => {
+                const x = patrimonioWithData.length <= 1 ? 8 : (idx / (patrimonioWithData.length - 1)) * 100;
+                const y = 92 - ((p.balance as number) / maxPatrimonio) * 78;
+                const pointY = Math.max(10, y);
+                const labelAbove = idx % 2 === 0 || pointY > 90;
+                return (
+                  <g key={`${p.month}-${idx}`}>
+                    <text
+                      x={x}
+                      y={labelAbove ? Math.max(7, pointY - 3.8) : Math.min(98, pointY + 4.8)}
+                      className="report-pro-point-value"
+                      textAnchor="middle"
+                      dominantBaseline={labelAbove ? 'auto' : 'hanging'}
+                    >
+                      {formatCurrency(p.balance)}
+                    </text>
+                    <circle cx={x} cy={pointY} r="1.7" className="report-pro-dot" />
+                  </g>
                 );
               })}
-            </div>
+            </svg>
           </div>
-
-          <div className="report-pro-panel">
-            <div className="report-pro-panel-head">
-              <h4>Evolucion patrimonio</h4>
-              <p>Linea de cierre mensual</p>
-            </div>
-            <div className="report-pro-line-wrap">
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="report-pro-line-chart">
-                <polyline className="report-pro-line" points={patrimonioPoints} />
-                {patrimonioWithData.map((p, idx) => {
-                  const x = patrimonioWithData.length <= 1 ? 8 : (idx / (patrimonioWithData.length - 1)) * 100;
-                  const y = 92 - ((p.balance as number) / maxPatrimonio) * 78;
-                  const pointY = Math.max(10, y);
-                  return (
-                    <g key={`${p.month}-${idx}`}>
-                      <text
-                        x={x}
-                        y={Math.max(7, pointY - 2.8)}
-                        className="report-pro-point-value"
-                        textAnchor="middle"
-                      >
-                        {formatCurrency(p.balance)}
-                      </text>
-                      <circle cx={x} cy={pointY} r="1.6" className="report-pro-dot" />
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
-            <div className="report-pro-month-row">
-              {patrimonioWithData.map((p) => <span key={p.month}>{p.month}</span>)}
-            </div>
+          <div
+            className="report-pro-month-row"
+            style={{ gridTemplateColumns: `repeat(${Math.max(1, patrimonioWithData.length)}, minmax(0, 1fr))` }}
+          >
+            {patrimonioWithData.map((p) => <span key={p.month}>{p.month}</span>)}
           </div>
         </section>
 

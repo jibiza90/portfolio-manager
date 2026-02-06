@@ -2333,6 +2333,11 @@ input[type='number'] {
   border-radius: 14px;
 }
 
+.report-pro-panel.report-pro-panel-xl {
+  margin: 0 36px 14px;
+  padding: 18px;
+}
+
 .report-pro-grid .report-pro-panel {
   margin: 0;
 }
@@ -2351,7 +2356,7 @@ input[type='number'] {
 
 .report-pro-bars {
   margin-top: 14px;
-  height: 300px;
+  height: 360px;
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 8px;
@@ -2413,12 +2418,12 @@ input[type='number'] {
   border: 1px solid rgba(30, 64, 99, 0.16);
   background: linear-gradient(180deg, #f8fbff, #edf4ff);
   border-radius: 12px;
-  padding: 8px;
+  padding: 12px 8px 10px;
 }
 
 .report-pro-line-chart {
   width: 100%;
-  height: 300px;
+  height: 360px;
 }
 
 .report-pro-line {
@@ -2437,11 +2442,11 @@ input[type='number'] {
 
 .report-pro-point-value {
   fill: #0f2f4d;
-  font-size: 2.6px;
-  font-weight: 700;
+  font-size: 3.4px;
+  font-weight: 800;
   paint-order: stroke;
   stroke: #ffffff;
-  stroke-width: 0.4px;
+  stroke-width: 0.65px;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -2643,7 +2648,7 @@ input[type='number'] {
 
   .report-pro-bars {
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    height: 260px;
+    height: 320px;
   }
 
   .report-pro-actions .btn-action {
