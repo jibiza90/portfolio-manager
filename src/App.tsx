@@ -499,7 +499,15 @@ function HeroHeader({ today }: { today: string }) {
   );
 }
 
-function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDate: (d: string) => void }) {
+function DailyGrid({
+  focusDate,
+  setFocusDate,
+  contacts
+}: {
+  focusDate: string;
+  setFocusDate: (d: string) => void;
+  contacts: Record<string, ContactInfo>;
+}) {
   const { snapshot } = usePortfolioStore();
   const movementsByClient = usePortfolioStore((s) => s.movementsByClient);
   const setDayFinal = usePortfolioStore((s) => s.setDayFinal);
@@ -516,13 +524,16 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
   }, [focusDate, rows.length]);
 
   const getMovementClients = (iso: string, type: 'increment' | 'decrement') => {
-    const clients: string[] = [];
+    const clients: { name: string; amount: number }[] = [];
     CLIENTS.forEach((c) => {
       const mov = movementsByClient[c.id]?.[iso];
       if (mov) {
         const amount = type === 'increment' ? mov.increment : mov.decrement;
         if (amount && amount !== 0) {
-          clients.push(`${c.name}: ${formatCurrency(amount)}`);
+          const ct = contacts[c.id];
+          const fullName = `${ct?.name ?? ''} ${ct?.surname ?? ''}`.trim();
+          const displayName = fullName || c.name;
+          clients.push({ name: displayName, amount });
         }
       }
     });
@@ -557,7 +568,9 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
                   onMouseEnter={(e) => {
                     const clients = getMovementClients(r.iso, 'increment');
                     if (clients.length > 0) {
-                      const content = `Incremento (${r.label})\n${clients.join('\n')}`;
+                      const total = clients.reduce((sum, item) => sum + item.amount, 0);
+                      const details = clients.map((item) => `${item.name} incremento ${formatCurrency(item.amount)}`).join('\n');
+                      const content = `${details}\nTotal ${formatCurrency(total)}`;
                       setTooltip({ x: e.clientX, y: e.clientY, content });
                     }
                   }}
@@ -570,7 +583,9 @@ function DailyGrid({ focusDate, setFocusDate }: { focusDate: string; setFocusDat
                   onMouseEnter={(e) => {
                     const clients = getMovementClients(r.iso, 'decrement');
                     if (clients.length > 0) {
-                      const content = `Decremento (${r.label})\n${clients.join('\n')}`;
+                      const total = clients.reduce((sum, item) => sum + item.amount, 0);
+                      const details = clients.map((item) => `${item.name} decremento ${formatCurrency(item.amount)}`).join('\n');
+                      const content = `${details}\nTotal ${formatCurrency(total)}`;
                       setTooltip({ x: e.clientX, y: e.clientY, content });
                     }
                   }}
@@ -1477,7 +1492,7 @@ export default function App() {
       ) : activeView === GENERAL_OPTION ? (
         <>
           <TotalsBanner />
-          <DailyGrid focusDate={focusDate} setFocusDate={setFocusDate} />
+          <DailyGrid focusDate={focusDate} setFocusDate={setFocusDate} contacts={contacts} />
         </>
       ) : activeView === INFO_VIEW ? (
         <InfoClientes contacts={contacts} setContacts={setContacts} guarantees={guarantees} setGuarantees={setGuarantees} />
