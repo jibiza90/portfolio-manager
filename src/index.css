@@ -899,6 +899,13 @@ input[type='number'] {
   border: 1px solid rgba(15,109,122,0.18);
 }
 
+.info-waitlist-tip {
+  min-width: 360px;
+  max-width: 520px;
+  border: 1px solid rgba(180, 83, 9, 0.32);
+  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.18);
+}
+
 .seguimiento-container {
   padding: 24px;
   display: flex;
