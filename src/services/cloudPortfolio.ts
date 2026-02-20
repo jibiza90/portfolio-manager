@@ -1,5 +1,6 @@
-import { PersistedState, PortfolioSnapshot } from '../types';
+import { ClientDayRow, PersistedState, PortfolioSnapshot } from '../types';
 import { db, firebase, firebaseConfig } from './firebaseApp';
+import { calculateAllMonthsTWR, calculateTWR } from '../utils/twr';
 
 const DOC_PATH = 'portfolio/state';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
@@ -20,33 +21,100 @@ const buildOverviewRows = (snapshot: PortfolioSnapshot, clientId: string) => {
       row.finalBalance !== undefined ||
       row.profit !== undefined
     )
-    .slice(-60)
+    .slice(-370)
     .map((row) => ({
       iso: row.iso,
+      label: row.label,
       increment: row.increment ?? null,
       decrement: row.decrement ?? null,
+      baseBalance: row.baseBalance ?? null,
       finalBalance: row.finalBalance ?? null,
       profit: row.profit ?? null,
+      profitPct: row.profitPct ?? null,
+      sharePct: row.sharePct ?? null,
       cumulativeProfit: row.cumulativeProfit ?? null
     }));
 };
 
+const buildMonthlyAnalytics = (rows: ClientDayRow[]) => {
+  const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number }>();
+
+  rows.forEach((row) => {
+    const month = row.iso.slice(0, 7);
+    if (!byMonth.has(month)) {
+      byMonth.set(month, { profit: 0, baseStart: undefined, finalEnd: undefined });
+    }
+    const entry = byMonth.get(month)!;
+    if (row.profit !== undefined) entry.profit += row.profit;
+    if (entry.baseStart === undefined && row.baseBalance !== undefined && row.baseBalance > 0) {
+      entry.baseStart = row.baseBalance;
+    }
+    if (row.finalBalance !== undefined && row.finalBalance > 0) {
+      entry.finalEnd = row.finalBalance;
+    }
+  });
+
+  const months = Array.from(byMonth.keys()).sort();
+  return months.map((month, idx) => {
+    const entry = byMonth.get(month)!;
+    const profit = entry.profit;
+    let baseStart = entry.baseStart;
+
+    if ((baseStart === undefined || baseStart === 0) && idx > 0) {
+      baseStart = byMonth.get(months[idx - 1])?.finalEnd;
+    }
+    if ((baseStart === undefined || baseStart === 0) && entry.finalEnd !== undefined && entry.finalEnd > 0) {
+      baseStart = Math.max(1, entry.finalEnd - profit);
+    }
+
+    const retPct = baseStart && baseStart > 0 ? profit / baseStart : 0;
+    return {
+      month,
+      profit,
+      retPct
+    };
+  });
+};
+
 const buildClientOverview = (snapshot: PortfolioSnapshot, clientId: string, clientName: string) => {
   const rows = snapshot.clientRowsById[clientId] ?? [];
-  const latestWithBalance = [...rows].reverse().find((row) => row.finalBalance !== undefined);
-  const latestWithProfit = [...rows].reverse().find((row) => row.cumulativeProfit !== undefined);
+  const latestWithBalance = [...rows].reverse().find((row) => row.finalBalance !== undefined || row.baseBalance !== undefined);
+  const latestWithProfit = [...rows].reverse().find((row) => row.cumulativeProfit !== undefined || row.profit !== undefined);
+  const latestWithShare = [...rows].reverse().find((row) => row.sharePct !== undefined);
+  const latestWithProfitPct = [...rows].reverse().find((row) => row.profitPct !== undefined);
 
-  const currentBalance = latestWithBalance?.finalBalance ?? 0;
+  const currentBalance = latestWithBalance?.finalBalance ?? latestWithBalance?.baseBalance ?? 0;
   const cumulativeProfit = latestWithProfit?.cumulativeProfit ?? 0;
-  const baseBalance = latestWithBalance?.baseBalance ?? 0;
-  const ytdReturnPct = baseBalance ? cumulativeProfit / baseBalance : 0;
+  const dailyProfit = latestWithProfit?.profit ?? 0;
+  const dailyProfitPct = latestWithProfitPct?.profitPct ?? 0;
+  const participation = latestWithShare?.sharePct ?? 0;
+  const totalIncrements = rows.reduce((sum, row) => sum + (row.increment ?? 0), 0);
+  const totalDecrements = rows.reduce((sum, row) => sum + (row.decrement ?? 0), 0);
+  const monthly = buildMonthlyAnalytics(rows);
+
+  const latestProfitMonth = [...monthly].reverse().find((item) => item.profit !== 0) ?? monthly[monthly.length - 1] ?? null;
+  const latestReturnMonth = [...monthly].reverse().find((item) => item.retPct !== 0) ?? monthly[monthly.length - 1] ?? null;
+
+  const twrYtd = calculateTWR(rows);
+  const twrMonthly = calculateAllMonthsTWR(rows);
+  const ytdReturnPct = twrYtd.twr;
 
   return {
     clientId,
     clientName,
     currentBalance,
     cumulativeProfit,
+    dailyProfit,
+    dailyProfitPct,
+    participation,
+    totalIncrements,
+    totalDecrements,
     ytdReturnPct,
+    latestProfitMonth,
+    latestReturnMonth,
+    monthly,
+    twrYtd: twrYtd.twr,
+    twrMonthly,
     rows: buildOverviewRows(snapshot, clientId),
     updatedAt: Date.now()
   };

@@ -22,14 +22,28 @@ interface ClientOverview {
   clientName: string;
   currentBalance: number;
   cumulativeProfit: number;
+  dailyProfit: number;
+  dailyProfitPct: number;
+  participation: number;
+  totalIncrements: number;
+  totalDecrements: number;
   ytdReturnPct: number;
+  latestProfitMonth?: { month: string; profit: number; retPct: number } | null;
+  latestReturnMonth?: { month: string; profit: number; retPct: number } | null;
+  monthly?: Array<{ month: string; profit: number; retPct: number }>;
+  twrYtd?: number;
+  twrMonthly?: Array<{ month: string; twr: number; periods: Array<unknown> }>;
   updatedAt: number;
   rows: Array<{
     iso: string;
+    label: string;
     increment: number | null;
     decrement: number | null;
+    baseBalance: number | null;
     finalBalance: number | null;
     profit: number | null;
+    profitPct: number | null;
+    sharePct: number | null;
     cumulativeProfit: number | null;
   }>;
 }
@@ -50,6 +64,13 @@ const formatEuro = (value: number) =>
   new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value);
 
 const formatPct = (value: number) => `${(value * 100).toFixed(2)}%`;
+const formatMonthLabel = (monthIso: string) => {
+  const [year, month] = monthIso.split('-');
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const idx = Number.parseInt(month, 10);
+  if (!Number.isFinite(idx) || idx < 1 || idx > 12) return monthIso;
+  return `${monthNames[idx - 1]} ${year}`;
+};
 
 const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password: string) => Promise<void>; busy: boolean; error: string | null }) => {
   const [email, setEmail] = useState('');
@@ -156,6 +177,11 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
   }, [clientId]);
 
   const clientName = useMemo(() => overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId, [clientId, overview]);
+  const latestProfitMonth = overview?.latestProfitMonth ?? null;
+  const latestReturnMonth = overview?.latestReturnMonth ?? null;
+  const monthly = overview?.monthly ?? [];
+  const twrMonthly = overview?.twrMonthly ?? [];
+  const twrYtd = overview?.twrYtd ?? overview?.ytdReturnPct ?? 0;
 
   return (
     <main
@@ -224,8 +250,47 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.currentBalance)}</h3>
             </article>
             <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
-              <p style={{ margin: 0, color: palette.muted }}>Beneficio acumulado</p>
+              <p style={{ margin: 0, color: palette.muted }}>Beneficio total</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.cumulativeProfit)}</h3>
+            </article>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Beneficio dia</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.dailyProfit ?? 0)}</h3>
+            </article>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>% dia</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.dailyProfitPct ?? 0)}</h3>
+            </article>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Participacion</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.participation ?? 0)}</h3>
+            </article>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Incrementos totales</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.totalIncrements ?? 0)}</h3>
+            </article>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Decrementos totales</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.totalDecrements ?? 0)}</h3>
+            </article>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Beneficio mensual</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(latestProfitMonth?.profit ?? 0)}</h3>
+              <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>
+                {latestProfitMonth ? formatMonthLabel(latestProfitMonth.month) : '-'}
+              </p>
+            </article>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Rentabilidad mensual</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(latestReturnMonth?.retPct ?? 0)}</h3>
+              <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>
+                {latestReturnMonth ? formatMonthLabel(latestReturnMonth.month) : '-'}
+              </p>
+            </article>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Rentabilidad TWR</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(twrYtd)}</h3>
+              <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>YTD</p>
             </article>
             <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
               <p style={{ margin: 0, color: palette.muted }}>Rentabilidad YTD</p>
@@ -237,9 +302,46 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
             </article>
           </section>
 
+          <section style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, overflow: 'hidden', marginBottom: 16 }}>
+            <div style={{ padding: 14, borderBottom: `1px solid ${palette.border}` }}>
+              <strong>Detalle mensual</strong>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: 12, color: palette.muted }}>Mes</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Beneficio</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Rentabilidad</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>TWR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthly.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ padding: 12, color: palette.muted }}>Sin datos mensuales.</td>
+                    </tr>
+                  ) : (
+                    monthly.map((month) => {
+                      const twrItem = twrMonthly.find((row) => row.month === month.month);
+                      return (
+                        <tr key={month.month}>
+                          <td style={{ padding: 12, borderTop: `1px solid ${palette.border}` }}>{formatMonthLabel(month.month)}</td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatEuro(month.profit)}</td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatPct(month.retPct)}</td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatPct(twrItem?.twr ?? 0)}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
           <section style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.cardAlt, overflow: 'hidden' }}>
             <div style={{ padding: 14, borderBottom: `1px solid ${palette.border}` }}>
-              <strong>Ultimos movimientos</strong>
+              <strong>Movimientos del cliente</strong>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
@@ -250,12 +352,13 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
                     <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Retiro</th>
                     <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Saldo</th>
                     <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Beneficio dia</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>% dia</th>
                   </tr>
                 </thead>
                 <tbody>
                   {overview.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: 12, color: palette.muted }}>Sin movimientos recientes.</td>
+                      <td colSpan={6} style={{ padding: 12, color: palette.muted }}>Sin movimientos recientes.</td>
                     </tr>
                   ) : (
                     overview.rows
@@ -268,6 +371,7 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.decrement ? formatEuro(row.decrement) : '-'}</td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.finalBalance !== null ? formatEuro(row.finalBalance) : '-'}</td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.profit !== null ? formatEuro(row.profit) : '-'}</td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.profitPct !== null ? formatPct(row.profitPct) : '-'}</td>
                         </tr>
                       ))
                   )}
