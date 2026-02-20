@@ -536,9 +536,8 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
                 </div>
               </div>
 
-              <h1 className="pmTitle">Acceso premium para datos financieros con control total.</h1>
+              <h1 className="pmTitle">Acceso seguro para revisar cartera, KPIs y reportes en segundos.</h1>
               <p className="pmCopy">
-                Acceso seguro para revisar cartera, KPIs y reportes en segundos.
                 Entra con tu cuenta para ver tus datos. Los clientes solo pueden leer su informacion.
                 El administrador mantiene el control total de la gestion y las publicaciones.
               </p>
