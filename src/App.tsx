@@ -1968,6 +1968,12 @@ function TotalsBanner() {
 }
 
 function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo> }) {
+  const QUICK_TEMPLATES_STORAGE_KEY = 'portfolio-admin-quick-templates';
+  const defaultQuickTemplates = [
+    'He recibido tu mensaje. Revisare tu solicitud y te respondere en breve.',
+    'Para continuar, necesito que confirmes la fecha, el importe y una breve descripcion del caso.',
+    'He finalizado la gestion de tu solicitud. Si deseas una revision adicional, responde en este mismo hilo.'
+  ];
   const [threads, setThreads] = useState<SupportThread[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [search, setSearch] = useState('');
@@ -1977,12 +1983,21 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-
-  const quickTemplates = [
-    'Hemos recibido tu mensaje. Estamos revisando tu solicitud y te responderemos en breve.',
-    'Para continuar, necesitamos que confirmes la fecha, el importe y una breve descripcion del caso.',
-    'Hemos finalizado la gestion de tu solicitud. Si deseas una revision adicional, responde en este mismo hilo.'
-  ];
+  const [quickTemplates, setQuickTemplates] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(QUICK_TEMPLATES_STORAGE_KEY);
+      if (!raw) return defaultQuickTemplates;
+      const parsed = JSON.parse(raw) as string[];
+      if (!Array.isArray(parsed)) return defaultQuickTemplates;
+      const clean = parsed.map((row) => String(row).trim()).filter((row) => row.length > 0);
+      return clean.length ? clean : defaultQuickTemplates;
+    } catch {
+      return defaultQuickTemplates;
+    }
+  });
+  const [newTemplateText, setNewTemplateText] = useState('');
+  const [templateEditIndex, setTemplateEditIndex] = useState<number | null>(null);
+  const [templateEditText, setTemplateEditText] = useState('');
 
   const getClientOrderNumber = (clientId: string) => {
     const match = clientId.match(/(\d+)(?!.*\d)/);
@@ -1990,6 +2005,10 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
     const parsed = Number.parseInt(match[1], 10);
     return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
   };
+
+  useEffect(() => {
+    localStorage.setItem(QUICK_TEMPLATES_STORAGE_KEY, JSON.stringify(quickTemplates));
+  }, [quickTemplates]);
 
   const getClientName = (clientId: string) => {
     const contact = contacts[clientId];
@@ -2115,6 +2134,35 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
     }
   };
 
+  const addQuickTemplate = () => {
+    const clean = newTemplateText.trim();
+    if (!clean) return;
+    setQuickTemplates((prev) => [...prev, clean]);
+    setNewTemplateText('');
+  };
+
+  const startEditQuickTemplate = (index: number) => {
+    setTemplateEditIndex(index);
+    setTemplateEditText(quickTemplates[index] ?? '');
+  };
+
+  const saveQuickTemplateEdit = () => {
+    if (templateEditIndex === null) return;
+    const clean = templateEditText.trim();
+    if (!clean) return;
+    setQuickTemplates((prev) => prev.map((row, idx) => (idx === templateEditIndex ? clean : row)));
+    setTemplateEditIndex(null);
+    setTemplateEditText('');
+  };
+
+  const deleteQuickTemplate = (index: number) => {
+    setQuickTemplates((prev) => prev.filter((_, idx) => idx !== index));
+    if (templateEditIndex === index) {
+      setTemplateEditIndex(null);
+      setTemplateEditText('');
+    }
+  };
+
   return (
     <div className="info-clients-container fade-in">
       <aside className="info-sidebar">
@@ -2226,9 +2274,9 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
 
           <div style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', padding: 12, display: 'grid', gap: 10 }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {quickTemplates.map((template) => (
+              {quickTemplates.map((template, index) => (
                 <button
-                  key={template}
+                  key={`${template}-${index}`}
                   type="button"
                   onClick={() => setDraft(template)}
                   style={{ border: '1px solid #d7d2c8', borderRadius: 999, background: '#fff', padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
@@ -2236,6 +2284,57 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
                   {template.length > 34 ? `${template.slice(0, 34)}...` : template}
                 </button>
               ))}
+            </div>
+            <div style={{ border: '1px solid #d7d2c8', borderRadius: 10, padding: 10, display: 'grid', gap: 8, background: '#fcfbf8' }}>
+              <strong style={{ fontSize: 13 }}>Gestion de respuestas rapidas</strong>
+              <div style={{ display: 'grid', gap: 6 }}>
+                {quickTemplates.length === 0 ? (
+                  <span className="muted" style={{ fontSize: 12 }}>No hay respuestas guardadas.</span>
+                ) : quickTemplates.map((template, index) => (
+                  <div key={`template-row-${index}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 8, alignItems: 'start' }}>
+                    {templateEditIndex === index ? (
+                      <textarea
+                        value={templateEditText}
+                        onChange={(event) => setTemplateEditText(event.target.value)}
+                        rows={2}
+                        style={{ border: '1px solid #d7d2c8', borderRadius: 8, padding: 8, font: 'inherit' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: 12, color: '#1f1d1b', paddingTop: 6 }}>{template}</span>
+                    )}
+                    {templateEditIndex === index ? (
+                      <button type="button" onClick={saveQuickTemplateEdit} style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 8, padding: '5px 8px', fontSize: 12, cursor: 'pointer' }}>
+                        Guardar
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => startEditQuickTemplate(index)} style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 8, padding: '5px 8px', fontSize: 12, cursor: 'pointer' }}>
+                        Editar
+                      </button>
+                    )}
+                    {templateEditIndex === index ? (
+                      <button type="button" onClick={() => { setTemplateEditIndex(null); setTemplateEditText(''); }} style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 8, padding: '5px 8px', fontSize: 12, cursor: 'pointer' }}>
+                        Cancelar
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => deleteQuickTemplate(index)} style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 8, padding: '5px 8px', fontSize: 12, cursor: 'pointer' }}>
+                        Borrar
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+                <input
+                  type="text"
+                  value={newTemplateText}
+                  onChange={(event) => setNewTemplateText(event.target.value)}
+                  placeholder="Nueva respuesta rapida..."
+                  style={{ border: '1px solid #d7d2c8', borderRadius: 8, padding: '8px 10px', font: 'inherit' }}
+                />
+                <button type="button" onClick={addQuickTemplate} style={{ border: 0, borderRadius: 8, background: '#0f6d7a', color: '#fff', padding: '8px 12px', fontWeight: 700, cursor: 'pointer' }}>
+                  Anadir
+                </button>
+              </div>
             </div>
             <textarea
               value={draft}
