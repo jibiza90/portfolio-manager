@@ -12,7 +12,7 @@ import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import { provisionClientAccess } from './services/cloudPortfolio';
-import { auth } from './services/firebaseApp';
+import { auth, db } from './services/firebaseApp';
 import { isValidReportToken } from './services/reportLinks';
 
 const INFO_VIEW = 'INFO_VIEW';
@@ -2532,6 +2532,36 @@ function InfoClientes({
     setContacts((prev) => ({ ...prev, [selectedId]: { ...contact, [field]: value } }));
   };
 
+  const syncClientIdentityToCloud = async () => {
+    if (!currentClient || isGeneralView) return;
+    const desiredName = `${contact.name} ${contact.surname}`.trim() || currentClient.name;
+    if (!desiredName) return;
+
+    try {
+      // Keep the client-facing name in Firestore so the client portal sees it (read-only for clients).
+      await db
+        .collection('portfolio_client_overviews')
+        .doc(currentClient.id)
+        .set({ clientName: desiredName, updatedAt: Date.now() }, { merge: true });
+
+      // Keep access_profiles displayName aligned so the login session also reflects it.
+      const profiles = await db
+        .collection('access_profiles')
+        .where('clientId', '==', currentClient.id)
+        .get();
+
+      if (!profiles.empty) {
+        const batch = db.batch();
+        profiles.docs.forEach((docRef) => {
+          batch.set(docRef.ref, { displayName: desiredName, updatedAt: Date.now() }, { merge: true });
+        });
+        await batch.commit();
+      }
+    } catch (error) {
+      console.error('No se pudo sincronizar el nombre del cliente', error);
+    }
+  };
+
   const createClient = () => {
     const created = onAddClient(newClientName);
     setNewClientName('');
@@ -2776,6 +2806,7 @@ function InfoClientes({
                 autoComplete="name"
                 value={contact.name}
                 onChange={(e) => { updateField('name', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+                onBlur={() => { void syncClientIdentityToCloud(); }}
               />
             </label>
             <label>
@@ -2786,6 +2817,7 @@ function InfoClientes({
                 autoComplete="family-name"
                 value={contact.surname}
                 onChange={(e) => { updateField('surname', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+                onBlur={() => { void syncClientIdentityToCloud(); }}
               />
             </label>
             <label>

@@ -659,9 +659,9 @@ const ClientPortal = ({
 
   const clientName = useMemo(() => overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId, [clientId, overview]);
   const headerName = useMemo(() => {
+    if (clientName && !clientName.toLowerCase().startsWith('cliente ')) return clientName;
     const cleanDisplayName = displayName?.trim();
     if (cleanDisplayName) return cleanDisplayName;
-    if (clientName && !clientName.toLowerCase().startsWith('cliente ')) return clientName;
     if (email) return email.split('@')[0];
     return clientName;
   }, [clientName, displayName, email]);
