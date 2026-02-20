@@ -2333,6 +2333,8 @@ function InfoClientes({
   const [accessPassword, setAccessPassword] = useState('');
   const [accessBusy, setAccessBusy] = useState(false);
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
+  const nameSyncTimerRef = useRef<number | null>(null);
+  const lastSyncedDisplayNameRef = useRef('');
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -2429,6 +2431,7 @@ function InfoClientes({
   useEffect(() => {
     setAccessPassword('');
     setAccessMessage(null);
+    lastSyncedDisplayNameRef.current = '';
   }, [selectedId]);
 
   const currentClient = CLIENTS.find((c) => c.id === selectedId);
@@ -2532,9 +2535,10 @@ function InfoClientes({
     setContacts((prev) => ({ ...prev, [selectedId]: { ...contact, [field]: value } }));
   };
 
-  const syncClientIdentityToCloud = async () => {
+  const syncClientIdentityToCloud = async (forcedName?: string) => {
     if (!currentClient || isGeneralView) return;
-    const desiredName = `${contact.name} ${contact.surname}`.trim() || currentClient.name;
+    const fallbackName = `${contact.name} ${contact.surname}`.trim() || currentClient.name;
+    const desiredName = (forcedName ?? fallbackName).trim();
     if (!desiredName) return;
 
     try {
@@ -2557,10 +2561,33 @@ function InfoClientes({
         });
         await batch.commit();
       }
+      lastSyncedDisplayNameRef.current = desiredName;
     } catch (error) {
       console.error('No se pudo sincronizar el nombre del cliente', error);
     }
   };
+
+  useEffect(() => {
+    if (!currentClient || isGeneralView) return;
+    const desiredName = `${contact.name} ${contact.surname}`.trim() || currentClient.name;
+    if (!desiredName) return;
+    if (desiredName === lastSyncedDisplayNameRef.current) return;
+
+    if (nameSyncTimerRef.current !== null) {
+      window.clearTimeout(nameSyncTimerRef.current);
+    }
+    nameSyncTimerRef.current = window.setTimeout(() => {
+      nameSyncTimerRef.current = null;
+      void syncClientIdentityToCloud(desiredName);
+    }, 450);
+
+    return () => {
+      if (nameSyncTimerRef.current !== null) {
+        window.clearTimeout(nameSyncTimerRef.current);
+        nameSyncTimerRef.current = null;
+      }
+    };
+  }, [contact.name, contact.surname, currentClient, isGeneralView]);
 
   const createClient = () => {
     const created = onAddClient(newClientName);

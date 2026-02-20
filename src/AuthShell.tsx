@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import App from './App';
 import { CLIENTS } from './constants/clients';
 import { fetchAccessProfile, subscribeClientOverview, syncClientOverviews } from './services/cloudPortfolio';
-import { auth, firebase } from './services/firebaseApp';
+import { auth, db, firebase } from './services/firebaseApp';
 import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
@@ -13,6 +13,7 @@ type Role = 'admin' | 'client';
 interface SessionState {
   loading: boolean;
   role: Role | null;
+  uid: string | null;
   clientId: string | null;
   email: string | null;
   displayName: string | null;
@@ -623,11 +624,13 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
 
 const ClientPortal = ({
   clientId,
+  profileUid,
   email,
   displayName,
   onLogout
 }: {
   clientId: string;
+  profileUid: string | null;
   email: string | null;
   displayName: string | null;
   onLogout: () => Promise<void>;
@@ -640,6 +643,11 @@ const ClientPortal = ({
   const [flowPopup, setFlowPopup] = useState<'inc' | 'dec' | 'profit' | null>(null);
   const [expandedBalanceChart, setExpandedBalanceChart] = useState(false);
   const [expandedTwrChart, setExpandedTwrChart] = useState(false);
+  const [liveProfileDisplayName, setLiveProfileDisplayName] = useState<string | null>(displayName);
+
+  useEffect(() => {
+    setLiveProfileDisplayName(displayName);
+  }, [displayName]);
 
   useEffect(() => {
     const unsubscribe = subscribeClientOverview(
@@ -657,14 +665,30 @@ const ClientPortal = ({
     return () => unsubscribe();
   }, [clientId]);
 
+  useEffect(() => {
+    if (!profileUid) return;
+    const unsubscribe = db
+      .collection('access_profiles')
+      .doc(profileUid)
+      .onSnapshot((doc) => {
+        const profileName = typeof doc.data()?.displayName === 'string' ? doc.data()?.displayName : null;
+        setLiveProfileDisplayName(profileName?.trim() || null);
+      });
+    return () => unsubscribe();
+  }, [profileUid]);
+
   const clientName = useMemo(() => overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId, [clientId, overview]);
   const headerName = useMemo(() => {
-    if (clientName && !clientName.toLowerCase().startsWith('cliente ')) return clientName;
+    const cleanLiveProfileName = liveProfileDisplayName?.trim();
+    if (cleanLiveProfileName) return cleanLiveProfileName;
+
     const cleanDisplayName = displayName?.trim();
     if (cleanDisplayName) return cleanDisplayName;
+
+    if (clientName && !clientName.toLowerCase().startsWith('cliente ')) return clientName;
     if (email) return email.split('@')[0];
     return clientName;
-  }, [clientName, displayName, email]);
+  }, [clientName, displayName, email, liveProfileDisplayName]);
   const monthlyRaw = overview?.monthly ?? [];
   const twrMonthlyRaw = overview?.twrMonthly ?? [];
   const monthly = useMemo(
@@ -1789,6 +1813,7 @@ const AuthShell = () => {
   const [session, setSession] = useState<SessionState>({
     loading: true,
     role: null,
+    uid: null,
     clientId: null,
     email: null,
     displayName: null,
@@ -1814,6 +1839,7 @@ const AuthShell = () => {
       setSession({
         loading: false,
         role: null,
+        uid: null,
         clientId: null,
         email: null,
         displayName: null,
@@ -1862,6 +1888,7 @@ const AuthShell = () => {
           setSession({
             loading: false,
             role: 'admin',
+            uid: user.uid,
             clientId: null,
             email: user.email ?? null,
             displayName: user.displayName ?? null,
@@ -1890,6 +1917,7 @@ const AuthShell = () => {
           setSession({
             loading: false,
             role: 'admin',
+            uid: user.uid,
             clientId: null,
             email: user.email ?? tokenEmailClaim ?? null,
             displayName: user.displayName ?? null,
@@ -1913,6 +1941,7 @@ const AuthShell = () => {
           setSession({
             loading: false,
             role: null,
+            uid: null,
             clientId: null,
             email: null,
             displayName: null,
@@ -1926,6 +1955,7 @@ const AuthShell = () => {
         setSession({
           loading: false,
           role: 'client',
+          uid: user.uid,
           clientId: profile.clientId,
           email: user.email,
           displayName: profile.displayName ?? user.displayName ?? null,
@@ -1939,6 +1969,7 @@ const AuthShell = () => {
             : {
                 loading: false,
                 role: null,
+                uid: null,
                 clientId: null,
                 email: null,
                 displayName: null,
@@ -2081,7 +2112,7 @@ const AuthShell = () => {
   }
 
   if (session.role === 'client' && session.clientId) {
-    return <ClientPortal clientId={session.clientId} email={session.email} displayName={session.displayName} onLogout={handleLogout} />;
+    return <ClientPortal clientId={session.clientId} profileUid={session.uid} email={session.email} displayName={session.displayName} onLogout={handleLogout} />;
   }
 
   return (
