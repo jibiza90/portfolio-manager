@@ -1173,11 +1173,46 @@ const ClientPortal = ({
         doc.setLineWidth(1);
         return y + space.m;
       };
+      const estimateTableHeight = (rowCount: number, rowHeight: number) => {
+        const safeRows = Math.max(1, rowCount);
+        return 18 + safeRows * rowHeight + 12;
+      };
+      const drawKpiCards = (startY: number, items: Array<{ label: string; value: string }>) => {
+        const columns = 2;
+        const gapX = 12;
+        const gapY = 12;
+        const cardW = (pageWidth - marginX * 2 - gapX) / columns;
+        const cardH = 64;
+        const rows = Math.ceil(items.length / columns);
+
+        items.forEach((item, idx) => {
+          const col = idx % columns;
+          const row = Math.floor(idx / columns);
+          const x = marginX + col * (cardW + gapX);
+          const y = startY + row * (cardH + gapY);
+          const fill = idx % 2 === 0 ? [255, 255, 255] : brand.soft;
+
+          doc.setDrawColor(brand.border[0], brand.border[1], brand.border[2]);
+          doc.setFillColor(fill[0], fill[1], fill[2]);
+          doc.roundedRect(x, y, cardW, cardH, 10, 10, 'FD');
+
+          doc.setFillColor(brand.teal[0], brand.teal[1], brand.teal[2]);
+          doc.roundedRect(x + 10, y + 10, 24, 4, 2, 2, 'F');
+
+          doc.setFontSize(8.5);
+          doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
+          doc.text(item.label, x + 10, y + 28);
+
+          doc.setFontSize(11);
+          doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
+          const valueLines = doc.splitTextToSize(item.value, cardW - 20).slice(0, 2);
+          doc.text(valueLines, x + 10, y + 46);
+        });
+
+        return startY + rows * cardH + Math.max(0, rows - 1) * gapY;
+      };
 
       let cursorY = drawInfoCard(contentTop);
-      cursorY = ensureRoom(cursorY, 180);
-      cursorY = drawSectionTitle('KPIs', cursorY);
-
       const latestProfitLabel = latestProfitMonth ? `${formatMonthLabel(latestProfitMonth.month)}: ${formatEuro(latestProfitMonth.profit)}` : '-';
       const latestTwrLabel = latestTwrMonth ? `${formatMonthLabel(latestTwrMonth.month)}: ${formatPct(latestTwrMonth.twr)}` : '-';
       const kpis = [
@@ -1190,50 +1225,26 @@ const ClientPortal = ({
         { label: 'TWR acumulado anual (YTD)', value: formatPct(twrYtd) },
         { label: 'Periodo en curso', value: formatMonthLabel(activeMonthIso) }
       ];
-      const kpiRows: Array<[string, string, string, string]> = [];
-      for (let i = 0; i < kpis.length; i += 2) {
-        const left = kpis[i];
-        const right = kpis[i + 1];
-        kpiRows.push([left.label, left.value, right.label, right.value]);
-      }
 
-      autoTable(doc, {
-        startY: cursorY + space.xs,
-        margin: tableMargin,
-        didDrawPage,
-        head: [['KPI', 'Valor', 'KPI', 'Valor']],
-        body: kpiRows,
-        theme: 'grid',
-        styles: {
-          fontSize: 9,
-          cellPadding: 7,
-          textColor: brand.text,
-          lineColor: brand.border,
-          lineWidth: 0.6
-        },
-        headStyles: {
-          fillColor: brand.ink,
-          textColor: 255,
-          fontStyle: 'bold'
-        },
-        alternateRowStyles: { fillColor: brand.soft },
-        columnStyles: {
-          0: { fontStyle: 'bold', textColor: brand.text },
-          1: { halign: 'right' },
-          2: { fontStyle: 'bold', textColor: brand.text },
-          3: { halign: 'right' }
-        }
-      });
+      const maxSummaryRoom = pageHeight - tableMargin.bottom - contentTop - 20;
+      const kpiRowsCount = Math.ceil(kpis.length / 2);
+      const kpiEstimatedHeight = kpiRowsCount * 64 + Math.max(0, kpiRowsCount - 1) * 12 + 20;
+      const monthlyEstimatedHeight = estimateTableHeight(monthly.length, 18) + 34;
+      const movementsEstimatedHeight = estimateTableHeight(movementRows.length, 17) + 34;
+      const summaryEstimate = kpiEstimatedHeight + monthlyEstimatedHeight + movementsEstimatedHeight + 56;
 
-      cursorY = lastTableY() + space.l;
-      const monthlyMinRoom = 120;
-      cursorY = ensureRoom(cursorY, monthlyMinRoom);
+      cursorY = ensureRoom(cursorY, Math.min(summaryEstimate, maxSummaryRoom));
+      cursorY = drawSectionTitle('KPIs', cursorY);
+      cursorY = drawKpiCards(cursorY + space.xs, kpis) + space.l;
+
+      cursorY = ensureRoom(cursorY, Math.min(monthlyEstimatedHeight, maxSummaryRoom));
       cursorY = drawSectionTitle('Detalle mensual', cursorY);
 
       autoTable(doc, {
         startY: cursorY + space.xs,
         margin: tableMargin,
         didDrawPage,
+        pageBreak: 'avoid',
         head: [['Mes', 'Estado', 'Saldo fin de mes', 'Beneficio', 'TWR mensual', 'TWR acumulado anual']],
         body: monthly.map((item) => {
           const twr = twrMonthly.find((row) => row.month === item.month)?.twr ?? 0;
@@ -1271,13 +1282,14 @@ const ClientPortal = ({
       });
 
       cursorY = lastTableY() + space.l;
-      cursorY = ensureRoom(cursorY, 170);
+      cursorY = ensureRoom(cursorY, Math.min(movementsEstimatedHeight, maxSummaryRoom));
       cursorY = drawSectionTitle('Ingresos y retiradas', cursorY);
 
       autoTable(doc, {
         startY: cursorY + space.xs,
         margin: tableMargin,
         didDrawPage,
+        pageBreak: 'avoid',
         head: [['Fecha', 'Ingreso', 'Retiro', 'Saldo']],
         body: movementRows.map((row) => [
           { content: new Date(row.iso).toLocaleDateString('es-ES') },
