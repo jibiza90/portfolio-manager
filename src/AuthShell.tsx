@@ -14,6 +14,7 @@ interface SessionState {
   role: Role | null;
   clientId: string | null;
   email: string | null;
+  displayName: string | null;
   error: string | null;
 }
 
@@ -586,7 +587,17 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
   );
 };
 
-const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: string | null; onLogout: () => Promise<void> }) => {
+const ClientPortal = ({
+  clientId,
+  email,
+  displayName,
+  onLogout
+}: {
+  clientId: string;
+  email: string | null;
+  displayName: string | null;
+  onLogout: () => Promise<void>;
+}) => {
   const [overview, setOverview] = useState<ClientOverview | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -613,6 +624,13 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
   }, [clientId]);
 
   const clientName = useMemo(() => overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId, [clientId, overview]);
+  const headerName = useMemo(() => {
+    const cleanDisplayName = displayName?.trim();
+    if (cleanDisplayName) return cleanDisplayName;
+    if (clientName && !clientName.toLowerCase().startsWith('cliente ')) return clientName;
+    if (email) return email.split('@')[0];
+    return clientName;
+  }, [clientName, displayName, email]);
   const monthlyRaw = overview?.monthly ?? [];
   const twrMonthlyRaw = overview?.twrMonthly ?? [];
   const monthly = useMemo(
@@ -811,7 +829,7 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
         <div>
           <h1 style={{ margin: 0, color: palette.text }}>Area Cliente</h1>
           <p style={{ margin: '6px 0 0 0', color: palette.muted }}>
-            {clientName} - {clientId}
+            {headerName}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1220,6 +1238,7 @@ const AuthShell = () => {
     role: null,
     clientId: null,
     email: null,
+    displayName: null,
     error: null
   });
   const [loginBusy, setLoginBusy] = useState(false);
@@ -1229,7 +1248,7 @@ const AuthShell = () => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) {
         usePortfolioStore.setState({ canWrite: false, initialized: false });
-        setSession({ loading: false, role: null, clientId: null, email: null, error: null });
+        setSession({ loading: false, role: null, clientId: null, email: null, displayName: null, error: null });
         return;
       }
 
@@ -1241,23 +1260,44 @@ const AuthShell = () => {
           usePortfolioStore.getState().setWriteAccess(true);
           await initializePortfolioStore();
           await syncClientOverviews(usePortfolioStore.getState().snapshot, CLIENTS);
-          setSession({ loading: false, role: 'admin', clientId: null, email: user.email, error: null });
+          setSession({ loading: false, role: 'admin', clientId: null, email: user.email, displayName: user.displayName ?? null, error: null });
           return;
         }
 
         const profile = await fetchAccessProfile(user.uid);
         if (!profile || profile.active === false || profile.role !== 'client' || !profile.clientId) {
           await auth.signOut();
-          setSession({ loading: false, role: null, clientId: null, email: null, error: 'Tu usuario no tiene perfil activo. Contacta con el administrador.' });
+          setSession({
+            loading: false,
+            role: null,
+            clientId: null,
+            email: null,
+            displayName: null,
+            error: 'Tu usuario no tiene perfil activo. Contacta con el administrador.'
+          });
           return;
         }
 
         usePortfolioStore.getState().setWriteAccess(false);
         usePortfolioStore.getState().setInitialized(true);
-        setSession({ loading: false, role: 'client', clientId: profile.clientId, email: user.email, error: null });
+        setSession({
+          loading: false,
+          role: 'client',
+          clientId: profile.clientId,
+          email: user.email,
+          displayName: profile.displayName ?? user.displayName ?? null,
+          error: null
+        });
       } catch (error) {
         console.error(error);
-        setSession({ loading: false, role: null, clientId: null, email: null, error: 'Error validando tu sesion.' });
+        setSession({
+          loading: false,
+          role: null,
+          clientId: null,
+          email: null,
+          displayName: null,
+          error: 'Error validando tu sesion.'
+        });
       }
     });
 
@@ -1314,7 +1354,7 @@ const AuthShell = () => {
   }
 
   if (session.role === 'client' && session.clientId) {
-    return <ClientPortal clientId={session.clientId} email={session.email} onLogout={handleLogout} />;
+    return <ClientPortal clientId={session.clientId} email={session.email} displayName={session.displayName} onLogout={handleLogout} />;
   }
 
   return (
