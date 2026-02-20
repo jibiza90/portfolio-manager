@@ -6,7 +6,7 @@ service cloud.firestore {
     }
 
     function adminEmail() {
-      return signedIn() && request.auth.token.email in ['jibiza90@gmail.com'];
+      return signedIn() && request.auth.token.email in ['jibiza90@gmail.com', 'jpujola@alogroup.es'];
     }
 
     function adminProfile() {

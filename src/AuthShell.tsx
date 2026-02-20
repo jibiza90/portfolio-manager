@@ -1369,6 +1369,8 @@ const AuthShell = () => {
         return;
       }
 
+      setSession((prev) => ({ ...prev, loading: true, error: null }));
+
       try {
         const email = normalizeEmail(user.email ?? '');
         const isAdmin = ADMIN_EMAILS.has(email);
@@ -1376,8 +1378,11 @@ const AuthShell = () => {
         if (isAdmin) {
           usePortfolioStore.getState().setWriteAccess(true);
           await initializePortfolioStore();
-          await syncClientOverviews(usePortfolioStore.getState().snapshot, CLIENTS);
           setSession({ loading: false, role: 'admin', clientId: null, email: user.email, displayName: user.displayName ?? null, error: null });
+          // Sync in background to avoid blocking admin login UX.
+          void syncClientOverviews(usePortfolioStore.getState().snapshot, CLIENTS).catch((syncError) => {
+            console.error('Background admin sync failed', syncError);
+          });
           return;
         }
 
@@ -1432,11 +1437,16 @@ const AuthShell = () => {
   const handleLogin = async (email: string, password: string) => {
     try {
       setLoginBusy(true);
-      setSession((prev) => ({ ...prev, error: null }));
+      setSession((prev) => ({ ...prev, loading: true, error: null }));
       await auth.signInWithEmailAndPassword(normalizeEmail(email), password);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo iniciar sesion';
-      setSession((prev) => ({ ...prev, error: message }));
+      let message = 'No se pudo iniciar sesion';
+      const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: string }).code) : '';
+      if (code === 'auth/invalid-credential') message = 'Email o contrasena incorrectos.';
+      if (code === 'auth/user-not-found') message = 'No existe ese usuario.';
+      if (code === 'auth/wrong-password') message = 'Contrasena incorrecta.';
+      if (code === 'auth/too-many-requests') message = 'Demasiados intentos. Espera un momento e intentalo otra vez.';
+      setSession((prev) => ({ ...prev, loading: false, error: message }));
     } finally {
       setLoginBusy(false);
     }
@@ -1448,19 +1458,82 @@ const AuthShell = () => {
 
   if (session.loading) {
     return (
-      <main
-        style={{
-          minHeight: '100vh',
-          display: 'grid',
-          placeItems: 'center',
-          color: palette.text,
-          background: `radial-gradient(circle at top left, rgba(15,109,122,0.14), transparent 45%), ${palette.bg}`
-        }}
-      >
-        <div style={{ textAlign: 'center', display: 'grid', gap: 8 }}>
-          <div style={{ width: 46, height: 46, borderRadius: 999, border: `3px solid ${palette.border}`, borderTopColor: palette.accent, margin: '0 auto' }} />
-          <strong>Cargando sesion{loadingDots}</strong>
-          <span style={{ color: palette.muted, fontSize: 13 }}>Estamos validando tu acceso</span>
+      <main className="pmLoadingRoot">
+        <style>{`
+          .pmLoadingRoot {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            color: ${palette.text};
+            background:
+              radial-gradient(920px 520px at 8% 10%, rgba(15,109,122,.16), transparent 58%),
+              radial-gradient(900px 520px at 92% 8%, rgba(240,195,104,.24), transparent 56%),
+              linear-gradient(180deg, #f6faff 0%, #f3efe7 100%);
+            padding: 16px;
+          }
+          .pmLoadingCard {
+            width: min(460px, 96vw);
+            border-radius: 24px;
+            border: 1px solid rgba(36, 43, 54, 0.16);
+            background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(252,248,241,.86));
+            box-shadow: 0 30px 60px rgba(22, 27, 39, 0.16);
+            padding: 26px 22px;
+            display: grid;
+            gap: 14px;
+            justify-items: center;
+            text-align: center;
+          }
+          .pmLoadingOrb {
+            width: 64px;
+            height: 64px;
+            border-radius: 999px;
+            background: conic-gradient(from 0deg, #0f6d7a, #52a9c2, #f2c45f, #0f6d7a);
+            display: grid;
+            place-items: center;
+            animation: pmSpin 1.4s linear infinite;
+            box-shadow: 0 18px 30px rgba(15,109,122,.26);
+          }
+          .pmLoadingOrb::after {
+            content: "";
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(36,43,54,.1);
+          }
+          .pmLoadingBars {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+          }
+          .pmLoadingBar {
+            height: 8px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(15,109,122,.2), rgba(15,109,122,.56));
+            transform-origin: left;
+            animation: pmPulse 1.2s ease-in-out infinite;
+          }
+          .pmLoadingBar:nth-child(2) { animation-delay: .15s; }
+          .pmLoadingBar:nth-child(3) { animation-delay: .3s; }
+          @keyframes pmSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes pmPulse {
+            0%, 100% { transform: scaleX(.35); opacity: .5; }
+            50% { transform: scaleX(1); opacity: 1; }
+          }
+        `}</style>
+        <div className="pmLoadingCard">
+          <div className="pmLoadingOrb" />
+          <strong style={{ fontSize: 20 }}>Cargando sesion{loadingDots}</strong>
+          <span style={{ color: palette.muted, fontSize: 13 }}>Estamos validando tu acceso y preparando tu panel</span>
+          <div className="pmLoadingBars">
+            <div className="pmLoadingBar" />
+            <div className="pmLoadingBar" />
+            <div className="pmLoadingBar" />
+          </div>
         </div>
       </main>
     );
