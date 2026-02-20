@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import App from './App';
 import { CLIENTS } from './constants/clients';
 import { fetchAccessProfile, subscribeClientOverview, syncClientOverviews } from './services/cloudPortfolio';
@@ -1360,21 +1360,60 @@ const AuthShell = () => {
   });
   const [loginBusy, setLoginBusy] = useState(false);
   const [loadingDots, setLoadingDots] = useState('.');
+  const pendingLogoutTimerRef = useRef<number | null>(null);
+  const manualLogoutRef = useRef(false);
 
   useEffect(() => {
+    const clearPendingLogoutTimer = () => {
+      if (pendingLogoutTimerRef.current !== null) {
+        window.clearTimeout(pendingLogoutTimerRef.current);
+        pendingLogoutTimerRef.current = null;
+      }
+    };
+
+    const markLoggedOut = (error: string | null) => {
+      usePortfolioStore.setState({ canWrite: false, initialized: false });
+      setSession({
+        loading: false,
+        role: null,
+        clientId: null,
+        email: null,
+        displayName: null,
+        error
+      });
+    };
+
+    const scheduleGracefulLogout = () => {
+      if (pendingLogoutTimerRef.current !== null) {
+        return;
+      }
+      setSession((prev) => (prev.role ? { ...prev, loading: true, error: 'Reconectando sesion...' } : prev));
+      pendingLogoutTimerRef.current = window.setTimeout(() => {
+        pendingLogoutTimerRef.current = null;
+        if (auth.currentUser) {
+          return;
+        }
+        markLoggedOut('Tu sesion expiro. Vuelve a iniciar sesion.');
+      }, 4000);
+    };
+
     void auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((error) => {
       console.error('No se pudo fijar persistencia LOCAL en auth', error);
     });
-  }, []);
 
-  useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) {
-        usePortfolioStore.setState({ canWrite: false, initialized: false });
-        setSession({ loading: false, role: null, clientId: null, email: null, displayName: null, error: null });
+        if (manualLogoutRef.current) {
+          manualLogoutRef.current = false;
+          clearPendingLogoutTimer();
+          markLoggedOut(null);
+          return;
+        }
+        scheduleGracefulLogout();
         return;
       }
 
+      clearPendingLogoutTimer();
       setSession((prev) => (prev.role ? { ...prev, error: null } : { ...prev, loading: true, error: null }));
 
       try {
@@ -1443,7 +1482,10 @@ const AuthShell = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearPendingLogoutTimer();
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -1473,7 +1515,15 @@ const AuthShell = () => {
   };
 
   const handleLogout = async () => {
-    await auth.signOut();
+    manualLogoutRef.current = true;
+    setSession((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      await auth.signOut();
+    } catch (error) {
+      console.error('Error cerrando sesion', error);
+      manualLogoutRef.current = false;
+      setSession((prev) => ({ ...prev, loading: false, error: 'No se pudo cerrar sesion.' }));
+    }
   };
 
   if (session.loading) {
