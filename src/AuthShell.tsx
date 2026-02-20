@@ -775,19 +775,126 @@ const ClientPortal = ({
       ]);
       const doc = new jsPDF({ unit: 'pt', format: 'a4' });
       const now = new Date();
+      const safeName = headerName.replace(/[^a-zA-Z0-9-_]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'cliente';
+
+      const drawSeriesChart = ({
+        title,
+        data,
+        startY,
+        color,
+        valueFormatter,
+        clampZero = false
+      }: {
+        title: string;
+        data: Array<{ label: string; value: number }>;
+        startY: number;
+        color: [number, number, number];
+        valueFormatter: (value: number) => string;
+        clampZero?: boolean;
+      }) => {
+        const panelX = 40;
+        const panelY = startY;
+        const panelW = 515;
+        const panelH = 246;
+        const plotX = panelX + 52;
+        const plotY = panelY + 32;
+        const plotW = panelW - 68;
+        const plotH = panelH - 70;
+
+        doc.setDrawColor(215, 210, 200);
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(panelX, panelY, panelW, panelH, 12, 12, 'FD');
+        doc.setFontSize(11);
+        doc.setTextColor(31, 29, 27);
+        doc.text(title, panelX + 14, panelY + 18);
+
+        if (!data.length) {
+          doc.setFontSize(10);
+          doc.setTextColor(95, 90, 82);
+          doc.text('Sin datos para este grafico.', panelX + 14, panelY + 42);
+          return panelY + panelH + 14;
+        }
+
+        const values = data.map((item) => item.value);
+        let minValue = Math.min(...values);
+        let maxValue = Math.max(...values);
+        if (clampZero) {
+          minValue = Math.min(minValue, 0);
+          maxValue = Math.max(maxValue, 0);
+        }
+        if (Math.abs(maxValue - minValue) < 0.000001) {
+          const pad = Math.max(1, Math.abs(maxValue) * 0.1);
+          minValue -= pad;
+          maxValue += pad;
+        }
+        const pad = (maxValue - minValue) * 0.12;
+        minValue -= pad;
+        maxValue += pad;
+        const range = Math.max(0.000001, maxValue - minValue);
+
+        const yTicks = 4;
+        for (let i = 0; i <= yTicks; i += 1) {
+          const ratio = i / yTicks;
+          const y = plotY + plotH - ratio * plotH;
+          const tickValue = minValue + ratio * range;
+          doc.setDrawColor(231, 227, 218);
+          doc.line(plotX, y, plotX + plotW, y);
+          doc.setFontSize(8);
+          doc.setTextColor(95, 90, 82);
+          doc.text(valueFormatter(tickValue), plotX - 6, y + 3, { align: 'right' });
+        }
+
+        doc.setDrawColor(198, 193, 183);
+        doc.line(plotX, plotY, plotX, plotY + plotH);
+        doc.line(plotX, plotY + plotH, plotX + plotW, plotY + plotH);
+
+        const dataCount = data.length;
+        const xStep = dataCount > 1 ? plotW / (dataCount - 1) : 0;
+        const coords = data.map((item, idx) => {
+          const x = dataCount > 1 ? plotX + idx * xStep : plotX + plotW / 2;
+          const y = plotY + plotH - ((item.value - minValue) / range) * plotH;
+          return { x, y, ...item };
+        });
+
+        doc.setDrawColor(color[0], color[1], color[2]);
+        doc.setLineWidth(1.8);
+        for (let i = 1; i < coords.length; i += 1) {
+          doc.line(coords[i - 1].x, coords[i - 1].y, coords[i].x, coords[i].y);
+        }
+        doc.setLineWidth(1);
+        doc.setFillColor(color[0], color[1], color[2]);
+        coords.forEach((point) => {
+          doc.circle(point.x, point.y, 2.4, 'F');
+        });
+
+        const labelStep = Math.max(1, Math.ceil(dataCount / 6));
+        doc.setFontSize(8);
+        doc.setTextColor(95, 90, 82);
+        coords.forEach((point, idx) => {
+          if (idx % labelStep !== 0 && idx !== coords.length - 1) return;
+          doc.text(point.label, point.x, plotY + plotH + 12, { align: 'center' });
+        });
+
+        const last = coords[coords.length - 1];
+        doc.setFontSize(9);
+        doc.setTextColor(31, 29, 27);
+        doc.text(`Ultimo dato: ${valueFormatter(last.value)}`, panelX + 14, panelY + panelH - 12);
+        return panelY + panelH + 14;
+      };
 
       doc.setFontSize(18);
       doc.text(`Portfolio - ${headerName}`, 40, 44);
       doc.setFontSize(10);
       doc.text(`Cliente: ${headerName}`, 40, 62);
-      doc.text(`ID interno: ${clientId}`, 40, 76);
+      let metaY = 76;
       if (email) {
-        doc.text(`Email: ${email}`, 40, 90);
+        doc.text(`Email: ${email}`, 40, metaY);
+        metaY += 14;
       }
-      doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, 40, 104);
+      doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, 40, metaY);
 
       autoTable(doc, {
-        startY: 118,
+        startY: metaY + 14,
         head: [['KPI', 'Valor']],
         body: [
           ['Saldo actual', formatEuro(overview.currentBalance)],
@@ -802,10 +909,26 @@ const ClientPortal = ({
         styles: { fontSize: 9 }
       });
 
+      doc.addPage();
+      const nextY = drawSeriesChart({
+        title: 'Grafico: Evolucion del saldo mensual',
+        data: balanceSeries,
+        startY: 36,
+        color: [15, 109, 122],
+        valueFormatter: formatEuro
+      });
+      drawSeriesChart({
+        title: 'Grafico: Rentabilidad mensual (TWR)',
+        data: twrSeries,
+        startY: nextY,
+        color: [15, 141, 82],
+        valueFormatter: formatPct,
+        clampZero: true
+      });
+
+      doc.addPage();
       autoTable(doc, {
-        startY: (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY
-          ? ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 16)
-          : 260,
+        startY: 40,
         head: [['Mes', 'Estado', 'Beneficio', 'TWR mensual', 'TWR acumulado ano']],
         body: monthly.map((item) => {
           const twr = twrMonthly.find((row) => row.month === item.month)?.twr ?? 0;
@@ -824,20 +947,18 @@ const ClientPortal = ({
       autoTable(doc, {
         startY: (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY
           ? ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 16)
-          : 400,
-        head: [['Fecha', 'Ingreso', 'Retiro', 'Saldo', 'Beneficio dia', '% dia']],
+          : 300,
+        head: [['Fecha', 'Ingreso', 'Retiro', 'Saldo']],
         body: movementRows.map((row) => [
             new Date(row.iso).toLocaleDateString('es-ES'),
             row.increment ? formatEuro(row.increment) : '-',
             row.decrement ? formatEuro(row.decrement) : '-',
-            row.finalBalance !== null ? formatEuro(row.finalBalance) : '-',
-            row.profit !== null ? formatEuro(row.profit) : '-',
-            row.profitPct !== null ? formatPct(row.profitPct) : '-'
+            row.finalBalance !== null ? formatEuro(row.finalBalance) : '-'
           ]),
         styles: { fontSize: 8 }
       });
 
-      doc.save(`portfolio-${clientId}-${now.toISOString().slice(0, 10)}.pdf`);
+      doc.save(`portfolio-${safeName}-${now.toISOString().slice(0, 10)}.pdf`);
     } catch (pdfError) {
       console.error(pdfError);
       setError('No se pudo generar el PDF.');
