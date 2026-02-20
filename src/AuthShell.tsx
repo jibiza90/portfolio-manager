@@ -1483,6 +1483,7 @@ const AuthShell = () => {
   const [loadingDots, setLoadingDots] = useState('.');
   const pendingLogoutTimerRef = useRef<number | null>(null);
   const manualLogoutRef = useRef(false);
+  const adminUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     const clearPendingLogoutTimer = () => {
@@ -1494,6 +1495,7 @@ const AuthShell = () => {
 
     const markLoggedOut = (error: string | null) => {
       usePortfolioStore.setState({ canWrite: false, initialized: false });
+      adminUidRef.current = null;
       setSession({
         loading: false,
         role: null,
@@ -1538,9 +1540,25 @@ const AuthShell = () => {
       setSession((prev) => (prev.role ? { ...prev, error: null } : { ...prev, loading: true, error: null }));
 
       try {
+        // If this UID was already verified as admin, keep admin session even if
+        // email claims are transiently unavailable.
+        if (adminUidRef.current && adminUidRef.current === user.uid) {
+          usePortfolioStore.getState().setWriteAccess(true);
+          setSession({
+            loading: false,
+            role: 'admin',
+            clientId: null,
+            email: user.email ?? null,
+            displayName: user.displayName ?? null,
+            error: null
+          });
+          return;
+        }
+
         const tokenResult = await user.getIdTokenResult().catch(() => null);
         const tokenEmailClaim = typeof tokenResult?.claims?.email === 'string' ? tokenResult.claims.email : '';
-        const email = normalizeEmail(user.email ?? tokenEmailClaim ?? '');
+        const providerEmail = user.providerData.map((provider) => provider?.email ?? '').find((value) => !!value) ?? '';
+        const email = normalizeEmail(user.email ?? tokenEmailClaim ?? providerEmail ?? '');
         let profile: Awaited<ReturnType<typeof fetchAccessProfile>> = null;
         const adminByEmail = ADMIN_EMAILS.has(email);
 
@@ -1552,6 +1570,7 @@ const AuthShell = () => {
         const isAdmin = adminByEmail || adminByProfile;
 
         if (isAdmin) {
+          adminUidRef.current = user.uid;
           usePortfolioStore.getState().setWriteAccess(true);
           setSession({
             loading: false,
@@ -1648,6 +1667,7 @@ const AuthShell = () => {
 
   const handleLogout = async () => {
     manualLogoutRef.current = true;
+    adminUidRef.current = null;
     setSession((prev) => ({ ...prev, loading: true, error: null }));
     try {
       await auth.signOut();
