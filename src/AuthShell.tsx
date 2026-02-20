@@ -777,7 +777,53 @@ const ClientPortal = ({
       const now = new Date();
       const safeName = headerName.replace(/[^a-zA-Z0-9-_]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'cliente';
 
-      const drawSeriesChart = ({
+      const brand = {
+        teal: [15, 109, 122] as [number, number, number],
+        gold: [242, 196, 95] as [number, number, number],
+        ink: [17, 26, 39] as [number, number, number],
+        text: [31, 29, 27] as [number, number, number],
+        muted: [95, 90, 82] as [number, number, number],
+        border: [215, 210, 200] as [number, number, number],
+        soft: [250, 249, 247] as [number, number, number],
+        green: [15, 141, 82] as [number, number, number],
+        red: [180, 35, 24] as [number, number, number]
+      };
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const marginX = 40;
+      const headerH = 74;
+      const contentTop = headerH + 22;
+
+      const drawHeader = () => {
+        doc.setFillColor(brand.teal[0], brand.teal[1], brand.teal[2]);
+        doc.rect(0, 0, pageWidth, headerH, 'F');
+        doc.setFillColor(brand.gold[0], brand.gold[1], brand.gold[2]);
+        doc.rect(0, headerH - 4, pageWidth, 4, 'F');
+
+        // Simple brand mark
+        doc.setFillColor(brand.gold[0], brand.gold[1], brand.gold[2]);
+        doc.circle(marginX + 14, 30, 10, 'F');
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(1.6);
+        doc.line(marginX + 8, 30, marginX + 20, 30);
+        doc.setLineWidth(1);
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.text('Portfolio Manager', marginX + 34, 22);
+        doc.setFontSize(18);
+        doc.text('Informe de cartera', marginX + 34, 46);
+
+        doc.setFontSize(9);
+        doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, pageWidth - marginX, 22, { align: 'right' });
+        doc.text(`Cliente: ${headerName}`, pageWidth - marginX, 38, { align: 'right' });
+        if (email) {
+          doc.text(`Email: ${email}`, pageWidth - marginX, 54, { align: 'right' });
+        }
+      };
+
+      const drawLineChartPanel = ({
         title,
         data,
         startY,
@@ -792,26 +838,27 @@ const ClientPortal = ({
         valueFormatter: (value: number) => string;
         clampZero?: boolean;
       }) => {
-        const panelX = 40;
+        const panelX = marginX;
         const panelY = startY;
-        const panelW = 515;
-        const panelH = 246;
-        const plotX = panelX + 52;
-        const plotY = panelY + 32;
-        const plotW = panelW - 68;
-        const plotH = panelH - 70;
+        const panelW = pageWidth - marginX * 2;
+        const panelH = 252;
+        const plotX = panelX + 56;
+        const plotY = panelY + 40;
+        const plotW = panelW - 72;
+        const plotH = panelH - 92;
 
-        doc.setDrawColor(215, 210, 200);
+        doc.setDrawColor(brand.border[0], brand.border[1], brand.border[2]);
         doc.setFillColor(255, 255, 255);
-        doc.roundedRect(panelX, panelY, panelW, panelH, 12, 12, 'FD');
-        doc.setFontSize(11);
-        doc.setTextColor(31, 29, 27);
-        doc.text(title, panelX + 14, panelY + 18);
+        doc.roundedRect(panelX, panelY, panelW, panelH, 14, 14, 'FD');
+
+        doc.setFontSize(12);
+        doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
+        doc.text(title, panelX + 16, panelY + 24);
 
         if (!data.length) {
           doc.setFontSize(10);
-          doc.setTextColor(95, 90, 82);
-          doc.text('Sin datos para este grafico.', panelX + 14, panelY + 42);
+          doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
+          doc.text('Sin datos disponibles.', panelX + 16, panelY + 50);
           return panelY + panelH + 14;
         }
 
@@ -840,8 +887,8 @@ const ClientPortal = ({
           doc.setDrawColor(231, 227, 218);
           doc.line(plotX, y, plotX + plotW, y);
           doc.setFontSize(8);
-          doc.setTextColor(95, 90, 82);
-          doc.text(valueFormatter(tickValue), plotX - 6, y + 3, { align: 'right' });
+          doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
+          doc.text(valueFormatter(tickValue), plotX - 8, y + 3, { align: 'right' });
         }
 
         doc.setDrawColor(198, 193, 183);
@@ -857,79 +904,231 @@ const ClientPortal = ({
         });
 
         doc.setDrawColor(color[0], color[1], color[2]);
-        doc.setLineWidth(1.8);
+        doc.setLineWidth(2.2);
         for (let i = 1; i < coords.length; i += 1) {
           doc.line(coords[i - 1].x, coords[i - 1].y, coords[i].x, coords[i].y);
         }
         doc.setLineWidth(1);
         doc.setFillColor(color[0], color[1], color[2]);
         coords.forEach((point) => {
-          doc.circle(point.x, point.y, 2.4, 'F');
+          doc.circle(point.x, point.y, 2.6, 'F');
         });
 
         const labelStep = Math.max(1, Math.ceil(dataCount / 6));
         doc.setFontSize(8);
-        doc.setTextColor(95, 90, 82);
+        doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
         coords.forEach((point, idx) => {
           if (idx % labelStep !== 0 && idx !== coords.length - 1) return;
-          doc.text(point.label, point.x, plotY + plotH + 12, { align: 'center' });
+          doc.text(point.label, point.x, plotY + plotH + 16, { align: 'center' });
         });
 
         const last = coords[coords.length - 1];
         doc.setFontSize(9);
-        doc.setTextColor(31, 29, 27);
-        doc.text(`Ultimo dato: ${valueFormatter(last.value)}`, panelX + 14, panelY + panelH - 12);
+        doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
+        doc.text(`Ultimo dato: ${valueFormatter(last.value)}`, panelX + 16, panelY + panelH - 18);
         return panelY + panelH + 14;
       };
 
-      doc.setFontSize(18);
-      doc.text(`Portfolio - ${headerName}`, 40, 44);
-      doc.setFontSize(10);
-      doc.text(`Cliente: ${headerName}`, 40, 62);
-      let metaY = 76;
-      if (email) {
-        doc.text(`Email: ${email}`, 40, metaY);
-        metaY += 14;
+      const drawTwrBarChartPanel = ({
+        title,
+        data,
+        startY
+      }: {
+        title: string;
+        data: Array<{ label: string; value: number }>;
+        startY: number;
+      }) => {
+        const panelX = marginX;
+        const panelY = startY;
+        const panelW = pageWidth - marginX * 2;
+        const panelH = 252;
+        const plotX = panelX + 56;
+        const plotY = panelY + 40;
+        const plotW = panelW - 72;
+        const plotH = panelH - 92;
+
+        doc.setDrawColor(brand.border[0], brand.border[1], brand.border[2]);
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(panelX, panelY, panelW, panelH, 14, 14, 'FD');
+
+        doc.setFontSize(12);
+        doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
+        doc.text(title, panelX + 16, panelY + 24);
+
+        if (!data.length) {
+          doc.setFontSize(10);
+          doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
+          doc.text('Sin datos disponibles.', panelX + 16, panelY + 50);
+          return panelY + panelH + 14;
+        }
+
+        const maxAbsRaw = Math.max(...data.map((item) => Math.abs(item.value)));
+        const maxAbs = Math.max(0.01, maxAbsRaw * 1.2);
+        const yMin = -maxAbs;
+        const yMax = maxAbs;
+        const yRange = yMax - yMin;
+        const getY = (value: number) => plotY + (1 - (value - yMin) / yRange) * plotH;
+        const zeroY = getY(0);
+
+        const yTicks = [-maxAbs, -maxAbs / 2, 0, maxAbs / 2, maxAbs];
+        yTicks.forEach((tick) => {
+          const y = getY(tick);
+          doc.setDrawColor(tick === 0 ? 170 : 231, tick === 0 ? 164 : 227, tick === 0 ? 152 : 218);
+          doc.line(plotX, y, plotX + plotW, y);
+          doc.setFontSize(8);
+          doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
+          doc.text(formatPct(tick), plotX - 8, y + 3, { align: 'right' });
+        });
+
+        doc.setDrawColor(198, 193, 183);
+        doc.line(plotX, plotY, plotX, plotY + plotH);
+        doc.line(plotX, plotY + plotH, plotX + plotW, plotY + plotH);
+
+        const count = data.length;
+        const xStep = plotW / Math.max(1, count);
+        const barW = Math.min(28, Math.max(10, xStep * 0.62));
+
+        const labelStep = Math.max(1, Math.ceil(count / 6));
+        data.forEach((item, idx) => {
+          const centerX = plotX + xStep * idx + xStep / 2;
+          const valueY = getY(item.value);
+          const topY = Math.min(valueY, zeroY);
+          const bottomY = Math.max(valueY, zeroY);
+          const height = Math.max(2, bottomY - topY);
+          const isPositive = item.value >= 0;
+          const fill = isPositive ? brand.green : brand.red;
+
+          doc.setFillColor(fill[0], fill[1], fill[2]);
+          doc.roundedRect(centerX - barW / 2, topY, barW, height, 6, 6, 'F');
+
+          doc.setFontSize(7.5);
+          doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
+          const labelY = isPositive ? topY - 6 : bottomY + 10;
+          doc.text(formatPct(item.value), centerX, labelY, { align: 'center' });
+
+          if (idx % labelStep === 0 || idx === count - 1) {
+            doc.setFontSize(8);
+            doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
+            doc.text(item.label, centerX, plotY + plotH + 16, { align: 'center' });
+          }
+        });
+
+        doc.setFontSize(9);
+        doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
+        const last = data[data.length - 1];
+        doc.text(`Ultimo dato: ${formatPct(last?.value ?? 0)}`, panelX + 16, panelY + panelH - 18);
+        return panelY + panelH + 14;
+      };
+
+      const tableMargin = { top: contentTop, left: marginX, right: marginX, bottom: 46 };
+      const didDrawPage = () => {
+        drawHeader();
+      };
+      const lastTableY = () => {
+        const lastAutoTable = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable;
+        return lastAutoTable?.finalY ?? contentTop;
+      };
+
+      drawHeader();
+
+      const periodLabel = monthly.length
+        ? `${formatMonthLabel(monthly[0].month)} - ${formatMonthLabel(monthly[monthly.length - 1].month)}`
+        : formatMonthLabel(activeMonthIso);
+      const updatedAtLabel = overview.updatedAt ? new Date(overview.updatedAt).toLocaleDateString('es-ES') : '-';
+
+      const drawInfoCard = (startY: number) => {
+        const cardX = marginX;
+        const cardY = startY;
+        const cardW = pageWidth - marginX * 2;
+        const cardH = 86;
+
+        doc.setDrawColor(brand.border[0], brand.border[1], brand.border[2]);
+        doc.setFillColor(brand.soft[0], brand.soft[1], brand.soft[2]);
+        doc.roundedRect(cardX, cardY, cardW, cardH, 14, 14, 'FD');
+
+        doc.setFontSize(9);
+        doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
+        doc.text('Datos del informe', cardX + 14, cardY + 18);
+
+        const leftX = cardX + 14;
+        const rightX = cardX + Math.round(cardW * 0.56);
+
+        doc.setFontSize(10);
+        doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
+        doc.text(`Cliente: ${headerName}`, leftX, cardY + 40);
+        if (email) {
+          doc.text(`Email: ${email}`, leftX, cardY + 58);
+        }
+
+        doc.text(`Emitido: ${now.toLocaleDateString('es-ES')}`, rightX, cardY + 40);
+        doc.text(`Actualizado: ${updatedAtLabel}`, rightX, cardY + 58);
+        doc.text(`Periodo: ${periodLabel}`, rightX, cardY + 76);
+
+        return cardY + cardH + 18;
+      };
+
+      let cursorY = drawInfoCard(contentTop);
+      doc.setFontSize(12);
+      doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
+      doc.text('KPIs', marginX, cursorY - 6);
+
+      const latestProfitLabel = latestProfitMonth ? `${formatMonthLabel(latestProfitMonth.month)}: ${formatEuro(latestProfitMonth.profit)}` : '-';
+      const latestTwrLabel = latestTwrMonth ? `${formatMonthLabel(latestTwrMonth.month)}: ${formatPct(latestTwrMonth.twr)}` : '-';
+      const kpis = [
+        { label: 'Saldo actual', value: formatEuro(overview.currentBalance) },
+        { label: 'Beneficio total', value: formatEuro(overview.cumulativeProfit) },
+        { label: 'Incrementos totales', value: formatEuro(overview.totalIncrements ?? 0) },
+        { label: 'Decrementos totales', value: formatEuro(overview.totalDecrements ?? 0) },
+        { label: 'Beneficio ultimo mes', value: latestProfitLabel },
+        { label: 'TWR ultimo mes', value: latestTwrLabel },
+        { label: 'TWR acumulado anual (YTD)', value: formatPct(twrYtd) },
+        { label: 'Periodo en curso', value: formatMonthLabel(activeMonthIso) }
+      ];
+      const kpiRows: Array<[string, string, string, string]> = [];
+      for (let i = 0; i < kpis.length; i += 2) {
+        const left = kpis[i];
+        const right = kpis[i + 1];
+        kpiRows.push([left.label, left.value, right.label, right.value]);
       }
-      doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, 40, metaY);
 
       autoTable(doc, {
-        startY: metaY + 14,
-        head: [['KPI', 'Valor']],
-        body: [
-          ['Saldo actual', formatEuro(overview.currentBalance)],
-          ['Beneficio total', formatEuro(overview.cumulativeProfit)],
-          ['Beneficio dia', formatEuro(overview.dailyProfit ?? 0)],
-          ['% dia', formatPct(overview.dailyProfitPct ?? 0)],
-          ['Participacion', formatPct(overview.participation ?? 0)],
-          ['Incrementos totales', formatEuro(overview.totalIncrements ?? 0)],
-          ['Decrementos totales', formatEuro(overview.totalDecrements ?? 0)],
-          ['Rentabilidad acumulada anual (TWR YTD)', formatPct(twrYtd)]
-        ],
-        styles: { fontSize: 9 }
+        startY: cursorY,
+        margin: tableMargin,
+        didDrawPage,
+        head: [['KPI', 'Valor', 'KPI', 'Valor']],
+        body: kpiRows,
+        theme: 'grid',
+        styles: {
+          fontSize: 9,
+          cellPadding: 6,
+          textColor: brand.text,
+          lineColor: brand.border,
+          lineWidth: 0.6
+        },
+        headStyles: {
+          fillColor: brand.ink,
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: brand.soft },
+        columnStyles: {
+          0: { fontStyle: 'bold', textColor: brand.text },
+          1: { halign: 'right' },
+          2: { fontStyle: 'bold', textColor: brand.text },
+          3: { halign: 'right' }
+        }
       });
 
-      doc.addPage();
-      const nextY = drawSeriesChart({
-        title: 'Grafico: Evolucion del saldo mensual',
-        data: balanceSeries,
-        startY: 36,
-        color: [15, 109, 122],
-        valueFormatter: formatEuro
-      });
-      drawSeriesChart({
-        title: 'Grafico: Rentabilidad mensual (TWR)',
-        data: twrSeries,
-        startY: nextY,
-        color: [15, 141, 82],
-        valueFormatter: formatPct,
-        clampZero: true
-      });
+      const monthlyStartY = lastTableY() + 18;
+      doc.setFontSize(12);
+      doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
+      doc.text('Detalle mensual', marginX, monthlyStartY - 6);
 
-      doc.addPage();
       autoTable(doc, {
-        startY: 40,
-        head: [['Mes', 'Estado', 'Beneficio', 'TWR mensual', 'TWR acumulado ano']],
+        startY: monthlyStartY,
+        margin: tableMargin,
+        didDrawPage,
+        head: [['Mes', 'Estado', 'Beneficio', 'TWR mensual', 'TWR acumulado anual']],
         body: monthly.map((item) => {
           const twr = twrMonthly.find((row) => row.month === item.month)?.twr ?? 0;
           const twrCumulative = twrCumulativeByMonth.get(item.month) ?? 0;
@@ -941,22 +1140,119 @@ const ClientPortal = ({
             formatPct(twrCumulative)
           ];
         }),
-        styles: { fontSize: 9 }
+        theme: 'grid',
+        styles: {
+          fontSize: 9,
+          cellPadding: 5,
+          textColor: brand.text,
+          lineColor: brand.border,
+          lineWidth: 0.6
+        },
+        headStyles: {
+          fillColor: brand.teal,
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: brand.soft },
+        columnStyles: {
+          2: { halign: 'right' },
+          3: { halign: 'right' },
+          4: { halign: 'right' }
+        }
       });
 
+      const flowsStartY = lastTableY() + 18;
+      doc.setFontSize(12);
+      doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
+      doc.text('Ingresos y retiradas', marginX, flowsStartY - 6);
+
       autoTable(doc, {
-        startY: (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY
-          ? ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 16)
-          : 300,
+        startY: flowsStartY,
+        margin: tableMargin,
+        didDrawPage,
         head: [['Fecha', 'Ingreso', 'Retiro', 'Saldo']],
         body: movementRows.map((row) => [
-            new Date(row.iso).toLocaleDateString('es-ES'),
-            row.increment ? formatEuro(row.increment) : '-',
-            row.decrement ? formatEuro(row.decrement) : '-',
-            row.finalBalance !== null ? formatEuro(row.finalBalance) : '-'
-          ]),
-        styles: { fontSize: 8 }
+          { content: new Date(row.iso).toLocaleDateString('es-ES') },
+          row.increment
+            ? { content: formatEuro(row.increment), styles: { textColor: brand.green, fontStyle: 'bold', halign: 'right' } }
+            : { content: '-', styles: { textColor: brand.muted, halign: 'right' } },
+          row.decrement
+            ? { content: formatEuro(row.decrement), styles: { textColor: brand.red, fontStyle: 'bold', halign: 'right' } }
+            : { content: '-', styles: { textColor: brand.muted, halign: 'right' } },
+          { content: row.finalBalance !== null ? formatEuro(row.finalBalance) : '-', styles: { halign: 'right' } }
+        ]),
+        theme: 'grid',
+        styles: {
+          fontSize: 8.5,
+          cellPadding: 5,
+          textColor: brand.text,
+          lineColor: brand.border,
+          lineWidth: 0.6
+        },
+        headStyles: {
+          fillColor: brand.ink,
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: brand.soft },
+        columnStyles: {
+          1: { halign: 'right' },
+          2: { halign: 'right' },
+          3: { halign: 'right' }
+        }
       });
+
+      // Charts + data (after tables)
+      doc.addPage();
+      drawHeader();
+      const balanceChartEndY = drawLineChartPanel({
+        title: 'Grafico - Evolucion del saldo mensual',
+        data: balanceSeries,
+        startY: contentTop,
+        color: brand.teal,
+        valueFormatter: formatEuro
+      });
+      autoTable(doc, {
+        startY: balanceChartEndY,
+        margin: tableMargin,
+        didDrawPage,
+        head: [['Mes', 'Saldo fin de mes']],
+        body: balanceSeries.map((row) => [row.label, formatEuro(row.value)]),
+        theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 5, textColor: brand.text, lineColor: brand.border, lineWidth: 0.6 },
+        headStyles: { fillColor: brand.teal, textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: brand.soft },
+        columnStyles: { 1: { halign: 'right' } }
+      });
+
+      doc.addPage();
+      drawHeader();
+      const twrChartEndY = drawTwrBarChartPanel({
+        title: 'Grafico - Rentabilidad mensual (TWR)',
+        data: twrSeries,
+        startY: contentTop
+      });
+      autoTable(doc, {
+        startY: twrChartEndY,
+        margin: tableMargin,
+        didDrawPage,
+        head: [['Mes', 'TWR mensual']],
+        body: twrSeries.map((row) => [row.label, formatPct(row.value)]),
+        theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 5, textColor: brand.text, lineColor: brand.border, lineWidth: 0.6 },
+        headStyles: { fillColor: brand.ink, textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: brand.soft },
+        columnStyles: { 1: { halign: 'right' } }
+      });
+
+      // Footer with pagination
+      const totalPages = doc.getNumberOfPages();
+      for (let page = 1; page <= totalPages; page += 1) {
+        doc.setPage(page);
+        doc.setFontSize(9);
+        doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
+        doc.text(`Pagina ${page} / ${totalPages}`, pageWidth - marginX, pageHeight - 18, { align: 'right' });
+      }
 
       doc.save(`portfolio-${safeName}-${now.toISOString().slice(0, 10)}.pdf`);
     } catch (pdfError) {
