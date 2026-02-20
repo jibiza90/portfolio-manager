@@ -11,6 +11,7 @@ import { useFocusDate } from './hooks/useFocusDate';
 import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
+import { provisionClientAccess } from './services/cloudPortfolio';
 
 const INFO_VIEW = 'INFO_VIEW';
 const COMISIONES_VIEW = 'COMISIONES_VIEW';
@@ -2319,6 +2320,9 @@ function InfoClientes({
   const popupRef = useRef<HTMLDivElement>(null);
   const [guaranteeTooltip, setGuaranteeTooltip] = useState<{ x: number; y: number } | null>(null);
   const [waitlistTooltip, setWaitlistTooltip] = useState<{ x: number; y: number } | null>(null);
+  const [accessPassword, setAccessPassword] = useState('');
+  const [accessBusy, setAccessBusy] = useState(false);
+  const [accessMessage, setAccessMessage] = useState<string | null>(null);
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -2411,6 +2415,11 @@ function InfoClientes({
     document.addEventListener('pointerdown', handler, true);
     return () => document.removeEventListener('pointerdown', handler, true);
   }, [monthPopupKey]);
+
+  useEffect(() => {
+    setAccessPassword('');
+    setAccessMessage(null);
+  }, [selectedId]);
 
   const currentClient = CLIENTS.find((c) => c.id === selectedId);
   const isGeneralView = selectedId === GENERAL_OPTION;
@@ -2533,6 +2542,58 @@ function InfoClientes({
     setSearch('');
     setMonthPopupKey(null);
     window.dispatchEvent(new CustomEvent('show-toast', { detail: `${displayName} eliminado` }));
+  };
+
+  const createClientLogin = async () => {
+    if (!currentClient) return;
+    const email = contact.email.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setAccessMessage('Primero informa un email valido en la ficha del cliente.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Email invalido' }));
+      return;
+    }
+    if (!accessPassword || accessPassword.length < 6) {
+      setAccessMessage('La password debe tener al menos 6 caracteres.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Password demasiado corta' }));
+      return;
+    }
+
+    setAccessBusy(true);
+    setAccessMessage(null);
+    try {
+      const displayName = `${contact.name} ${contact.surname}`.trim() || currentClient.name;
+      const result = await provisionClientAccess({
+        email,
+        password: accessPassword,
+        clientId: currentClient.id,
+        displayName
+      });
+
+      if (!result.ok) {
+        const message =
+          result.reason === 'email_exists_without_profile'
+            ? 'Ese email ya existe en Authentication, pero no tiene perfil en access_profiles. Crea o vincula su perfil desde Firebase Console.'
+            : result.reason === 'password_weak' || result.reason === 'password_short'
+              ? 'La password no cumple requisitos (minimo 6 caracteres).'
+              : 'No se pudo crear/vincular el acceso del cliente.';
+        setAccessMessage(message);
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Error creando acceso' }));
+        return;
+      }
+
+      const message = result.createdAuthUser
+        ? `Acceso creado: ${email}. Ya puede entrar con la password definida.`
+        : `Perfil vinculado: ${email}. Si quieres cambiar password, hazlo en Firebase Authentication.`;
+      setAccessMessage(message);
+      setAccessPassword('');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Acceso cliente listo' }));
+    } catch (error) {
+      console.error(error);
+      setAccessMessage('Error inesperado creando el acceso del cliente.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Error creando acceso' }));
+    } finally {
+      setAccessBusy(false);
+    }
   };
 
   return (
@@ -2722,6 +2783,36 @@ function InfoClientes({
               />
             </label>
             <label>
+              <span>Password acceso (cliente)</span>
+              <input
+                id="client-access-password"
+                name="client-access-password"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Minimo 6 caracteres"
+                value={accessPassword}
+                onChange={(e) => setAccessPassword(e.target.value)}
+              />
+            </label>
+            <label>
+              <span>Acceso cliente</span>
+              <button
+                type="button"
+                className="info-add-btn"
+                onClick={() => { void createClientLogin(); }}
+                disabled={accessBusy}
+                style={{ width: '100%' }}
+              >
+                {accessBusy ? 'Creando...' : 'Crear / Vincular login'}
+              </button>
+            </label>
+            {accessMessage && (
+              <label style={{ gridColumn: '1 / -1' }}>
+                <span>Estado acceso</span>
+                <input value={accessMessage} disabled />
+              </label>
+            )}
+            <label>
               <span>Fecha de alta</span>
               <input
                 id="contact-join-date"
@@ -2760,6 +2851,13 @@ function InfoClientes({
                 placeholder="Resumen de situacion del cliente, objetivos y recordatorios..."
                 value={contact.notes}
                 onChange={(e) => { updateField('notes', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+              />
+            </label>
+            <label style={{ gridColumn: '1 / -1' }}>
+              <span>Nota acceso</span>
+              <input
+                value="El cliente entra en modo solo lectura: no puede editar datos ni ver otros clientes."
+                disabled
               />
             </label>
           </div>
