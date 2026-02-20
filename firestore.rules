@@ -52,12 +52,46 @@ service cloud.firestore {
 
     match /support_threads/{clientId} {
       allow read: if isAdmin() || clientOwns(clientId);
-      allow write: if isAdmin() || clientOwns(clientId);
+      allow create: if isAdmin() || (
+        clientOwns(clientId) &&
+        request.resource.data.clientId == clientId &&
+        request.resource.data.adminUnreadCount is int &&
+        request.resource.data.adminUnreadCount >= 1
+      );
+      allow update: if isAdmin() || (
+        clientOwns(clientId) &&
+        request.resource.data.clientId == clientId &&
+        resource.data.adminUnreadCount is int &&
+        request.resource.data.adminUnreadCount is int &&
+        request.resource.data.adminUnreadCount >= resource.data.adminUnreadCount
+      );
+      allow delete: if isAdmin();
 
       match /messages/{messageId} {
         allow read: if isAdmin() || clientOwns(clientId);
-        allow create: if isAdmin() || clientOwns(clientId);
-        allow update: if isAdmin() || clientOwns(clientId);
+        allow create: if (
+          isAdmin() &&
+          request.resource.data.clientId == clientId &&
+          request.resource.data.senderRole == 'admin'
+        ) || (
+          clientOwns(clientId) &&
+          request.resource.data.clientId == clientId &&
+          request.resource.data.senderRole == 'client' &&
+          request.resource.data.clientRead == true
+        );
+        allow update: if isAdmin() || (
+          clientOwns(clientId) &&
+          resource.data.senderRole == 'admin' &&
+          request.resource.data.senderRole == resource.data.senderRole &&
+          request.resource.data.clientId == resource.data.clientId &&
+          request.resource.data.text == resource.data.text &&
+          request.resource.data.senderName == resource.data.senderName &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.edited == resource.data.edited &&
+          request.resource.data.clientRead == true &&
+          request.resource.data.clientReadAt is int &&
+          request.resource.data.updatedAt is int
+        );
         allow delete: if isAdmin();
       }
     }

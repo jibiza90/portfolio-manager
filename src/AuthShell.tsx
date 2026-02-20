@@ -3,7 +3,7 @@ import App from './App';
 import { CLIENTS } from './constants/clients';
 import { fetchAccessProfile, subscribeClientOverview, syncClientOverviews } from './services/cloudPortfolio';
 import { auth, db, firebase } from './services/firebaseApp';
-import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, subscribeThread, type SupportMessage } from './services/supportInbox';
+import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, type SupportMessage } from './services/supportInbox';
 import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
@@ -700,17 +700,6 @@ const ClientPortal = ({
         setSupportMessages(messages);
       },
       () => setSupportError('No se pudieron cargar tus mensajes.')
-    );
-    return () => unsubscribe();
-  }, [clientId]);
-
-  useEffect(() => {
-    const unsubscribe = subscribeThread(
-      clientId,
-      () => {
-        // Unread count for client is calculated from messages to avoid exposing read-by-admin states.
-      },
-      () => {}
     );
     return () => unsubscribe();
   }, [clientId]);

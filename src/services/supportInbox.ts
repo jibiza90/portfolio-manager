@@ -61,41 +61,6 @@ const mapThread = (doc: firebase.firestore.QueryDocumentSnapshot<firebase.firest
 const threadRef = (clientId: string) => db.collection(THREADS_COLLECTION).doc(clientId);
 const messagesRef = (clientId: string) => threadRef(clientId).collection('messages');
 
-const upsertThreadOnMessage = async ({
-  clientId,
-  clientName,
-  clientEmail,
-  text,
-  senderRole
-}: {
-  clientId: string;
-  clientName: string;
-  clientEmail: string;
-  text: string;
-  senderRole: SupportSenderRole;
-}) => {
-  const now = Date.now();
-  await db.runTransaction(async (tx) => {
-    const tRef = threadRef(clientId);
-    const tSnap = await tx.get(tRef);
-    const prevUnread = Number(tSnap.data()?.adminUnreadCount ?? 0);
-    const nextUnread = senderRole === 'client' ? prevUnread + 1 : prevUnread;
-    tx.set(
-      tRef,
-      {
-        clientId,
-        clientName,
-        clientEmail,
-        lastMessageText: text,
-        lastMessageAt: now,
-        updatedAt: now,
-        adminUnreadCount: nextUnread
-      },
-      { merge: true }
-    );
-  });
-};
-
 export const sendSupportMessage = async ({
   clientId,
   clientName,
@@ -114,25 +79,43 @@ export const sendSupportMessage = async ({
   const cleanText = normalizeText(text);
   if (!cleanText) return;
   const now = Date.now();
+  const tRef = threadRef(clientId);
+  const mRef = messagesRef(clientId).doc();
 
-  await upsertThreadOnMessage({
-    clientId,
-    clientName,
-    clientEmail,
-    text: cleanText,
-    senderRole
-  });
+  await db.runTransaction(async (tx) => {
+    const tSnap = await tx.get(tRef);
+    const prevUnread = Number(tSnap.data()?.adminUnreadCount ?? 0);
+    const nextUnread = senderRole === 'client' ? prevUnread + 1 : prevUnread;
 
-  await messagesRef(clientId).add({
-    clientId,
-    senderRole,
-    senderName: senderName.trim(),
-    text: cleanText,
-    createdAt: now,
-    updatedAt: now,
-    clientRead: senderRole === 'client',
-    clientReadAt: senderRole === 'client' ? now : null,
-    edited: false
+    tx.set(
+      mRef,
+      {
+        clientId,
+        senderRole,
+        senderName: senderName.trim(),
+        text: cleanText,
+        createdAt: now,
+        updatedAt: now,
+        clientRead: senderRole === 'client',
+        clientReadAt: senderRole === 'client' ? now : null,
+        edited: false
+      },
+      { merge: false }
+    );
+
+    tx.set(
+      tRef,
+      {
+        clientId,
+        clientName,
+        clientEmail,
+        lastMessageText: cleanText,
+        lastMessageAt: now,
+        updatedAt: now,
+        adminUnreadCount: nextUnread
+      },
+      { merge: true }
+    );
   });
 };
 
@@ -159,9 +142,12 @@ export const editAdminSupportMessage = async ({
     },
     { merge: true }
   );
+  const latestMessage = await messagesRef(clientId).orderBy('createdAt', 'desc').limit(1).get();
+  const latest = latestMessage.docs[0]?.data() ?? null;
   await threadRef(clientId).set(
     {
-      lastMessageText: cleanText,
+      lastMessageText: String(latest?.text ?? cleanText),
+      lastMessageAt: Number(latest?.createdAt ?? now),
       updatedAt: now
     },
     { merge: true }
@@ -256,4 +242,3 @@ export const subscribeThread = (
     },
     (error) => onError(error)
   );
-

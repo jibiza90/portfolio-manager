@@ -2017,6 +2017,11 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
           lastMessageAt: thread?.lastMessageAt ?? 0,
           lastMessageText: thread?.lastMessageText ?? ''
         };
+      }).sort((a, b) => {
+        const unreadDiff = (b.unread > 0 ? 1 : 0) - (a.unread > 0 ? 1 : 0);
+        if (unreadDiff !== 0) return unreadDiff;
+        if (a.lastMessageAt !== b.lastMessageAt) return b.lastMessageAt - a.lastMessageAt;
+        return a.name.localeCompare(b.name, 'es');
       }),
     [threads, contacts]
   );
@@ -2219,7 +2224,7 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
                   onClick={() => setDraft(template)}
                   style={{ border: '1px solid #d7d2c8', borderRadius: 999, background: '#fff', padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
                 >
-                  Plantilla
+                  {template.length > 34 ? `${template.slice(0, 34)}...` : template}
                 </button>
               ))}
             </div>
