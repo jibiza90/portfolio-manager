@@ -34,6 +34,18 @@ interface ClientOverview {
   }>;
 }
 
+const palette = {
+  bg: '#f2f0ea',
+  text: '#1f1d1b',
+  muted: '#5f5a52',
+  card: '#ffffff',
+  cardAlt: '#f7f4ee',
+  border: '#d7d2c8',
+  accent: '#0f6d7a',
+  accentText: '#ffffff',
+  error: '#b42318'
+};
+
 const formatEuro = (value: number) =>
   new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value);
 
@@ -44,24 +56,57 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
   const [password, setPassword] = useState('');
 
   return (
-    <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 16 }}>
-      <section style={{ width: '100%', maxWidth: 420, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20, background: 'rgba(11,14,22,0.95)' }}>
-        <h1 style={{ marginTop: 0, marginBottom: 8 }}>Portfolio Manager</h1>
-        <p style={{ marginTop: 0, opacity: 0.8 }}>Accede con tu cuenta para ver tus datos.</p>
+    <main
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        padding: 16,
+        background: `radial-gradient(circle at top left, rgba(15,109,122,0.14), transparent 45%), ${palette.bg}`,
+        color: palette.text
+      }}
+    >
+      <section
+        style={{
+          width: '100%',
+          maxWidth: 430,
+          border: `1px solid ${palette.border}`,
+          borderRadius: 16,
+          padding: 22,
+          background: palette.card,
+          boxShadow: '0 20px 45px rgba(20, 24, 31, 0.12)'
+        }}
+      >
+        <h1 style={{ marginTop: 0, marginBottom: 8, color: palette.text }}>Portfolio Manager</h1>
+        <p style={{ marginTop: 0, marginBottom: 14, color: palette.muted }}>
+          Accede con tu cuenta para ver tus datos.
+        </p>
         <div style={{ display: 'grid', gap: 10 }}>
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            style={{ padding: 10, borderRadius: 8, border: '1px solid rgba(255,255,255,0.16)', background: '#0f1320', color: '#fff' }}
+            style={{
+              padding: 11,
+              borderRadius: 10,
+              border: `1px solid ${palette.border}`,
+              background: '#ffffff',
+              color: palette.text
+            }}
           />
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            style={{ padding: 10, borderRadius: 8, border: '1px solid rgba(255,255,255,0.16)', background: '#0f1320', color: '#fff' }}
+            style={{
+              padding: 11,
+              borderRadius: 10,
+              border: `1px solid ${palette.border}`,
+              background: '#ffffff',
+              color: palette.text
+            }}
           />
           <button
             type="button"
@@ -69,11 +114,20 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
               void onLogin(email, password);
             }}
             disabled={busy || !email.trim() || !password}
-            style={{ padding: 11, borderRadius: 9, border: 0, fontWeight: 600, background: '#28a4ff', color: '#041220', cursor: 'pointer' }}
+            style={{
+              padding: 11,
+              borderRadius: 10,
+              border: 0,
+              fontWeight: 600,
+              background: palette.accent,
+              color: palette.accentText,
+              cursor: 'pointer',
+              opacity: busy ? 0.75 : 1
+            }}
           >
             {busy ? 'Entrando...' : 'Entrar'}
           </button>
-          {error ? <p style={{ margin: 0, color: '#ff8a8a' }}>{error}</p> : null}
+          {error ? <p style={{ margin: 0, color: palette.error, fontWeight: 600 }}>{error}</p> : null}
         </div>
       </section>
     </main>
@@ -104,24 +158,60 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
   const clientName = useMemo(() => overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId, [clientId, overview]);
 
   return (
-    <main style={{ minHeight: '100vh', padding: '24px 16px', maxWidth: 980, margin: '0 auto' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+    <main
+      style={{
+        minHeight: '100vh',
+        padding: '24px 16px',
+        maxWidth: 980,
+        margin: '0 auto',
+        background: `radial-gradient(circle at top right, rgba(15,109,122,0.12), transparent 40%), ${palette.bg}`,
+        color: palette.text
+      }}
+    >
+      <header
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 12,
+          marginBottom: 20,
+          border: `1px solid ${palette.border}`,
+          background: palette.card,
+          borderRadius: 14,
+          padding: '12px 14px'
+        }}
+      >
         <div>
-          <h1 style={{ margin: 0 }}>Area Cliente</h1>
-          <p style={{ margin: '6px 0 0 0', opacity: 0.75 }}>{clientName} · {clientId}</p>
+          <h1 style={{ margin: 0, color: palette.text }}>Area Cliente</h1>
+          <p style={{ margin: '6px 0 0 0', color: palette.muted }}>
+            {clientName} - {clientId}
+          </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, opacity: 0.75 }}>{email ?? ''}</span>
-          <button type="button" onClick={() => { void onLogout(); }} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff' }}>
+          <span style={{ fontSize: 13, color: palette.muted }}>{email ?? ''}</span>
+          <button
+            type="button"
+            onClick={() => {
+              void onLogout();
+            }}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 10,
+              border: 0,
+              background: palette.accent,
+              color: palette.accentText,
+              fontWeight: 600
+            }}
+          >
             Salir
           </button>
         </div>
       </header>
 
-      {error ? <p style={{ color: '#ff8a8a' }}>{error}</p> : null}
-      {!loaded ? <p style={{ opacity: 0.7 }}>Cargando tu resumen...</p> : null}
+      {error ? <p style={{ color: palette.error, fontWeight: 600 }}>{error}</p> : null}
+      {!loaded ? <p style={{ color: palette.muted }}>Cargando tu resumen...</p> : null}
       {loaded && !overview ? (
-        <p style={{ opacity: 0.8 }}>
+        <p style={{ color: palette.muted }}>
           Aun no hay resumen publicado para tu cuenta. El administrador debe sincronizar tus datos.
         </p>
       ) : null}
@@ -129,43 +219,43 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
       {overview ? (
         <>
           <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', marginBottom: 18 }}>
-            <article style={{ padding: 14, borderRadius: 12, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(14,19,31,0.9)' }}>
-              <p style={{ margin: 0, opacity: 0.75 }}>Saldo actual</p>
-              <h3 style={{ margin: '8px 0 0 0' }}>{formatEuro(overview.currentBalance)}</h3>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Saldo actual</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.currentBalance)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(14,19,31,0.9)' }}>
-              <p style={{ margin: 0, opacity: 0.75 }}>Beneficio acumulado</p>
-              <h3 style={{ margin: '8px 0 0 0' }}>{formatEuro(overview.cumulativeProfit)}</h3>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Beneficio acumulado</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.cumulativeProfit)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(14,19,31,0.9)' }}>
-              <p style={{ margin: 0, opacity: 0.75 }}>Rentabilidad YTD</p>
-              <h3 style={{ margin: '8px 0 0 0' }}>{formatPct(overview.ytdReturnPct ?? 0)}</h3>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Rentabilidad YTD</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.ytdReturnPct ?? 0)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(14,19,31,0.9)' }}>
-              <p style={{ margin: 0, opacity: 0.75 }}>Actualizado</p>
-              <h3 style={{ margin: '8px 0 0 0', fontSize: 16 }}>{new Date(overview.updatedAt).toLocaleString('es-ES')}</h3>
+            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+              <p style={{ margin: 0, color: palette.muted }}>Actualizado</p>
+              <h3 style={{ margin: '8px 0 0 0', fontSize: 16, color: palette.text }}>{new Date(overview.updatedAt).toLocaleString('es-ES')}</h3>
             </article>
           </section>
 
-          <section style={{ borderRadius: 12, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(14,19,31,0.9)', overflow: 'hidden' }}>
-            <div style={{ padding: 14, borderBottom: '1px solid rgba(255,255,255,0.09)' }}>
+          <section style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.cardAlt, overflow: 'hidden' }}>
+            <div style={{ padding: 14, borderBottom: `1px solid ${palette.border}` }}>
               <strong>Ultimos movimientos</strong>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'left', padding: 12 }}>Fecha</th>
-                    <th style={{ textAlign: 'right', padding: 12 }}>Ingreso</th>
-                    <th style={{ textAlign: 'right', padding: 12 }}>Retiro</th>
-                    <th style={{ textAlign: 'right', padding: 12 }}>Saldo</th>
-                    <th style={{ textAlign: 'right', padding: 12 }}>Beneficio día</th>
+                    <th style={{ textAlign: 'left', padding: 12, color: palette.muted }}>Fecha</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Ingreso</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Retiro</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Saldo</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Beneficio dia</th>
                   </tr>
                 </thead>
                 <tbody>
                   {overview.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: 12, opacity: 0.7 }}>Sin movimientos recientes.</td>
+                      <td colSpan={5} style={{ padding: 12, color: palette.muted }}>Sin movimientos recientes.</td>
                     </tr>
                   ) : (
                     overview.rows
@@ -173,11 +263,11 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
                       .reverse()
                       .map((row) => (
                         <tr key={row.iso}>
-                          <td style={{ padding: 12 }}>{new Date(row.iso).toLocaleDateString('es-ES')}</td>
-                          <td style={{ padding: 12, textAlign: 'right' }}>{row.increment ? formatEuro(row.increment) : '—'}</td>
-                          <td style={{ padding: 12, textAlign: 'right' }}>{row.decrement ? formatEuro(row.decrement) : '—'}</td>
-                          <td style={{ padding: 12, textAlign: 'right' }}>{row.finalBalance !== null ? formatEuro(row.finalBalance) : '—'}</td>
-                          <td style={{ padding: 12, textAlign: 'right' }}>{row.profit !== null ? formatEuro(row.profit) : '—'}</td>
+                          <td style={{ padding: 12, borderTop: `1px solid ${palette.border}` }}>{new Date(row.iso).toLocaleDateString('es-ES')}</td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.increment ? formatEuro(row.increment) : '-'}</td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.decrement ? formatEuro(row.decrement) : '-'}</td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.finalBalance !== null ? formatEuro(row.finalBalance) : '-'}</td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.profit !== null ? formatEuro(row.profit) : '-'}</td>
                         </tr>
                       ))
                   )}
@@ -233,7 +323,7 @@ const AuthShell = () => {
         setSession({ loading: false, role: 'client', clientId: profile.clientId, email: user.email, error: null });
       } catch (error) {
         console.error(error);
-        setSession({ loading: false, role: null, clientId: null, email: null, error: 'Error validando tu sesión.' });
+        setSession({ loading: false, role: null, clientId: null, email: null, error: 'Error validando tu sesion.' });
       }
     });
 
@@ -246,7 +336,7 @@ const AuthShell = () => {
       setSession((prev) => ({ ...prev, error: null }));
       await auth.signInWithEmailAndPassword(email.trim(), password);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo iniciar sesión';
+      const message = error instanceof Error ? error.message : 'No se pudo iniciar sesion';
       setSession((prev) => ({ ...prev, error: message }));
     } finally {
       setLoginBusy(false);
@@ -258,7 +348,11 @@ const AuthShell = () => {
   };
 
   if (session.loading) {
-    return <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>Cargando sesión...</main>;
+    return (
+      <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: palette.text }}>
+        Cargando sesion...
+      </main>
+    );
   }
 
   if (!session.role) {
@@ -271,9 +365,38 @@ const AuthShell = () => {
 
   return (
     <>
-      <div style={{ position: 'fixed', top: 10, right: 12, zIndex: 9999, display: 'flex', gap: 8, alignItems: 'center', background: 'rgba(2,8,18,0.85)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 999, padding: '6px 10px' }}>
-        <span style={{ fontSize: 12, opacity: 0.75 }}>{session.email}</span>
-        <button type="button" onClick={() => { void handleLogout(); }} style={{ border: 0, borderRadius: 999, padding: '6px 10px', background: '#2d8cff', color: '#031120', fontWeight: 600 }}>
+      <div
+        style={{
+          position: 'fixed',
+          top: 10,
+          right: 12,
+          zIndex: 9999,
+          display: 'flex',
+          gap: 8,
+          alignItems: 'center',
+          background: '#ffffff',
+          border: `1px solid ${palette.border}`,
+          borderRadius: 999,
+          padding: '6px 10px',
+          color: palette.text,
+          boxShadow: '0 10px 24px rgba(0, 0, 0, 0.08)'
+        }}
+      >
+        <span style={{ fontSize: 12, color: palette.muted }}>{session.email}</span>
+        <button
+          type="button"
+          onClick={() => {
+            void handleLogout();
+          }}
+          style={{
+            border: 0,
+            borderRadius: 999,
+            padding: '6px 10px',
+            background: palette.accent,
+            color: palette.accentText,
+            fontWeight: 600
+          }}
+        >
           Salir
         </button>
       </div>
