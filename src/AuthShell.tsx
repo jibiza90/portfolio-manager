@@ -304,10 +304,16 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
           justify-content: space-between;
           gap: 22px;
         }
+        .pmBrandIntro {
+          display: grid;
+          gap: 18px;
+          align-content: start;
+        }
         .pmLogo {
           display: flex;
           align-items: center;
           gap: 14px;
+          margin-bottom: 2px;
         }
         .pmMark {
           width: 52px;
@@ -320,23 +326,24 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
         }
         .pmTitle {
           margin: 0;
-          font-size: clamp(34px, 4vw, 56px);
-          line-height: 1.02;
-          letter-spacing: -0.03em;
+          font-size: clamp(30px, 3.7vw, 48px);
+          line-height: 1.08;
+          letter-spacing: -0.025em;
           color: #111a27;
-          max-width: 15ch;
+          max-width: 14ch;
         }
         .pmCopy {
           margin: 0;
           color: #465362;
-          line-height: 1.7;
-          max-width: 60ch;
-          font-size: 15px;
+          line-height: 1.75;
+          max-width: 54ch;
+          font-size: 15.5px;
         }
         .pmPills {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px;
+          gap: 12px;
+          margin-top: 2px;
         }
         .pmPill {
           border: 1px solid rgba(36, 43, 54, 0.14);
@@ -511,6 +518,9 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
           .pmTitle {
             max-width: none;
           }
+          .pmBrandIntro {
+            gap: 14px;
+          }
         }
         @media (max-width: 720px) {
           .pmPills {
@@ -522,7 +532,7 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
       <div className="pmLoginWrap">
         <section className="pmShell">
           <div className="pmBrand" aria-label="Panel de marca">
-            <div>
+            <div className="pmBrandIntro">
               <div className="pmLogo">
                 <div className="pmMark" aria-hidden="true">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -541,13 +551,12 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
 
               <h1 className="pmTitle">Accede a tu cartera en segundos.</h1>
               <p className="pmCopy">
-                Inicia sesion para ver tu informe, KPIs y movimientos.
-                Si eres cliente, veras solo tu informacion. Si eres administrador, tendras acceso completo.
+                Inicia sesion para ver tu informe, KPIs y movimientos en un panel claro y actualizado en tiempo real.
               </p>
 
               <div className="pmPills" aria-label="Caracteristicas">
                 <div className="pmPill"><i /> KPIs claros</div>
-                <div className="pmPill"><i /> Cliente: solo lectura</div>
+                <div className="pmPill"><i /> Comunicacion directa con administracion</div>
                 <div className="pmPill"><i /> PDF con un clic</div>
                 <div className="pmPill"><i /> Historico con trazabilidad</div>
               </div>
