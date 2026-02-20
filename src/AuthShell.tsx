@@ -5,7 +5,8 @@ import { fetchAccessProfile, subscribeClientOverview, syncClientOverviews } from
 import { auth } from './services/firebaseApp';
 import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
 
-const ADMIN_EMAILS = new Set(['jibiza90@gmail.com', 'jpujola@alogroup.es']);
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+const ADMIN_EMAILS = new Set(['jibiza90@gmail.com', 'jpujola@alogroup.es'].map(normalizeEmail));
 
 type Role = 'admin' | 'client';
 
@@ -1369,7 +1370,7 @@ const AuthShell = () => {
       }
 
       try {
-        const email = (user.email ?? '').toLowerCase();
+        const email = normalizeEmail(user.email ?? '');
         const isAdmin = ADMIN_EMAILS.has(email);
 
         if (isAdmin) {
@@ -1432,7 +1433,7 @@ const AuthShell = () => {
     try {
       setLoginBusy(true);
       setSession((prev) => ({ ...prev, error: null }));
-      await auth.signInWithEmailAndPassword(email.trim(), password);
+      await auth.signInWithEmailAndPassword(normalizeEmail(email), password);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo iniciar sesion';
       setSession((prev) => ({ ...prev, error: message }));
