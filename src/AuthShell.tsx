@@ -90,14 +90,23 @@ const Sparkline = ({ values, color = '#0f6d7a' }: { values: number[]; color?: st
   const min = Math.min(...safeValues);
   const max = Math.max(...safeValues);
   const range = Math.max(1, max - min);
+  const gradientId = `spark-${color.replace('#', '')}`;
   const points = safeValues.map((value, idx) => {
     const x = pad + (idx / Math.max(1, safeValues.length - 1)) * (width - pad * 2);
     const y = height - pad - ((value - min) / range) * (height - pad * 2);
     return `${x},${y}`;
   });
+  const areaPoints = `${pad},${height - pad} ${points.join(' ')} ${width - pad},${height - pad}`;
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 120, display: 'block' }}>
+      <defs>
+        <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.24} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
+      <polygon points={areaPoints} fill={`url(#${gradientId})`} />
       <polyline points={points.join(' ')} fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
       {points.map((point, idx) => {
         const [x, y] = point.split(',').map(Number);
@@ -161,6 +170,56 @@ const VerticalBars = ({ data, color = '#0f6d7a' }: { data: Array<{ label: string
     </div>
   );
 };
+
+const ChartTypeSelector = ({
+  value,
+  onChange
+}: {
+  value: 'line' | 'bars';
+  onChange: (value: 'line' | 'bars') => void;
+}) => (
+  <div
+    style={{
+      display: 'inline-flex',
+      border: `1px solid ${palette.border}`,
+      borderRadius: 999,
+      background: '#ffffff'
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => onChange('line')}
+      style={{
+        border: 0,
+        background: value === 'line' ? palette.accent : 'transparent',
+        color: value === 'line' ? palette.accentText : palette.text,
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        padding: '6px 12px',
+        cursor: 'pointer'
+      }}
+    >
+      Linea
+    </button>
+    <button
+      type="button"
+      onClick={() => onChange('bars')}
+      style={{
+        border: 0,
+        background: value === 'bars' ? palette.accent : 'transparent',
+        color: value === 'bars' ? palette.accentText : palette.text,
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 700,
+        padding: '6px 12px',
+        cursor: 'pointer'
+      }}
+    >
+      Barras
+    </button>
+  </div>
+);
 
 const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password: string) => Promise<void>; busy: boolean; error: string | null }) => {
   const [email, setEmail] = useState('');
@@ -250,7 +309,10 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
-  const [chartType, setChartType] = useState<'line' | 'bars'>('line');
+  const [balanceChartType, setBalanceChartType] = useState<'line' | 'bars'>('line');
+  const [returnChartType, setReturnChartType] = useState<'line' | 'bars'>('line');
+  const [kpiHint, setKpiHint] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [flowPopup, setFlowPopup] = useState<'inc' | 'dec' | null>(null);
 
   useEffect(() => {
     const unsubscribe = subscribeClientOverview(
@@ -289,9 +351,13 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
   );
   const twrYtd = overview?.twrYtd ?? overview?.ytdReturnPct ?? 0;
   const currentMonthIso = currentMonthIsoMadrid();
+  const latestMonthIso = monthly.length ? monthly[monthly.length - 1].month : null;
+  const activeMonthIso =
+    latestMonthIso && latestMonthIso > currentMonthIso ? latestMonthIso : currentMonthIso;
   const monthEndBalance = useMemo(() => {
     const map = new Map<string, number>();
-    for (const row of overview?.rows ?? []) {
+    const orderedRows = [...(overview?.rows ?? [])].sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
+    for (const row of orderedRows) {
       const month = row.iso.slice(0, 7);
       if (row.finalBalance !== null) {
         map.set(month, row.finalBalance);
@@ -318,9 +384,26 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
   const movementRows = useMemo(
     () =>
       (overview?.rows ?? [])
-        .filter((row) => (row.increment ?? 0) !== 0 || (row.decrement ?? 0) !== 0),
+        .filter((row) => (row.increment ?? 0) !== 0 || (row.decrement ?? 0) !== 0)
+        .slice()
+        .sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0)),
     [overview?.rows]
   );
+  const incrementDetailRows = useMemo(
+    () => movementRows.filter((row) => (row.increment ?? 0) > 0).slice(-24).reverse(),
+    [movementRows]
+  );
+  const decrementDetailRows = useMemo(
+    () => movementRows.filter((row) => (row.decrement ?? 0) > 0).slice(-24).reverse(),
+    [movementRows]
+  );
+
+  const showKpiHint = (event: React.MouseEvent<HTMLElement>, text: string) => {
+    setKpiHint({ text, x: event.clientX + 12, y: event.clientY + 12 });
+  };
+  const moveKpiHint = (event: React.MouseEvent<HTMLElement>) => {
+    setKpiHint((prev) => (prev ? { ...prev, x: event.clientX + 12, y: event.clientY + 12 } : prev));
+  };
 
   const downloadClientPdf = async () => {
     if (!overview) return;
@@ -365,7 +448,7 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
           const twr = twrMonthly.find((row) => row.month === item.month)?.twr ?? 0;
           return [
             formatMonthLabel(item.month),
-            item.month === currentMonthIso ? 'En curso' : 'Cerrado',
+            item.month === activeMonthIso ? 'En curso' : 'Cerrado',
             formatEuro(item.profit),
             formatPct(item.retPct),
             formatPct(twr)
@@ -473,34 +556,27 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
         </div>
       </header>
 
-      <section
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 10,
-          marginBottom: 14,
-          background: palette.card,
-          border: `1px solid ${palette.border}`,
-          borderRadius: 12,
-          padding: '10px 12px'
-        }}
-      >
-        <p style={{ margin: 0, color: palette.muted, fontSize: 13 }}>
-          Si un mes esta <strong>en curso</strong>, su rentabilidad cambia cada dia. Al empezar el mes siguiente, ese mes queda <strong>cerrado</strong>.
-        </p>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: palette.text, fontSize: 13 }}>
-          Tipo grafico
-          <select
-            value={chartType}
-            onChange={(event) => setChartType(event.target.value as 'line' | 'bars')}
-            style={{ borderRadius: 8, border: `1px solid ${palette.border}`, padding: '4px 8px', background: '#fff', color: palette.text }}
-          >
-            <option value="line">Linea</option>
-            <option value="bars">Barras</option>
-          </select>
-        </label>
-      </section>
+      {kpiHint ? (
+        <div
+          style={{
+            position: 'fixed',
+            left: kpiHint.x,
+            top: kpiHint.y,
+            zIndex: 2000,
+            maxWidth: 280,
+            pointerEvents: 'none',
+            background: '#111827',
+            color: '#ffffff',
+            fontSize: 12,
+            lineHeight: 1.35,
+            borderRadius: 10,
+            padding: '8px 10px',
+            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.28)'
+          }}
+        >
+          {kpiHint.text}
+        </div>
+      ) : null}
 
       {error ? <p style={{ color: palette.error, fontWeight: 600 }}>{error}</p> : null}
       {!loaded ? <p style={{ color: palette.muted }}>Cargando tu resumen...</p> : null}
@@ -514,56 +590,118 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
         <>
           <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', marginBottom: 18 }}>
             <article
-              title="Cuanto dinero total tienes ahora mismo en tu cuenta de inversion."
+              onMouseEnter={(event) => showKpiHint(event, 'Cuanto dinero total tienes ahora mismo en tu cuenta de inversion.')}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Saldo actual</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.currentBalance)}</h3>
             </article>
             <article
-              title="Dinero ganado o perdido sumando todo el ano."
+              onMouseEnter={(event) => showKpiHint(event, 'Dinero ganado o perdido sumando todo el ano.')}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Beneficio total</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.cumulativeProfit)}</h3>
             </article>
             <article
-              title="Cuanto ganaste o perdiste solo en el ultimo dia con datos."
+              onMouseEnter={(event) => showKpiHint(event, 'Cuanto ganaste o perdiste solo en el ultimo dia con datos.')}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Beneficio dia</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.dailyProfit ?? 0)}</h3>
             </article>
             <article
-              title="Porcentaje ganado o perdido en el ultimo dia con datos, comparado contra el dinero que habia ese dia."
+              onMouseEnter={(event) => showKpiHint(event, 'Porcentaje ganado o perdido en el ultimo dia comparado con el dinero que habia ese dia.')}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>% dia</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.dailyProfitPct ?? 0)}</h3>
             </article>
             <article
-              title="Que parte del total de la cartera representas. Si sube, tu peso en el total tambien sube."
+              onMouseEnter={(event) => showKpiHint(event, 'Que parte del total de la cartera representas.')}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Participacion</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.participation ?? 0)}</h3>
             </article>
             <article
-              title="Suma de todas tus entradas de dinero del ano."
-              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+              onMouseEnter={(event) => {
+                showKpiHint(event, 'Suma de todas tus entradas de dinero del ano.');
+                setFlowPopup('inc');
+              }}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => {
+                setKpiHint(null);
+                setFlowPopup((prev) => (prev === 'inc' ? null : prev));
+              }}
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, position: 'relative' }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Incrementos totales</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.totalIncrements ?? 0)}</h3>
+              {flowPopup === 'inc' ? (
+                <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, zIndex: 70, width: 340, maxHeight: 260, overflow: 'auto', background: '#fff', border: `1px solid ${palette.border}`, borderRadius: 12, boxShadow: '0 18px 34px rgba(0,0,0,0.14)', padding: 10 }}>
+                  <strong style={{ fontSize: 12 }}>Detalle incrementos</strong>
+                  <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                    {incrementDetailRows.length === 0 ? (
+                      <span style={{ color: palette.muted, fontSize: 12 }}>Sin incrementos.</span>
+                    ) : (
+                      incrementDetailRows.map((row) => (
+                        <div key={`inc-${row.iso}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, fontSize: 12 }}>
+                          <span>{new Date(row.iso).toLocaleDateString('es-ES')}</span>
+                          <strong style={{ color: '#0f8d52' }}>{row.increment ? formatEuro(row.increment) : '-'}</strong>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </article>
             <article
-              title="Suma de todas tus retiradas de dinero del ano."
-              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+              onMouseEnter={(event) => {
+                showKpiHint(event, 'Suma de todas tus retiradas de dinero del ano.');
+                setFlowPopup('dec');
+              }}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => {
+                setKpiHint(null);
+                setFlowPopup((prev) => (prev === 'dec' ? null : prev));
+              }}
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, position: 'relative' }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Decrementos totales</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.totalDecrements ?? 0)}</h3>
+              {flowPopup === 'dec' ? (
+                <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, zIndex: 70, width: 340, maxHeight: 260, overflow: 'auto', background: '#fff', border: `1px solid ${palette.border}`, borderRadius: 12, boxShadow: '0 18px 34px rgba(0,0,0,0.14)', padding: 10 }}>
+                  <strong style={{ fontSize: 12 }}>Detalle decrementos</strong>
+                  <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                    {decrementDetailRows.length === 0 ? (
+                      <span style={{ color: palette.muted, fontSize: 12 }}>Sin decrementos.</span>
+                    ) : (
+                      decrementDetailRows.map((row) => (
+                        <div key={`dec-${row.iso}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, fontSize: 12 }}>
+                          <span>{new Date(row.iso).toLocaleDateString('es-ES')}</span>
+                          <strong style={{ color: '#b42318' }}>{row.decrement ? formatEuro(row.decrement) : '-'}</strong>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </article>
             <article
-              title="Lo ganado o perdido en el ultimo mes con datos."
+              onMouseEnter={(event) => showKpiHint(event, 'Lo ganado o perdido en el ultimo mes con datos.')}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Beneficio mensual</p>
@@ -573,7 +711,9 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
               </p>
             </article>
             <article
-              title="Porcentaje de ganancia del mes. Se calcula comparando lo ganado ese mes con el dinero base de ese mes."
+              onMouseEnter={(event) => showKpiHint(event, 'Porcentaje de ganancia del mes frente al dinero base de ese mismo mes.')}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Rentabilidad mensual</p>
@@ -583,7 +723,9 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
               </p>
             </article>
             <article
-              title="Rentabilidad TWR: mide rendimiento real evitando que las entradas y salidas de dinero falseen el porcentaje."
+              onMouseEnter={(event) => showKpiHint(event, 'TWR mide el rendimiento real evitando que entradas y salidas distorsionen el resultado.')}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Rentabilidad TWR</p>
@@ -591,14 +733,18 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
               <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>YTD</p>
             </article>
             <article
-              title="Rentabilidad acumulada del ano en porcentaje."
+              onMouseEnter={(event) => showKpiHint(event, 'YTD es la rentabilidad acumulada del ano usando el resultado final respecto al capital base.')}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Rentabilidad YTD</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.ytdReturnPct ?? 0)}</h3>
             </article>
             <article
-              title="Fecha y hora de la ultima actualizacion de tus datos."
+              onMouseEnter={(event) => showKpiHint(event, 'Fecha y hora de la ultima actualizacion de tus datos.')}
+              onMouseMove={moveKpiHint}
+              onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Actualizado</p>
@@ -606,24 +752,88 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
             </article>
           </section>
 
+          <section
+            style={{
+              marginBottom: 16,
+              border: `1px solid ${palette.border}`,
+              background: '#ffffff',
+              borderRadius: 12,
+              padding: 12
+            }}
+          >
+            <strong style={{ display: 'block', marginBottom: 10 }}>Diferencia entre rentabilidad TWR y YTD</strong>
+            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))' }}>
+              <article style={{ border: `1px solid ${palette.border}`, borderRadius: 10, padding: 10, background: '#f8fbfd' }}>
+                <strong style={{ display: 'block', marginBottom: 6 }}>TWR</strong>
+                <p style={{ margin: 0, color: palette.muted, fontSize: 13 }}>
+                  Mide el rendimiento real de tu estrategia y evita que entradas o salidas de dinero distorsionen el dato.
+                </p>
+              </article>
+              <article style={{ border: `1px solid ${palette.border}`, borderRadius: 10, padding: 10, background: '#fbf8f2' }}>
+                <strong style={{ display: 'block', marginBottom: 6 }}>YTD</strong>
+                <p style={{ margin: 0, color: palette.muted, fontSize: 13 }}>
+                  Es la rentabilidad acumulada del ano sobre el capital base. Sirve para ver el resultado anual total.
+                </p>
+              </article>
+            </div>
+          </section>
+
           <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', marginBottom: 16 }}>
-            <article style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, padding: 14 }}>
-              <p style={{ margin: 0, color: palette.muted }}>Grafico de saldo mensual</p>
-              <h4 style={{ margin: '8px 0 6px', color: palette.text }}>Evolucion de balance</h4>
-              {chartType === 'line' ? (
+            <article
+              style={{
+                borderRadius: 14,
+                border: `1px solid ${palette.border}`,
+                background: 'linear-gradient(180deg, #ffffff 0%, #f5fbfd 100%)',
+                padding: 14,
+                boxShadow: '0 12px 26px rgba(15, 109, 122, 0.10)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <div>
+                  <p style={{ margin: 0, color: palette.muted }}>Grafico de saldo mensual</p>
+                  <h4 style={{ margin: '6px 0 0', color: palette.text }}>Evolucion de balance</h4>
+                </div>
+                <ChartTypeSelector value={balanceChartType} onChange={setBalanceChartType} />
+              </div>
+              {balanceSeries.length === 0 ? (
+                <p style={{ margin: 0, color: palette.muted }}>Aun no hay datos de saldo mensual.</p>
+              ) : balanceChartType === 'line' ? (
                 <Sparkline values={balanceSeries.map((row) => row.value)} color="#0f6d7a" />
               ) : (
                 <VerticalBars data={balanceSeries} color="#0f6d7a" />
               )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, color: palette.muted }}>
+                <span>Meses con datos: {balanceSeries.length}</span>
+                <span>{balanceSeries.length ? `Ultimo: ${formatEuro(balanceSeries[balanceSeries.length - 1].value)}` : ''}</span>
+              </div>
             </article>
-            <article style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, padding: 14 }}>
-              <p style={{ margin: 0, color: palette.muted }}>Grafico de rentabilidad mensual</p>
-              <h4 style={{ margin: '8px 0 10px', color: palette.text }}>Tendencia por mes</h4>
-              {chartType === 'line' ? (
-                <Sparkline values={returnSeries.map((row) => row.value)} color="#0f6d7a" />
+            <article
+              style={{
+                borderRadius: 14,
+                border: `1px solid ${palette.border}`,
+                background: 'linear-gradient(180deg, #ffffff 0%, #f9f7ff 100%)',
+                padding: 14,
+                boxShadow: '0 12px 26px rgba(70, 38, 140, 0.08)'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <div>
+                  <p style={{ margin: 0, color: palette.muted }}>Grafico de rentabilidad mensual</p>
+                  <h4 style={{ margin: '6px 0 0', color: palette.text }}>Tendencia por mes</h4>
+                </div>
+                <ChartTypeSelector value={returnChartType} onChange={setReturnChartType} />
+              </div>
+              {returnSeries.length === 0 ? (
+                <p style={{ margin: 0, color: palette.muted }}>Aun no hay datos de rentabilidad mensual.</p>
+              ) : returnChartType === 'line' ? (
+                <Sparkline values={returnSeries.map((row) => row.value)} color="#4a2f8f" />
               ) : (
                 <HorizontalBars data={returnSeries} />
               )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, color: palette.muted }}>
+                <span>Meses con datos: {returnSeries.length}</span>
+                <span>{returnSeries.length ? `Ultimo: ${formatPct(returnSeries[returnSeries.length - 1].value)}` : ''}</span>
+              </div>
             </article>
           </section>
 
@@ -654,7 +864,7 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
                         <tr key={month.month}>
                           <td style={{ padding: 12, borderTop: `1px solid ${palette.border}` }}>{formatMonthLabel(month.month)}</td>
                           <td style={{ padding: 12, borderTop: `1px solid ${palette.border}`, color: palette.muted }}>
-                            {month.month === currentMonthIso ? 'En curso' : 'Cerrado'}
+                            {month.month === activeMonthIso ? 'En curso' : 'Cerrado'}
                           </td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatEuro(month.profit)}</td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatPct(month.retPct)}</td>
@@ -685,19 +895,21 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
                   </tr>
                 </thead>
                 <tbody>
-                  {overview.rows.length === 0 ? (
+                  {movementRows.length === 0 ? (
                     <tr>
                       <td colSpan={6} style={{ padding: 12, color: palette.muted }}>Sin movimientos recientes.</td>
                     </tr>
                   ) : (
                     movementRows
-                      .slice()
-                      .reverse()
                       .map((row) => (
                         <tr key={row.iso}>
                           <td style={{ padding: 12, borderTop: `1px solid ${palette.border}` }}>{new Date(row.iso).toLocaleDateString('es-ES')}</td>
-                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.increment ? formatEuro(row.increment) : '-'}</td>
-                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.decrement ? formatEuro(row.decrement) : '-'}</td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}`, color: row.increment ? '#0f8d52' : palette.muted, fontWeight: row.increment ? 700 : 400 }}>
+                            {row.increment ? formatEuro(row.increment) : '-'}
+                          </td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}`, color: row.decrement ? '#b42318' : palette.muted, fontWeight: row.decrement ? 700 : 400 }}>
+                            {row.decrement ? formatEuro(row.decrement) : '-'}
+                          </td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.finalBalance !== null ? formatEuro(row.finalBalance) : '-'}</td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.profit !== null ? formatEuro(row.profit) : '-'}</td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.profitPct !== null ? formatPct(row.profitPct) : '-'}</td>
