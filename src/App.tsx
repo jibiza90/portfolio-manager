@@ -2844,13 +2844,6 @@ function InfoClientes({
                 <input value={accessMessage} disabled />
               </label>
             )}
-            <label style={{ gridColumn: '1 / -1' }}>
-              <span>Seguridad password</span>
-              <input
-                value="La password actual del cliente no se puede leer ni mostrar. Solo se puede crear una nueva cuenta o enviar reset."
-                disabled
-              />
-            </label>
             <label>
               <span>Fecha de alta</span>
               <input

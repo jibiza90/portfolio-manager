@@ -1417,7 +1417,9 @@ const AuthShell = () => {
       setSession((prev) => (prev.role ? { ...prev, error: null } : { ...prev, loading: true, error: null }));
 
       try {
-        const email = normalizeEmail(user.email ?? '');
+        const tokenResult = await user.getIdTokenResult().catch(() => null);
+        const tokenEmailClaim = typeof tokenResult?.claims?.email === 'string' ? tokenResult.claims.email : '';
+        const email = normalizeEmail(user.email ?? tokenEmailClaim ?? '');
         let profile: Awaited<ReturnType<typeof fetchAccessProfile>> = null;
         const adminByEmail = ADMIN_EMAILS.has(email);
 
@@ -1430,8 +1432,17 @@ const AuthShell = () => {
 
         if (isAdmin) {
           usePortfolioStore.getState().setWriteAccess(true);
-          await initializePortfolioStore();
-          setSession({ loading: false, role: 'admin', clientId: null, email: user.email, displayName: user.displayName ?? null, error: null });
+          setSession({
+            loading: false,
+            role: 'admin',
+            clientId: null,
+            email: user.email ?? tokenEmailClaim ?? null,
+            displayName: user.displayName ?? null,
+            error: null
+          });
+          void initializePortfolioStore().catch((initError) => {
+            console.error('Admin store init failed', initError);
+          });
           // Sync in background to avoid blocking admin login UX.
           void syncClientOverviews(usePortfolioStore.getState().snapshot, CLIENTS).catch((syncError) => {
             console.error('Background admin sync failed', syncError);
