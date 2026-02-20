@@ -251,327 +251,370 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
   return (
     <main className="pmLoginRoot">
       <style>{`
-        .pmLoginRoot{
-          min-height:100vh;
-          padding:20px;
-          color:#1f1d1b;
+        .pmLoginRoot {
+          min-height: 100vh;
+          padding: clamp(16px, 2vw, 28px);
+          color: #1f1d1b;
           background:
-            radial-gradient(900px 520px at 12% 12%, rgba(15,109,122,.14), transparent 55%),
-            radial-gradient(800px 460px at 88% 14%, rgba(230,183,86,.20), transparent 58%),
-            radial-gradient(780px 440px at 35% 88%, rgba(52,151,176,.10), transparent 60%),
-            linear-gradient(180deg, #f8fbff 0%, #f3efe7 100%);
+            radial-gradient(1200px 700px at 6% 8%, rgba(15, 109, 122, 0.16), transparent 58%),
+            radial-gradient(900px 620px at 94% 10%, rgba(240, 195, 104, 0.26), transparent 54%),
+            radial-gradient(940px 620px at 50% 100%, rgba(86, 173, 196, 0.12), transparent 62%),
+            linear-gradient(180deg, #f5f9ff 0%, #f6efe3 100%);
         }
-        .pmLoginWrap{
-          max-width:1240px;
-          margin:0 auto;
-          display:grid;
-          grid-template-columns:1.1fr .9fr;
-          gap:26px;
-          align-items:stretch;
+        .pmLoginWrap {
+          max-width: 1260px;
+          margin: 0 auto;
         }
-        .pmBrand,.pmCard{
-          border-radius:24px;
-          border:1px solid rgba(31,29,27,.14);
-          background:linear-gradient(180deg, rgba(255,255,255,.84) 0%, rgba(250,246,238,.82) 100%);
-          backdrop-filter: blur(10px);
-          box-shadow:0 24px 52px rgba(20,24,31,.12);
+        .pmShell {
+          position: relative;
+          overflow: hidden;
+          border-radius: 32px;
+          border: 1px solid rgba(36, 43, 54, 0.16);
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(252, 248, 241, 0.88));
+          box-shadow:
+            0 34px 70px rgba(22, 27, 39, 0.16),
+            inset 0 1px 0 rgba(255, 255, 255, 0.85);
+          display: grid;
+          grid-template-columns: 1.18fr 0.82fr;
+          min-height: 680px;
         }
-        .pmBrand{
-          padding:30px;
-          position:relative;
-          overflow:hidden;
-        }
-        .pmBrand::before{
-          content:"";
-          position:absolute;
-          inset:-30% -18%;
-          pointer-events:none;
+        .pmShell::before {
+          content: "";
+          position: absolute;
+          inset: -35% -18%;
+          pointer-events: none;
           background:
-            radial-gradient(540px 240px at 20% 15%, rgba(230,183,86,.24), transparent 65%),
-            radial-gradient(460px 240px at 78% 22%, rgba(46,143,169,.16), transparent 64%);
-          filter:blur(6px);
+            radial-gradient(680px 260px at 16% 16%, rgba(250, 196, 94, 0.26), transparent 64%),
+            radial-gradient(760px 340px at 76% 18%, rgba(66, 166, 191, 0.2), transparent 66%),
+            radial-gradient(500px 260px at 54% 84%, rgba(76, 146, 187, 0.14), transparent 70%);
+          filter: blur(10px);
         }
-        .pmBrand > *{ position:relative; z-index:1; }
-        .pmLogo{
-          display:flex;
-          align-items:center;
-          gap:12px;
-          margin-bottom:18px;
+        .pmShell > * {
+          position: relative;
+          z-index: 1;
         }
-        .pmMark{
-          width:44px;
-          height:44px;
-          border-radius:14px;
-          display:grid;
-          place-items:center;
-          background:linear-gradient(145deg, rgba(230,183,86,.95), rgba(52,151,176,.70));
-          box-shadow:0 14px 26px rgba(52,151,176,.24);
+        .pmBrand {
+          padding: clamp(24px, 3vw, 40px);
+          border-right: 1px solid rgba(36, 43, 54, 0.12);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          gap: 22px;
         }
-        .pmBrand h1{
-          margin:0;
-          font-size:36px;
-          line-height:1.08;
-          letter-spacing:-.02em;
-          color:#16222e;
+        .pmLogo {
+          display: flex;
+          align-items: center;
+          gap: 14px;
         }
-        .pmBrand p{
-          margin:12px 0 0;
-          color:#4f5a64;
-          line-height:1.62;
-          max-width:62ch;
+        .pmMark {
+          width: 52px;
+          height: 52px;
+          border-radius: 16px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(145deg, #f2c45f, #56b4cb);
+          box-shadow: 0 16px 34px rgba(50, 122, 153, 0.24);
         }
-        .pmPills{
-          margin-top:20px;
-          display:grid;
-          gap:10px;
-          grid-template-columns:repeat(2, minmax(0, 1fr));
+        .pmTitle {
+          margin: 0;
+          font-size: clamp(34px, 4vw, 56px);
+          line-height: 1.02;
+          letter-spacing: -0.03em;
+          color: #111a27;
+          max-width: 15ch;
         }
-        .pmPill{
-          border:1px solid rgba(31,29,27,.13);
-          border-radius:999px;
-          background:rgba(255,255,255,.86);
-          padding:10px 12px;
-          font-size:13px;
-          font-weight:650;
-          display:flex;
-          align-items:center;
-          gap:8px;
-          color:#243342;
+        .pmCopy {
+          margin: 0;
+          color: #465362;
+          line-height: 1.7;
+          max-width: 60ch;
+          font-size: 15px;
         }
-        .pmPill i{
-          width:9px;
-          height:9px;
-          border-radius:999px;
-          background:#0f8d52;
-          box-shadow:0 0 0 4px rgba(15,141,82,.14);
-          display:inline-block;
+        .pmPills {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
         }
-        .pmLegal{
-          margin-top:20px;
-          color:#6c746f;
-          font-size:12px;
+        .pmPill {
+          border: 1px solid rgba(36, 43, 54, 0.14);
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.86);
+          padding: 10px 12px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #233247;
+          display: flex;
+          align-items: center;
+          gap: 9px;
         }
-        .pmCard{
-          padding:24px;
-          align-self:center;
+        .pmPill i {
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          background: #0f8d52;
+          box-shadow: 0 0 0 4px rgba(15, 141, 82, 0.16);
+          display: inline-block;
         }
-        .pmCardHead{
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          gap:10px;
-          margin-bottom:16px;
+        .pmBand {
+          border-radius: 16px;
+          border: 1px solid rgba(36, 43, 54, 0.14);
+          background: linear-gradient(90deg, rgba(15, 109, 122, 0.12), rgba(82, 169, 194, 0.06));
+          padding: 12px 14px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #2f4b63;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
         }
-        .pmCardTitle{
-          margin:0;
-          font-size:12px;
-          letter-spacing:.16em;
-          text-transform:uppercase;
-          color:#68737f;
-          font-weight:800;
+        .pmLegal {
+          color: #6a7178;
+          font-size: 12px;
+          margin-top: 2px;
         }
-        .pmStatus{
-          border:1px solid rgba(31,29,27,.12);
-          border-radius:999px;
-          padding:7px 10px;
-          font-size:12px;
-          color:#4f5a64;
-          background:#ffffff;
-          display:flex;
-          align-items:center;
-          gap:7px;
+        .pmCard {
+          padding: clamp(22px, 2.4vw, 36px);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(247, 250, 255, 0.58));
         }
-        .pmStatus i{
-          width:8px;
-          height:8px;
-          border-radius:999px;
-          background:#0f8d52;
-          box-shadow:0 0 0 4px rgba(15,141,82,.14);
-          display:inline-block;
+        .pmCardHead {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 18px;
         }
-        .pmField{
-          margin-bottom:12px;
+        .pmCardTitle {
+          margin: 0;
+          font-size: 12px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: #6a737d;
+          font-weight: 800;
         }
-        .pmLabel{
-          display:block;
-          margin-bottom:6px;
-          color:#5d6873;
-          font-size:12px;
-          font-weight:760;
-          letter-spacing:.14em;
-          text-transform:uppercase;
+        .pmStatus {
+          border: 1px solid rgba(36, 43, 54, 0.12);
+          border-radius: 999px;
+          padding: 8px 11px;
+          font-size: 12px;
+          color: #4a5a67;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          font-weight: 700;
         }
-        .pmControl{
-          position:relative;
+        .pmStatus i {
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: #0f8d52;
+          box-shadow: 0 0 0 4px rgba(15, 141, 82, 0.14);
+          display: inline-block;
         }
-        .pmInput{
-          width:100%;
-          border:1px solid rgba(31,29,27,.16);
-          border-radius:14px;
-          background:#ffffff;
-          color:#1f1d1b;
-          padding:13px 42px 13px 12px;
-          font-size:14px;
-          outline:none;
-          transition:border-color .18s ease, box-shadow .18s ease;
+        .pmField {
+          margin-bottom: 13px;
         }
-        .pmInput:focus{
-          border-color:#0f6d7a;
-          box-shadow:0 0 0 4px rgba(15,109,122,.14);
+        .pmLabel {
+          display: block;
+          margin-bottom: 7px;
+          color: #5b6874;
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 0.13em;
+          text-transform: uppercase;
         }
-        .pmIconBtn{
-          position:absolute;
-          right:8px;
-          top:50%;
-          transform:translateY(-50%);
-          width:30px;
-          height:30px;
-          border-radius:10px;
-          border:1px solid rgba(31,29,27,.14);
-          background:#f9fbfd;
-          color:#4f5a64;
-          cursor:pointer;
-          font-size:12px;
+        .pmControl {
+          position: relative;
         }
-        .pmSubmit{
-          margin-top:12px;
-          width:100%;
-          border:0;
-          border-radius:14px;
-          padding:13px;
-          background:linear-gradient(135deg, #0f6d7a, #52a9c2);
-          color:#ffffff;
-          font-weight:760;
-          letter-spacing:.08em;
-          text-transform:uppercase;
-          cursor:pointer;
-          box-shadow:0 16px 34px rgba(15,109,122,.24);
-          transition:transform .14s ease, opacity .14s ease;
+        .pmInput {
+          width: 100%;
+          border: 1px solid rgba(36, 43, 54, 0.18);
+          border-radius: 15px;
+          background: #ffffff;
+          color: #1f1d1b;
+          padding: 13px 44px 13px 13px;
+          font-size: 14px;
+          outline: none;
+          transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
         }
-        .pmSubmit:disabled{
-          cursor:not-allowed;
-          opacity:.66;
-          transform:none;
+        .pmInput:focus {
+          border-color: #0f6d7a;
+          box-shadow: 0 0 0 4px rgba(15, 109, 122, 0.14);
+          transform: translateY(-1px);
         }
-        .pmSubmit:not(:disabled):active{
-          transform:translateY(1px);
+        .pmIconBtn {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 31px;
+          height: 31px;
+          border-radius: 10px;
+          border: 1px solid rgba(36, 43, 54, 0.14);
+          background: #f8fbff;
+          color: #4f5a64;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 700;
         }
-        .pmError{
-          margin-top:10px;
-          border-radius:12px;
-          border:1px solid rgba(180,35,24,.34);
-          background:rgba(180,35,24,.09);
-          color:#9e2017;
-          padding:10px 12px;
-          font-size:13px;
-          font-weight:650;
+        .pmSubmit {
+          margin-top: 14px;
+          width: 100%;
+          border: 0;
+          border-radius: 15px;
+          padding: 14px;
+          background: linear-gradient(135deg, #0f6d7a, #4aa8c2);
+          color: #ffffff;
+          font-weight: 800;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          cursor: pointer;
+          box-shadow: 0 20px 36px rgba(15, 109, 122, 0.28);
+          transition: transform 0.14s ease, opacity 0.14s ease, box-shadow 0.18s ease;
         }
-        @media (max-width:980px){
-          .pmLoginWrap{
-            grid-template-columns:1fr;
+        .pmSubmit:disabled {
+          cursor: not-allowed;
+          opacity: 0.66;
+          transform: none;
+          box-shadow: none;
+        }
+        .pmSubmit:not(:disabled):hover {
+          box-shadow: 0 22px 42px rgba(15, 109, 122, 0.34);
+        }
+        .pmSubmit:not(:disabled):active {
+          transform: translateY(1px);
+        }
+        .pmError {
+          margin-top: 12px;
+          border-radius: 12px;
+          border: 1px solid rgba(180, 35, 24, 0.34);
+          background: rgba(180, 35, 24, 0.09);
+          color: #9e2017;
+          padding: 10px 12px;
+          font-size: 13px;
+          font-weight: 650;
+        }
+        @media (max-width: 1100px) {
+          .pmShell {
+            grid-template-columns: 1fr;
+            min-height: auto;
           }
-          .pmBrand h1{
-            font-size:30px;
+          .pmBrand {
+            border-right: 0;
+            border-bottom: 1px solid rgba(36, 43, 54, 0.12);
+          }
+          .pmTitle {
+            max-width: none;
           }
         }
-        @media (max-width:560px){
-          .pmPills{
-            grid-template-columns:1fr;
+        @media (max-width: 720px) {
+          .pmPills {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
 
       <div className="pmLoginWrap">
-        <section className="pmBrand" aria-label="Panel de marca">
-          <div className="pmLogo">
-            <div className="pmMark" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2l8.5 5v10L12 22 3.5 17V7L12 2Z" stroke="rgba(255,255,255,.95)" strokeWidth="1.6" />
-                <path d="M7.2 14.1 12 16.9l4.8-2.8" stroke="rgba(255,255,255,.92)" strokeWidth="1.6" strokeLinecap="round" />
-                <path d="M12 6.5v10.4" stroke="rgba(255,255,255,.86)" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </div>
+        <section className="pmShell">
+          <div className="pmBrand" aria-label="Panel de marca">
             <div>
-              <strong style={{ display: 'block', color: '#1d2938', fontSize: 18 }}>Portfolio Manager</strong>
-              <span style={{ fontSize: 12, color: '#62707d', letterSpacing: '.12em', textTransform: 'uppercase' }}>
-                Client & Admin Access
-              </span>
-            </div>
-          </div>
+              <div className="pmLogo">
+                <div className="pmMark" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2l8.5 5v10L12 22 3.5 17V7L12 2Z" stroke="rgba(255,255,255,.95)" strokeWidth="1.6" />
+                    <path d="M7.2 14.1 12 16.9l4.8-2.8" stroke="rgba(255,255,255,.92)" strokeWidth="1.6" strokeLinecap="round" />
+                    <path d="M12 6.5v10.4" stroke="rgba(255,255,255,.86)" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <div>
+                  <strong style={{ display: 'block', color: '#1d2938', fontSize: 20, letterSpacing: '-.01em' }}>Portfolio Manager</strong>
+                  <span style={{ fontSize: 12, color: '#62707d', letterSpacing: '.14em', textTransform: 'uppercase' }}>
+                    Client and Admin Access
+                  </span>
+                </div>
+              </div>
 
-          <h1>Acceso seguro para revisar cartera, KPIs y reportes en segundos.</h1>
-          <p>
-            Entra con tu cuenta para ver tus datos. Los clientes solo pueden leer su informacion.
-            El administrador mantiene el control total de la gestion y las publicaciones.
-          </p>
+              <h1 className="pmTitle">Acceso premium para datos financieros con control total.</h1>
+              <p className="pmCopy">
+                Acceso seguro para revisar cartera, KPIs y reportes en segundos.
+                Entra con tu cuenta para ver tus datos. Los clientes solo pueden leer su informacion.
+                El administrador mantiene el control total de la gestion y las publicaciones.
+              </p>
 
-          <div className="pmPills" aria-label="Caracteristicas">
-            <div className="pmPill"><i /> Lectura segura de datos</div>
-            <div className="pmPill"><i /> Perfil cliente de solo lectura</div>
-            <div className="pmPill"><i /> Exportacion PDF desde panel</div>
-            <div className="pmPill"><i /> Historial con trazabilidad</div>
-          </div>
-
-          <div className="pmLegal">© {currentYear} Portfolio Manager</div>
-        </section>
-
-        <section className="pmCard" aria-label="Formulario de acceso">
-          <div className="pmCardHead">
-            <h2 className="pmCardTitle">Client Access</h2>
-            <div className="pmStatus"><i /> Secure Session</div>
-          </div>
-
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void onLogin(email, password);
-            }}
-            noValidate
-          >
-            <div className="pmField">
-              <label className="pmLabel" htmlFor="pmEmail">Correo</label>
-              <div className="pmControl">
-                <input
-                  id="pmEmail"
-                  className="pmInput"
-                  type="email"
-                  autoComplete="username"
-                  placeholder="nombre@dominio.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
+              <div className="pmPills" aria-label="Caracteristicas">
+                <div className="pmPill"><i /> Lectura segura de datos</div>
+                <div className="pmPill"><i /> Perfil cliente de solo lectura</div>
+                <div className="pmPill"><i /> Exportacion PDF desde panel</div>
+                <div className="pmPill"><i /> Historial con trazabilidad</div>
               </div>
             </div>
 
-            <div className="pmField">
-              <label className="pmLabel" htmlFor="pmPass">Contrasena</label>
-              <div className="pmControl">
-                <input
-                  id="pmPass"
-                  className="pmInput"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  placeholder="••••••••••••"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-                <button
-                  type="button"
-                  className="pmIconBtn"
-                  aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
-                  onClick={() => setShowPassword((prev) => !prev)}
-                >
-                  {showPassword ? 'Oc' : 'Ver'}
-                </button>
-              </div>
+            <div>
+              <div className="pmBand">Secure Session Mode</div>
+              <div className="pmLegal">(c) {currentYear} Portfolio Manager</div>
+            </div>
+          </div>
+
+          <section className="pmCard" aria-label="Formulario de acceso">
+            <div className="pmCardHead">
+              <h2 className="pmCardTitle">Client Access</h2>
+              <div className="pmStatus"><i /> Secure Session</div>
             </div>
 
-            <button className="pmSubmit" type="submit" disabled={busy || !email.trim() || !password}>
-              {busy ? 'Verificando...' : 'Iniciar sesion'}
-            </button>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void onLogin(email, password);
+              }}
+              noValidate
+            >
+              <div className="pmField">
+                <label className="pmLabel" htmlFor="pmEmail">Correo</label>
+                <div className="pmControl">
+                  <input
+                    id="pmEmail"
+                    className="pmInput"
+                    type="email"
+                    autoComplete="username"
+                    placeholder="nombre@dominio.com"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                </div>
+              </div>
 
-            {error ? <div className="pmError">{error}</div> : null}
-          </form>
+              <div className="pmField">
+                <label className="pmLabel" htmlFor="pmPass">Contrasena</label>
+                <div className="pmControl">
+                  <input
+                    id="pmPass"
+                    className="pmInput"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="************"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="pmIconBtn"
+                    aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                    onClick={() => setShowPassword((prev) => !prev)}
+                  >
+                    {showPassword ? 'Oc' : 'Ver'}
+                  </button>
+                </div>
+              </div>
+
+              <button className="pmSubmit" type="submit" disabled={busy || !email.trim() || !password}>
+                {busy ? 'Verificando...' : 'Iniciar sesion'}
+              </button>
+
+              {error ? <div className="pmError">{error}</div> : null}
+            </form>
+          </section>
         </section>
       </div>
     </main>
