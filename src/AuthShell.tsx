@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import App from './App';
 import { CLIENTS } from './constants/clients';
 import { fetchAccessProfile, subscribeClientOverview, syncClientOverviews } from './services/cloudPortfolio';
-import { auth } from './services/firebaseApp';
+import { auth, firebase } from './services/firebaseApp';
 import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
@@ -1362,6 +1362,12 @@ const AuthShell = () => {
   const [loadingDots, setLoadingDots] = useState('.');
 
   useEffect(() => {
+    void auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((error) => {
+      console.error('No se pudo fijar persistencia LOCAL en auth', error);
+    });
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) {
         usePortfolioStore.setState({ canWrite: false, initialized: false });
@@ -1369,11 +1375,19 @@ const AuthShell = () => {
         return;
       }
 
-      setSession((prev) => ({ ...prev, loading: true, error: null }));
+      setSession((prev) => (prev.role ? { ...prev, error: null } : { ...prev, loading: true, error: null }));
 
       try {
         const email = normalizeEmail(user.email ?? '');
-        const isAdmin = ADMIN_EMAILS.has(email);
+        let profile: Awaited<ReturnType<typeof fetchAccessProfile>> = null;
+        const adminByEmail = ADMIN_EMAILS.has(email);
+
+        if (!adminByEmail) {
+          profile = await fetchAccessProfile(user.uid);
+        }
+
+        const adminByProfile = profile?.role === 'admin' && profile.active !== false;
+        const isAdmin = adminByEmail || adminByProfile;
 
         if (isAdmin) {
           usePortfolioStore.getState().setWriteAccess(true);
@@ -1386,7 +1400,9 @@ const AuthShell = () => {
           return;
         }
 
-        const profile = await fetchAccessProfile(user.uid);
+        if (!profile) {
+          profile = await fetchAccessProfile(user.uid);
+        }
         if (!profile || profile.active === false || profile.role !== 'client' || !profile.clientId) {
           await auth.signOut();
           setSession({
@@ -1412,14 +1428,18 @@ const AuthShell = () => {
         });
       } catch (error) {
         console.error(error);
-        setSession({
-          loading: false,
-          role: null,
-          clientId: null,
-          email: null,
-          displayName: null,
-          error: 'Error validando tu sesion.'
-        });
+        setSession((prev) =>
+          prev.role
+            ? { ...prev, loading: false, error: 'Conexion inestable. Intentando recuperar sesion...' }
+            : {
+                loading: false,
+                role: null,
+                clientId: null,
+                email: null,
+                displayName: null,
+                error: 'Error validando tu sesion.'
+              }
+        );
       }
     });
 
@@ -1437,7 +1457,7 @@ const AuthShell = () => {
   const handleLogin = async (email: string, password: string) => {
     try {
       setLoginBusy(true);
-      setSession((prev) => ({ ...prev, loading: true, error: null }));
+      setSession((prev) => ({ ...prev, error: null }));
       await auth.signInWithEmailAndPassword(normalizeEmail(email), password);
     } catch (error) {
       let message = 'No se pudo iniciar sesion';
