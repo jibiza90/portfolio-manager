@@ -1,5 +1,5 @@
-// Importar db desde cloudPortfolio para asegurar que Firebase está inicializado con settings
-import { db } from './cloudPortfolio';
+// Importar db desde cloudPortfolio para asegurar que Firebase estÃ¡ inicializado con settings
+import { db } from './firebaseApp';
 
 export interface ReportData {
   clientId: string;
@@ -35,7 +35,7 @@ export interface ReportData {
   expiresAt: number;
 }
 
-// Generar token único
+// Generar token Ãºnico
 const generateToken = (): string => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let token = '';
@@ -75,3 +75,4 @@ export const getReportByToken = async (token: string): Promise<ReportData | null
 
   return data;
 };
+

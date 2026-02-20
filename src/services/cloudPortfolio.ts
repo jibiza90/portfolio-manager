@@ -1,111 +1,108 @@
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/firestore';
-import { PersistedState } from '../types';
+import { PersistedState, PortfolioSnapshot } from '../types';
+import { db } from './firebaseApp';
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: 'AIzaSyDBRpCpb2xj_iHQh8JiLv0xRKjfWJj0Az8',
-  authDomain: 'portfolio-manager-b40b8.firebaseapp.com',
-  projectId: 'portfolio-manager-b40b8',
-  storageBucket: 'portfolio-manager-b40b8.firebasestorage.app',
-  messagingSenderId: '286094409889',
-  appId: '1:286094409889:web:74337eabc0e336a02930e0'
-};
-
-// REST API base URL para Firestore
-const FIRESTORE_REST_URL = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents`;
 const DOC_PATH = 'portfolio/state';
-
-// Inicializar Firebase para reportLinks (que usa db)
-let app: firebase.app.App;
-if (!firebase.apps.length) {
-  app = firebase.initializeApp(firebaseConfig);
-} else {
-  app = firebase.app();
-}
-export const db = app.firestore();
+const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
 
 const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {} };
 
-// Convertir valor JS a formato Firestore REST
-const toFirestoreValue = (val: unknown): unknown => {
-  if (val === null || val === undefined) return { nullValue: null };
-  if (typeof val === 'string') return { stringValue: val };
-  if (typeof val === 'number') return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };
-  if (typeof val === 'boolean') return { booleanValue: val };
-  if (Array.isArray(val)) return { arrayValue: { values: val.map(toFirestoreValue) } };
-  if (typeof val === 'object') {
-    const fields: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
-      fields[k] = toFirestoreValue(v);
-    }
-    return { mapValue: { fields } };
-  }
-  return { stringValue: String(val) };
+const sanitizePersistedState = (data?: Partial<PersistedState> | null): PersistedState => ({
+  finalByDay: data?.finalByDay ?? {},
+  movementsByClient: data?.movementsByClient ?? {}
+});
+
+const buildOverviewRows = (snapshot: PortfolioSnapshot, clientId: string) => {
+  const rows = snapshot.clientRowsById[clientId] ?? [];
+  return rows
+    .filter((row) =>
+      row.increment !== undefined ||
+      row.decrement !== undefined ||
+      row.finalBalance !== undefined ||
+      row.profit !== undefined
+    )
+    .slice(-60)
+    .map((row) => ({
+      iso: row.iso,
+      increment: row.increment ?? null,
+      decrement: row.decrement ?? null,
+      finalBalance: row.finalBalance ?? null,
+      profit: row.profit ?? null,
+      cumulativeProfit: row.cumulativeProfit ?? null
+    }));
 };
 
-// Convertir valor Firestore REST a JS
-const fromFirestoreValue = (val: Record<string, unknown>): unknown => {
-  if ('nullValue' in val) return null;
-  if ('stringValue' in val) return val.stringValue;
-  if ('integerValue' in val) return parseInt(val.integerValue as string, 10);
-  if ('doubleValue' in val) return val.doubleValue;
-  if ('booleanValue' in val) return val.booleanValue;
-  if ('arrayValue' in val) {
-    const arr = val.arrayValue as { values?: unknown[] };
-    return (arr.values ?? []).map((v) => fromFirestoreValue(v as Record<string, unknown>));
-  }
-  if ('mapValue' in val) {
-    const map = val.mapValue as { fields?: Record<string, unknown> };
-    const result: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(map.fields ?? {})) {
-      result[k] = fromFirestoreValue(v as Record<string, unknown>);
-    }
-    return result;
-  }
-  return null;
+const buildClientOverview = (snapshot: PortfolioSnapshot, clientId: string, clientName: string) => {
+  const rows = snapshot.clientRowsById[clientId] ?? [];
+  const latestWithBalance = [...rows].reverse().find((row) => row.finalBalance !== undefined);
+  const latestWithProfit = [...rows].reverse().find((row) => row.cumulativeProfit !== undefined);
+
+  const currentBalance = latestWithBalance?.finalBalance ?? 0;
+  const cumulativeProfit = latestWithProfit?.cumulativeProfit ?? 0;
+  const baseBalance = latestWithBalance?.baseBalance ?? 0;
+  const ytdReturnPct = baseBalance ? cumulativeProfit / baseBalance : 0;
+
+  return {
+    clientId,
+    clientName,
+    currentBalance,
+    cumulativeProfit,
+    ytdReturnPct,
+    rows: buildOverviewRows(snapshot, clientId),
+    updatedAt: Date.now()
+  };
 };
 
 export const fetchPortfolioState = async (): Promise<PersistedState> => {
   try {
-    const url = `${FIRESTORE_REST_URL}/${DOC_PATH}?key=${firebaseConfig.apiKey}`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      if (res.status === 404) return emptyPersisted;
-      throw new Error(`Firestore REST fetch failed: ${res.status}`);
-    }
-    const doc = await res.json();
-    if (!doc.fields) return emptyPersisted;
-    
-    const data = fromFirestoreValue({ mapValue: { fields: doc.fields } }) as PersistedState;
-    return {
-      finalByDay: data.finalByDay ?? {},
-      movementsByClient: data.movementsByClient ?? {}
-    };
+    const doc = await db.doc(DOC_PATH).get();
+    if (!doc.exists) return emptyPersisted;
+    return sanitizePersistedState(doc.data() as Partial<PersistedState>);
   } catch (error) {
-    console.error('Firestore REST fetch error', error);
+    console.error('Firestore fetch error', error);
     return emptyPersisted;
   }
 };
 
 export const savePortfolioState = async (state: PersistedState) => {
-  try {
-    const url = `${FIRESTORE_REST_URL}/${DOC_PATH}?key=${firebaseConfig.apiKey}`;
-    const fields: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(state)) {
-      fields[k] = toFirestoreValue(v);
-    }
-    
-    const res = await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields })
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Firestore REST save failed: ${res.status}`);
-    }
-  } catch (error) {
-    console.error('Firestore REST save error', error);
-  }
+  await db.doc(DOC_PATH).set(state, { merge: true });
 };
+
+export const syncClientOverviews = async (
+  snapshot: PortfolioSnapshot,
+  clients: Array<{ id: string; name: string }>
+) => {
+  const batch = db.batch();
+  clients.forEach((client) => {
+    const docRef = db.collection(CLIENT_OVERVIEW_COLLECTION).doc(client.id);
+    batch.set(docRef, buildClientOverview(snapshot, client.id, client.name), { merge: true });
+  });
+  await batch.commit();
+};
+
+export interface AccessProfile {
+  role: 'admin' | 'client';
+  clientId?: string;
+  displayName?: string;
+  active?: boolean;
+}
+
+export const fetchAccessProfile = async (uid: string): Promise<AccessProfile | null> => {
+  const doc = await db.collection('access_profiles').doc(uid).get();
+  if (!doc.exists) return null;
+  return doc.data() as AccessProfile;
+};
+
+export const subscribeClientOverview = (
+  clientId: string,
+  onValue: (value: Record<string, unknown> | null) => void,
+  onError: (error: unknown) => void
+) =>
+  db
+    .collection(CLIENT_OVERVIEW_COLLECTION)
+    .doc(clientId)
+    .onSnapshot(
+      (doc) => {
+        onValue(doc.exists ? (doc.data() as Record<string, unknown>) : null);
+      },
+      (error) => onError(error)
+    );

@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function adminEmail() {
+      return signedIn() && request.auth.token.email in ['jibiza90@gmail.com'];
+    }
+
+    function adminProfile() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/access_profiles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/access_profiles/$(request.auth.uid)).data.role == 'admin' &&
+        get(/databases/$(database)/documents/access_profiles/$(request.auth.uid)).data.active != false;
+    }
+
+    function isAdmin() {
+      return adminEmail() || adminProfile();
+    }
+
+    function clientOwns(clientId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/access_profiles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/access_profiles/$(request.auth.uid)).data.role == 'client' &&
+        get(/databases/$(database)/documents/access_profiles/$(request.auth.uid)).data.active != false &&
+        get(/databases/$(database)/documents/access_profiles/$(request.auth.uid)).data.clientId == clientId;
+    }
+
+    match /access_profiles/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow write: if isAdmin();
+    }
+
+    match /portfolio/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /portfolio_client_overviews/{clientId} {
+      allow read: if isAdmin() || clientOwns(clientId);
+      allow write: if isAdmin();
+    }
+
+    match /reportLinks/{token} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
