@@ -60,6 +60,28 @@ Consecuencias:
 - `firestore.rules`: autorizacion real de datos.
 - `render.yaml`: despliegue Render.
 
+## 3.1 Localizacion exacta de codigo (busqueda operativa)
+
+No se fijan lineas estaticas en la guia porque cambian con cada release.  
+Para localizar la linea exacta usar:
+
+`rg -n "<simbolo>" src firestore.rules`
+
+Atajos utiles:
+
+- PDF cliente: `downloadClientPdf` (en `src/AuthShell.tsx`)
+- Portal cliente: `ClientPortal` (en `src/AuthShell.tsx`)
+- Login: `LoginCard` (en `src/AuthShell.tsx`)
+- Mensajes admin: `AdminMessagesView` (en `src/App.tsx`)
+- Plantillas rapidas: `QUICK_TEMPLATES_STORAGE_KEY` (en `src/App.tsx`)
+- API chat: `sendSupportMessage`, `editAdminSupportMessage`, `markMessagesReadByClient` (en `src/services/supportInbox.ts`)
+- Seguridad chat: `match /support_threads/{clientId}` (en `firestore.rules`)
+- Perfil de acceso: `match /access_profiles/{uid}` (en `firestore.rules`)
+
+Comando combinado sugerido:
+
+`rg -n "downloadClientPdf|ClientPortal|AdminMessagesView|QUICK_TEMPLATES_STORAGE_KEY|sendSupportMessage|markMessagesReadByClient|match /support_threads" src firestore.rules`
+
 ---
 
 ## 4. Modelo de datos y contratos

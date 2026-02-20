@@ -158,6 +158,46 @@ Importante: esto significa que una parte funcional (contactos, notas, etc.) es l
 - `firestore.rules`
   - Control de permisos por rol y recurso.
 
+## 4.6 Localizacion rapida (archivo + simbolo)
+
+Nota: no fijamos numeros de linea en la guia porque cambian en cada commit.  
+Para ir directo a la linea exacta usa `rg -n "<simbolo>" <archivo>`.
+
+- Login visual:
+  - archivo: `src/AuthShell.tsx`
+  - simbolo: `LoginCard`
+- Resolucion de rol/sesion:
+  - archivo: `src/AuthShell.tsx`
+  - simbolos: `ADMIN_EMAILS`, `SessionState`
+- Portal cliente:
+  - archivo: `src/AuthShell.tsx`
+  - simbolo: `ClientPortal`
+- PDF cliente:
+  - archivo: `src/AuthShell.tsx`
+  - simbolo: `downloadClientPdf`
+- Chat cliente:
+  - archivo: `src/AuthShell.tsx`
+  - simbolos: `supportOpen`, `sendClientSupportMessage`, `markMessagesReadByClient`
+- Chat admin:
+  - archivo: `src/App.tsx`
+  - simbolo: `AdminMessagesView`
+- Plantillas rapidas admin:
+  - archivo: `src/App.tsx`
+  - simbolo: `QUICK_TEMPLATES_STORAGE_KEY`
+- API Firestore chat:
+  - archivo: `src/services/supportInbox.ts`
+  - simbolos: `sendSupportMessage`, `editAdminSupportMessage`, `subscribeSupportThreads`, `subscribeSupportMessages`
+- Provision perfiles y overviews:
+  - archivo: `src/services/cloudPortfolio.ts`
+  - simbolos: `fetchAccessProfile`, `subscribeClientOverview`, `syncClientOverviews`
+- Reglas de seguridad:
+  - archivo: `firestore.rules`
+  - simbolos: `match /access_profiles/{uid}`, `match /portfolio_client_overviews/{clientId}`, `match /support_threads/{clientId}`, `match /reportLinks/{token}`
+
+Comando rapido recomendado:
+
+`rg -n "downloadClientPdf|AdminMessagesView|QUICK_TEMPLATES_STORAGE_KEY|support_threads|markMessagesReadByClient|sendSupportMessage" src firestore.rules`
+
 ---
 
 ## 5) Flujo de autenticacion y roles
