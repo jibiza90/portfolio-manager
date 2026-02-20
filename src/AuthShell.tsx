@@ -733,13 +733,17 @@ const ClientPortal = ({
       const now = new Date();
 
       doc.setFontSize(18);
-      doc.text(`Portfolio - ${clientName}`, 40, 44);
+      doc.text(`Portfolio - ${headerName}`, 40, 44);
       doc.setFontSize(10);
-      doc.text(`Cliente: ${clientId}`, 40, 62);
-      doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, 40, 76);
+      doc.text(`Cliente: ${headerName}`, 40, 62);
+      doc.text(`ID interno: ${clientId}`, 40, 76);
+      if (email) {
+        doc.text(`Email: ${email}`, 40, 90);
+      }
+      doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, 40, 104);
 
       autoTable(doc, {
-        startY: 92,
+        startY: 118,
         head: [['KPI', 'Valor']],
         body: [
           ['Saldo actual', formatEuro(overview.currentBalance)],
@@ -778,11 +782,7 @@ const ClientPortal = ({
           ? ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 16)
           : 400,
         head: [['Fecha', 'Ingreso', 'Retiro', 'Saldo', 'Beneficio dia', '% dia']],
-        body: (overview.rows ?? [])
-          .slice()
-          .reverse()
-          .slice(0, 40)
-          .map((row) => [
+        body: movementRows.map((row) => [
             new Date(row.iso).toLocaleDateString('es-ES'),
             row.increment ? formatEuro(row.increment) : '-',
             row.decrement ? formatEuro(row.decrement) : '-',
