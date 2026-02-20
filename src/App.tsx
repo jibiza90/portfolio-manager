@@ -14,12 +14,14 @@ import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import { provisionClientAccess } from './services/cloudPortfolio';
 import { auth, db } from './services/firebaseApp';
 import { isValidReportToken } from './services/reportLinks';
+import { editAdminSupportMessage, markThreadSeenByAdmin, sendSupportMessage, subscribeSupportMessages, subscribeSupportThreads, type SupportMessage, type SupportThread } from './services/supportInbox';
 
 const INFO_VIEW = 'INFO_VIEW';
 const COMISIONES_VIEW = 'COMISIONES_VIEW';
 const INFORMES_VIEW = 'INFORMES_VIEW';
 const STATS_VIEW = 'STATS_VIEW';
 const SEGUIMIENTO_VIEW = 'SEGUIMIENTO_VIEW';
+const MENSAJES_VIEW = 'MENSAJES_VIEW';
 type ContactInfo = {
   name: string;
   surname: string;
@@ -1965,6 +1967,283 @@ function TotalsBanner() {
   );
 }
 
+function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo> }) {
+  const [threads, setThreads] = useState<SupportThread[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [search, setSearch] = useState('');
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<SupportMessage[]>([]);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+
+  const quickTemplates = [
+    'Recibido. Lo reviso y te respondo en breve.',
+    'Necesito un dato adicional para ayudarte: confirma la fecha exacta y el importe.',
+    'Queda resuelto. Si necesitas algo mas, responde en este hilo.'
+  ];
+
+  const getClientName = (clientId: string) => {
+    const contact = contacts[clientId];
+    const fullName = `${contact?.name ?? ''} ${contact?.surname ?? ''}`.trim();
+    if (fullName) return fullName;
+    return CLIENTS.find((row) => row.id === clientId)?.name ?? clientId;
+  };
+
+  const getClientEmail = (clientId: string) => {
+    return contacts[clientId]?.email?.trim().toLowerCase() ?? '';
+  };
+
+  useEffect(() => {
+    const unsubscribe = subscribeSupportThreads(
+      (value) => {
+        setThreads(value);
+      },
+      () => setError('No se pudieron cargar los hilos de mensajes.')
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const clientRows = useMemo(
+    () =>
+      CLIENTS.map((client) => {
+        const thread = threads.find((row) => row.clientId === client.id);
+        return {
+          clientId: client.id,
+          name: getClientName(client.id),
+          email: getClientEmail(client.id),
+          unread: thread?.adminUnreadCount ?? 0,
+          lastMessageAt: thread?.lastMessageAt ?? 0,
+          lastMessageText: thread?.lastMessageText ?? ''
+        };
+      }),
+    [threads, contacts]
+  );
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return clientRows;
+    return clientRows.filter((row) => `${row.clientId} ${row.name} ${row.email}`.toLowerCase().includes(q));
+  }, [clientRows, search]);
+
+  useEffect(() => {
+    if (!selectedClientId) {
+      setSelectedClientId(filteredRows[0]?.clientId ?? '');
+      return;
+    }
+    const exists = filteredRows.some((row) => row.clientId === selectedClientId);
+    if (!exists) setSelectedClientId(filteredRows[0]?.clientId ?? '');
+  }, [filteredRows, selectedClientId]);
+
+  useEffect(() => {
+    if (!selectedClientId) {
+      setMessages([]);
+      return;
+    }
+    const unsubscribe = subscribeSupportMessages(
+      selectedClientId,
+      (value) => setMessages(value),
+      () => setError('No se pudo cargar la conversacion seleccionada.')
+    );
+    return () => unsubscribe();
+  }, [selectedClientId]);
+
+  const selectedRow = filteredRows.find((row) => row.clientId === selectedClientId) ?? null;
+
+  const sendAdminMessage = async () => {
+    const cleanText = draft.trim();
+    if (!selectedClientId || !cleanText) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const senderName = auth.currentUser?.email?.trim() || 'Admin';
+      await sendSupportMessage({
+        clientId: selectedClientId,
+        clientName: getClientName(selectedClientId),
+        clientEmail: getClientEmail(selectedClientId),
+        senderRole: 'admin',
+        senderName,
+        text: cleanText
+      });
+      setDraft('');
+    } catch (sendError) {
+      console.error(sendError);
+      setError('No se pudo enviar el mensaje.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const markSeen = async () => {
+    if (!selectedClientId) return;
+    try {
+      await markThreadSeenByAdmin(selectedClientId);
+    } catch (seenError) {
+      console.error(seenError);
+      setError('No se pudo marcar como visto.');
+    }
+  };
+
+  const saveEdit = async () => {
+    if (!selectedClientId || !editId || !editText.trim()) return;
+    try {
+      await editAdminSupportMessage({
+        clientId: selectedClientId,
+        messageId: editId,
+        text: editText
+      });
+      setEditId(null);
+      setEditText('');
+    } catch (editError) {
+      console.error(editError);
+      setError('No se pudo editar el mensaje.');
+    }
+  };
+
+  return (
+    <div className="info-clients-container fade-in">
+      <aside className="info-sidebar">
+        <div className="info-sidebar-header">
+          <h4>Mensajes</h4>
+          <input
+            type="text"
+            className="info-search"
+            placeholder="Buscar cliente..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <p className="muted" style={{ marginTop: 8 }}>Escribe a cualquier cliente, aunque no te haya contactado.</p>
+        </div>
+        <div className="info-list">
+          {filteredRows.map((row) => (
+            <button
+              key={row.clientId}
+              className={clsx('info-item', selectedClientId === row.clientId && 'active')}
+              onClick={() => setSelectedClientId(row.clientId)}
+            >
+              <span className="info-name">{row.name}</span>
+              <span className="info-id">{row.clientId}</span>
+              {row.unread > 0 ? (
+                <span style={{ marginTop: 6, justifySelf: 'start', background: '#b42318', color: '#fff', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+                  No leido: {row.unread}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      <main className="info-detail">
+        <header className="info-detail-header">
+          <div>
+            <h3 style={{ margin: 0 }}>{selectedRow ? selectedRow.name : 'Selecciona un cliente'}</h3>
+            <p className="muted" style={{ marginTop: 6 }}>
+              {selectedRow?.email || 'Sin email'} {selectedRow ? `• ${selectedRow.clientId}` : ''}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="info-add-btn" onClick={() => { void markSeen(); }} disabled={!selectedClientId}>
+              Marcar visto
+            </button>
+          </div>
+        </header>
+
+        <section className="info-section" style={{ display: 'grid', gap: 12 }}>
+          <div style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', maxHeight: 380, overflowY: 'auto', padding: 12, display: 'grid', gap: 8 }}>
+            {messages.length === 0 ? (
+              <p className="muted" style={{ margin: 0 }}>Sin mensajes en este hilo.</p>
+            ) : messages.map((row) => (
+              <div key={row.id} style={{
+                justifySelf: row.senderRole === 'admin' ? 'end' : 'start',
+                width: 'min(82%, 760px)',
+                border: '1px solid #d7d2c8',
+                borderRadius: 12,
+                padding: 10,
+                background: row.senderRole === 'admin' ? '#dff3f7' : '#ffffff'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <strong style={{ fontSize: 12 }}>{row.senderRole === 'admin' ? 'Tu (admin)' : selectedRow?.name || 'Cliente'}</strong>
+                  <span style={{ fontSize: 11, color: '#5f5a52' }}>{new Date(row.createdAt).toLocaleString('es-ES')}</span>
+                </div>
+                {editId === row.id ? (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <textarea
+                      value={editText}
+                      onChange={(event) => setEditText(event.target.value)}
+                      rows={3}
+                      style={{ border: '1px solid #d7d2c8', borderRadius: 10, padding: 8, font: 'inherit' }}
+                    />
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button type="button" className="info-add-btn" onClick={() => { setEditId(null); setEditText(''); }} style={{ background: '#fff', color: '#1f1d1b', border: '1px solid #d7d2c8' }}>
+                        Cancelar
+                      </button>
+                      <button type="button" className="info-add-btn" onClick={() => { void saveEdit(); }}>
+                        Guardar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{row.text}</p>
+                    <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: '#5f5a52' }}>
+                        {row.senderRole === 'admin' ? (row.clientRead ? `Leido por cliente: ${row.clientReadAt ? new Date(row.clientReadAt).toLocaleString('es-ES') : 'si'}` : 'No leido por cliente') : ''}
+                        {row.edited ? ' • Editado' : ''}
+                      </span>
+                      {row.senderRole === 'admin' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditId(row.id);
+                            setEditText(row.text);
+                          }}
+                          style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}
+                        >
+                          Editar
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', padding: 12, display: 'grid', gap: 10 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {quickTemplates.map((template) => (
+                <button
+                  key={template}
+                  type="button"
+                  onClick={() => setDraft(template)}
+                  style={{ border: '1px solid #d7d2c8', borderRadius: 999, background: '#fff', padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
+                >
+                  Plantilla
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              rows={4}
+              placeholder="Escribe aqui tu respuesta o mensaje nuevo para el cliente..."
+              style={{ border: '1px solid #d7d2c8', borderRadius: 10, padding: 10, font: 'inherit', resize: 'vertical' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="muted" style={{ fontSize: 12 }}>El cliente recibira notificacion hasta abrir el hilo.</span>
+              <button type="button" className="info-add-btn" onClick={() => { void sendAdminMessage(); }} disabled={!selectedClientId || busy || !draft.trim()}>
+                {busy ? 'Enviando...' : 'Enviar'}
+              </button>
+            </div>
+            {error ? <p style={{ margin: 0, color: '#b42318', fontSize: 12 }}>{error}</p> : null}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
 export default function App() {
   // Check for report token in URL
   const [reportToken, setReportToken] = useState<string | null>(() => parseReportTokenFromLocation());
@@ -2047,6 +2326,7 @@ export default function App() {
   });
   const [focusDate, setFocusDate] = useState(derivedFocusDate);
   const [toast, setToast] = useState<string | null>(null);
+  const [supportUnreadTotal, setSupportUnreadTotal] = useState(0);
   const handleAddClient = (name?: string) => {
     const created = addClientProfile(name);
     setContacts((prev) => {
@@ -2162,6 +2442,17 @@ export default function App() {
     return () => window.removeEventListener('goto-general', handler);
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = subscribeSupportThreads(
+      (rows) => {
+        const total = rows.reduce((sum, row) => sum + (row.adminUnreadCount || 0), 0);
+        setSupportUnreadTotal(total);
+      },
+      () => {}
+    );
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="app-shell">
       {alertMessage && (
@@ -2229,6 +2520,12 @@ export default function App() {
           onClick={() => { setActiveView(SEGUIMIENTO_VIEW); setMenuOpen(false); }}
         >
           Seguimiento
+        </button>
+        <button
+          className={clsx('side-link', activeView === MENSAJES_VIEW && 'active')}
+          onClick={() => { setActiveView(MENSAJES_VIEW); setMenuOpen(false); }}
+        >
+          Mensajes {supportUnreadTotal > 0 ? `(${supportUnreadTotal})` : ''}
         </button>
       </div>
 
@@ -2299,6 +2596,8 @@ export default function App() {
         <StatsView contacts={contacts} />
       ) : activeView === SEGUIMIENTO_VIEW ? (
         <SeguimientoView contacts={contacts} followUpByClient={followUpByClient} setFollowUpByClient={setFollowUpByClient} />
+      ) : activeView === MENSAJES_VIEW ? (
+        <AdminMessagesView contacts={contacts} />
       ) : (
         <ClientPanel clientId={activeView} focusDate={focusDate} contacts={contacts} setAlertMessage={setAlertMessage} />
       )}

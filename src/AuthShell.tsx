@@ -3,6 +3,7 @@ import App from './App';
 import { CLIENTS } from './constants/clients';
 import { fetchAccessProfile, subscribeClientOverview, syncClientOverviews } from './services/cloudPortfolio';
 import { auth, db, firebase } from './services/firebaseApp';
+import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, subscribeThread, type SupportMessage } from './services/supportInbox';
 import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
@@ -644,6 +645,12 @@ const ClientPortal = ({
   const [expandedBalanceChart, setExpandedBalanceChart] = useState(false);
   const [expandedTwrChart, setExpandedTwrChart] = useState(false);
   const [liveProfileDisplayName, setLiveProfileDisplayName] = useState<string | null>(displayName);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [supportText, setSupportText] = useState('');
+  const [supportBusy, setSupportBusy] = useState(false);
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [supportError, setSupportError] = useState<string | null>(null);
+  const [clientUnreadCount, setClientUnreadCount] = useState(0);
 
   useEffect(() => {
     setLiveProfileDisplayName(displayName);
@@ -677,6 +684,41 @@ const ClientPortal = ({
     return () => unsubscribe();
   }, [profileUid]);
 
+  useEffect(() => {
+    const unsubscribe = subscribeSupportMessages(
+      clientId,
+      (messages) => {
+        setSupportMessages(messages);
+      },
+      () => setSupportError('No se pudieron cargar tus mensajes.')
+    );
+    return () => unsubscribe();
+  }, [clientId]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeThread(
+      clientId,
+      () => {
+        // Unread count for client is calculated from messages to avoid exposing read-by-admin states.
+      },
+      () => {}
+    );
+    return () => unsubscribe();
+  }, [clientId]);
+
+  useEffect(() => {
+    const unread = supportMessages.filter((row) => row.senderRole === 'admin' && !row.clientRead).length;
+    setClientUnreadCount(unread);
+  }, [supportMessages]);
+
+  useEffect(() => {
+    if (!supportOpen) return;
+    if (clientUnreadCount <= 0) return;
+    void markMessagesReadByClient(clientId).catch(() => {
+      setSupportError('No se pudo marcar como leido.');
+    });
+  }, [clientId, clientUnreadCount, supportOpen]);
+
   const clientName = useMemo(() => overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId, [clientId, overview]);
   const headerName = useMemo(() => {
     const cleanLiveProfileName = liveProfileDisplayName?.trim();
@@ -689,6 +731,29 @@ const ClientPortal = ({
     if (email) return email.split('@')[0];
     return clientName;
   }, [clientName, displayName, email, liveProfileDisplayName]);
+
+  const sendClientSupportMessage = async () => {
+    const cleanText = supportText.trim();
+    if (!cleanText) return;
+    setSupportBusy(true);
+    setSupportError(null);
+    try {
+      await sendSupportMessage({
+        clientId,
+        clientName: headerName,
+        clientEmail: email ?? '',
+        senderRole: 'client',
+        senderName: headerName,
+        text: cleanText
+      });
+      setSupportText('');
+    } catch (error) {
+      console.error(error);
+      setSupportError('No se pudo enviar tu mensaje.');
+    } finally {
+      setSupportBusy(false);
+    }
+  };
   const monthlyRaw = overview?.monthly ?? [];
   const twrMonthlyRaw = overview?.twrMonthly ?? [];
   const monthly = useMemo(
@@ -1340,6 +1405,35 @@ const ClientPortal = ({
           <span style={{ fontSize: 13, color: palette.muted }}>{email ?? ''}</span>
           <button
             type="button"
+            onClick={() => setSupportOpen((prev) => !prev)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 10,
+              border: `1px solid ${palette.border}`,
+              background: '#ffffff',
+              color: palette.text,
+              fontWeight: 600,
+              cursor: 'pointer',
+              position: 'relative'
+            }}
+          >
+            Mensajes
+            {clientUnreadCount > 0 ? (
+              <span style={{
+                marginLeft: 8,
+                background: '#b42318',
+                color: '#fff',
+                borderRadius: 999,
+                padding: '1px 7px',
+                fontSize: 11,
+                fontWeight: 700
+              }}>
+                {clientUnreadCount}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
             onClick={() => {
               void downloadClientPdf();
             }}
@@ -1404,6 +1498,57 @@ const ClientPortal = ({
         <p style={{ color: palette.muted }}>
           Aun no hay resumen publicado para tu cuenta. El administrador debe sincronizar tus datos.
         </p>
+      ) : null}
+
+      {supportOpen ? (
+        <section style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, overflow: 'hidden', marginBottom: 16 }}>
+          <div style={{ padding: 14, borderBottom: `1px solid ${palette.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <strong>Mensajes con administracion</strong>
+            <span style={{ fontSize: 12, color: palette.muted }}>Si hay respuesta nueva, veras aviso hasta abrir esta seccion.</span>
+          </div>
+          <div style={{ padding: 14, display: 'grid', gap: 10 }}>
+            <div style={{ maxHeight: 240, overflowY: 'auto', border: `1px solid ${palette.border}`, borderRadius: 10, background: palette.cardAlt, padding: 10, display: 'grid', gap: 8 }}>
+              {supportMessages.length === 0 ? (
+                <span style={{ color: palette.muted, fontSize: 13 }}>No hay mensajes todavia.</span>
+              ) : supportMessages.map((row) => (
+                <div key={row.id} style={{
+                  justifySelf: row.senderRole === 'client' ? 'end' : 'start',
+                  maxWidth: '80%',
+                  borderRadius: 10,
+                  padding: '8px 10px',
+                  background: row.senderRole === 'client' ? '#dff3f7' : '#fff',
+                  border: `1px solid ${palette.border}`
+                }}>
+                  <div style={{ fontSize: 11, color: palette.muted, marginBottom: 4 }}>
+                    {row.senderRole === 'client' ? 'Tu' : 'Admin'} • {new Date(row.createdAt).toLocaleString('es-ES')}
+                  </div>
+                  <div style={{ fontSize: 13, color: palette.text, whiteSpace: 'pre-wrap' }}>{row.text}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <textarea
+                value={supportText}
+                onChange={(event) => setSupportText(event.target.value)}
+                rows={3}
+                placeholder="Escribe tu duda para administracion..."
+                style={{ border: `1px solid ${palette.border}`, borderRadius: 10, padding: 10, font: 'inherit', resize: 'vertical' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 12, color: palette.muted }}>Respuesta en el mismo hilo.</span>
+                <button
+                  type="button"
+                  onClick={() => { void sendClientSupportMessage(); }}
+                  disabled={supportBusy || !supportText.trim()}
+                  style={{ padding: '8px 14px', borderRadius: 10, border: 0, background: palette.accent, color: palette.accentText, fontWeight: 600, cursor: 'pointer', opacity: supportBusy ? 0.7 : 1 }}
+                >
+                  {supportBusy ? 'Enviando...' : 'Enviar'}
+                </button>
+              </div>
+              {supportError ? <span style={{ color: palette.error, fontSize: 12 }}>{supportError}</span> : null}
+            </div>
+          </div>
+        </section>
       ) : null}
 
       {overview ? (

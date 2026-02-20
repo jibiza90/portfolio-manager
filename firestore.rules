@@ -50,6 +50,18 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /support_threads/{clientId} {
+      allow read: if isAdmin() || clientOwns(clientId);
+      allow write: if isAdmin() || clientOwns(clientId);
+
+      match /messages/{messageId} {
+        allow read: if isAdmin() || clientOwns(clientId);
+        allow create: if isAdmin() || clientOwns(clientId);
+        allow update: if isAdmin() || clientOwns(clientId);
+        allow delete: if isAdmin();
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
