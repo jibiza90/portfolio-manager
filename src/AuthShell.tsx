@@ -1225,23 +1225,24 @@ const ClientPortal = ({
         }
       });
 
-      // Give the report breathing room: tables go on their own page.
-      doc.addPage();
-      drawHeader();
-      cursorY = contentTop;
+      cursorY = lastTableY() + space.l;
+      const monthlyMinRoom = 120;
+      cursorY = ensureRoom(cursorY, monthlyMinRoom);
       cursorY = drawSectionTitle('Detalle mensual', cursorY);
 
       autoTable(doc, {
         startY: cursorY + space.xs,
         margin: tableMargin,
         didDrawPage,
-        head: [['Mes', 'Estado', 'Beneficio', 'TWR mensual', 'TWR acumulado anual']],
+        head: [['Mes', 'Estado', 'Saldo fin de mes', 'Beneficio', 'TWR mensual', 'TWR acumulado anual']],
         body: monthly.map((item) => {
           const twr = twrMonthly.find((row) => row.month === item.month)?.twr ?? 0;
           const twrCumulative = twrCumulativeByMonth.get(item.month) ?? 0;
+          const monthBalance = monthEndBalance.get(item.month) ?? 0;
           return [
             formatMonthLabel(item.month),
             item.month === activeMonthIso ? 'En curso' : 'Cerrado',
+            formatEuro(monthBalance),
             formatEuro(item.profit),
             formatPct(twr),
             formatPct(twrCumulative)
@@ -1264,7 +1265,8 @@ const ClientPortal = ({
         columnStyles: {
           2: { halign: 'right' },
           3: { halign: 'right' },
-          4: { halign: 'right' }
+          4: { halign: 'right' },
+          5: { halign: 'right' }
         }
       });
 
