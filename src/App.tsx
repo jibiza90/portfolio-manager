@@ -12,6 +12,7 @@ import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import { provisionClientAccess } from './services/cloudPortfolio';
+import { auth } from './services/firebaseApp';
 
 const INFO_VIEW = 'INFO_VIEW';
 const COMISIONES_VIEW = 'COMISIONES_VIEW';
@@ -2596,6 +2597,24 @@ function InfoClientes({
     }
   };
 
+  const sendClientPasswordReset = async () => {
+    const email = contact.email.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setAccessMessage('Primero informa un email valido en la ficha del cliente.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Email invalido' }));
+      return;
+    }
+    try {
+      await auth.sendPasswordResetEmail(email);
+      setAccessMessage(`Enlace de reseteo enviado a ${email}.`);
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Reset enviado' }));
+    } catch (error) {
+      console.error(error);
+      setAccessMessage('No se pudo enviar el reset de password. Revisa que el usuario exista en Authentication.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Error enviando reset' }));
+    }
+  };
+
   return (
     <div className="info-clients-container fade-in">
       {/* Panel izquierdo: buscador + lista */}
@@ -2806,12 +2825,32 @@ function InfoClientes({
                 {accessBusy ? 'Creando...' : 'Crear / Vincular login'}
               </button>
             </label>
+            <label>
+              <span>Password olvidada</span>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => {
+                  void sendClientPasswordReset();
+                }}
+                style={{ width: '100%', minHeight: 40 }}
+              >
+                Enviar reset por email
+              </button>
+            </label>
             {accessMessage && (
               <label style={{ gridColumn: '1 / -1' }}>
                 <span>Estado acceso</span>
                 <input value={accessMessage} disabled />
               </label>
             )}
+            <label style={{ gridColumn: '1 / -1' }}>
+              <span>Seguridad password</span>
+              <input
+                value="La password actual del cliente no se puede leer ni mostrar. Solo se puede crear una nueva cuenta o enviar reset."
+                disabled
+              />
+            </label>
             <label>
               <span>Fecha de alta</span>
               <input

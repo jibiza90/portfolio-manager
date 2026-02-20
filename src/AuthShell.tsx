@@ -71,6 +71,63 @@ const formatMonthLabel = (monthIso: string) => {
   if (!Number.isFinite(idx) || idx < 1 || idx > 12) return monthIso;
   return `${monthNames[idx - 1]} ${year}`;
 };
+const currentMonthIsoLocal = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const Sparkline = ({ values, color = '#0f6d7a' }: { values: number[]; color?: string }) => {
+  const width = 360;
+  const height = 110;
+  const pad = 10;
+  const safeValues = values.length > 0 ? values : [0];
+  const min = Math.min(...safeValues);
+  const max = Math.max(...safeValues);
+  const range = Math.max(1, max - min);
+  const points = safeValues.map((value, idx) => {
+    const x = pad + (idx / Math.max(1, safeValues.length - 1)) * (width - pad * 2);
+    const y = height - pad - ((value - min) / range) * (height - pad * 2);
+    return `${x},${y}`;
+  });
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 120, display: 'block' }}>
+      <polyline points={points.join(' ')} fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+      {points.map((point, idx) => {
+        const [x, y] = point.split(',').map(Number);
+        return <circle key={idx} cx={x} cy={y} r={2.2} fill={color} />;
+      })}
+    </svg>
+  );
+};
+
+const HorizontalBars = ({ data }: { data: Array<{ label: string; value: number }> }) => {
+  const maxAbs = Math.max(1, ...data.map((item) => Math.abs(item.value)));
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {data.map((item) => {
+        const pct = (Math.abs(item.value) / maxAbs) * 100;
+        const positive = item.value >= 0;
+        return (
+          <div key={item.label} style={{ display: 'grid', gridTemplateColumns: '88px 1fr 88px', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: palette.muted }}>{item.label}</span>
+            <div style={{ height: 10, background: '#e9e5dc', borderRadius: 999, overflow: 'hidden' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${pct}%`,
+                  background: positive ? '#0f8d52' : '#b42318',
+                  borderRadius: 999
+                }}
+              />
+            </div>
+            <span style={{ fontSize: 12, textAlign: 'right', color: palette.text }}>{formatPct(item.value)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password: string) => Promise<void>; busy: boolean; error: string | null }) => {
   const [email, setEmail] = useState('');
@@ -159,6 +216,7 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
   const [overview, setOverview] = useState<ClientOverview | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeClientOverview(
@@ -182,6 +240,114 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
   const monthly = overview?.monthly ?? [];
   const twrMonthly = overview?.twrMonthly ?? [];
   const twrYtd = overview?.twrYtd ?? overview?.ytdReturnPct ?? 0;
+  const currentMonthIso = currentMonthIsoLocal();
+  const monthEndBalance = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of overview?.rows ?? []) {
+      const month = row.iso.slice(0, 7);
+      if (row.finalBalance !== null) {
+        map.set(month, row.finalBalance);
+      }
+    }
+    return map;
+  }, [overview?.rows]);
+  const balanceSeries = useMemo(
+    () =>
+      monthly.map((item) => ({
+        label: formatMonthLabel(item.month),
+        value: monthEndBalance.get(item.month) ?? 0
+      })),
+    [monthEndBalance, monthly]
+  );
+  const returnSeries = useMemo(
+    () =>
+      monthly.map((item) => ({
+        label: formatMonthLabel(item.month),
+        value: item.retPct
+      })),
+    [monthly]
+  );
+
+  const downloadClientPdf = async () => {
+    if (!overview) return;
+    try {
+      setPdfBusy(true);
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      const now = new Date();
+
+      doc.setFontSize(18);
+      doc.text(`Portfolio - ${clientName}`, 40, 44);
+      doc.setFontSize(10);
+      doc.text(`Cliente: ${clientId}`, 40, 62);
+      doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, 40, 76);
+
+      autoTable(doc, {
+        startY: 92,
+        head: [['KPI', 'Valor']],
+        body: [
+          ['Saldo actual', formatEuro(overview.currentBalance)],
+          ['Beneficio total', formatEuro(overview.cumulativeProfit)],
+          ['Beneficio dia', formatEuro(overview.dailyProfit ?? 0)],
+          ['% dia', formatPct(overview.dailyProfitPct ?? 0)],
+          ['Participacion', formatPct(overview.participation ?? 0)],
+          ['Incrementos totales', formatEuro(overview.totalIncrements ?? 0)],
+          ['Decrementos totales', formatEuro(overview.totalDecrements ?? 0)],
+          ['Rentabilidad TWR YTD', formatPct(twrYtd)],
+          ['Rentabilidad YTD', formatPct(overview.ytdReturnPct ?? 0)]
+        ],
+        styles: { fontSize: 9 }
+      });
+
+      autoTable(doc, {
+        startY: (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY
+          ? ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 16)
+          : 260,
+        head: [['Mes', 'Estado', 'Beneficio', 'Rentabilidad', 'TWR mensual']],
+        body: monthly.map((item) => {
+          const twr = twrMonthly.find((row) => row.month === item.month)?.twr ?? 0;
+          return [
+            formatMonthLabel(item.month),
+            item.month === currentMonthIso ? 'En curso' : 'Cerrado',
+            formatEuro(item.profit),
+            formatPct(item.retPct),
+            formatPct(twr)
+          ];
+        }),
+        styles: { fontSize: 9 }
+      });
+
+      autoTable(doc, {
+        startY: (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY
+          ? ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 16)
+          : 400,
+        head: [['Fecha', 'Ingreso', 'Retiro', 'Saldo', 'Beneficio dia', '% dia']],
+        body: (overview.rows ?? [])
+          .slice()
+          .reverse()
+          .slice(0, 40)
+          .map((row) => [
+            new Date(row.iso).toLocaleDateString('es-ES'),
+            row.increment ? formatEuro(row.increment) : '-',
+            row.decrement ? formatEuro(row.decrement) : '-',
+            row.finalBalance !== null ? formatEuro(row.finalBalance) : '-',
+            row.profit !== null ? formatEuro(row.profit) : '-',
+            row.profitPct !== null ? formatPct(row.profitPct) : '-'
+          ]),
+        styles: { fontSize: 8 }
+      });
+
+      doc.save(`portfolio-${clientId}-${now.toISOString().slice(0, 10)}.pdf`);
+    } catch (pdfError) {
+      console.error(pdfError);
+      setError('No se pudo generar el PDF.');
+    } finally {
+      setPdfBusy(false);
+    }
+  };
 
   return (
     <main
@@ -215,6 +381,25 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 13, color: palette.muted }}>{email ?? ''}</span>
+          <button
+            type="button"
+            onClick={() => {
+              void downloadClientPdf();
+            }}
+            disabled={!overview || pdfBusy}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 10,
+              border: `1px solid ${palette.border}`,
+              background: '#ffffff',
+              color: palette.text,
+              fontWeight: 600,
+              cursor: 'pointer',
+              opacity: !overview || pdfBusy ? 0.7 : 1
+            }}
+          >
+            {pdfBusy ? 'Generando PDF...' : 'Descargar PDF'}
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -302,6 +487,19 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
             </article>
           </section>
 
+          <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', marginBottom: 16 }}>
+            <article style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, padding: 14 }}>
+              <p style={{ margin: 0, color: palette.muted }}>Grafico de saldo mensual</p>
+              <h4 style={{ margin: '8px 0 6px', color: palette.text }}>Evolucion de balance</h4>
+              <Sparkline values={balanceSeries.map((row) => row.value)} color="#0f6d7a" />
+            </article>
+            <article style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, padding: 14 }}>
+              <p style={{ margin: 0, color: palette.muted }}>Grafico de rentabilidad mensual</p>
+              <h4 style={{ margin: '8px 0 10px', color: palette.text }}>Tendencia por mes</h4>
+              <HorizontalBars data={returnSeries} />
+            </article>
+          </section>
+
           <section style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, overflow: 'hidden', marginBottom: 16 }}>
             <div style={{ padding: 14, borderBottom: `1px solid ${palette.border}` }}>
               <strong>Detalle mensual</strong>
@@ -311,15 +509,16 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
                 <thead>
                   <tr>
                     <th style={{ textAlign: 'left', padding: 12, color: palette.muted }}>Mes</th>
+                    <th style={{ textAlign: 'left', padding: 12, color: palette.muted }}>Estado</th>
                     <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Beneficio</th>
                     <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Rentabilidad</th>
-                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>TWR</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>TWR mensual</th>
                   </tr>
                 </thead>
                 <tbody>
                   {monthly.length === 0 ? (
                     <tr>
-                      <td colSpan={4} style={{ padding: 12, color: palette.muted }}>Sin datos mensuales.</td>
+                      <td colSpan={5} style={{ padding: 12, color: palette.muted }}>Sin datos mensuales.</td>
                     </tr>
                   ) : (
                     monthly.map((month) => {
@@ -327,6 +526,9 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
                       return (
                         <tr key={month.month}>
                           <td style={{ padding: 12, borderTop: `1px solid ${palette.border}` }}>{formatMonthLabel(month.month)}</td>
+                          <td style={{ padding: 12, borderTop: `1px solid ${palette.border}`, color: palette.muted }}>
+                            {month.month === currentMonthIso ? 'En curso' : 'Cerrado'}
+                          </td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatEuro(month.profit)}</td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatPct(month.retPct)}</td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatPct(twrItem?.twr ?? 0)}</td>
