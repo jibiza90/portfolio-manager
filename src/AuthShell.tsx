@@ -83,145 +83,6 @@ const currentMonthIsoMadrid = () => {
   return `${year}-${month}`;
 };
 
-const Sparkline = ({ values, color = '#0f6d7a' }: { values: number[]; color?: string }) => {
-  const width = 360;
-  const height = 110;
-  const pad = 10;
-  const safeValues = values.length > 0 ? values : [0];
-  const min = Math.min(...safeValues);
-  const max = Math.max(...safeValues);
-  const range = Math.max(1, max - min);
-  const gradientId = `spark-${color.replace('#', '')}`;
-  const points = safeValues.map((value, idx) => {
-    const x = pad + (idx / Math.max(1, safeValues.length - 1)) * (width - pad * 2);
-    const y = height - pad - ((value - min) / range) * (height - pad * 2);
-    return `${x},${y}`;
-  });
-  const areaPoints = `${pad},${height - pad} ${points.join(' ')} ${width - pad},${height - pad}`;
-
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 120, display: 'block' }}>
-      <defs>
-        <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.24} />
-          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
-        </linearGradient>
-      </defs>
-      <polygon points={areaPoints} fill={`url(#${gradientId})`} />
-      <polyline points={points.join(' ')} fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-      {points.map((point, idx) => {
-        const [x, y] = point.split(',').map(Number);
-        return <circle key={idx} cx={x} cy={y} r={2.2} fill={color} />;
-      })}
-    </svg>
-  );
-};
-
-const HorizontalBars = ({ data }: { data: Array<{ label: string; value: number }> }) => {
-  const maxAbs = Math.max(1, ...data.map((item) => Math.abs(item.value)));
-  return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      {data.map((item) => {
-        const pct = (Math.abs(item.value) / maxAbs) * 100;
-        const positive = item.value >= 0;
-        return (
-          <div key={item.label} style={{ display: 'grid', gridTemplateColumns: '88px 1fr 88px', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 12, color: palette.muted }}>{item.label}</span>
-            <div style={{ height: 10, background: '#e9e5dc', borderRadius: 999, overflow: 'hidden' }}>
-              <div
-                style={{
-                  height: '100%',
-                  width: `${pct}%`,
-                  background: positive ? '#0f8d52' : '#b42318',
-                  borderRadius: 999
-                }}
-              />
-            </div>
-            <span style={{ fontSize: 12, textAlign: 'right', color: palette.text }}>{formatPct(item.value)}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-const VerticalBars = ({ data, color = '#0f6d7a' }: { data: Array<{ label: string; value: number }>; color?: string }) => {
-  const maxAbs = Math.max(1, ...data.map((item) => Math.abs(item.value)));
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, data.length)}, minmax(22px, 1fr))`, gap: 8, alignItems: 'end', minHeight: 140 }}>
-      {data.map((item) => {
-        const heightPct = (Math.abs(item.value) / maxAbs) * 100;
-        const positive = item.value >= 0;
-        return (
-          <div key={item.label} style={{ display: 'grid', gap: 4, justifyItems: 'center' }}>
-            <div
-              title={`${item.label}: ${item.value.toFixed(2)}`}
-              style={{
-                width: '100%',
-                minHeight: 6,
-                height: `${Math.max(6, heightPct)}%`,
-                background: positive ? color : '#b42318',
-                borderRadius: 8
-              }}
-            />
-            <span style={{ fontSize: 10, color: palette.muted }}>{item.label.split(' ')[0]}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-const ChartTypeSelector = ({
-  value,
-  onChange
-}: {
-  value: 'line' | 'bars';
-  onChange: (value: 'line' | 'bars') => void;
-}) => (
-  <div
-    style={{
-      display: 'inline-flex',
-      border: `1px solid ${palette.border}`,
-      borderRadius: 999,
-      background: '#ffffff'
-    }}
-  >
-    <button
-      type="button"
-      onClick={() => onChange('line')}
-      style={{
-        border: 0,
-        background: value === 'line' ? palette.accent : 'transparent',
-        color: value === 'line' ? palette.accentText : palette.text,
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 700,
-        padding: '6px 12px',
-        cursor: 'pointer'
-      }}
-    >
-      Linea
-    </button>
-    <button
-      type="button"
-      onClick={() => onChange('bars')}
-      style={{
-        border: 0,
-        background: value === 'bars' ? palette.accent : 'transparent',
-        color: value === 'bars' ? palette.accentText : palette.text,
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 700,
-        padding: '6px 12px',
-        cursor: 'pointer'
-      }}
-    >
-      Barras
-    </button>
-  </div>
-);
-
 const ChartLegend = ({
   data,
   valueFormatter
@@ -250,6 +111,161 @@ const ChartLegend = ({
     ))}
   </div>
 );
+
+const PremiumAreaChart = ({
+  data,
+  valueFormatter,
+  color
+}: {
+  data: Array<{ label: string; value: number }>;
+  valueFormatter: (value: number) => string;
+  color: string;
+}) => {
+  if (data.length === 0) return null;
+
+  const width = 760;
+  const height = 280;
+  const margin = { top: 20, right: 24, bottom: 66, left: 74 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const values = data.map((item) => item.value);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const spread = maxValue - minValue;
+  const valuePad = spread > 0 ? spread * 0.12 : Math.max(1, Math.abs(maxValue) * 0.12, 0.01);
+  const yMin = minValue - valuePad;
+  const yMax = maxValue + valuePad;
+  const yRange = Math.max(0.000001, yMax - yMin);
+  const xStep = data.length > 1 ? plotWidth / (data.length - 1) : 0;
+  const gradientId = `premium-area-${color.replace('#', '')}-${data.length}`;
+
+  const getX = (idx: number) => margin.left + idx * xStep;
+  const getY = (value: number) => margin.top + (1 - (value - yMin) / yRange) * plotHeight;
+
+  const points = data.map((item, idx) => ({ x: getX(idx), y: getY(item.value), ...item }));
+  const linePath = points.map((point, idx) => `${idx === 0 ? 'M' : 'L'}${point.x} ${point.y}`).join(' ');
+  const areaPath = `${linePath} L ${margin.left + plotWidth} ${margin.top + plotHeight} L ${margin.left} ${margin.top + plotHeight} Z`;
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => yMin + (yMax - yMin) * t);
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.30} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.04} />
+        </linearGradient>
+      </defs>
+
+      {yTicks.map((tick, idx) => {
+        const y = getY(tick);
+        return (
+          <g key={`y-tick-${idx}`}>
+            <line x1={margin.left} y1={y} x2={margin.left + plotWidth} y2={y} stroke="#e7e3da" strokeDasharray="4 6" />
+            <text x={margin.left - 10} y={y + 4} textAnchor="end" fontSize="11" fill={palette.muted}>
+              {valueFormatter(tick)}
+            </text>
+          </g>
+        );
+      })}
+
+      <path d={areaPath} fill={`url(#${gradientId})`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+      {points.map((point) => (
+        <g key={`point-${point.label}`}>
+          <circle cx={point.x} cy={point.y} r="4" fill={color} />
+          <text x={point.x} y={point.y - 10} textAnchor="middle" fontSize="10.5" fill="#22313e" fontWeight="700">
+            {valueFormatter(point.value)}
+          </text>
+          <text x={point.x} y={margin.top + plotHeight + 20} textAnchor="middle" fontSize="10.5" fill={palette.muted}>
+            {point.label}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+};
+
+const PremiumTwrBarChart = ({
+  data,
+  valueFormatter
+}: {
+  data: Array<{ label: string; value: number }>;
+  valueFormatter: (value: number) => string;
+}) => {
+  if (data.length === 0) return null;
+
+  const width = 760;
+  const height = 300;
+  const margin = { top: 20, right: 24, bottom: 68, left: 74 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const maxAbsRaw = Math.max(...data.map((item) => Math.abs(item.value)));
+  const maxAbs = Math.max(0.01, maxAbsRaw * 1.15);
+  const yMin = -maxAbs;
+  const yMax = maxAbs;
+  const yRange = yMax - yMin;
+  const xStep = plotWidth / Math.max(1, data.length);
+  const barWidth = Math.min(34, Math.max(14, xStep * 0.52));
+  const getY = (value: number) => margin.top + (1 - (value - yMin) / yRange) * plotHeight;
+  const zeroY = getY(0);
+  const yTicks = [-maxAbs, -maxAbs / 2, 0, maxAbs / 2, maxAbs];
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+      {yTicks.map((tick, idx) => {
+        const y = getY(tick);
+        return (
+          <g key={`twr-y-${idx}`}>
+            <line
+              x1={margin.left}
+              y1={y}
+              x2={margin.left + plotWidth}
+              y2={y}
+              stroke={tick === 0 ? '#a9a298' : '#e9e5dd'}
+              strokeDasharray={tick === 0 ? '0' : '4 6'}
+            />
+            <text x={margin.left - 10} y={y + 4} textAnchor="end" fontSize="11" fill={palette.muted}>
+              {valueFormatter(tick)}
+            </text>
+          </g>
+        );
+      })}
+
+      {data.map((item, idx) => {
+        const centerX = margin.left + xStep * idx + xStep / 2;
+        const barTop = getY(Math.max(0, item.value));
+        const barBottom = getY(Math.min(0, item.value));
+        const barHeight = Math.max(2, Math.abs(barBottom - barTop));
+        const isPositive = item.value >= 0;
+        const barColor = isPositive ? '#0f8d52' : '#b42318';
+        const labelY = isPositive ? barTop - 8 : barBottom + 14;
+
+        return (
+          <g key={`twr-bar-${item.label}`}>
+            <rect
+              x={centerX - barWidth / 2}
+              y={Math.min(barTop, barBottom)}
+              width={barWidth}
+              height={barHeight}
+              rx="7"
+              fill={barColor}
+              opacity="0.92"
+            />
+            <text x={centerX} y={labelY} textAnchor="middle" fontSize="10.5" fill="#22313e" fontWeight="700">
+              {valueFormatter(item.value)}
+            </text>
+            <text x={centerX} y={margin.top + plotHeight + 20} textAnchor="middle" fontSize="10.5" fill={palette.muted}>
+              {item.label}
+            </text>
+          </g>
+        );
+      })}
+
+      <line x1={margin.left} y1={zeroY} x2={margin.left + plotWidth} y2={zeroY} stroke="#a9a298" strokeWidth="1.4" />
+    </svg>
+  );
+};
 
 const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password: string) => Promise<void>; busy: boolean; error: string | null }) => {
   const [email, setEmail] = useState('');
@@ -602,8 +618,6 @@ const ClientPortal = ({
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
-  const [balanceChartType, setBalanceChartType] = useState<'line' | 'bars'>('line');
-  const [returnChartType, setReturnChartType] = useState<'line' | 'bars'>('line');
   const [kpiHint, setKpiHint] = useState<{ text: string; x: number; y: number } | null>(null);
   const [flowPopup, setFlowPopup] = useState<'inc' | 'dec' | null>(null);
 
@@ -1087,19 +1101,16 @@ const ClientPortal = ({
                 boxShadow: '0 12px 26px rgba(15, 109, 122, 0.10)'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <div style={{ marginBottom: 10 }}>
                 <div>
                   <p style={{ margin: 0, color: palette.muted }}>Grafico de saldo mensual</p>
                   <h4 style={{ margin: '6px 0 0', color: palette.text }}>Evolucion de balance</h4>
                 </div>
-                <ChartTypeSelector value={balanceChartType} onChange={setBalanceChartType} />
               </div>
               {balanceSeries.length === 0 ? (
                 <p style={{ margin: 0, color: palette.muted }}>Aun no hay datos de saldo mensual.</p>
-              ) : balanceChartType === 'line' ? (
-                <Sparkline values={balanceSeries.map((row) => row.value)} color="#0f6d7a" />
               ) : (
-                <VerticalBars data={balanceSeries} color="#0f6d7a" />
+                <PremiumAreaChart data={balanceSeries} valueFormatter={formatEuro} color="#0f6d7a" />
               )}
               {balanceSeries.length > 0 ? (
                 <ChartLegend data={balanceSeries} valueFormatter={formatEuro} />
@@ -1113,24 +1124,21 @@ const ClientPortal = ({
               style={{
                 borderRadius: 14,
                 border: `1px solid ${palette.border}`,
-                background: 'linear-gradient(180deg, #ffffff 0%, #f9f7ff 100%)',
+                background: 'linear-gradient(180deg, #ffffff 0%, #fff7f5 100%)',
                 padding: 14,
-                boxShadow: '0 12px 26px rgba(70, 38, 140, 0.08)'
+                boxShadow: '0 12px 26px rgba(180, 35, 24, 0.08)'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <div style={{ marginBottom: 10 }}>
                 <div>
                   <p style={{ margin: 0, color: palette.muted }}>Grafico TWR mensual</p>
                   <h4 style={{ margin: '6px 0 0', color: palette.text }}>Rendimiento mensual sin flujos</h4>
                 </div>
-                <ChartTypeSelector value={returnChartType} onChange={setReturnChartType} />
               </div>
               {twrSeries.length === 0 ? (
                 <p style={{ margin: 0, color: palette.muted }}>Aun no hay datos de TWR mensual.</p>
-              ) : returnChartType === 'line' ? (
-                <Sparkline values={twrSeries.map((row) => row.value)} color="#4a2f8f" />
               ) : (
-                <HorizontalBars data={twrSeries} />
+                <PremiumTwrBarChart data={twrSeries} valueFormatter={formatPct} />
               )}
               {twrSeries.length > 0 ? (
                 <ChartLegend data={twrSeries} valueFormatter={formatPct} />
