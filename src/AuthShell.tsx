@@ -5,7 +5,7 @@ import { fetchAccessProfile, subscribeClientOverview, syncClientOverviews } from
 import { auth } from './services/firebaseApp';
 import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
 
-const ADMIN_EMAILS = new Set(['jibiza90@gmail.com']);
+const ADMIN_EMAILS = new Set(['jibiza90@gmail.com', 'jpujola@alogroup.es']);
 
 type Role = 'admin' | 'client';
 
@@ -83,48 +83,21 @@ const currentMonthIsoMadrid = () => {
   return `${year}-${month}`;
 };
 
-const ChartLegend = ({
-  data,
-  valueFormatter
-}: {
-  data: Array<{ label: string; value: number }>;
-  valueFormatter: (value: number) => string;
-}) => (
-  <div style={{ marginTop: 10, display: 'grid', gap: 6, maxHeight: 152, overflowY: 'auto', paddingRight: 4 }}>
-    {data.map((item) => (
-      <div
-        key={item.label}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr auto',
-          gap: 8,
-          alignItems: 'center',
-          border: `1px solid ${palette.border}`,
-          borderRadius: 10,
-          padding: '6px 10px',
-          background: '#ffffff'
-        }}
-      >
-        <span style={{ fontSize: 12, color: palette.muted }}>{item.label}</span>
-        <strong style={{ fontSize: 12, color: palette.text }}>{valueFormatter(item.value)}</strong>
-      </div>
-    ))}
-  </div>
-);
-
 const PremiumAreaChart = ({
   data,
   valueFormatter,
-  color
+  color,
+  expanded = false
 }: {
   data: Array<{ label: string; value: number }>;
   valueFormatter: (value: number) => string;
   color: string;
+  expanded?: boolean;
 }) => {
   if (data.length === 0) return null;
 
-  const width = 760;
-  const height = 280;
+  const width = expanded ? 940 : 760;
+  const height = expanded ? 360 : 280;
   const margin = { top: 20, right: 24, bottom: 66, left: 74 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
@@ -188,15 +161,17 @@ const PremiumAreaChart = ({
 
 const PremiumTwrBarChart = ({
   data,
-  valueFormatter
+  valueFormatter,
+  expanded = false
 }: {
   data: Array<{ label: string; value: number }>;
   valueFormatter: (value: number) => string;
+  expanded?: boolean;
 }) => {
   if (data.length === 0) return null;
 
-  const width = 760;
-  const height = 300;
+  const width = expanded ? 940 : 760;
+  const height = expanded ? 380 : 300;
   const margin = { top: 20, right: 24, bottom: 68, left: 74 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
@@ -619,7 +594,9 @@ const ClientPortal = ({
   const [error, setError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [kpiHint, setKpiHint] = useState<{ text: string; x: number; y: number } | null>(null);
-  const [flowPopup, setFlowPopup] = useState<'inc' | 'dec' | null>(null);
+  const [flowPopup, setFlowPopup] = useState<'inc' | 'dec' | 'profit' | null>(null);
+  const [expandedBalanceChart, setExpandedBalanceChart] = useState(false);
+  const [expandedTwrChart, setExpandedTwrChart] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeClientOverview(
@@ -678,6 +655,7 @@ const ClientPortal = ({
   const balanceSeries = useMemo(
     () =>
       monthly.map((item) => ({
+        month: item.month,
         label: formatMonthLabel(item.month),
         value: monthEndBalance.get(item.month) ?? 0
       })),
@@ -686,6 +664,7 @@ const ClientPortal = ({
   const twrSeries = useMemo(
     () =>
       monthly.map((item) => ({
+        month: item.month,
         label: formatMonthLabel(item.month),
         value: twrMonthly.find((row) => row.month === item.month)?.twr ?? 0
       })),
@@ -726,6 +705,14 @@ const ClientPortal = ({
   const decrementDetailRows = useMemo(
     () => movementRows.filter((row) => (row.decrement ?? 0) > 0).slice(-24).reverse(),
     [movementRows]
+  );
+  const profitDetailRows = useMemo(
+    () =>
+      monthly
+        .map((item) => ({ month: item.month, profit: item.profit }))
+        .slice()
+        .reverse(),
+    [monthly]
   );
 
   const showKpiHint = (event: React.MouseEvent<HTMLElement>, text: string) => {
@@ -1029,16 +1016,39 @@ const ClientPortal = ({
               ) : null}
             </article>
             <article
-              onMouseEnter={(event) => showKpiHint(event, 'Lo ganado o perdido en el ultimo mes con datos.')}
+              onMouseEnter={(event) => {
+                showKpiHint(event, 'Lo ganado o perdido en el ultimo mes con datos.');
+                setFlowPopup('profit');
+              }}
               onMouseMove={moveKpiHint}
-              onMouseLeave={() => setKpiHint(null)}
-              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+              onMouseLeave={() => {
+                setKpiHint(null);
+                setFlowPopup((prev) => (prev === 'profit' ? null : prev));
+              }}
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, position: 'relative' }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Beneficio mensual</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(latestProfitMonth?.profit ?? 0)}</h3>
               <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>
                 {latestProfitMonth ? formatMonthLabel(latestProfitMonth.month) : '-'}
               </p>
+              {flowPopup === 'profit' ? (
+                <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, zIndex: 70, width: 340, maxHeight: 260, overflow: 'auto', background: '#fff', border: `1px solid ${palette.border}`, borderRadius: 12, boxShadow: '0 18px 34px rgba(0,0,0,0.14)', padding: 10 }}>
+                  <strong style={{ fontSize: 12 }}>Detalle beneficio mensual</strong>
+                  <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                    {profitDetailRows.length === 0 ? (
+                      <span style={{ color: palette.muted, fontSize: 12 }}>Sin meses con datos.</span>
+                    ) : (
+                      profitDetailRows.map((row) => (
+                        <div key={`profit-${row.month}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, fontSize: 12 }}>
+                          <span>{formatMonthLabel(row.month)}</span>
+                          <strong style={{ color: row.profit >= 0 ? '#0f8d52' : '#b42318' }}>{formatEuro(row.profit)}</strong>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </article>
             <article
               onMouseEnter={(event) => showKpiHint(event, 'TWR mensual: rendimiento del ultimo mes sin distorsion por ingresos ni retiros.')}
@@ -1073,24 +1083,6 @@ const ClientPortal = ({
             </article>
           </section>
 
-          <section
-            style={{
-              marginBottom: 16,
-              border: `1px solid ${palette.border}`,
-              background: '#ffffff',
-              borderRadius: 12,
-              padding: 12
-            }}
-          >
-            <strong style={{ display: 'block', marginBottom: 10 }}>Rentabilidad acumulada del ano (sin flujos)</strong>
-            <article style={{ border: `1px solid ${palette.border}`, borderRadius: 10, padding: 10, background: '#f8fbfd' }}>
-              <p style={{ margin: 0, color: palette.muted, fontSize: 13 }}>
-                Esta metrica usa TWR: mide rendimiento real del ano y no se distorsiona por ingresos o retiros.
-                El dato acumulado mensual se calcula encadenando los TWR de cada mes.
-              </p>
-            </article>
-          </section>
-
           <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', marginBottom: 16 }}>
             <article
               style={{
@@ -1098,22 +1090,56 @@ const ClientPortal = ({
                 border: `1px solid ${palette.border}`,
                 background: 'linear-gradient(180deg, #ffffff 0%, #f5fbfd 100%)',
                 padding: 14,
-                boxShadow: '0 12px 26px rgba(15, 109, 122, 0.10)'
+                boxShadow: '0 12px 26px rgba(15, 109, 122, 0.10)',
+                gridColumn: expandedBalanceChart ? '1 / -1' : undefined
               }}
             >
-              <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
                 <div>
                   <p style={{ margin: 0, color: palette.muted }}>Grafico de saldo mensual</p>
                   <h4 style={{ margin: '6px 0 0', color: palette.text }}>Evolucion de balance</h4>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setExpandedBalanceChart((prev) => !prev)}
+                  style={{
+                    border: `1px solid ${palette.border}`,
+                    background: '#ffffff',
+                    color: palette.text,
+                    borderRadius: 10,
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {expandedBalanceChart ? 'Minimizar' : 'Expandir'}
+                </button>
               </div>
               {balanceSeries.length === 0 ? (
                 <p style={{ margin: 0, color: palette.muted }}>Aun no hay datos de saldo mensual.</p>
               ) : (
-                <PremiumAreaChart data={balanceSeries} valueFormatter={formatEuro} color="#0f6d7a" />
+                <PremiumAreaChart data={balanceSeries} valueFormatter={formatEuro} color="#0f6d7a" expanded={expandedBalanceChart} />
               )}
-              {balanceSeries.length > 0 ? (
-                <ChartLegend data={balanceSeries} valueFormatter={formatEuro} />
+              {expandedBalanceChart && balanceSeries.length > 0 ? (
+                <div style={{ marginTop: 10, border: `1px solid ${palette.border}`, borderRadius: 10, background: '#ffffff', maxHeight: 280, overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left', padding: 10, color: palette.muted, fontSize: 12 }}>Mes</th>
+                        <th style={{ textAlign: 'right', padding: 10, color: palette.muted, fontSize: 12 }}>Saldo cierre</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {balanceSeries.map((row) => (
+                        <tr key={`balance-expand-${row.month}`}>
+                          <td style={{ padding: 10, borderTop: `1px solid ${palette.border}`, fontSize: 13 }}>{row.label}</td>
+                          <td style={{ padding: 10, borderTop: `1px solid ${palette.border}`, textAlign: 'right', fontSize: 13 }}>{formatEuro(row.value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : null}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, color: palette.muted }}>
                 <span>Meses con datos: {balanceSeries.length}</span>
@@ -1126,22 +1152,62 @@ const ClientPortal = ({
                 border: `1px solid ${palette.border}`,
                 background: 'linear-gradient(180deg, #ffffff 0%, #fff7f5 100%)',
                 padding: 14,
-                boxShadow: '0 12px 26px rgba(180, 35, 24, 0.08)'
+                boxShadow: '0 12px 26px rgba(180, 35, 24, 0.08)',
+                gridColumn: expandedTwrChart ? '1 / -1' : undefined
               }}
             >
-              <div style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
                 <div>
                   <p style={{ margin: 0, color: palette.muted }}>Grafico TWR mensual</p>
                   <h4 style={{ margin: '6px 0 0', color: palette.text }}>Rendimiento mensual sin flujos</h4>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setExpandedTwrChart((prev) => !prev)}
+                  style={{
+                    border: `1px solid ${palette.border}`,
+                    background: '#ffffff',
+                    color: palette.text,
+                    borderRadius: 10,
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {expandedTwrChart ? 'Minimizar' : 'Expandir'}
+                </button>
               </div>
               {twrSeries.length === 0 ? (
                 <p style={{ margin: 0, color: palette.muted }}>Aun no hay datos de TWR mensual.</p>
               ) : (
-                <PremiumTwrBarChart data={twrSeries} valueFormatter={formatPct} />
+                <PremiumTwrBarChart data={twrSeries} valueFormatter={formatPct} expanded={expandedTwrChart} />
               )}
-              {twrSeries.length > 0 ? (
-                <ChartLegend data={twrSeries} valueFormatter={formatPct} />
+              {expandedTwrChart && twrSeries.length > 0 ? (
+                <div style={{ marginTop: 10, border: `1px solid ${palette.border}`, borderRadius: 10, background: '#ffffff', maxHeight: 280, overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left', padding: 10, color: palette.muted, fontSize: 12 }}>Mes</th>
+                        <th style={{ textAlign: 'right', padding: 10, color: palette.muted, fontSize: 12 }}>TWR mensual</th>
+                        <th style={{ textAlign: 'right', padding: 10, color: palette.muted, fontSize: 12 }}>TWR acumulado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {twrSeries.map((row) => (
+                        <tr key={`twr-expand-${row.month}`}>
+                          <td style={{ padding: 10, borderTop: `1px solid ${palette.border}`, fontSize: 13 }}>{row.label}</td>
+                          <td style={{ padding: 10, borderTop: `1px solid ${palette.border}`, textAlign: 'right', fontSize: 13, color: row.value >= 0 ? '#0f8d52' : '#b42318' }}>
+                            {formatPct(row.value)}
+                          </td>
+                          <td style={{ padding: 10, borderTop: `1px solid ${palette.border}`, textAlign: 'right', fontSize: 13 }}>
+                            {formatPct(twrCumulativeByMonth.get(row.month) ?? 0)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : null}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: 12, color: palette.muted }}>
                 <span>Meses con datos: {twrSeries.length}</span>
