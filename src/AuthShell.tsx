@@ -532,35 +532,35 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
                 <div>
                   <strong style={{ display: 'block', color: '#1d2938', fontSize: 20, letterSpacing: '-.01em' }}>Portfolio Manager</strong>
                   <span style={{ fontSize: 12, color: '#62707d', letterSpacing: '.14em', textTransform: 'uppercase' }}>
-                    Client and Admin Access
+                    Portal privado
                   </span>
                 </div>
               </div>
 
-              <h1 className="pmTitle">Acceso seguro para revisar cartera, KPIs y reportes en segundos.</h1>
+              <h1 className="pmTitle">Accede a tu cartera en segundos.</h1>
               <p className="pmCopy">
-                Entra con tu cuenta para ver tus datos. Los clientes solo pueden leer su informacion.
-                El administrador mantiene el control total de la gestion y las publicaciones.
+                Inicia sesion para ver tu informe, KPIs y movimientos.
+                Si eres cliente, veras solo tu informacion. Si eres administrador, tendras acceso completo.
               </p>
 
               <div className="pmPills" aria-label="Caracteristicas">
-                <div className="pmPill"><i /> Lectura segura de datos</div>
-                <div className="pmPill"><i /> Perfil cliente de solo lectura</div>
-                <div className="pmPill"><i /> Exportacion PDF desde panel</div>
-                <div className="pmPill"><i /> Historial con trazabilidad</div>
+                <div className="pmPill"><i /> KPIs claros</div>
+                <div className="pmPill"><i /> Cliente: solo lectura</div>
+                <div className="pmPill"><i /> PDF con un clic</div>
+                <div className="pmPill"><i /> Historico con trazabilidad</div>
               </div>
             </div>
 
             <div>
-              <div className="pmBand">Secure Session Mode</div>
+              <div className="pmBand">Acceso privado</div>
               <div className="pmLegal">(c) {currentYear} Portfolio Manager</div>
             </div>
           </div>
 
           <section className="pmCard" aria-label="Formulario de acceso">
             <div className="pmCardHead">
-              <h2 className="pmCardTitle">Client Access</h2>
-              <div className="pmStatus"><i /> Secure Session</div>
+              <h2 className="pmCardTitle">Iniciar sesion</h2>
+              <div className="pmStatus"><i /> Acceso privado</div>
             </div>
 
             <form
