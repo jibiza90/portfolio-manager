@@ -792,8 +792,9 @@ const ClientPortal = ({
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const marginX = 40;
-      const headerH = 74;
-      const contentTop = headerH + 22;
+      const space = { xs: 6, s: 10, m: 16, l: 24, xl: 32 };
+      const headerH = 78;
+      const contentTop = headerH + 26;
 
       const drawHeader = () => {
         doc.setFillColor(brand.teal[0], brand.teal[1], brand.teal[2]);
@@ -1040,7 +1041,7 @@ const ClientPortal = ({
         const cardX = marginX;
         const cardY = startY;
         const cardW = pageWidth - marginX * 2;
-        const cardH = 86;
+        const cardH = 94;
 
         doc.setDrawColor(brand.border[0], brand.border[1], brand.border[2]);
         doc.setFillColor(brand.soft[0], brand.soft[1], brand.soft[2]);
@@ -1048,29 +1049,47 @@ const ClientPortal = ({
 
         doc.setFontSize(9);
         doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
-        doc.text('Datos del informe', cardX + 14, cardY + 18);
+        doc.text('Datos del informe', cardX + 14, cardY + 20);
 
         const leftX = cardX + 14;
         const rightX = cardX + Math.round(cardW * 0.56);
 
         doc.setFontSize(10);
         doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
-        doc.text(`Cliente: ${headerName}`, leftX, cardY + 40);
+        doc.text(`Cliente: ${headerName}`, leftX, cardY + 44);
         if (email) {
-          doc.text(`Email: ${email}`, leftX, cardY + 58);
+          doc.text(`Email: ${email}`, leftX, cardY + 64);
         }
 
-        doc.text(`Emitido: ${now.toLocaleDateString('es-ES')}`, rightX, cardY + 40);
-        doc.text(`Actualizado: ${updatedAtLabel}`, rightX, cardY + 58);
-        doc.text(`Periodo: ${periodLabel}`, rightX, cardY + 76);
+        doc.text(`Emitido: ${now.toLocaleDateString('es-ES')}`, rightX, cardY + 44);
+        doc.text(`Actualizado: ${updatedAtLabel}`, rightX, cardY + 64);
+        doc.text(`Periodo: ${periodLabel}`, rightX, cardY + 84);
 
-        return cardY + cardH + 18;
+        return cardY + cardH + space.l;
+      };
+
+      const ensureRoom = (y: number, minRoom: number) => {
+        const bottomLimit = pageHeight - tableMargin.bottom;
+        if (y + minRoom <= bottomLimit) return y;
+        doc.addPage();
+        drawHeader();
+        return contentTop;
+      };
+
+      const drawSectionTitle = (title: string, y: number) => {
+        doc.setFontSize(12);
+        doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
+        doc.text(title, marginX, y);
+        doc.setDrawColor(brand.border[0], brand.border[1], brand.border[2]);
+        doc.setLineWidth(0.8);
+        doc.line(marginX, y + 6, pageWidth - marginX, y + 6);
+        doc.setLineWidth(1);
+        return y + space.m;
       };
 
       let cursorY = drawInfoCard(contentTop);
-      doc.setFontSize(12);
-      doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
-      doc.text('KPIs', marginX, cursorY - 6);
+      cursorY = ensureRoom(cursorY, 180);
+      cursorY = drawSectionTitle('KPIs', cursorY);
 
       const latestProfitLabel = latestProfitMonth ? `${formatMonthLabel(latestProfitMonth.month)}: ${formatEuro(latestProfitMonth.profit)}` : '-';
       const latestTwrLabel = latestTwrMonth ? `${formatMonthLabel(latestTwrMonth.month)}: ${formatPct(latestTwrMonth.twr)}` : '-';
@@ -1092,7 +1111,7 @@ const ClientPortal = ({
       }
 
       autoTable(doc, {
-        startY: cursorY,
+        startY: cursorY + space.xs,
         margin: tableMargin,
         didDrawPage,
         head: [['KPI', 'Valor', 'KPI', 'Valor']],
@@ -1100,7 +1119,7 @@ const ClientPortal = ({
         theme: 'grid',
         styles: {
           fontSize: 9,
-          cellPadding: 6,
+          cellPadding: 7,
           textColor: brand.text,
           lineColor: brand.border,
           lineWidth: 0.6
@@ -1119,13 +1138,14 @@ const ClientPortal = ({
         }
       });
 
-      const monthlyStartY = lastTableY() + 18;
-      doc.setFontSize(12);
-      doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
-      doc.text('Detalle mensual', marginX, monthlyStartY - 6);
+      // Give the report breathing room: tables go on their own page.
+      doc.addPage();
+      drawHeader();
+      cursorY = contentTop;
+      cursorY = drawSectionTitle('Detalle mensual', cursorY);
 
       autoTable(doc, {
-        startY: monthlyStartY,
+        startY: cursorY + space.xs,
         margin: tableMargin,
         didDrawPage,
         head: [['Mes', 'Estado', 'Beneficio', 'TWR mensual', 'TWR acumulado anual']],
@@ -1143,7 +1163,7 @@ const ClientPortal = ({
         theme: 'grid',
         styles: {
           fontSize: 9,
-          cellPadding: 5,
+          cellPadding: 6,
           textColor: brand.text,
           lineColor: brand.border,
           lineWidth: 0.6
@@ -1161,13 +1181,12 @@ const ClientPortal = ({
         }
       });
 
-      const flowsStartY = lastTableY() + 18;
-      doc.setFontSize(12);
-      doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
-      doc.text('Ingresos y retiradas', marginX, flowsStartY - 6);
+      cursorY = lastTableY() + space.l;
+      cursorY = ensureRoom(cursorY, 170);
+      cursorY = drawSectionTitle('Ingresos y retiradas', cursorY);
 
       autoTable(doc, {
-        startY: flowsStartY,
+        startY: cursorY + space.xs,
         margin: tableMargin,
         didDrawPage,
         head: [['Fecha', 'Ingreso', 'Retiro', 'Saldo']],
@@ -1184,7 +1203,7 @@ const ClientPortal = ({
         theme: 'grid',
         styles: {
           fontSize: 8.5,
-          cellPadding: 5,
+          cellPadding: 6,
           textColor: brand.text,
           lineColor: brand.border,
           lineWidth: 0.6
@@ -1208,18 +1227,18 @@ const ClientPortal = ({
       const balanceChartEndY = drawLineChartPanel({
         title: 'Grafico - Evolucion del saldo mensual',
         data: balanceSeries,
-        startY: contentTop,
+        startY: contentTop + space.xs,
         color: brand.teal,
         valueFormatter: formatEuro
       });
       autoTable(doc, {
-        startY: balanceChartEndY,
+        startY: balanceChartEndY + space.s,
         margin: tableMargin,
         didDrawPage,
         head: [['Mes', 'Saldo fin de mes']],
         body: balanceSeries.map((row) => [row.label, formatEuro(row.value)]),
         theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 5, textColor: brand.text, lineColor: brand.border, lineWidth: 0.6 },
+        styles: { fontSize: 9, cellPadding: 6, textColor: brand.text, lineColor: brand.border, lineWidth: 0.6 },
         headStyles: { fillColor: brand.teal, textColor: 255, fontStyle: 'bold' },
         alternateRowStyles: { fillColor: brand.soft },
         columnStyles: { 1: { halign: 'right' } }
@@ -1230,16 +1249,16 @@ const ClientPortal = ({
       const twrChartEndY = drawTwrBarChartPanel({
         title: 'Grafico - Rentabilidad mensual (TWR)',
         data: twrSeries,
-        startY: contentTop
+        startY: contentTop + space.xs
       });
       autoTable(doc, {
-        startY: twrChartEndY,
+        startY: twrChartEndY + space.s,
         margin: tableMargin,
         didDrawPage,
         head: [['Mes', 'TWR mensual']],
         body: twrSeries.map((row) => [row.label, formatPct(row.value)]),
         theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 5, textColor: brand.text, lineColor: brand.border, lineWidth: 0.6 },
+        styles: { fontSize: 9, cellPadding: 6, textColor: brand.text, lineColor: brand.border, lineWidth: 0.6 },
         headStyles: { fillColor: brand.ink, textColor: 255, fontStyle: 'bold' },
         alternateRowStyles: { fillColor: brand.soft },
         columnStyles: { 1: { halign: 'right' } }
