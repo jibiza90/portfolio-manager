@@ -3,7 +3,7 @@ import { CLIENTS } from '../constants/clients';
 import { usePortfolioStore } from '../store/portfolio';
 import { formatCurrency, formatPercent } from '../utils/format';
 import { YEAR } from '../utils/dates';
-import { saveReportLink } from '../services/reportLinks';
+import { buildReportUrl, saveReportLink } from '../services/reportLinks';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 
 type ContactInfo = { name: string; surname: string; email: string; phone: string };
@@ -621,8 +621,8 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
     });
     
     // Generar URL del informe
-    const baseUrl = window.location.origin;
-    const reportUrl = `${baseUrl}?report=${token}`;
+    const baseUrl = `${window.location.origin}${window.location.pathname}`;
+    const reportUrl = buildReportUrl(baseUrl, token);
     
     // Abrir Gmail con datos pre-rellenados
     const clientName = clientData.contact.name || clientData.name;
@@ -893,8 +893,8 @@ Su gestor de inversiones`
                           }))
                         });
 
-                        const baseUrl = window.location.origin;
-                        const reportUrl = `${baseUrl}?report=${token}`;
+                        const baseUrl = `${window.location.origin}${window.location.pathname}`;
+                        const reportUrl = buildReportUrl(baseUrl, token);
                         const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
                         const to = encodeURIComponent(ct.email);
                         const subject = encodeURIComponent(`Informe de Inversion - ${client.name} - ${fecha}`);

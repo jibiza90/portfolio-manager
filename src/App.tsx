@@ -13,6 +13,7 @@ import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import { provisionClientAccess } from './services/cloudPortfolio';
 import { auth } from './services/firebaseApp';
+import { isValidReportToken } from './services/reportLinks';
 
 const INFO_VIEW = 'INFO_VIEW';
 const COMISIONES_VIEW = 'COMISIONES_VIEW';
@@ -48,6 +49,17 @@ const normalizeContact = (input?: Partial<ContactInfo>): ContactInfo => ({
   ...EMPTY_CONTACT,
   ...(input ?? {})
 });
+
+const parseReportTokenFromLocation = (): string | null => {
+  const searchToken = new URLSearchParams(window.location.search).get('report');
+  if (isValidReportToken(searchToken)) return searchToken;
+
+  const hashRaw = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const hashToken = new URLSearchParams(hashRaw).get('report');
+  if (isValidReportToken(hashToken)) return hashToken;
+
+  return null;
+};
 
 function EditableCell({ value, onChange, isPercent = false }: { value: number | undefined; onChange: (v: number | undefined) => void; isPercent?: boolean }) {
   const [editing, setEditing] = useState(false);
@@ -1955,10 +1967,7 @@ function TotalsBanner() {
 
 export default function App() {
   // Check for report token in URL
-  const [reportToken, setReportToken] = useState<string | null>(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('report');
-  });
+  const [reportToken, setReportToken] = useState<string | null>(() => parseReportTokenFromLocation());
 
   const [activeView, setActiveView] = useState<string>(GENERAL_OPTION);
   const [menuOpen, setMenuOpen] = useState(false);

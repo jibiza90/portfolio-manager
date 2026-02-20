@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { getReportByToken, ReportData } from '../services/reportLinks';
+import { getReportByToken, isValidReportToken, ReportData } from '../services/reportLinks';
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 
@@ -15,6 +15,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
 
   useEffect(() => {
     const loadReport = async () => {
+      if (!isValidReportToken(token)) {
+        setExpired(true);
+        setLoading(false);
+        return;
+      }
       const data = await getReportByToken(token);
       if (data) {
         setReport(data);

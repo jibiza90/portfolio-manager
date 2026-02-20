@@ -1,4 +1,3 @@
-// Importar db desde cloudPortfolio para asegurar que Firebase estÃ¡ inicializado con settings
 import { db } from './firebaseApp';
 
 export interface ReportData {
@@ -35,21 +34,43 @@ export interface ReportData {
   expiresAt: number;
 }
 
-// Generar token Ãºnico
-const generateToken = (): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
-  for (let i = 0; i < 32; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
+const REPORT_TOKEN_BYTES = 32;
+const REPORT_TOKEN_REGEX = /^[A-Za-z0-9_-]{43}$/;
+
+const toBase64Url = (bytes: Uint8Array) => {
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const chunk = bytes.subarray(offset, offset + chunkSize);
+    binary += String.fromCharCode(...chunk);
   }
-  return token;
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 };
 
-// Guardar informe con token y caducidad 24h
+// Generate strong random token for share links.
+const generateToken = (): string => {
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi?.getRandomValues) {
+    throw new Error('Secure random API no disponible para generar report token.');
+  }
+  const bytes = new Uint8Array(REPORT_TOKEN_BYTES);
+  cryptoApi.getRandomValues(bytes);
+  return toBase64Url(bytes);
+};
+
+export const isValidReportToken = (value: string | null | undefined): value is string =>
+  typeof value === 'string' && REPORT_TOKEN_REGEX.test(value);
+
+export const buildReportUrl = (baseUrl: string, token: string) => {
+  if (!isValidReportToken(token)) return baseUrl;
+  return `${baseUrl}#report=${token}`;
+};
+
+// Save report link with 24h expiration.
 export const saveReportLink = async (data: Omit<ReportData, 'createdAt' | 'expiresAt'>): Promise<string> => {
   const token = generateToken();
   const now = Date.now();
-  const expiresAt = now + 24 * 60 * 60 * 1000; // 24 horas
+  const expiresAt = now + 24 * 60 * 60 * 1000;
 
   const reportData: ReportData = {
     ...data,
@@ -61,18 +82,27 @@ export const saveReportLink = async (data: Omit<ReportData, 'createdAt' | 'expir
   return token;
 };
 
-// Obtener informe por token (si no ha caducado)
+// Read report link if it is still valid.
 export const getReportByToken = async (token: string): Promise<ReportData | null> => {
-  const doc = await db.collection('reportLinks').doc(token).get();
-  if (!doc.exists) return null;
+  if (!isValidReportToken(token)) return null;
 
-  const data = doc.data() as ReportData;
-  if (Date.now() > data.expiresAt) {
-    // Caducado, eliminar
-    await db.collection('reportLinks').doc(token).delete();
+  try {
+    const doc = await db.collection('reportLinks').doc(token).get();
+    if (!doc.exists) return null;
+
+    const data = doc.data() as ReportData;
+    if (Date.now() > data.expiresAt) {
+      await db.collection('reportLinks').doc(token).delete();
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: string }).code) : '';
+    if (code === 'permission-denied') {
+      return null;
+    }
+    console.error('Error leyendo report link', error);
     return null;
   }
-
-  return data;
 };
-
