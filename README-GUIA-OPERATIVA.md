@@ -1,7 +1,7 @@
 # Guia tecnica y operativa - Portfolio Manager
 
 Ultima revision de esta guia: 2026-02-20  
-Base de codigo revisada: rama `main` (incluye hardening de enlaces de reportes y update de `jspdf`).
+Base de codigo revisada: rama `main` (incluye chat interno admin-cliente, respuestas rapidas editables y rediseno/paginacion de PDF cliente).
 
 ---
 
@@ -58,6 +58,10 @@ Colecciones/documentos usados:
   - Rol de acceso (`admin` o `client`), `clientId`, `active`, etc.
 - `reportLinks/{token}`:
   - Informes compartidos con expiracion.
+- `support_threads/{clientId}`:
+  - Hilo de mensajeria privada admin-cliente (resumen del hilo y contadores de no leido).
+- `support_threads/{clientId}/messages/{messageId}`:
+  - Mensajes del hilo, estado de lectura del cliente y marca de mensaje editado.
 
 ### Firebase Auth (nube)
 
@@ -76,6 +80,7 @@ Guardado local (no compartido automaticamente entre dispositivos):
 - `portfolio-followup-by-client`
 - `portfolio-followup-last-alert-date`
 - `portfolio-comision-estado-retiro`
+- `portfolio-admin-quick-templates` (plantillas de respuesta rapida del admin para mensajeria interna)
 
 Importante: esto significa que una parte funcional (contactos, notas, etc.) es local al navegador.
 
@@ -116,6 +121,7 @@ Importante: esto significa que una parte funcional (contactos, notas, etc.) es l
   - CRUD basico de clientes.
   - Alta/vinculacion de login cliente.
   - Envio de reset password.
+  - Mensajeria interna admin-cliente (buscador por cliente, no leidos, edicion de mensaje admin, plantillas rapidas CRUD).
   - Lectura de reportes por token.
 
 ## 4.3 Datos y calculo
@@ -143,6 +149,9 @@ Importante: esto significa que una parte funcional (contactos, notas, etc.) es l
 - `src/services/reportLinks.ts`
   - Tokens de enlace de informes.
   - Guardado/lectura de reportes con expiracion.
+- `src/services/supportInbox.ts`
+  - API de Firestore para hilos y mensajes internos.
+  - Marcas de lectura (admin y cliente), edicion de mensaje admin y suscripciones realtime.
 
 ## 4.5 Reglas de seguridad
 
@@ -210,6 +219,24 @@ Puntos clave:
   - read: solo si no expirado.
   - create/update: solo admin y con expiracion valida.
   - delete: solo admin.
+- `support_threads/{clientId}`:
+  - read: admin o cliente propietario del `clientId`.
+  - create:
+    - admin, o
+    - cliente propietario si crea hilo propio y sube `adminUnreadCount` inicial.
+  - update:
+    - admin, o
+    - cliente propietario sin poder bajar `adminUnreadCount`.
+  - delete: solo admin.
+- `support_threads/{clientId}/messages/{messageId}`:
+  - read: admin o cliente propietario.
+  - create:
+    - admin (mensajes de admin), o
+    - cliente propietario (mensajes cliente con `clientRead=true` al crear).
+  - update:
+    - admin (edicion de su mensaje), o
+    - cliente propietario solo para marcar leido mensajes del admin.
+  - delete: solo admin.
 - Todo lo demas denegado por defecto.
 
 ---
@@ -252,6 +279,26 @@ Documento temporal para compartir informe:
 - Datos del informe renderizable.
 - `createdAt`
 - `expiresAt` (24h desde creacion).
+
+## 7.5 `support_threads/{clientId}`
+
+Cabecera del hilo interno por cliente:
+
+- `clientId`, `clientName`, `clientEmail`
+- `lastMessageText`, `lastMessageAt`, `updatedAt`
+- `adminUnreadCount` (cuantos mensajes del cliente no han sido marcados como vistos por admin)
+- `clientLastSeenAt` y `adminLastSeenAt` (cuando existe)
+
+## 7.6 `support_threads/{clientId}/messages/{messageId}`
+
+Mensaje individual del chat interno:
+
+- `senderRole`: `admin | client`
+- `senderName`
+- `text`
+- `createdAt`, `updatedAt`
+- `clientRead`, `clientReadAt` (lectura del cliente para mensajes del admin)
+- `edited` (si el admin lo modifico despues de enviar)
 
 ---
 
@@ -308,7 +355,25 @@ En `src/utils/twr.ts`:
 En `AuthShell` (vista cliente):
 
 - Descarga PDF personalizado sin mostrar ID interno.
-- Incluye tablas y graficos.
+- Incluye bloque de KPIs en tarjetas (2 columnas), `Detalle mensual` y `Ingresos y retiradas`.
+- Prioriza mantener KPI + tablas en una sola pagina cuando caben; si no, corta por bloque para no romper visualmente.
+- Incluye graficos en paginas separadas con tabla de datos bajo cada grafico.
+
+## 9.4 Mensajeria interna admin-cliente
+
+Flujo operativo:
+
+- Cliente:
+  - abre su panel y escribe en su hilo.
+  - ve notificacion persistente hasta abrir el hilo cuando hay respuesta del admin.
+  - no ve estado "leido/no leido" del lado admin.
+- Admin:
+  - vista `Mensajes` en `App.tsx` con buscador de clientes.
+  - orden de lista: prioridad por no leido, luego actividad reciente, luego numero de cliente.
+  - puede escribir aunque el cliente no haya iniciado hilo.
+  - puede marcar hilo como visto (pone `adminUnreadCount=0`).
+  - puede editar mensajes enviados por admin (no mensajes del cliente).
+  - tiene gestor CRUD de respuestas rapidas (guardadas en localStorage del navegador admin).
 
 ---
 
@@ -324,6 +389,12 @@ Puede:
 - Crear o vincular login cliente.
 - Enviar reset password.
 - Generar enlaces de informes.
+- Gestionar mensajeria interna:
+  - enviar mensajes a cualquier cliente,
+  - marcar hilos como vistos,
+  - ver confirmacion de lectura del cliente en mensajes del admin,
+  - editar mensajes propios,
+  - administrar plantillas rapidas (anadir/editar/borrar).
 
 No debe:
 
@@ -337,6 +408,7 @@ Puede:
 - Ver solo su resumen (`clientId` asignado en access profile).
 - Ver KPI, graficos, detalle mensual y movimientos.
 - Descargar PDF.
+- Usar chat interno para escribir al admin y leer respuestas.
 - Cerrar sesion.
 
 No puede:
@@ -1139,7 +1211,7 @@ A: Lint script no definido en package actual.
 A: Hay textos con codificacion heredada rara (`Ã` etc) en algunos archivos.
 
 ### Q124) "Hay codigo fuera de dominio en el repo?"
-A: Si, `scripts/schedule-launch-plan.ts` no pertenece a portfolio manager.
+A: Ahora no hay scripts heredados activos fuera de dominio en `scripts/` (directorio limpio).
 
 ### Q125) "Que hago primero si tomo mantenimiento?"
 A:
@@ -1149,3 +1221,25 @@ A:
 4. revisar reglas Firestore
 5. mapear localStorage pendiente de migracion
 
+### Q126) "Donde se implementa el chat interno admin-cliente?"
+A:
+- UI admin: `AdminMessagesView` en `src/App.tsx`
+- UI cliente: bloque de mensajes en `ClientPortal` dentro de `src/AuthShell.tsx`
+- Persistencia y realtime: `src/services/supportInbox.ts`
+- Seguridad: `support_threads` y subcoleccion `messages` en `firestore.rules`
+
+### Q127) "El cliente puede editar mensajes?"
+A: No. Solo el admin puede editar mensajes enviados por el admin.
+
+### Q128) "Donde se guardan las respuestas rapidas del admin?"
+A: En localStorage del navegador admin (`portfolio-admin-quick-templates`).
+
+### Q129) "Como se marca un mensaje como leido?"
+A:
+- Cliente: al abrir su panel de mensajes, se marca lectura de mensajes admin (`clientRead=true`).
+- Admin: usa boton `Marcar visto` para poner `adminUnreadCount=0` en el hilo.
+
+### Q130) "Por que a veces el PDF cambia de pagina antes de lo esperado?"
+A:
+- El PDF intenta juntar bloques KPI + tablas cuando caben.
+- Si el alto estimado supera el espacio util, se mueve el bloque completo para no partirlo visualmente.

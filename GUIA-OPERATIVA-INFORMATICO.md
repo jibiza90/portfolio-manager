@@ -1,6 +1,7 @@
 # Guia operativa para informatico - Portfolio Manager
 
 Fecha: 2026-02-20
+Revision incluida: chat interno admin-cliente, respuestas rapidas editables y ajuste de paginacion/KPI del PDF cliente.
 
 Este documento es la version operativa para una persona tecnica que tiene que mantener, desplegar, auditar y evolucionar el sistema.
 
@@ -46,13 +47,14 @@ Consecuencias:
 
 - `src/main.tsx`: bootstrap React.
 - `src/AuthShell.tsx`: login, sesion, resolucion de rol, portal cliente.
-- `src/App.tsx`: panel admin completo.
+- `src/App.tsx`: panel admin completo (incluye vista `Mensajes`).
 - `src/store/portfolio.ts`: store global + persistencia + sync.
 - `src/utils/snapshot.ts`: calculo diario y por cliente.
 - `src/utils/twr.ts`: TWR anual/mensual.
 - `src/services/firebaseApp.ts`: init Firebase.
 - `src/services/cloudPortfolio.ts`: acceso Firestore + provision cliente.
 - `src/services/reportLinks.ts`: enlaces de informe (token + expiracion).
+- `src/services/supportInbox.ts`: hilos/mensajes internos, lectura y edicion admin.
 - `src/components/InformesView.tsx`: generar y compartir informes.
 - `src/components/ReportView.tsx`: visualizar enlace de informe.
 - `firestore.rules`: autorizacion real de datos.
@@ -104,6 +106,16 @@ Incluye:
 
 Token fuerte, formato validado y expiracion controlada en cliente + reglas.
 
+## 4.5 Chat interno
+
+`support_threads/{clientId}`
+
+- cabecera del hilo (ultimo mensaje, fecha, no leidos admin, cliente/email).
+
+`support_threads/{clientId}/messages/{messageId}`
+
+- mensajes con `senderRole`, texto, fechas, `clientRead/clientReadAt` y `edited`.
+
 ---
 
 ## 5. Flujo de autenticacion (operativo)
@@ -145,6 +157,15 @@ Definicion en `firestore.rules`.
 - `reportLinks/*`:
   - read: permitido solo si `expiresAt` no vencido.
   - create/update/delete: solo admin (con validacion de expiracion en create/update).
+- `support_threads/{clientId}`:
+  - read: admin o cliente propietario.
+  - create/update: admin o cliente propietario (con restricciones de integridad).
+  - delete: solo admin.
+- `support_threads/{clientId}/messages/{messageId}`:
+  - read: admin o cliente propietario.
+  - create: admin o cliente propietario segun `senderRole`.
+  - update: admin (edicion) o cliente propietario solo para marcar lectura de mensajes admin.
+  - delete: solo admin.
 - default deny en el resto.
 
 Regla operativa: cualquier cambio de reglas requiere deploy manual Firebase.
@@ -175,7 +196,8 @@ Regla operativa: cualquier cambio de reglas requiere deploy manual Firebase.
 - login admin estable,
 - login cliente estable,
 - overview cliente visible,
-- descarga PDF OK,
+- chat interno admin-cliente envia/recibe OK,
+- descarga PDF OK (KPIs + tablas principales sin saltos visuales innecesarios),
 - enlace de informe abre y expira correctamente.
 
 ---
@@ -224,6 +246,24 @@ Checklist:
 - `canWrite` true en sesion admin,
 - escritura en Firestore permitida,
 - errores de red en `savePortfolioState`.
+
+## 8.6 Incidencia: "mensaje enviado pero no aparece"
+
+Checklist:
+
+- revisar permisos `support_threads` y `messages` en reglas desplegadas,
+- revisar si hay `permission-denied` en consola,
+- comprobar `clientId` del perfil cliente,
+- validar conectividad Firestore (onSnapshot activo).
+
+## 8.7 Incidencia: "cliente no ve respuesta del admin / lectura no actualiza"
+
+Checklist:
+
+- documento mensaje tiene `senderRole=admin`,
+- campo `clientRead=false` al crear mensaje admin,
+- cliente abre panel mensajes (debe ejecutar `markMessagesReadByClient`),
+- revisar hora del sistema (timestamps).
 
 ---
 
@@ -317,6 +357,12 @@ Quitar rol admin y, si aplica, quitar email de allowlist frontend.
 ### "Si Render esta bien pero permisos fallan?"
 Casi seguro no se desplegaron reglas nuevas.
 
+### "Donde se guardan/editar respuestas rapidas del admin?"
+En localStorage del navegador admin (`portfolio-admin-quick-templates`) y se gestionan desde la vista `Mensajes`.
+
+### "Por que el PDF cliente corta a otra pagina?"
+El generador de `downloadClientPdf` calcula espacio util y mueve bloques completos para evitar cortes feos dentro de KPI/tablas.
+
 ---
 
 ## 13. Checklist para pasar el proyecto a otro informatico
@@ -346,4 +392,3 @@ Validar junto al receptor:
 - Este sistema es funcional y mantenible, pero no es "backend-first".
 - El mayor salto de calidad no es visual: es control de datos y seguridad de operaciones criticas.
 - Si se prioriza estabilidad real, la migracion de localStorage y la capa backend de gestion de usuarios deben ir antes que nuevas funcionalidades de UI.
-
