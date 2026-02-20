@@ -556,7 +556,7 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
 
               <div className="pmPills" aria-label="Caracteristicas">
                 <div className="pmPill"><i /> KPIs claros</div>
-                <div className="pmPill"><i /> Comunicacion directa con soporte</div>
+                <div className="pmPill"><i /> Canal interno de soporte</div>
                 <div className="pmPill"><i /> PDF con un clic</div>
                 <div className="pmPill"><i /> Historico con trazabilidad</div>
               </div>
