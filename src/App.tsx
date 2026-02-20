@@ -1979,10 +1979,17 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
   const [editText, setEditText] = useState('');
 
   const quickTemplates = [
-    'Recibido. Lo reviso y te respondo en breve.',
-    'Necesito un dato adicional para ayudarte: confirma la fecha exacta y el importe.',
-    'Queda resuelto. Si necesitas algo mas, responde en este hilo.'
+    'Hemos recibido tu mensaje. Estamos revisando tu solicitud y te responderemos en breve.',
+    'Para continuar, necesitamos que confirmes la fecha, el importe y una breve descripcion del caso.',
+    'Hemos finalizado la gestion de tu solicitud. Si deseas una revision adicional, responde en este mismo hilo.'
   ];
+
+  const getClientOrderNumber = (clientId: string) => {
+    const match = clientId.match(/(\d+)(?!.*\d)/);
+    if (!match) return Number.MAX_SAFE_INTEGER;
+    const parsed = Number.parseInt(match[1], 10);
+    return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+  };
 
   const getClientName = (clientId: string) => {
     const contact = contacts[clientId];
@@ -2021,7 +2028,9 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
         const unreadDiff = (b.unread > 0 ? 1 : 0) - (a.unread > 0 ? 1 : 0);
         if (unreadDiff !== 0) return unreadDiff;
         if (a.lastMessageAt !== b.lastMessageAt) return b.lastMessageAt - a.lastMessageAt;
-        return a.name.localeCompare(b.name, 'es');
+        const idDiff = getClientOrderNumber(a.clientId) - getClientOrderNumber(b.clientId);
+        if (idDiff !== 0) return idDiff;
+        return a.clientId.localeCompare(b.clientId, 'es');
       }),
     [threads, contacts]
   );
