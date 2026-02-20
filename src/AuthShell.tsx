@@ -71,9 +71,15 @@ const formatMonthLabel = (monthIso: string) => {
   if (!Number.isFinite(idx) || idx < 1 || idx > 12) return monthIso;
   return `${monthNames[idx - 1]} ${year}`;
 };
-const currentMonthIsoLocal = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+const currentMonthIsoMadrid = () => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    timeZone: 'Europe/Madrid'
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === 'year')?.value ?? '0000';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '01';
+  return `${year}-${month}`;
 };
 
 const Sparkline = ({ values, color = '#0f6d7a' }: { values: number[]; color?: string }) => {
@@ -122,6 +128,33 @@ const HorizontalBars = ({ data }: { data: Array<{ label: string; value: number }
               />
             </div>
             <span style={{ fontSize: 12, textAlign: 'right', color: palette.text }}>{formatPct(item.value)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const VerticalBars = ({ data, color = '#0f6d7a' }: { data: Array<{ label: string; value: number }>; color?: string }) => {
+  const maxAbs = Math.max(1, ...data.map((item) => Math.abs(item.value)));
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, data.length)}, minmax(22px, 1fr))`, gap: 8, alignItems: 'end', minHeight: 140 }}>
+      {data.map((item) => {
+        const heightPct = (Math.abs(item.value) / maxAbs) * 100;
+        const positive = item.value >= 0;
+        return (
+          <div key={item.label} style={{ display: 'grid', gap: 4, justifyItems: 'center' }}>
+            <div
+              title={`${item.label}: ${item.value.toFixed(2)}`}
+              style={{
+                width: '100%',
+                minHeight: 6,
+                height: `${Math.max(6, heightPct)}%`,
+                background: positive ? color : '#b42318',
+                borderRadius: 8
+              }}
+            />
+            <span style={{ fontSize: 10, color: palette.muted }}>{item.label.split(' ')[0]}</span>
           </div>
         );
       })}
@@ -217,6 +250,7 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [chartType, setChartType] = useState<'line' | 'bars'>('line');
 
   useEffect(() => {
     const unsubscribe = subscribeClientOverview(
@@ -235,12 +269,26 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
   }, [clientId]);
 
   const clientName = useMemo(() => overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId, [clientId, overview]);
-  const latestProfitMonth = overview?.latestProfitMonth ?? null;
-  const latestReturnMonth = overview?.latestReturnMonth ?? null;
-  const monthly = overview?.monthly ?? [];
-  const twrMonthly = overview?.twrMonthly ?? [];
+  const monthlyRaw = overview?.monthly ?? [];
+  const twrMonthlyRaw = overview?.twrMonthly ?? [];
+  const monthly = useMemo(
+    () => monthlyRaw.filter((item) => Math.abs(item.profit) > 0.0001 || Math.abs(item.retPct) > 0.0001),
+    [monthlyRaw]
+  );
+  const twrMonthly = useMemo(
+    () => twrMonthlyRaw.filter((item) => Math.abs(item.twr) > 0.0001 || monthly.some((month) => month.month === item.month)),
+    [monthly, twrMonthlyRaw]
+  );
+  const latestProfitMonth = useMemo(
+    () => [...monthly].reverse().find((item) => item.profit !== 0) ?? monthly[monthly.length - 1] ?? null,
+    [monthly]
+  );
+  const latestReturnMonth = useMemo(
+    () => [...monthly].reverse().find((item) => item.retPct !== 0) ?? monthly[monthly.length - 1] ?? null,
+    [monthly]
+  );
   const twrYtd = overview?.twrYtd ?? overview?.ytdReturnPct ?? 0;
-  const currentMonthIso = currentMonthIsoLocal();
+  const currentMonthIso = currentMonthIsoMadrid();
   const monthEndBalance = useMemo(() => {
     const map = new Map<string, number>();
     for (const row of overview?.rows ?? []) {
@@ -266,6 +314,12 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
         value: item.retPct
       })),
     [monthly]
+  );
+  const movementRows = useMemo(
+    () =>
+      (overview?.rows ?? [])
+        .filter((row) => (row.increment ?? 0) !== 0 || (row.decrement ?? 0) !== 0),
+    [overview?.rows]
   );
 
   const downloadClientPdf = async () => {
@@ -419,6 +473,35 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
         </div>
       </header>
 
+      <section
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 10,
+          marginBottom: 14,
+          background: palette.card,
+          border: `1px solid ${palette.border}`,
+          borderRadius: 12,
+          padding: '10px 12px'
+        }}
+      >
+        <p style={{ margin: 0, color: palette.muted, fontSize: 13 }}>
+          Si un mes esta <strong>en curso</strong>, su rentabilidad cambia cada dia. Al empezar el mes siguiente, ese mes queda <strong>cerrado</strong>.
+        </p>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: palette.text, fontSize: 13 }}>
+          Tipo grafico
+          <select
+            value={chartType}
+            onChange={(event) => setChartType(event.target.value as 'line' | 'bars')}
+            style={{ borderRadius: 8, border: `1px solid ${palette.border}`, padding: '4px 8px', background: '#fff', color: palette.text }}
+          >
+            <option value="line">Linea</option>
+            <option value="bars">Barras</option>
+          </select>
+        </label>
+      </section>
+
       {error ? <p style={{ color: palette.error, fontWeight: 600 }}>{error}</p> : null}
       {!loaded ? <p style={{ color: palette.muted }}>Cargando tu resumen...</p> : null}
       {loaded && !overview ? (
@@ -430,58 +513,94 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
       {overview ? (
         <>
           <section style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', marginBottom: 18 }}>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Cuanto dinero total tienes ahora mismo en tu cuenta de inversion."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Saldo actual</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.currentBalance)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Dinero ganado o perdido sumando todo el ano."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Beneficio total</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.cumulativeProfit)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Cuanto ganaste o perdiste solo en el ultimo dia con datos."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Beneficio dia</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.dailyProfit ?? 0)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Porcentaje ganado o perdido en el ultimo dia con datos, comparado contra el dinero que habia ese dia."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>% dia</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.dailyProfitPct ?? 0)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Que parte del total de la cartera representas. Si sube, tu peso en el total tambien sube."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Participacion</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.participation ?? 0)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Suma de todas tus entradas de dinero del ano."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Incrementos totales</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.totalIncrements ?? 0)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Suma de todas tus retiradas de dinero del ano."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Decrementos totales</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.totalDecrements ?? 0)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Lo ganado o perdido en el ultimo mes con datos."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Beneficio mensual</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(latestProfitMonth?.profit ?? 0)}</h3>
               <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>
                 {latestProfitMonth ? formatMonthLabel(latestProfitMonth.month) : '-'}
               </p>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Porcentaje de ganancia del mes. Se calcula comparando lo ganado ese mes con el dinero base de ese mes."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Rentabilidad mensual</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(latestReturnMonth?.retPct ?? 0)}</h3>
               <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>
                 {latestReturnMonth ? formatMonthLabel(latestReturnMonth.month) : '-'}
               </p>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Rentabilidad TWR: mide rendimiento real evitando que las entradas y salidas de dinero falseen el porcentaje."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Rentabilidad TWR</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(twrYtd)}</h3>
               <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>YTD</p>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Rentabilidad acumulada del ano en porcentaje."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Rentabilidad YTD</p>
               <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.ytdReturnPct ?? 0)}</h3>
             </article>
-            <article style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}>
+            <article
+              title="Fecha y hora de la ultima actualizacion de tus datos."
+              style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
+            >
               <p style={{ margin: 0, color: palette.muted }}>Actualizado</p>
               <h3 style={{ margin: '8px 0 0 0', fontSize: 16, color: palette.text }}>{new Date(overview.updatedAt).toLocaleString('es-ES')}</h3>
             </article>
@@ -491,12 +610,20 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
             <article style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, padding: 14 }}>
               <p style={{ margin: 0, color: palette.muted }}>Grafico de saldo mensual</p>
               <h4 style={{ margin: '8px 0 6px', color: palette.text }}>Evolucion de balance</h4>
-              <Sparkline values={balanceSeries.map((row) => row.value)} color="#0f6d7a" />
+              {chartType === 'line' ? (
+                <Sparkline values={balanceSeries.map((row) => row.value)} color="#0f6d7a" />
+              ) : (
+                <VerticalBars data={balanceSeries} color="#0f6d7a" />
+              )}
             </article>
             <article style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, padding: 14 }}>
               <p style={{ margin: 0, color: palette.muted }}>Grafico de rentabilidad mensual</p>
               <h4 style={{ margin: '8px 0 10px', color: palette.text }}>Tendencia por mes</h4>
-              <HorizontalBars data={returnSeries} />
+              {chartType === 'line' ? (
+                <Sparkline values={returnSeries.map((row) => row.value)} color="#0f6d7a" />
+              ) : (
+                <HorizontalBars data={returnSeries} />
+              )}
             </article>
           </section>
 
@@ -543,7 +670,7 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
 
           <section style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.cardAlt, overflow: 'hidden' }}>
             <div style={{ padding: 14, borderBottom: `1px solid ${palette.border}` }}>
-              <strong>Movimientos del cliente</strong>
+              <strong>Detalle de movimientos (incrementos y decrementos)</strong>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
@@ -563,7 +690,7 @@ const ClientPortal = ({ clientId, email, onLogout }: { clientId: string; email: 
                       <td colSpan={6} style={{ padding: 12, color: palette.muted }}>Sin movimientos recientes.</td>
                     </tr>
                   ) : (
-                    overview.rows
+                    movementRows
                       .slice()
                       .reverse()
                       .map((row) => (
@@ -596,6 +723,7 @@ const AuthShell = () => {
     error: null
   });
   const [loginBusy, setLoginBusy] = useState(false);
+  const [loadingDots, setLoadingDots] = useState('.');
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -636,6 +764,14 @@ const AuthShell = () => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!session.loading) return;
+    const timer = window.setInterval(() => {
+      setLoadingDots((prev) => (prev.length >= 3 ? '.' : `${prev}.`));
+    }, 350);
+    return () => window.clearInterval(timer);
+  }, [session.loading]);
+
   const handleLogin = async (email: string, password: string) => {
     try {
       setLoginBusy(true);
@@ -655,8 +791,20 @@ const AuthShell = () => {
 
   if (session.loading) {
     return (
-      <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: palette.text }}>
-        Cargando sesion...
+      <main
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          color: palette.text,
+          background: `radial-gradient(circle at top left, rgba(15,109,122,0.14), transparent 45%), ${palette.bg}`
+        }}
+      >
+        <div style={{ textAlign: 'center', display: 'grid', gap: 8 }}>
+          <div style={{ width: 46, height: 46, borderRadius: 999, border: `3px solid ${palette.border}`, borderTopColor: palette.accent, margin: '0 auto' }} />
+          <strong>Cargando sesion{loadingDots}</strong>
+          <span style={{ color: palette.muted, fontSize: 13 }}>Estamos validando tu acceso</span>
+        </div>
       </main>
     );
   }
