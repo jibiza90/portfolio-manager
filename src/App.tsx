@@ -23,6 +23,7 @@ const INFORMES_VIEW = 'INFORMES_VIEW';
 const STATS_VIEW = 'STATS_VIEW';
 const SEGUIMIENTO_VIEW = 'SEGUIMIENTO_VIEW';
 const MENSAJES_VIEW = 'MENSAJES_VIEW';
+const ACCESOS_VIEW = 'ACCESOS_VIEW';
 type ContactInfo = {
   name: string;
   surname: string;
@@ -2358,6 +2359,122 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
   );
 }
 
+function LoginAccessView({ events, error }: { events: LoginEvent[]; error: string | null }) {
+  const dayKeyFromTs = (ts: number) => new Date(ts).toLocaleDateString('en-CA');
+
+  const groups = useMemo(() => {
+    const map = new Map<string, { dayKey: string; dayLabel: string; events: LoginEvent[] }>();
+    events.forEach((event) => {
+      const date = new Date(event.loginAt);
+      const dayKey = dayKeyFromTs(event.loginAt);
+      const dayLabel = date.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const row = map.get(dayKey) ?? { dayKey, dayLabel, events: [] };
+      row.events.push(event);
+      map.set(dayKey, row);
+    });
+    return Array.from(map.values()).sort((a, b) => (a.dayKey < b.dayKey ? 1 : -1));
+  }, [events]);
+
+  const [selectedDay, setSelectedDay] = useState<string>('all');
+
+  useEffect(() => {
+    if (selectedDay === 'all') return;
+    const exists = groups.some((group) => group.dayKey === selectedDay);
+    if (!exists) setSelectedDay('all');
+  }, [groups, selectedDay]);
+
+  const visibleGroups = useMemo(
+    () => (selectedDay === 'all' ? groups : groups.filter((group) => group.dayKey === selectedDay)),
+    [groups, selectedDay]
+  );
+
+  const uniqueUsers = useMemo(() => new Set(events.map((row) => row.email)).size, [events]);
+
+  const todayKey = dayKeyFromTs(Date.now());
+  const todayCount = useMemo(
+    () => events.filter((row) => dayKeyFromTs(row.loginAt) === todayKey).length,
+    [events, todayKey]
+  );
+
+  return (
+    <div className="glass-card fade-in" style={{ display: 'grid', gap: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div>
+          <h3 style={{ margin: 0 }}>Registro de accesos</h3>
+          <p className="muted" style={{ marginTop: 6 }}>Detalle dia por dia con usuario y hora de inicio de sesion.</p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(120px, auto))', gap: 8 }}>
+          <div style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 10, padding: '8px 10px' }}>
+            <div style={{ fontSize: 11, color: '#5f5a52' }}>Eventos</div>
+            <strong>{events.length}</strong>
+          </div>
+          <div style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 10, padding: '8px 10px' }}>
+            <div style={{ fontSize: 11, color: '#5f5a52' }}>Usuarios</div>
+            <strong>{uniqueUsers}</strong>
+          </div>
+          <div style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 10, padding: '8px 10px' }}>
+            <div style={{ fontSize: 11, color: '#5f5a52' }}>Hoy</div>
+            <strong>{todayCount}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <label htmlFor="access-day-filter" style={{ fontSize: 12, color: '#5f5a52' }}>Filtrar dia</label>
+        <select
+          id="access-day-filter"
+          value={selectedDay}
+          onChange={(event) => setSelectedDay(event.target.value)}
+          style={{ border: '1px solid #d7d2c8', borderRadius: 10, padding: '7px 10px', background: '#fff' }}
+        >
+          <option value="all">Todos los dias</option>
+          {groups.map((group) => (
+            <option key={group.dayKey} value={group.dayKey}>{group.dayLabel}</option>
+          ))}
+        </select>
+      </div>
+
+      {error ? <p style={{ margin: 0, color: '#b42318', fontSize: 12 }}>{error}</p> : null}
+
+      {visibleGroups.length === 0 ? (
+        <p className="muted" style={{ margin: 0 }}>Aun no hay accesos registrados.</p>
+      ) : (
+        <div style={{ display: 'grid', gap: 12 }}>
+          {visibleGroups.map((group) => (
+            <section key={group.dayKey} style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+              <header style={{ padding: '10px 12px', borderBottom: '1px solid #ebe6dd', fontWeight: 700, textTransform: 'capitalize' }}>
+                {group.dayLabel} · {group.events.length} acceso(s)
+              </header>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ textAlign: 'left', fontSize: 12, color: '#5f5a52', padding: '8px 12px', borderBottom: '1px solid #ebe6dd' }}>Hora</th>
+                      <th style={{ textAlign: 'left', fontSize: 12, color: '#5f5a52', padding: '8px 12px', borderBottom: '1px solid #ebe6dd' }}>Email</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.events.map((event) => (
+                      <tr key={event.id}>
+                        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f1ece2', fontSize: 13 }}>
+                          {new Date(event.loginAt).toLocaleTimeString('es-ES')}
+                        </td>
+                        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f1ece2', fontSize: 13 }}>
+                          {event.email || '(sin email)'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   // Check for report token in URL
   const [reportToken, setReportToken] = useState<string | null>(() => parseReportTokenFromLocation());
@@ -2580,6 +2697,12 @@ export default function App() {
   const isPrimaryAdmin = currentUserEmail === 'jibiza90@gmail.com';
 
   useEffect(() => {
+    if (!isPrimaryAdmin && activeView === ACCESOS_VIEW) {
+      setActiveView(GENERAL_OPTION);
+    }
+  }, [activeView, isPrimaryAdmin]);
+
+  useEffect(() => {
     if (!isPrimaryAdmin) {
       setOwnerLoginEvents([]);
       setOwnerLoginError(null);
@@ -2688,6 +2811,14 @@ export default function App() {
         >
           Seguimiento
         </button>
+        {isPrimaryAdmin ? (
+          <button
+            className={clsx('side-link', activeView === ACCESOS_VIEW && 'active')}
+            onClick={() => { setActiveView(ACCESOS_VIEW); setMenuOpen(false); }}
+          >
+            Accesos
+          </button>
+        ) : null}
         <button
           className={clsx('side-link', activeView === MENSAJES_VIEW && 'active')}
           onClick={() => { setActiveView(MENSAJES_VIEW); setMenuOpen(false); }}
@@ -2769,6 +2900,23 @@ export default function App() {
                         </span>
                       ))}
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveView(ACCESOS_VIEW)}
+                      style={{
+                        marginTop: 10,
+                        width: '100%',
+                        border: '1px solid #d7d2c8',
+                        borderRadius: 10,
+                        background: '#f8fbff',
+                        color: '#1f1d1b',
+                        padding: '8px 10px',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Ver detalle diario
+                    </button>
                   </>
                 )}
               </div>
@@ -2807,6 +2955,8 @@ export default function App() {
         <StatsView contacts={contacts} />
       ) : activeView === SEGUIMIENTO_VIEW ? (
         <SeguimientoView contacts={contacts} followUpByClient={followUpByClient} setFollowUpByClient={setFollowUpByClient} />
+      ) : activeView === ACCESOS_VIEW && isPrimaryAdmin ? (
+        <LoginAccessView events={ownerLoginEvents} error={ownerLoginError} />
       ) : activeView === MENSAJES_VIEW ? (
         <AdminMessagesView contacts={contacts} />
       ) : (
