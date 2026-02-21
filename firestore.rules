@@ -8,6 +8,10 @@ service cloud.firestore {
     function adminEmail() {
       return signedIn() && request.auth.token.email in ['jibiza90@gmail.com', 'jpujola@alogroup.es'];
     }
+    
+    function primaryAdminEmail() {
+      return signedIn() && request.auth.token.email == 'jibiza90@gmail.com';
+    }
 
     function adminProfile() {
       return signedIn() &&
@@ -94,6 +98,20 @@ service cloud.firestore {
         );
         allow delete: if isAdmin();
       }
+    }
+
+    match /auth_login_events/{eventId} {
+      allow read: if primaryAdminEmail();
+      allow create: if signedIn() &&
+        request.resource.data.uid is string &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.email is string &&
+        request.resource.data.authEventKey is string &&
+        request.resource.data.loginAt is int &&
+        request.resource.data.loginAt > 0 &&
+        request.resource.data.createdAt is int &&
+        request.resource.data.createdAt > 0;
+      allow update, delete: if false;
     }
 
     match /{document=**} {

@@ -3,6 +3,7 @@ import App from './App';
 import { CLIENTS } from './constants/clients';
 import { fetchAccessProfile, subscribeClientOverview, syncClientOverviews } from './services/cloudPortfolio';
 import { auth, db, firebase } from './services/firebaseApp';
+import { recordLoginEvent } from './services/loginTracker';
 import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, type SupportMessage } from './services/supportInbox';
 import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
 
@@ -2036,6 +2037,9 @@ const AuthShell = () => {
 
       clearPendingLogoutTimer();
       setSession((prev) => (prev.role ? { ...prev, error: null } : { ...prev, loading: true, error: null }));
+      void recordLoginEvent(user).catch((trackError) => {
+        console.error('No se pudo registrar login event', trackError);
+      });
 
       try {
         // If this UID was already verified as admin, keep admin session even if

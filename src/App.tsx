@@ -13,6 +13,7 @@ import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import { provisionClientAccess } from './services/cloudPortfolio';
 import { auth, db } from './services/firebaseApp';
+import { subscribeLoginEvents, type LoginEvent } from './services/loginTracker';
 import { isValidReportToken } from './services/reportLinks';
 import { editAdminSupportMessage, markThreadSeenByAdmin, sendSupportMessage, subscribeSupportMessages, subscribeSupportThreads, type SupportMessage, type SupportThread } from './services/supportInbox';
 
@@ -2440,6 +2441,9 @@ export default function App() {
   const [focusDate, setFocusDate] = useState(derivedFocusDate);
   const [toast, setToast] = useState<string | null>(null);
   const [supportUnreadTotal, setSupportUnreadTotal] = useState(0);
+  const [currentUserEmail, setCurrentUserEmail] = useState(() => auth.currentUser?.email?.trim().toLowerCase() ?? '');
+  const [ownerLoginEvents, setOwnerLoginEvents] = useState<LoginEvent[]>([]);
+  const [ownerLoginError, setOwnerLoginError] = useState<string | null>(null);
   const handleAddClient = (name?: string) => {
     const created = addClientProfile(name);
     setContacts((prev) => {
@@ -2566,6 +2570,56 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setCurrentUserEmail(user?.email?.trim().toLowerCase() ?? '');
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const isPrimaryAdmin = currentUserEmail === 'jibiza90@gmail.com';
+
+  useEffect(() => {
+    if (!isPrimaryAdmin) {
+      setOwnerLoginEvents([]);
+      setOwnerLoginError(null);
+      return;
+    }
+    const unsubscribe = subscribeLoginEvents(
+      (events) => {
+        setOwnerLoginEvents(events);
+        setOwnerLoginError(null);
+      },
+      () => {
+        setOwnerLoginError('No se pudo cargar actividad de accesos.');
+      }
+    );
+    return () => unsubscribe();
+  }, [isPrimaryAdmin]);
+
+  const ownerLoginSummary = useMemo(() => {
+    const map = new Map<string, { email: string; count: number; lastAt: number; todayCount: number }>();
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const dayStartMs = startOfDay.getTime();
+
+    ownerLoginEvents.forEach((event) => {
+      const email = (event.email || '(sin email)').trim().toLowerCase();
+      const current = map.get(email) ?? { email, count: 0, lastAt: 0, todayCount: 0 };
+      current.count += 1;
+      if (event.loginAt > current.lastAt) current.lastAt = event.loginAt;
+      if (event.loginAt >= dayStartMs) current.todayCount += 1;
+      map.set(email, current);
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.lastAt - a.lastAt);
+  }, [ownerLoginEvents]);
+
+  const ownerRecentLogins = useMemo(
+    () => ownerLoginEvents.slice(0, 12),
+    [ownerLoginEvents]
+  );
+
   return (
     <div className="app-shell">
       {alertMessage && (
@@ -2675,6 +2729,50 @@ export default function App() {
               </div>
               <p className="hero-helper">Visible en todas las vistas. Cambia rápido entre clientes.</p>
             </div>
+            {isPrimaryAdmin ? (
+              <div
+                style={{
+                  marginTop: 12,
+                  border: '1px solid #d7d2c8',
+                  borderRadius: 12,
+                  padding: 12,
+                  background: '#fff',
+                  minWidth: 320
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                  <strong style={{ fontSize: 13 }}>Actividad de accesos</strong>
+                  <span style={{ fontSize: 12, color: '#5f5a52' }}>
+                    Eventos: {ownerLoginEvents.length}
+                  </span>
+                </div>
+                {ownerLoginError ? (
+                  <p style={{ margin: 0, color: '#b42318', fontSize: 12 }}>{ownerLoginError}</p>
+                ) : (
+                  <>
+                    <div style={{ display: 'grid', gap: 6, marginBottom: 10 }}>
+                      {ownerLoginSummary.slice(0, 8).map((row) => (
+                        <div key={row.email} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
+                          <span style={{ fontSize: 12, color: '#1f1d1b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {row.email}
+                          </span>
+                          <span style={{ fontSize: 11, color: '#5f5a52' }}>
+                            {row.count} total · hoy {row.todayCount}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ borderTop: '1px solid #ebe6dd', paddingTop: 8, display: 'grid', gap: 4 }}>
+                      {ownerRecentLogins.slice(0, 5).map((event) => (
+                        <span key={event.id} style={{ fontSize: 11, color: '#5f5a52' }}>
+                          {event.email || '(sin email)'} · {new Date(event.loginAt).toLocaleString('es-ES')}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : null}
           </div>
         )}
       </div>
