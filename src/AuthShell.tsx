@@ -9,6 +9,7 @@ import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const ADMIN_EMAILS = new Set(['jibiza90@gmail.com', 'jpujola@alogroup.es'].map(normalizeEmail));
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
 type Role = 'admin' | 'client';
 
@@ -1980,8 +1981,17 @@ const AuthShell = () => {
   const [loginBusy, setLoginBusy] = useState(false);
   const [loadingDots, setLoadingDots] = useState('.');
   const pendingLogoutTimerRef = useRef<number | null>(null);
+  const inactivityTimerRef = useRef<number | null>(null);
+  const inactivityLogoutRef = useRef(false);
   const manualLogoutRef = useRef(false);
   const adminUidRef = useRef<string | null>(null);
+
+  const clearInactivityTimer = () => {
+    if (inactivityTimerRef.current !== null) {
+      window.clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
+    }
+  };
 
   useEffect(() => {
     const clearPendingLogoutTimer = () => {
@@ -2025,6 +2035,12 @@ const AuthShell = () => {
 
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) {
+        if (inactivityLogoutRef.current) {
+          inactivityLogoutRef.current = false;
+          clearPendingLogoutTimer();
+          markLoggedOut('Sesion cerrada por inactividad (15 minutos).');
+          return;
+        }
         if (manualLogoutRef.current) {
           manualLogoutRef.current = false;
           clearPendingLogoutTimer();
@@ -2036,6 +2052,7 @@ const AuthShell = () => {
       }
 
       clearPendingLogoutTimer();
+      inactivityLogoutRef.current = false;
       setSession((prev) => (prev.role ? { ...prev, error: null } : { ...prev, loading: true, error: null }));
       void recordLoginEvent(user).catch((trackError) => {
         console.error('No se pudo registrar login event', trackError);
@@ -2142,9 +2159,51 @@ const AuthShell = () => {
 
     return () => {
       clearPendingLogoutTimer();
+      clearInactivityTimer();
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const triggerInactivityLogout = () => {
+      if (!auth.currentUser || !session.role) return;
+      inactivityLogoutRef.current = true;
+      adminUidRef.current = null;
+      setSession((prev) =>
+        prev.role ? { ...prev, loading: true, error: 'Sesion cerrandose por inactividad...' } : prev
+      );
+      void auth.signOut().catch((error) => {
+        console.error('Error cerrando sesion por inactividad', error);
+        inactivityLogoutRef.current = false;
+        setSession((prev) => ({ ...prev, loading: false, error: 'No se pudo cerrar sesion por inactividad.' }));
+      });
+    };
+
+    const armInactivityTimer = () => {
+      clearInactivityTimer();
+      inactivityTimerRef.current = window.setTimeout(triggerInactivityLogout, INACTIVITY_TIMEOUT_MS);
+    };
+
+    if (!session.role) {
+      clearInactivityTimer();
+      return;
+    }
+
+    const onActivity = () => armInactivityTimer();
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'];
+
+    armInactivityTimer();
+    events.forEach((eventName) => {
+      window.addEventListener(eventName, onActivity, { passive: true });
+    });
+
+    return () => {
+      clearInactivityTimer();
+      events.forEach((eventName) => {
+        window.removeEventListener(eventName, onActivity);
+      });
+    };
+  }, [session.role]);
 
   useEffect(() => {
     if (!session.loading) return;
@@ -2175,6 +2234,8 @@ const AuthShell = () => {
   const handleLogout = async () => {
     manualLogoutRef.current = true;
     adminUidRef.current = null;
+    inactivityLogoutRef.current = false;
+    clearInactivityTimer();
     setSession((prev) => ({ ...prev, loading: true, error: null }));
     try {
       await auth.signOut();
