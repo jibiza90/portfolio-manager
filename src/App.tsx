@@ -2361,10 +2361,21 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
 
 function LoginAccessView({ events, error }: { events: LoginEvent[]; error: string | null }) {
   const dayKeyFromTs = (ts: number) => new Date(ts).toLocaleDateString('en-CA');
+  const normalizedEvents = useMemo(() => {
+    const unique = new Map<string, LoginEvent>();
+    events.forEach((event) => {
+      const key = event.authEventKey || event.id;
+      const prev = unique.get(key);
+      if (!prev || event.createdAt > prev.createdAt) {
+        unique.set(key, event);
+      }
+    });
+    return Array.from(unique.values()).sort((a, b) => b.loginAt - a.loginAt);
+  }, [events]);
 
   const groups = useMemo(() => {
     const map = new Map<string, { dayKey: string; dayLabel: string; events: LoginEvent[] }>();
-    events.forEach((event) => {
+    normalizedEvents.forEach((event) => {
       const date = new Date(event.loginAt);
       const dayKey = dayKeyFromTs(event.loginAt);
       const dayLabel = date.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -2373,27 +2384,27 @@ function LoginAccessView({ events, error }: { events: LoginEvent[]; error: strin
       map.set(dayKey, row);
     });
     return Array.from(map.values()).sort((a, b) => (a.dayKey < b.dayKey ? 1 : -1));
-  }, [events]);
+  }, [normalizedEvents]);
 
-  const [selectedDay, setSelectedDay] = useState<string>('all');
+  const [selectedDay, setSelectedDay] = useState<string>('');
 
   useEffect(() => {
-    if (selectedDay === 'all') return;
+    if (!selectedDay) return;
     const exists = groups.some((group) => group.dayKey === selectedDay);
-    if (!exists) setSelectedDay('all');
+    if (!exists) setSelectedDay('');
   }, [groups, selectedDay]);
 
   const visibleGroups = useMemo(
-    () => (selectedDay === 'all' ? groups : groups.filter((group) => group.dayKey === selectedDay)),
+    () => (selectedDay ? groups.filter((group) => group.dayKey === selectedDay) : groups),
     [groups, selectedDay]
   );
 
-  const uniqueUsers = useMemo(() => new Set(events.map((row) => row.email)).size, [events]);
+  const uniqueUsers = useMemo(() => new Set(normalizedEvents.map((row) => row.email)).size, [normalizedEvents]);
 
   const todayKey = dayKeyFromTs(Date.now());
   const todayCount = useMemo(
-    () => events.filter((row) => dayKeyFromTs(row.loginAt) === todayKey).length,
-    [events, todayKey]
+    () => normalizedEvents.filter((row) => dayKeyFromTs(row.loginAt) === todayKey).length,
+    [normalizedEvents, todayKey]
   );
 
   return (
@@ -2406,7 +2417,7 @@ function LoginAccessView({ events, error }: { events: LoginEvent[]; error: strin
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(120px, auto))', gap: 8 }}>
           <div style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 10, padding: '8px 10px' }}>
             <div style={{ fontSize: 11, color: '#5f5a52' }}>Eventos</div>
-            <strong>{events.length}</strong>
+            <strong>{normalizedEvents.length}</strong>
           </div>
           <div style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 10, padding: '8px 10px' }}>
             <div style={{ fontSize: 11, color: '#5f5a52' }}>Usuarios</div>
@@ -2421,17 +2432,20 @@ function LoginAccessView({ events, error }: { events: LoginEvent[]; error: strin
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <label htmlFor="access-day-filter" style={{ fontSize: 12, color: '#5f5a52' }}>Filtrar dia</label>
-        <select
+        <input
           id="access-day-filter"
+          type="date"
           value={selectedDay}
           onChange={(event) => setSelectedDay(event.target.value)}
           style={{ border: '1px solid #d7d2c8', borderRadius: 10, padding: '7px 10px', background: '#fff' }}
+        />
+        <button
+          type="button"
+          onClick={() => setSelectedDay('')}
+          style={{ border: '1px solid #d7d2c8', borderRadius: 10, padding: '7px 10px', background: '#fff', cursor: 'pointer' }}
         >
-          <option value="all">Todos los dias</option>
-          {groups.map((group) => (
-            <option key={group.dayKey} value={group.dayKey}>{group.dayLabel}</option>
-          ))}
-        </select>
+          Ver todos
+        </button>
       </div>
 
       {error ? <p style={{ margin: 0, color: '#b42318', fontSize: 12 }}>{error}</p> : null}
@@ -2720,29 +2734,6 @@ export default function App() {
     return () => unsubscribe();
   }, [isPrimaryAdmin]);
 
-  const ownerLoginSummary = useMemo(() => {
-    const map = new Map<string, { email: string; count: number; lastAt: number; todayCount: number }>();
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const dayStartMs = startOfDay.getTime();
-
-    ownerLoginEvents.forEach((event) => {
-      const email = (event.email || '(sin email)').trim().toLowerCase();
-      const current = map.get(email) ?? { email, count: 0, lastAt: 0, todayCount: 0 };
-      current.count += 1;
-      if (event.loginAt > current.lastAt) current.lastAt = event.loginAt;
-      if (event.loginAt >= dayStartMs) current.todayCount += 1;
-      map.set(email, current);
-    });
-
-    return Array.from(map.values()).sort((a, b) => b.lastAt - a.lastAt);
-  }, [ownerLoginEvents]);
-
-  const ownerRecentLogins = useMemo(
-    () => ownerLoginEvents.slice(0, 12),
-    [ownerLoginEvents]
-  );
-
   return (
     <div className="app-shell">
       {alertMessage && (
@@ -2860,67 +2851,6 @@ export default function App() {
               </div>
               <p className="hero-helper">Visible en todas las vistas. Cambia rápido entre clientes.</p>
             </div>
-            {isPrimaryAdmin ? (
-              <div
-                style={{
-                  marginTop: 12,
-                  border: '1px solid #d7d2c8',
-                  borderRadius: 12,
-                  padding: 12,
-                  background: '#fff',
-                  minWidth: 320
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-                  <strong style={{ fontSize: 13 }}>Actividad de accesos</strong>
-                  <span style={{ fontSize: 12, color: '#5f5a52' }}>
-                    Eventos: {ownerLoginEvents.length}
-                  </span>
-                </div>
-                {ownerLoginError ? (
-                  <p style={{ margin: 0, color: '#b42318', fontSize: 12 }}>{ownerLoginError}</p>
-                ) : (
-                  <>
-                    <div style={{ display: 'grid', gap: 6, marginBottom: 10 }}>
-                      {ownerLoginSummary.slice(0, 8).map((row) => (
-                        <div key={row.email} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
-                          <span style={{ fontSize: 12, color: '#1f1d1b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {row.email}
-                          </span>
-                          <span style={{ fontSize: 11, color: '#5f5a52' }}>
-                            {row.count} total · hoy {row.todayCount}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ borderTop: '1px solid #ebe6dd', paddingTop: 8, display: 'grid', gap: 4 }}>
-                      {ownerRecentLogins.slice(0, 5).map((event) => (
-                        <span key={event.id} style={{ fontSize: 11, color: '#5f5a52' }}>
-                          {event.email || '(sin email)'} · {new Date(event.loginAt).toLocaleString('es-ES')}
-                        </span>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveView(ACCESOS_VIEW)}
-                      style={{
-                        marginTop: 10,
-                        width: '100%',
-                        border: '1px solid #d7d2c8',
-                        borderRadius: 10,
-                        background: '#f8fbff',
-                        color: '#1f1d1b',
-                        padding: '8px 10px',
-                        fontWeight: 700,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Ver detalle diario
-                    </button>
-                  </>
-                )}
-              </div>
-            ) : null}
           </div>
         )}
       </div>

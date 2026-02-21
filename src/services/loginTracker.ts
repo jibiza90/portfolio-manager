@@ -4,11 +4,13 @@ export interface LoginEvent {
   id: string;
   uid: string;
   email: string;
+  authEventKey: string;
   loginAt: number;
   createdAt: number;
 }
 
 const LOGIN_EVENTS_COLLECTION = 'auth_login_events';
+const inFlightAuthEventKeys = new Set<string>();
 
 const normalizeEmail = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
 
@@ -18,6 +20,7 @@ const mapLoginEvent = (doc: firebase.firestore.QueryDocumentSnapshot<firebase.fi
     id: doc.id,
     uid: String(data.uid ?? ''),
     email: String(data.email ?? ''),
+    authEventKey: String(data.authEventKey ?? ''),
     loginAt: Number(data.loginAt ?? 0),
     createdAt: Number(data.createdAt ?? data.loginAt ?? 0)
   };
@@ -31,20 +34,32 @@ export const recordLoginEvent = async (user: firebase.User) => {
   const authEventKey = `${user.uid}_${Math.floor(loginAt / 1000)}`;
   const storageKey = `pm_login_event_${authEventKey}`;
 
+  if (inFlightAuthEventKeys.has(authEventKey)) {
+    return;
+  }
   if (typeof window !== 'undefined' && window.sessionStorage.getItem(storageKey) === '1') {
     return;
   }
-
-  await db.collection(LOGIN_EVENTS_COLLECTION).add({
-    uid: user.uid,
-    email,
-    loginAt,
-    createdAt: Date.now(),
-    authEventKey
-  });
-
+  inFlightAuthEventKeys.add(authEventKey);
   if (typeof window !== 'undefined') {
     window.sessionStorage.setItem(storageKey, '1');
+  }
+
+  try {
+    await db.collection(LOGIN_EVENTS_COLLECTION).add({
+      uid: user.uid,
+      email,
+      loginAt,
+      createdAt: Date.now(),
+      authEventKey
+    });
+  } catch (error) {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem(storageKey);
+    }
+    throw error;
+  } finally {
+    inFlightAuthEventKeys.delete(authEventKey);
   }
 };
 
