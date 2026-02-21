@@ -2388,12 +2388,6 @@ function LoginAccessView({ events, error }: { events: LoginEvent[]; error: strin
 
   const [selectedDay, setSelectedDay] = useState<string>('');
 
-  useEffect(() => {
-    if (!selectedDay) return;
-    const exists = groups.some((group) => group.dayKey === selectedDay);
-    if (!exists) setSelectedDay('');
-  }, [groups, selectedDay]);
-
   const visibleGroups = useMemo(
     () => (selectedDay ? groups.filter((group) => group.dayKey === selectedDay) : groups),
     [groups, selectedDay]
