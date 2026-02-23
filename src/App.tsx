@@ -912,89 +912,74 @@ function ModernBarChart({
   onHover: (text: string, x: number, y: number) => void;
   valueFormatter?: (v?: number | null) => string;
 }) {
-  const hasNegative = data.some((d) => d.value < 0);
-  const maxPos = Math.max(0, ...data.map((d) => d.value));
-  const minNeg = Math.min(0, ...data.map((d) => d.value));
-  const range = Math.max(1, maxPos - minNeg);
-  const zeroOffset = hasNegative ? Math.min(90, Math.max(10, (maxPos / range) * 100)) : 100;
+  const width = 920;
+  const margin = { top: 16, right: 20, bottom: 64, left: 84 };
+  const plotW = width - margin.left - margin.right;
+  const plotH = height - margin.top - margin.bottom;
 
-  const tickCount = 5;
-  const ticks: number[] = [];
-  for (let i = 0; i < tickCount; i++) {
-    const val = maxPos - (i / (tickCount - 1)) * range;
-    ticks.push(val);
+  if (!data.length) {
+    return (
+      <div style={{ height, display: 'grid', placeItems: 'center', color: '#64748b', fontSize: 13 }}>
+        Sin datos para mostrar.
+      </div>
+    );
   }
 
+  const values = data.map((d) => d.value);
+  const minVal = Math.min(0, ...values);
+  const maxVal = Math.max(0, ...values);
+  const rawRange = maxVal - minVal;
+  const range = rawRange > 0 ? rawRange : Math.max(1, Math.abs(maxVal) || 1);
+  const yFor = (value: number) => margin.top + (1 - (value - minVal) / range) * plotH;
+  const zeroY = yFor(0);
+  const tickCount = 5;
+  const ticks = Array.from({ length: tickCount }, (_, i) => maxVal - (i / (tickCount - 1)) * range);
+  const slotW = plotW / Math.max(1, data.length);
+  const barW = Math.max(12, Math.min(34, slotW * 0.58));
+  const labelStep = data.length > 10 ? 2 : 1;
+
   return (
-    <div className="pm-modern-chart-container" style={{ height, padding: '32px 28px 56px 68px', position: 'relative' }}>
-      <div className="pm-modern-y-axis">
-        {ticks.map((t, i) => (
-          <div key={i} className="pm-modern-y-tick">
-            <span>{valueFormatter(t)}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="pm-modern-grid">
-        {ticks.map((_, i) => (
-          <div key={i} className="pm-modern-grid-line" style={{ top: `${(i / (tickCount - 1)) * 100}%` }} />
-        ))}
-      </div>
-
-      {hasNegative && <div className="pm-modern-zero-line" style={{ top: `${zeroOffset}%` }} />}
-
-      <div
-        className="pm-modern-bars"
-        style={{
-          position: 'relative',
-          height: '100%',
-          display: 'grid',
-          gridTemplateColumns: `repeat(${Math.max(1, data.length)}, minmax(0, 1fr))`,
-          gap: 6,
-          alignItems: 'stretch'
-        }}
-      >
-        {data.map((d, i) => {
-          const heightPct = Math.min(85, (Math.abs(d.value) / range) * 100);
-          const isNeg = d.value < 0;
+    <div style={{ height, width: '100%' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: '100%', display: 'block' }}>
+        {ticks.map((tick, i) => {
+          const y = yFor(tick);
           return (
-            <div
-              key={i}
-              style={{ position: 'relative' }}
-              onMouseMove={(e) => onHover(`${d.label}: ${valueFormatter(d.value)}`, e.clientX, e.clientY - 12)}
-              onMouseLeave={() => onHover('', 0, 0)}
-            >
-              <div
-                className={`pm-modern-bar ${isNeg ? 'negative' : ''}`}
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 'min(42px, 90%)',
-                  height: `${heightPct}%`,
-                  ...(isNeg ? { top: `${zeroOffset}%` } : { bottom: `${100 - zeroOffset}%` })
-                }}
-              >
-                <span
-                  className="pm-modern-bar-label"
-                  style={{
-                    position: 'absolute',
-                    bottom: isNeg ? 'auto' : '-22px',
-                    top: isNeg ? '-22px' : 'auto',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {d.label}
-                </span>
-              </div>
-            </div>
+            <g key={`tick-${i}`}>
+              <line x1={margin.left} y1={y} x2={margin.left + plotW} y2={y} stroke="rgba(14,165,233,0.12)" />
+              <text x={margin.left - 10} y={y + 4} textAnchor="end" fontSize="11" fill="#64748b">
+                {valueFormatter(tick)}
+              </text>
+            </g>
           );
         })}
-      </div>
 
-      <div className="pm-modern-x-axis" style={{ top: hasNegative ? `${zeroOffset}%` : 'auto' }} />
+        <line x1={margin.left} y1={zeroY} x2={margin.left + plotW} y2={zeroY} stroke="rgba(100,116,139,0.65)" strokeWidth="1.4" />
+
+        {data.map((item, i) => {
+          const xCenter = margin.left + slotW * i + slotW / 2;
+          const yTop = yFor(Math.max(0, item.value));
+          const yBottom = yFor(Math.min(0, item.value));
+          const rectY = Math.min(yTop, yBottom);
+          const rectH = Math.max(2, Math.abs(yBottom - yTop));
+          const isNegative = item.value < 0;
+          const fill = isNegative ? '#ef4444' : '#0ea5e9';
+          return (
+            <g
+              key={`bar-${item.label}-${i}`}
+              onMouseMove={(e) => onHover(`${item.label}: ${valueFormatter(item.value)}`, e.clientX, e.clientY - 12)}
+              onMouseLeave={() => onHover('', 0, 0)}
+              style={{ cursor: 'pointer' }}
+            >
+              <rect x={xCenter - barW / 2} y={rectY} width={barW} height={rectH} rx={8} fill={fill} opacity={0.9} />
+              {i % labelStep === 0 || i === data.length - 1 ? (
+                <text x={xCenter} y={height - 16} textAnchor="middle" fontSize="10.5" fill="#334155">
+                  {item.label}
+                </text>
+              ) : null}
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }
@@ -1011,129 +996,74 @@ function ModernLineChart({
   onHover: (text: string, x: number, y: number) => void;
   valueFormatter?: (v?: number | null) => string;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const width = 920;
+  const margin = { top: 16, right: 20, bottom: 60, left: 84 };
+  const plotW = width - margin.left - margin.right;
+  const plotH = height - margin.top - margin.bottom;
 
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(Math.max(320, containerRef.current.offsetWidth));
-      }
-    };
-    updateWidth();
-    let observer: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
-      observer = new ResizeObserver(updateWidth);
-      observer.observe(containerRef.current);
-    }
-    window.addEventListener('resize', updateWidth);
-    return () => {
-      window.removeEventListener('resize', updateWidth);
-      observer?.disconnect();
-    };
-  }, []);
+  if (!data.length) {
+    return (
+      <div style={{ height, display: 'grid', placeItems: 'center', color: '#64748b', fontSize: 13 }}>
+        Sin datos para mostrar.
+      </div>
+    );
+  }
 
   const values = data.map((d) => d.value);
   const minVal = Math.min(0, ...values);
-  const rawMax = Math.max(0.0001, ...values);
-  const maxVal = rawMax * 1.2; // headroom 20%
-  const range = Math.max(0.0001, maxVal - minVal);
+  const maxVal = Math.max(...values, 0.000001);
+  const range = Math.max(0.000001, maxVal - minVal);
+  const yFor = (value: number) => margin.top + (1 - (value - minVal) / range) * plotH;
+  const xFor = (index: number) =>
+    data.length > 1 ? margin.left + (index / (data.length - 1)) * plotW : margin.left + plotW / 2;
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => minVal + t * range);
-
-  const padLeft = 70;
-  const padRight = 20;
-  const padTop = 20;
-  const padBottom = 36;
-  const chartW = Math.max(120, containerWidth - padLeft - padRight);
-  const chartH = height - padTop - padBottom;
-  const svgWidth = Math.max(320, containerWidth || 320);
-
-  const points = data.map((d, i) => {
-    const x = data.length > 1 ? padLeft + (i / (data.length - 1)) * chartW : padLeft + chartW / 2;
-    const y = padTop + (1 - (d.value - minVal) / range) * chartH;
-    return { label: d.label, value: d.value, x, y };
-  });
-
-  const buildSmoothPath = (pts: { x: number; y: number }[]) => {
-    if (pts.length === 0) return '';
-    if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
-    const path: string[] = [];
-    const tension = 0.2;
-    for (let i = 0; i < pts.length; i++) {
-      const p0 = pts[i - 1] || pts[0];
-      const p1 = pts[i];
-      const p2 = pts[i + 1] || pts[i];
-      const p3 = pts[i + 2] || p2;
-      if (i === 0) path.push(`M ${p1.x} ${p1.y}`);
-      const cp1x = p1.x + (p2.x - p0.x) * tension;
-      const cp1y = p1.y + (p2.y - p0.y) * tension;
-      const cp2x = p2.x - (p3.x - p1.x) * tension;
-      const cp2y = p2.y - (p3.y - p1.y) * tension;
-      path.push(`C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`);
-    }
-    return path.join(' ');
-  };
-
-  const linePath = buildSmoothPath(points);
-  const areaPath = points.length > 1
-    ? `${linePath} L ${points[points.length - 1].x},${padTop + chartH} L ${points[0].x},${padTop + chartH} Z`
-    : '';
+  const points = data.map((row, i) => ({ x: xFor(i), y: yFor(row.value), label: row.label, value: row.value }));
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  const areaD =
+    points.length > 1
+      ? `${pathD} L ${points[points.length - 1].x} ${margin.top + plotH} L ${points[0].x} ${margin.top + plotH} Z`
+      : '';
+  const labelStep = data.length > 10 ? 2 : 1;
 
   return (
-    <div ref={containerRef} style={{ width: '100%', minWidth: 0, height, position: 'relative', background: 'linear-gradient(180deg, rgba(14,165,233,0.04), #fff)', borderRadius: 12, overflow: 'hidden' }}>
-      {/* Y-axis */}
-      <div style={{ position: 'absolute', left: 0, top: padTop, height: chartH, width: padLeft - 8, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 8 }}>
-        {[...ticks].reverse().map((t, i) => (
-          <span key={i} style={{ fontSize: 10, color: '#64748b', fontWeight: 500 }}>{valueFormatter(t)}</span>
-        ))}
-      </div>
-      {/* Grid */}
-      {[0, 1, 2, 3, 4].map((i) => (
-        <div key={i} style={{ position: 'absolute', left: padLeft, right: padRight, top: padTop + i * (chartH / 4), height: 1, background: 'rgba(14,165,233,0.1)' }} />
-      ))}
-      {/* SVG */}
-      <svg width={svgWidth} height={height} style={{ position: 'absolute', top: 0, left: 0 }}>
-        <defs>
-          <linearGradient id={`areaGrad-${color}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity={0.25} />
-            <stop offset="100%" stopColor={color} stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
-        {/* Area */}
-        {areaPath && <path d={areaPath} fill={`url(#areaGrad-${color})`} />}
-        {/* Line connecting points */}
-        {points.length > 1 && (
-          <path
-            d={linePath}
-            fill="none"
-            stroke={color}
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        )}
-        {/* Points */}
-        {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r="7"
-            fill={color}
-            stroke="#fff"
-            strokeWidth="2.5"
-            style={{ cursor: 'pointer', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.2))' }}
-            onMouseMove={(e) => onHover(`${data[i].label}: ${valueFormatter(data[i].value)}`, e.clientX, e.clientY - 12)}
-            onMouseLeave={() => onHover('', 0, 0)}
-          />
+    <div style={{ width: '100%', height }}>
+      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: '100%', display: 'block' }}>
+        {ticks.map((tick, i) => {
+          const y = yFor(tick);
+          return (
+            <g key={`tick-${i}`}>
+              <line x1={margin.left} y1={y} x2={margin.left + plotW} y2={y} stroke="rgba(14,165,233,0.12)" />
+              <text x={margin.left - 10} y={y + 4} textAnchor="end" fontSize="11" fill="#64748b">
+                {valueFormatter(tick)}
+              </text>
+            </g>
+          );
+        })}
+
+        {areaD ? <path d={areaD} fill={color} opacity={0.12} /> : null}
+        <path d={pathD} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+        {points.map((point, i) => (
+          <g key={`point-${i}`}>
+            <circle
+              cx={point.x}
+              cy={point.y}
+              r="6"
+              fill={color}
+              stroke="#fff"
+              strokeWidth="2"
+              onMouseMove={(e) => onHover(`${point.label}: ${valueFormatter(point.value)}`, e.clientX, e.clientY - 12)}
+              onMouseLeave={() => onHover('', 0, 0)}
+              style={{ cursor: 'pointer' }}
+            />
+            {i % labelStep === 0 || i === points.length - 1 ? (
+              <text x={point.x} y={height - 16} textAnchor="middle" fontSize="10.5" fill="#334155">
+                {point.label}
+              </text>
+            ) : null}
+          </g>
         ))}
       </svg>
-      {/* X labels */}
-      <div style={{ position: 'absolute', left: padLeft, right: padRight, bottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-        {data.map((d, i) => (
-          <span key={i} style={{ fontSize: 10, color: '#334155', fontWeight: 600 }}>{d.label}</span>
-        ))}
-      </div>
     </div>
   );
 }
@@ -1381,6 +1311,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   const [tooltip, setTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
   const movementsRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const analyticsBodyRef = useRef<HTMLDivElement>(null);
 
   const stats = useMemo(() => {
     const validRows = [...yearRows].reverse();
@@ -1509,6 +1440,24 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     setTooltip({ x: rect.left + rect.width / 2, y: rect.top - 8, text, visible: true });
   };
   const handleMouseLeave = () => setTooltip({ x: 0, y: 0, text: '', visible: false });
+
+  useEffect(() => {
+    if (!showAnalytics) return;
+    const id = window.requestAnimationFrame(() => {
+      if (analyticsBodyRef.current) analyticsBodyRef.current.scrollTop = 0;
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [showAnalytics, clientId]);
+
+  const scrollToMovements = () => {
+    const body = analyticsBodyRef.current;
+    const target = movementsRef.current;
+    if (!body || !target) return;
+    const bodyRect = body.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const nextTop = body.scrollTop + (targetRect.top - bodyRect.top) - 12;
+    body.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' });
+  };
 
   return (
     <div className="client-panel">
@@ -1780,14 +1729,14 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
       </div>
 
       {showAnalytics && (
-        <div className="client-analytics-overlay" onClick={() => setShowAnalytics(false)}>
+        <div className="client-analytics-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAnalytics(false); }}>
           <div className="client-analytics-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Análisis de {CLIENTS.find((c) => c.id === clientId)?.name || 'Cliente'}</h3>
               <button onClick={() => setShowAnalytics(false)}>×</button>
             </div>
 
-            <div className="analytics-body">
+            <div className="analytics-body" ref={analyticsBodyRef}>
               <div className="analytics-grid">
                 <div className="stat-card glow">
                   <div className="stat-label">Saldo actual</div>
@@ -1821,7 +1770,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 </div>
                 <div
                   className="stat-card glow clickable"
-                  onClick={() => movementsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  onClick={scrollToMovements}
                 >
                   <div className="stat-label">Incrementos totales</div>
                   <div className="stat-value positive">{formatCurrency(stats.totalIncrements)}</div>
@@ -1829,7 +1778,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 </div>
                 <div
                   className="stat-card glow clickable"
-                  onClick={() => movementsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  onClick={scrollToMovements}
                 >
                   <div className="stat-label">Decrementos totales</div>
                   <div className="stat-value negative">{formatCurrency(stats.totalDecrements)}</div>
