@@ -2884,7 +2884,13 @@ export default function App() {
       ) : activeView === MENSAJES_VIEW ? (
         <AdminMessagesView contacts={contacts} />
       ) : (
-        <ClientPanel clientId={activeView} focusDate={focusDate} contacts={contacts} setAlertMessage={setAlertMessage} />
+        <ClientPanel
+          key={`client-panel-${activeView}`}
+          clientId={activeView}
+          focusDate={focusDate}
+          contacts={contacts}
+          setAlertMessage={setAlertMessage}
+        />
       )}
       {toast && <div className="toast">{toast}</div>}
     </div>
