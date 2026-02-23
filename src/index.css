@@ -4438,6 +4438,7 @@ select {
 
 .client-analytics-modal {
   width: min(1100px, 95vw);
+  height: calc(100vh - 36px);
   max-height: calc(100vh - 36px);
   margin: 0 auto;
   display: flex;
@@ -4447,11 +4448,14 @@ select {
 
 .analytics-body {
   flex: 1 1 auto;
+  height: 100%;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 6px;
-  padding-bottom: 16px;
+  padding-bottom: 20px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chart-grid-modern {
