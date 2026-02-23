@@ -926,25 +926,25 @@ function ModernBarChart({
   }
 
   return (
-    <div className="modern-chart-container" style={{ height, padding: '32px 28px 56px 68px', position: 'relative' }}>
-      <div className="modern-y-axis">
+    <div className="pm-modern-chart-container" style={{ height, padding: '32px 28px 56px 68px', position: 'relative' }}>
+      <div className="pm-modern-y-axis">
         {ticks.map((t, i) => (
-          <div key={i} className="modern-y-tick">
+          <div key={i} className="pm-modern-y-tick">
             <span>{valueFormatter(t)}</span>
           </div>
         ))}
       </div>
 
-      <div className="modern-grid">
+      <div className="pm-modern-grid">
         {ticks.map((_, i) => (
-          <div key={i} className="modern-grid-line" style={{ top: `${(i / (tickCount - 1)) * 100}%` }} />
+          <div key={i} className="pm-modern-grid-line" style={{ top: `${(i / (tickCount - 1)) * 100}%` }} />
         ))}
       </div>
 
-      {hasNegative && <div className="modern-zero-line" style={{ top: `${zeroOffset}%` }} />}
+      {hasNegative && <div className="pm-modern-zero-line" style={{ top: `${zeroOffset}%` }} />}
 
       <div
-        className="modern-bars"
+        className="pm-modern-bars"
         style={{
           position: 'relative',
           height: '100%',
@@ -965,7 +965,7 @@ function ModernBarChart({
               onMouseLeave={() => onHover('', 0, 0)}
             >
               <div
-                className={`modern-bar ${isNeg ? 'negative' : ''}`}
+                className={`pm-modern-bar ${isNeg ? 'negative' : ''}`}
                 style={{
                   position: 'absolute',
                   left: '50%',
@@ -976,7 +976,7 @@ function ModernBarChart({
                 }}
               >
                 <span
-                  className="modern-bar-label"
+                  className="pm-modern-bar-label"
                   style={{
                     position: 'absolute',
                     bottom: isNeg ? 'auto' : '-22px',
@@ -994,7 +994,7 @@ function ModernBarChart({
         })}
       </div>
 
-      <div className="modern-x-axis" style={{ top: hasNegative ? `${zeroOffset}%` : 'auto' }} />
+      <div className="pm-modern-x-axis" style={{ top: hasNegative ? `${zeroOffset}%` : 'auto' }} />
     </div>
   );
 }
