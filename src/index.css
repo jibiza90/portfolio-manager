@@ -4423,3 +4423,37 @@ select {
     font-size: 11px;
   }
 }
+
+/* Client analytics modal: force stable vertical scroll and avoid horizontal drift */
+.client-analytics-overlay {
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(6px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px 0;
+}
+
+.client-analytics-modal {
+  width: min(1100px, 95vw);
+  max-height: calc(100vh - 36px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.analytics-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+}
+
+.chart-grid-modern {
+  overflow-x: hidden;
+}
+
+.chart-card {
+  min-width: 0;
+}

@@ -1012,15 +1012,25 @@ function ModernLineChart({
   valueFormatter?: (v?: number | null) => string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(600);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   useEffect(() => {
     const updateWidth = () => {
-      if (containerRef.current) setContainerWidth(containerRef.current.offsetWidth);
+      if (containerRef.current) {
+        setContainerWidth(Math.max(320, containerRef.current.offsetWidth));
+      }
     };
     updateWidth();
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+      observer = new ResizeObserver(updateWidth);
+      observer.observe(containerRef.current);
+    }
     window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+    return () => {
+      window.removeEventListener('resize', updateWidth);
+      observer?.disconnect();
+    };
   }, []);
 
   const values = data.map((d) => d.value);
@@ -1034,8 +1044,9 @@ function ModernLineChart({
   const padRight = 20;
   const padTop = 20;
   const padBottom = 36;
-  const chartW = containerWidth - padLeft - padRight;
+  const chartW = Math.max(120, containerWidth - padLeft - padRight);
   const chartH = height - padTop - padBottom;
+  const svgWidth = Math.max(320, containerWidth || 320);
 
   const points = data.map((d, i) => {
     const x = data.length > 1 ? padLeft + (i / (data.length - 1)) * chartW : padLeft + chartW / 2;
@@ -1069,7 +1080,7 @@ function ModernLineChart({
     : '';
 
   return (
-    <div ref={containerRef} style={{ height, position: 'relative', background: 'linear-gradient(180deg, rgba(14,165,233,0.04), #fff)', borderRadius: 12, overflow: 'hidden' }}>
+    <div ref={containerRef} style={{ width: '100%', minWidth: 0, height, position: 'relative', background: 'linear-gradient(180deg, rgba(14,165,233,0.04), #fff)', borderRadius: 12, overflow: 'hidden' }}>
       {/* Y-axis */}
       <div style={{ position: 'absolute', left: 0, top: padTop, height: chartH, width: padLeft - 8, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: 8 }}>
         {[...ticks].reverse().map((t, i) => (
@@ -1081,7 +1092,7 @@ function ModernLineChart({
         <div key={i} style={{ position: 'absolute', left: padLeft, right: padRight, top: padTop + i * (chartH / 4), height: 1, background: 'rgba(14,165,233,0.1)' }} />
       ))}
       {/* SVG */}
-      <svg width={containerWidth} height={height} style={{ position: 'absolute', top: 0, left: 0 }}>
+      <svg width={svgWidth} height={height} style={{ position: 'absolute', top: 0, left: 0 }}>
         <defs>
           <linearGradient id={`areaGrad-${color}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.25} />
