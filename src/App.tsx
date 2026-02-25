@@ -1311,7 +1311,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   const [tooltip, setTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
   const movementsRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
-  const analyticsBodyRef = useRef<HTMLDivElement>(null);
+  const analyticsScrollRef = useRef<HTMLDivElement>(null);
 
   const stats = useMemo(() => {
     const validRows = [...yearRows].reverse();
@@ -1444,13 +1444,13 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   useEffect(() => {
     if (!showAnalytics) return;
     const id = window.requestAnimationFrame(() => {
-      if (analyticsBodyRef.current) analyticsBodyRef.current.scrollTop = 0;
+      if (analyticsScrollRef.current) analyticsScrollRef.current.scrollTop = 0;
     });
     return () => window.cancelAnimationFrame(id);
   }, [showAnalytics, clientId]);
 
   const scrollToMovements = () => {
-    const body = analyticsBodyRef.current;
+    const body = analyticsScrollRef.current;
     const target = movementsRef.current;
     if (!body || !target) return;
     const bodyRect = body.getBoundingClientRect();
@@ -1730,13 +1730,13 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
 
       {showAnalytics && (
         <div className="client-analytics-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAnalytics(false); }}>
-          <div className="client-analytics-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="client-analytics-modal" ref={analyticsScrollRef} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Análisis de {CLIENTS.find((c) => c.id === clientId)?.name || 'Cliente'}</h3>
               <button onClick={() => setShowAnalytics(false)}>×</button>
             </div>
 
-            <div className="analytics-body" ref={analyticsBodyRef}>
+            <div className="analytics-body">
               <div className="analytics-grid">
                 <div className="stat-card glow">
                   <div className="stat-label">Saldo actual</div>
