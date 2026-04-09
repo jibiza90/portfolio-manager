@@ -3,21 +3,25 @@ import { findFocusDate } from '../utils/dates';
 
 export const useFocusDate = () =>
   usePortfolioStore((state) => {
-    console.log('[useFocusDate] Raw finalByDay:', state.finalByDay);
-    const ordered = Object.entries(state.finalByDay)
+    const finalDates = Object.entries(state.finalByDay)
       .filter(([, value]) => value !== undefined && !Number.isNaN(value))
       .map(([iso]) => iso)
       .sort((a, b) => (a > b ? 1 : -1));
-    
-    console.log('[useFocusDate] Ordered dates:', ordered);
-    
-    if (ordered.length > 0) {
-      const lastDate = ordered[ordered.length - 1];
-      console.log('[useFocusDate] Returning last date:', lastDate);
-      return lastDate;
+
+    const movementDates = Object.values(state.movementsByClient)
+      .flatMap((rows) => Object.keys(rows))
+      .sort((a, b) => (a > b ? 1 : -1));
+
+    const lastFinalDate = finalDates[finalDates.length - 1];
+    const lastMovementDate = movementDates[movementDates.length - 1];
+    const lastWrittenDate =
+      lastFinalDate && lastMovementDate
+        ? (lastFinalDate > lastMovementDate ? lastFinalDate : lastMovementDate)
+        : lastFinalDate ?? lastMovementDate;
+
+    if (lastWrittenDate) {
+      return lastWrittenDate;
     }
 
-    const fallback = findFocusDate();
-    console.log('[useFocusDate] No finals, returning fallback:', fallback);
-    return fallback;
+    return findFocusDate();
   });
