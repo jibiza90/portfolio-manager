@@ -1382,6 +1382,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     () => clientRows.filter((r) => r.iso.startsWith(`${activeYear}-`)),
     [activeYear, clientRows]
   );
+  const displayRows = clientRows;
   const tableRef = useRef<HTMLTableElement>(null);
   const initialScrollDoneRef = useRef(false);
 
@@ -1394,7 +1395,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
       row.scrollIntoView({ behavior: 'smooth', block: 'center' });
       initialScrollDoneRef.current = true;
     }
-  }, [focusDate]);
+  }, [focusDate, displayRows.length]);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [hoverOrigin, setHoverOrigin] = useState<'inc' | 'dec' | 'profit' | 'return' | 'twr' | null>(null);
@@ -1783,7 +1784,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
               </tr>
             </thead>
             <tbody>
-              {yearRows.map(r => (
+              {displayRows.map(r => (
                 <tr key={r.iso} data-iso={r.iso} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}>
                   <td><span>{r.label}</span><small>{r.weekday}</small><small>{r.iso.slice(0, 4)}</small></td>
                   <td>{r.isWeekend ? (r.increment === undefined ? '—' : formatCurrency(r.increment)) : <CurrencyCell value={r.increment} onChange={(v) => setClientMovement(clientId, r.iso, 'increment', v)} />}</td>
