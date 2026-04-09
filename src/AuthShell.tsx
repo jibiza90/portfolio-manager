@@ -606,8 +606,9 @@ const LoginCard = ({
                     className="pmInput"
                     type="text"
                     autoComplete="username"
-                    inputMode="numeric"
-                    placeholder="398428"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    placeholder="ma39ma18ya"
                     value={identifier}
                     onChange={(event) => setIdentifier(event.target.value)}
                   />

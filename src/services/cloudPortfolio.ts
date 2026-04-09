@@ -220,8 +220,13 @@ export const subscribeClientOverview = (
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const CLIENT_LOGIN_DOMAIN = 'clients.portfolio-manager.local';
 
-export const normalizeLoginId = (value: string) => value.trim().replace(/\s+/g, '');
-export const isValidLoginId = (value: string) => /^\d{6,12}$/.test(normalizeLoginId(value));
+export const normalizeLoginId = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+export const isValidLoginId = (value: string) => /^[a-z0-9]{4,20}$/.test(normalizeLoginId(value));
 export const buildClientAuthEmail = (loginId: string) => `${normalizeLoginId(loginId)}@${CLIENT_LOGIN_DOMAIN}`;
 export const loginIdFromAuthEmail = (value?: string | null) => {
   const email = normalizeEmail(value ?? '');

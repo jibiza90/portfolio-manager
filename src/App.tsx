@@ -3318,7 +3318,7 @@ function InfoClientes({
     if (!currentClient) return;
     const loginId = accessLoginId.trim();
     if (!isValidLoginId(loginId)) {
-      setAccessMessage('El usuario del cliente debe ser numerico y tener entre 6 y 12 digitos.');
+      setAccessMessage('El usuario debe tener entre 4 y 20 caracteres y solo puede llevar letras y numeros.');
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Usuario invalido' }));
       return;
     }
@@ -3348,9 +3348,9 @@ function InfoClientes({
       if (!result.ok) {
         const message =
           result.reason === 'login_exists_without_profile'
-            ? 'Ese usuario ya se uso antes. Elige otro numero de usuario.'
+            ? 'Ese usuario ya se uso antes. Elige otro usuario.'
             : result.reason === 'login_id_invalid'
-              ? 'El usuario debe ser numerico y tener entre 6 y 12 digitos.'
+              ? 'El usuario debe tener entre 4 y 20 caracteres y solo puede llevar letras y numeros.'
             : result.reason === 'password_weak' || result.reason === 'password_short'
               ? 'La password no cumple requisitos (minimo 6 caracteres).'
               : 'No se pudo crear/vincular el acceso del cliente.';
@@ -3562,10 +3562,12 @@ function InfoClientes({
               <input
                 id="client-access-login-id"
                 name="client-access-login-id"
-                inputMode="numeric"
-                placeholder="Ej: 398428"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="Ej: ma39ma18ya"
                 value={accessLoginId}
-                onChange={(e) => setAccessLoginId(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                onChange={(e) => setAccessLoginId(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20))}
               />
             </label>
             <label>
@@ -3618,7 +3620,7 @@ function InfoClientes({
             )}
             <label style={{ gridColumn: '1 / -1' }}>
               <span>Nota acceso</span>
-              <input value="Si el cliente olvida la contrasena, elimina la asignacion en la pestaña Accesos y crea un usuario nuevo desde aqui." disabled />
+              <input value="Usuario sin email visible. Solo admite letras y numeros. Si el cliente olvida la contrasena, elimina la asignacion en Accesos y crea otra nueva." disabled />
             </label>
             <label>
               <span>UID interno del acceso</span>
