@@ -16,6 +16,7 @@ import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const ADMIN_EMAILS = new Set(['jibiza90@gmail.com', 'jpujola@alogroup.es'].map(normalizeEmail));
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+const REMEMBERED_IDENTIFIER_KEY = 'portfolio-login-identifier';
 
 type Role = 'admin' | 'client';
 
@@ -263,9 +264,10 @@ const LoginCard = ({
   busy: boolean;
   error: string | null;
 }) => {
-  const [identifier, setIdentifier] = useState('');
+  const [identifier, setIdentifier] = useState(() => localStorage.getItem(REMEMBERED_IDENTIFIER_KEY) ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberIdentifier, setRememberIdentifier] = useState(() => !!localStorage.getItem(REMEMBERED_IDENTIFIER_KEY));
   const currentYear = new Date().getFullYear();
 
   return (
@@ -594,9 +596,16 @@ const LoginCard = ({
             <form
               onSubmit={(event) => {
                 event.preventDefault();
+                const cleanIdentifier = identifier.trim();
+                if (rememberIdentifier) {
+                  localStorage.setItem(REMEMBERED_IDENTIFIER_KEY, cleanIdentifier);
+                } else {
+                  localStorage.removeItem(REMEMBERED_IDENTIFIER_KEY);
+                }
                 void onLogin(identifier, password);
               }}
               noValidate
+              autoComplete="on"
             >
               <div className="pmField">
                 <label className="pmLabel" htmlFor="pmIdentifier">Usuario o email admin</label>
@@ -608,7 +617,7 @@ const LoginCard = ({
                     autoComplete="username"
                     autoCapitalize="none"
                     spellCheck={false}
-                    placeholder="ma39ma18ya"
+                    placeholder="Usuario"
                     value={identifier}
                     onChange={(event) => setIdentifier(event.target.value)}
                   />
@@ -636,6 +645,18 @@ const LoginCard = ({
                     {showPassword ? 'Oc' : 'Ver'}
                   </button>
                 </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#5b6874', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberIdentifier}
+                    onChange={(event) => setRememberIdentifier(event.target.checked)}
+                  />
+                  Recordar usuario
+                </label>
+                <span style={{ fontSize: 12, color: '#6a7178' }}>La contrasena la puede guardar tu navegador.</span>
               </div>
 
               <button className="pmSubmit" type="submit" disabled={busy || !identifier.trim() || !password}>
