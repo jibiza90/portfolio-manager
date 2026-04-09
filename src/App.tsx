@@ -1454,14 +1454,6 @@ function normalizeReturnPctValue(value?: number) {
   return Math.abs(value) > 1 ? value / 100 : value;
 }
 
-function rowEffectiveIncrement(row: { effectiveIncrement?: number; increment?: number }) {
-  return row.effectiveIncrement ?? row.increment ?? 0;
-}
-
-function rowEffectiveDecrement(row: { effectiveDecrement?: number; decrement?: number }) {
-  return row.effectiveDecrement ?? row.decrement ?? 0;
-}
-
 function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   clientId: string;
   focusDate: string;
@@ -1522,21 +1514,21 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     const dailyProfit = last?.profit ?? 0;
     const participation = last?.sharePct ?? 0;
     const profitPct = last?.profitPct ?? 0;
-    const totalIncrements = statsRows.reduce((sum, r) => sum + rowEffectiveIncrement(r), 0);
-    const totalDecrements = statsRows.reduce((sum, r) => sum + rowEffectiveDecrement(r), 0);
+    const totalIncrements = statsRows.reduce((sum, r) => sum + (r.increment ?? 0), 0);
+    const totalDecrements = statsRows.reduce((sum, r) => sum + (r.decrement ?? 0), 0);
     return { estimatedBalance, totalProfit, dailyProfit, participation, profitPct, totalIncrements, totalDecrements };
   }, [statsRows]);
 
   const movementDetails = useMemo(
     () =>
       statsRows
-        .filter((r) => rowEffectiveIncrement(r) || rowEffectiveDecrement(r))
+        .filter((r) => (r.increment ?? 0) || (r.decrement ?? 0))
         .map((r) => ({
           iso: r.iso,
           label: r.label,
-          increment: rowEffectiveIncrement(r),
-          decrement: rowEffectiveDecrement(r),
-          net: rowEffectiveIncrement(r) - rowEffectiveDecrement(r)
+          increment: r.increment ?? 0,
+          decrement: r.decrement ?? 0,
+          net: (r.increment ?? 0) - (r.decrement ?? 0)
         })),
     [statsRows]
   );
@@ -1721,12 +1713,11 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
           <div
             className="stat-card glow clickable"
             style={{ position: 'relative', overflow: 'visible' }}
-            onMouseEnter={() => setHoverOrigin('inc')}
-            onMouseLeave={() => setHoverOrigin((v) => (v === 'inc' ? null : v))}
+            onClick={() => setHoverOrigin((v) => (v === 'inc' ? null : 'inc'))}
           >
             <div className="stat-label">Incrementos totales</div>
             <div className="stat-value positive">{formatCurrency(stats.totalIncrements)}</div>
-            <div className="stat-sub">Suma anual</div>
+            <div className="stat-sub">Total registrado · Click para ver detalle</div>
             {hoverOrigin === 'inc' && (
               <div className="mini-popup" ref={popupRef} onClick={(e) => e.stopPropagation()}>
                 <div className="mini-popup-header">
@@ -1749,12 +1740,11 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
           <div
             className="stat-card glow clickable"
             style={{ position: 'relative', overflow: 'visible' }}
-            onMouseEnter={() => setHoverOrigin('dec')}
-            onMouseLeave={() => setHoverOrigin((v) => (v === 'dec' ? null : v))}
+            onClick={() => setHoverOrigin((v) => (v === 'dec' ? null : 'dec'))}
           >
             <div className="stat-label">Decrementos totales</div>
             <div className="stat-value negative">{formatCurrency(stats.totalDecrements)}</div>
-            <div className="stat-sub">Suma anual</div>
+            <div className="stat-sub">Total registrado · Click para ver detalle</div>
             {hoverOrigin === 'dec' && (
               <div className="mini-popup" ref={popupRef} onClick={(e) => e.stopPropagation()}>
                 <div className="mini-popup-header">
@@ -2055,7 +2045,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 >
                   <div className="stat-label">Incrementos totales</div>
                   <div className="stat-value positive">{formatCurrency(stats.totalIncrements)}</div>
-                  <div className="stat-sub">Suma anual · <span className="link-text">Ver detalle</span></div>
+                  <div className="stat-sub">Total registrado · <span className="link-text">Ver detalle</span></div>
                 </div>
                 <div
                   className="stat-card glow clickable"
@@ -2063,7 +2053,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 >
                   <div className="stat-label">Decrementos totales</div>
                   <div className="stat-value negative">{formatCurrency(stats.totalDecrements)}</div>
-                  <div className="stat-sub">Suma anual · <span className="link-text">Ver detalle</span></div>
+                  <div className="stat-sub">Total registrado · <span className="link-text">Ver detalle</span></div>
                 </div>
               </div>
 
@@ -3309,8 +3299,8 @@ function InfoClientes({
     const dailyProfit = last?.profit ?? 0;
     const profitPct = last?.profitPct ?? 0;
     const participation = last?.sharePct ?? 0;
-    const capitalInvertido = summaryRows.reduce((s, r) => s + rowEffectiveIncrement(r), 0);
-    const capitalRetirado = summaryRows.reduce((s, r) => s + rowEffectiveDecrement(r), 0);
+    const capitalInvertido = summaryRows.reduce((s, r) => s + (r.increment ?? 0), 0);
+    const capitalRetirado = summaryRows.reduce((s, r) => s + (r.decrement ?? 0), 0);
 
     const lastMonthIso = last?.iso.slice(0, 7);
     const monthRows = lastMonthIso ? summaryRows.filter((r) => r.iso.startsWith(lastMonthIso)) : [];
@@ -3414,10 +3404,10 @@ function InfoClientes({
   );
   const movementHistory = useMemo(
     () => [...summaryRows]
-      .filter((r) => rowEffectiveIncrement(r) !== 0 || rowEffectiveDecrement(r) !== 0)
+      .filter((r) => (r.increment ?? 0) !== 0 || (r.decrement ?? 0) !== 0)
       .slice(-12)
       .reverse()
-      .map((r) => ({ iso: r.iso, label: r.label, increment: rowEffectiveIncrement(r), decrement: rowEffectiveDecrement(r), net: rowEffectiveIncrement(r) - rowEffectiveDecrement(r) })),
+      .map((r) => ({ iso: r.iso, label: r.label, increment: r.increment ?? 0, decrement: r.decrement ?? 0, net: (r.increment ?? 0) - (r.decrement ?? 0) })),
     [summaryRows]
   );
   const guaranteeCurrentTotal = useMemo(
@@ -4337,8 +4327,8 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
     return CLIENTS.map((c) => {
       const rows = snapshot.clientRowsById[c.id] || [];
       const yearRows = rows.filter((r) => r.iso.startsWith(`${activeYear}-`));
-      const incrementos = yearRows.reduce((s, r) => s + rowEffectiveIncrement(r), 0);
-      const decrementos = yearRows.reduce((s, r) => s + rowEffectiveDecrement(r), 0);
+      const incrementos = yearRows.reduce((s, r) => s + (r.increment ?? 0), 0);
+      const decrementos = yearRows.reduce((s, r) => s + (r.decrement ?? 0), 0);
       const validRows = [...yearRows].reverse();
       const lastWithFinal = validRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0);
       const lastWithBase = validRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0);

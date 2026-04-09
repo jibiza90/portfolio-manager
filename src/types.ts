@@ -37,8 +37,6 @@ export interface ClientDayRow {
   increment?: number;
   decrement?: number;
   manualProfit?: number;
-  effectiveIncrement?: number;
-  effectiveDecrement?: number;
   baseBalance?: number;
   profit?: number;
   profitPct?: number;

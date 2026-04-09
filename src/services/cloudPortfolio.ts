@@ -93,8 +93,6 @@ const buildClientOverview = (snapshot: PortfolioSnapshot, clientId: string, clie
   const participation = latestWithShare?.sharePct ?? 0;
   const totalIncrements = rows.reduce((sum, row) => sum + (row.increment ?? 0), 0);
   const totalDecrements = rows.reduce((sum, row) => sum + (row.decrement ?? 0), 0);
-  const totalEffectiveIncrements = rows.reduce((sum, row) => sum + (row.effectiveIncrement ?? row.increment ?? 0), 0);
-  const totalEffectiveDecrements = rows.reduce((sum, row) => sum + (row.effectiveDecrement ?? row.decrement ?? 0), 0);
   const monthly = buildMonthlyAnalytics(rows);
 
   const latestProfitMonth = [...monthly].reverse().find((item) => item.profit !== 0) ?? monthly[monthly.length - 1] ?? null;
@@ -112,8 +110,8 @@ const buildClientOverview = (snapshot: PortfolioSnapshot, clientId: string, clie
     dailyProfit,
     dailyProfitPct,
     participation,
-    totalIncrements: totalEffectiveIncrements,
-    totalDecrements: totalEffectiveDecrements,
+    totalIncrements,
+    totalDecrements,
     ytdReturnPct,
     latestProfitMonth,
     latestReturnMonth,
