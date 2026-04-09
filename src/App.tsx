@@ -1454,6 +1454,14 @@ function normalizeReturnPctValue(value?: number) {
   return Math.abs(value) > 1 ? value / 100 : value;
 }
 
+function rowEffectiveIncrement(row: { effectiveIncrement?: number; increment?: number }) {
+  return row.effectiveIncrement ?? row.increment ?? 0;
+}
+
+function rowEffectiveDecrement(row: { effectiveDecrement?: number; decrement?: number }) {
+  return row.effectiveDecrement ?? row.decrement ?? 0;
+}
+
 function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   clientId: string;
   focusDate: string;
@@ -1471,6 +1479,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     [activeYear, clientRows]
   );
   const displayRows = clientRows;
+  const statsRows = displayRows;
   const historyMonths = useMemo(() => {
     const months: string[] = [];
     for (let year = START_YEAR; year <= END_YEAR; year += 1) {
@@ -1504,7 +1513,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   const analyticsScrollRef = useRef<HTMLDivElement>(null);
 
   const stats = useMemo(() => {
-    const validRows = [...yearRows].reverse();
+    const validRows = [...statsRows].reverse();
     const last = validRows.find((r) =>
       r.finalBalance !== undefined || r.baseBalance !== undefined || r.cumulativeProfit !== undefined
     );
@@ -1513,23 +1522,23 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     const dailyProfit = last?.profit ?? 0;
     const participation = last?.sharePct ?? 0;
     const profitPct = last?.profitPct ?? 0;
-    const totalIncrements = yearRows.reduce((sum, r) => sum + (r.increment || 0), 0);
-    const totalDecrements = yearRows.reduce((sum, r) => sum + (r.decrement || 0), 0);
+    const totalIncrements = statsRows.reduce((sum, r) => sum + rowEffectiveIncrement(r), 0);
+    const totalDecrements = statsRows.reduce((sum, r) => sum + rowEffectiveDecrement(r), 0);
     return { estimatedBalance, totalProfit, dailyProfit, participation, profitPct, totalIncrements, totalDecrements };
-  }, [yearRows]);
+  }, [statsRows]);
 
   const movementDetails = useMemo(
     () =>
-      yearRows
-        .filter((r) => r.increment || r.decrement)
+      statsRows
+        .filter((r) => rowEffectiveIncrement(r) || rowEffectiveDecrement(r))
         .map((r) => ({
           iso: r.iso,
           label: r.label,
-          increment: r.increment || 0,
-          decrement: r.decrement || 0,
-          net: (r.increment || 0) - (r.decrement || 0)
+          increment: rowEffectiveIncrement(r),
+          decrement: rowEffectiveDecrement(r),
+          net: rowEffectiveIncrement(r) - rowEffectiveDecrement(r)
         })),
-    [yearRows]
+    [statsRows]
   );
 
   const analytics = useMemo(() => {
@@ -1537,7 +1546,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number }>();
     let lastKnownFinal: number | undefined;
 
-    yearRows.forEach((r) => {
+    statsRows.forEach((r) => {
       const month = r.iso.slice(0, 7);
       if (!byMonth.has(month)) {
         byMonth.set(month, { profit: 0, baseStart: undefined, finalEnd: undefined });
@@ -1610,7 +1619,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
       retMax: Math.max(0.01, retMax),
       evoMax: Math.max(1, evoMax)
     };
-  }, [yearRows, monthlyHistory]);
+  }, [statsRows, monthlyHistory]);
 
   // Buscar último mes con beneficio distinto de 0, o el último disponible
   const latestProfitMonth = (() => {
@@ -1630,10 +1639,10 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
 
   // Calcular TWR (Time-Weighted Return)
   const twrData = useMemo(() => {
-    const ytdResult = calculateTWR(yearRows);
-    const monthlyTWR = calculateAllMonthsTWR(yearRows);
+    const ytdResult = calculateTWR(statsRows);
+    const monthlyTWR = calculateAllMonthsTWR(statsRows);
     return { ytd: ytdResult, monthly: monthlyTWR };
-  }, [yearRows]);
+  }, [statsRows]);
 
   const handleMouseMove = (e: React.MouseEvent, text: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -3291,19 +3300,20 @@ function InfoClientes({
   const clientRows = useMemo(() => snapshot.clientRowsById[selectedId] || [], [snapshot, selectedId]);
   const selectedMonthlyHistory = usePortfolioStore((s) => s.monthlyHistoryByClient[selectedId] ?? {});
   const yearRows = useMemo(() => clientRows.filter((r) => r.iso.startsWith(`${activeYear}-`)), [activeYear, clientRows]);
+  const summaryRows = clientRows;
   const stats = useMemo(() => {
-    const validRows = [...yearRows].reverse();
+    const validRows = [...summaryRows].reverse();
     const last = validRows.find((r) => r.finalBalance !== undefined || r.baseBalance !== undefined || r.cumulativeProfit !== undefined);
     const estimatedBalance = last?.finalBalance ?? last?.baseBalance ?? 0;
     const totalProfit = last?.cumulativeProfit ?? 0;
     const dailyProfit = last?.profit ?? 0;
     const profitPct = last?.profitPct ?? 0;
     const participation = last?.sharePct ?? 0;
-    const capitalInvertido = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
-    const capitalRetirado = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
+    const capitalInvertido = summaryRows.reduce((s, r) => s + rowEffectiveIncrement(r), 0);
+    const capitalRetirado = summaryRows.reduce((s, r) => s + rowEffectiveDecrement(r), 0);
 
     const lastMonthIso = last?.iso.slice(0, 7);
-    const monthRows = lastMonthIso ? yearRows.filter((r) => r.iso.startsWith(lastMonthIso)) : [];
+    const monthRows = lastMonthIso ? summaryRows.filter((r) => r.iso.startsWith(lastMonthIso)) : [];
     const lastMonthHistory = lastMonthIso ? selectedMonthlyHistory[lastMonthIso] : undefined;
     const normalizedLastMonthReturn = normalizeReturnPctValue(lastMonthHistory?.returnPct);
     const historyMonthlyProfit =
@@ -3316,7 +3326,7 @@ function InfoClientes({
     const firstValidBase = monthRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0)?.baseBalance;
     const firstValidFinal = monthRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0)?.finalBalance;
     const prevMonthFinal = (() => {
-      const prev = [...yearRows].reverse().find((r) => r.iso < `${lastMonthIso}-01` && r.finalBalance !== undefined && r.finalBalance > 0);
+      const prev = [...summaryRows].reverse().find((r) => r.iso < `${lastMonthIso}-01` && r.finalBalance !== undefined && r.finalBalance > 0);
       return prev?.finalBalance;
     })();
     const estimatedBase = lastFinalInMonth !== undefined ? Math.max(1, lastFinalInMonth - monthlyProfit) : 0;
@@ -3326,13 +3336,13 @@ function InfoClientes({
     const proportion = snapshot.totals.assets ? estimatedBalance / snapshot.totals.assets : 0;
 
     return { estimatedBalance, totalProfit, dailyProfit, profitPct, participation, capitalInvertido, capitalRetirado, monthlyProfit, monthlyReturn, proportion, lastMonthIso };
-  }, [yearRows, selectedMonthlyHistory, snapshot.totals.assets]);
+  }, [summaryRows, selectedMonthlyHistory, snapshot.totals.assets]);
 
   const monthlySummary = useMemo(() => {
     const profitByMonth = new Map<string, number>();
     const firstBaseByMonth = new Map<string, number>();
     const lastFinalByMonth = new Map<string, number>();
-    yearRows.forEach((r) => {
+    summaryRows.forEach((r) => {
       const m = r.iso.slice(0, 7);
       profitByMonth.set(m, (profitByMonth.get(m) || 0) + (r.profit || 0));
       // Solo guardar baseBalance si es > 0 (ignorar 0 como valor no válido)
@@ -3371,7 +3381,7 @@ function InfoClientes({
       const ret = normalizedHistoryReturn ?? (base ? profit / base : 0);
       return { month: m, label: monthLabel(m), profit, ret };
     });
-  }, [yearRows, selectedMonthlyHistory]);
+  }, [summaryRows, selectedMonthlyHistory]);
 
   useEffect(() => {
     if (!monthPopupKey) return;
@@ -3403,12 +3413,12 @@ function InfoClientes({
     [clientRows]
   );
   const movementHistory = useMemo(
-    () => [...yearRows]
-      .filter((r) => (r.increment ?? 0) !== 0 || (r.decrement ?? 0) !== 0)
+    () => [...summaryRows]
+      .filter((r) => rowEffectiveIncrement(r) !== 0 || rowEffectiveDecrement(r) !== 0)
       .slice(-12)
       .reverse()
-      .map((r) => ({ iso: r.iso, label: r.label, increment: r.increment ?? 0, decrement: r.decrement ?? 0, net: (r.increment ?? 0) - (r.decrement ?? 0) })),
-    [yearRows]
+      .map((r) => ({ iso: r.iso, label: r.label, increment: rowEffectiveIncrement(r), decrement: rowEffectiveDecrement(r), net: rowEffectiveIncrement(r) - rowEffectiveDecrement(r) })),
+    [summaryRows]
   );
   const guaranteeCurrentTotal = useMemo(
     () => CLIENTS.reduce((sum, c) => {
@@ -4327,8 +4337,8 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
     return CLIENTS.map((c) => {
       const rows = snapshot.clientRowsById[c.id] || [];
       const yearRows = rows.filter((r) => r.iso.startsWith(`${activeYear}-`));
-      const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
-      const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
+      const incrementos = yearRows.reduce((s, r) => s + rowEffectiveIncrement(r), 0);
+      const decrementos = yearRows.reduce((s, r) => s + rowEffectiveDecrement(r), 0);
       const validRows = [...yearRows].reverse();
       const lastWithFinal = validRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0);
       const lastWithBase = validRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0);

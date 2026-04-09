@@ -192,6 +192,14 @@ export const buildSnapshot = (
       const decrement = draft.decrement;
       const manualProfit = draft.manualProfit;
       const baseBalance = beyondLastRecorded ? undefined : draft.baseBalance;
+      const effectiveIncrement =
+        beyondLastRecorded
+          ? undefined
+          : (increment ?? 0) + Math.max(0, draft.syntheticFlow);
+      const effectiveDecrement =
+        beyondLastRecorded
+          ? undefined
+          : (decrement ?? 0) + Math.max(0, -draft.syntheticFlow);
 
       let coreFinal = draft.lockedCoreFinal;
       if (!beyondLastRecorded && coreFinal === undefined) {
@@ -238,6 +246,8 @@ export const buildSnapshot = (
         increment,
         decrement,
         manualProfit,
+        effectiveIncrement,
+        effectiveDecrement,
         baseBalance,
         profit: clientProfit,
         profitPct: clientProfitPct,
