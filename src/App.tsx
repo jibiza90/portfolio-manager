@@ -1075,18 +1075,27 @@ function ModernLineChart({
   );
 }
 
+function extractPastedValues(raw: string) {
+  return raw
+    .split(/[\r\n\t]+/)
+    .map((value) => value.trim())
+    .filter((value) => value !== '');
+}
+
 function CurrencyCell({
   value,
   onChange,
   cellId,
   onTabNext,
-  fallbackValueOnEmptyTab
+  fallbackValueOnEmptyTab,
+  onBulkPaste
 }: {
   value: number | undefined;
   onChange: (v: number | undefined) => void;
   cellId?: string;
   onTabNext?: () => void;
   fallbackValueOnEmptyTab?: number;
+  onBulkPaste?: (values: Array<number | undefined>) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
@@ -1110,6 +1119,15 @@ function CurrencyCell({
         className="cell-input"
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onPaste={(e) => {
+          if (!onBulkPaste) return;
+          const values = extractPastedValues(e.clipboardData.getData('text/plain'))
+            .map((entry) => parseNumberEs(entry.replace('€', '').trim()));
+          if (values.length <= 1) return;
+          e.preventDefault();
+          onBulkPaste(values);
+          setEditing(false);
+        }}
         onBlur={() => save()}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
@@ -1130,10 +1148,12 @@ function CurrencyCell({
 
 function PercentCell({
   value,
-  onChange
+  onChange,
+  onBulkPaste
 }: {
   value: number | undefined;
   onChange: (v: number | undefined) => void;
+  onBulkPaste?: (values: Array<number | undefined>) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
@@ -1159,6 +1179,18 @@ function PercentCell({
         className="cell-input"
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onPaste={(e) => {
+          if (!onBulkPaste) return;
+          const values = extractPastedValues(e.clipboardData.getData('text/plain'))
+            .map((entry) => {
+              const parsedValue = parseNumberEs(entry.replace('%', '').trim());
+              return parsedValue === undefined ? undefined : parsedValue / 100;
+            });
+          if (values.length <= 1) return;
+          e.preventDefault();
+          onBulkPaste(values);
+          setEditing(false);
+        }}
         onBlur={save}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === 'Tab') {
@@ -1911,7 +1943,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                     </tr>
                   </thead>
                   <tbody>
-                    {historyMonths.map((month) => {
+                    {historyMonths.map((month, monthIndex) => {
                       const entry = monthlyHistory[month] ?? {};
                       return (
                         <tr key={month}>
@@ -1920,12 +1952,26 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                             <CurrencyCell
                               value={entry.finalBalance}
                               onChange={(v) => setClientMonthlyHistory(clientId, month, 'finalBalance', v)}
+                              onBulkPaste={(values) => {
+                                values.forEach((pasteValue, index) => {
+                                  const targetMonth = historyMonths[monthIndex + index];
+                                  if (!targetMonth) return;
+                                  setClientMonthlyHistory(clientId, targetMonth, 'finalBalance', pasteValue);
+                                });
+                              }}
                             />
                           </td>
                           <td>
                             <PercentCell
                               value={entry.returnPct}
                               onChange={(v) => setClientMonthlyHistory(clientId, month, 'returnPct', v)}
+                              onBulkPaste={(values) => {
+                                values.forEach((pasteValue, index) => {
+                                  const targetMonth = historyMonths[monthIndex + index];
+                                  if (!targetMonth) return;
+                                  setClientMonthlyHistory(clientId, targetMonth, 'returnPct', pasteValue);
+                                });
+                              }}
                             />
                           </td>
                         </tr>
