@@ -1093,8 +1093,9 @@ function CurrencyCell({
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { if (editing) { setText(formatCurrency(value).replace('€', '').trim()); setTimeout(() => ref.current?.select(), 10); } }, [editing, value]);
   const save = (options?: { useFallbackOnEmpty?: boolean }) => {
-    const isEmpty = text.trim() === '';
-    const parsedValue = parseNumberEs(text);
+    const normalizedText = text.replace('€', '').trim();
+    const isEmpty = normalizedText === '' || normalizedText === '-';
+    const parsedValue = parseNumberEs(isEmpty ? '' : normalizedText);
     const nextValue =
       isEmpty && options?.useFallbackOnEmpty && fallbackValueOnEmptyTab !== undefined
         ? fallbackValueOnEmptyTab
