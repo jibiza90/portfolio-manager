@@ -3269,6 +3269,10 @@ function InfoClientes({
   const popupRef = useRef<HTMLDivElement>(null);
   const [guaranteeTooltip, setGuaranteeTooltip] = useState<{ x: number; y: number } | null>(null);
   const [waitlistTooltip, setWaitlistTooltip] = useState<{ x: number; y: number } | null>(null);
+  const [showBulkMonthlyReturn, setShowBulkMonthlyReturn] = useState(false);
+  const [bulkMonthlyMonth, setBulkMonthlyMonth] = useState(`${activeYear}-01`);
+  const [bulkMonthlyReturnText, setBulkMonthlyReturnText] = useState('');
+  const [bulkMonthlyClientIds, setBulkMonthlyClientIds] = useState<string[]>([]);
   const [accessLoginId, setAccessLoginId] = useState('');
   const [accessPassword, setAccessPassword] = useState('');
   const [accessBusy, setAccessBusy] = useState(false);
@@ -3276,6 +3280,7 @@ function InfoClientes({
   const [clientAccessProfile, setClientAccessProfile] = useState<AccessProfileRecord | null>(null);
   const nameSyncTimerRef = useRef<number | null>(null);
   const lastSyncedDisplayNameRef = useRef('');
+  const setClientMonthlyHistory = usePortfolioStore((s) => s.setClientMonthlyHistory);
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -3286,6 +3291,15 @@ function InfoClientes({
       return full.includes(q) || c.id.toLowerCase().includes(q);
     });
   }, [search, contacts]);
+  const allHistoryMonths = useMemo(() => {
+    const months: string[] = [];
+    for (let year = START_YEAR; year <= END_YEAR; year += 1) {
+      for (let month = 1; month <= 12; month += 1) {
+        months.push(`${year}-${String(month).padStart(2, '0')}`);
+      }
+    }
+    return months;
+  }, []);
 
   const clientRows = useMemo(() => snapshot.clientRowsById[selectedId] || [], [snapshot, selectedId]);
   const selectedMonthlyHistory = usePortfolioStore((s) => s.monthlyHistoryByClient[selectedId] ?? {});
@@ -3572,6 +3586,44 @@ function InfoClientes({
     setAccessLoginId(clientAccessProfile?.loginId ?? '');
   }, [clientAccessProfile?.loginId]);
 
+  useEffect(() => {
+    setBulkMonthlyMonth((prev) => (allHistoryMonths.includes(prev) ? prev : `${activeYear}-01`));
+  }, [activeYear, allHistoryMonths]);
+
+  const openBulkMonthlyReturnModal = () => {
+    setBulkMonthlyMonth(`${activeYear}-01`);
+    setBulkMonthlyReturnText('');
+    setBulkMonthlyClientIds(CLIENTS.map((client) => client.id));
+    setShowBulkMonthlyReturn(true);
+  };
+
+  const toggleBulkMonthlyClient = (clientId: string) => {
+    setBulkMonthlyClientIds((prev) =>
+      prev.includes(clientId) ? prev.filter((id) => id !== clientId) : [...prev, clientId]
+    );
+  };
+
+  const applyBulkMonthlyReturn = () => {
+    const parsedReturn = parseNumberEs(bulkMonthlyReturnText);
+    if (parsedReturn === undefined) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Introduce una rentabilidad valida.' }));
+      return;
+    }
+    if (bulkMonthlyClientIds.length === 0) {
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Selecciona al menos un cliente.' }));
+      return;
+    }
+
+    const normalizedReturn = parsedReturn / 100;
+    bulkMonthlyClientIds.forEach((clientId) => {
+      setClientMonthlyHistory(clientId, bulkMonthlyMonth, 'finalBalance', undefined);
+      setClientMonthlyHistory(clientId, bulkMonthlyMonth, 'returnPct', normalizedReturn);
+    });
+
+    setShowBulkMonthlyReturn(false);
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Rentabilidad mensual aplicada.' }));
+  };
+
   const createClient = () => {
     const created = onAddClient(newClientName);
     setNewClientName('');
@@ -3727,11 +3779,18 @@ function InfoClientes({
             <div className="eyebrow">{isGeneralView ? 'Consolidado' : 'Ficha de cliente'}</div>
             <h2>{displayName || 'Selecciona un cliente'}</h2>
           </div>
-          {currentClient && (
-            <button type="button" className="info-delete-btn" onClick={deleteSelectedClient}>
-              Eliminar cliente
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 10 }}>
+            {isGeneralView && (
+              <button type="button" className="ghost-btn" onClick={openBulkMonthlyReturnModal}>
+                Aplicar rentabilidad mensual
+              </button>
+            )}
+            {currentClient && (
+              <button type="button" className="info-delete-btn" onClick={deleteSelectedClient}>
+                Eliminar cliente
+              </button>
+            )}
+          </div>
         </header>
 
         {!isGeneralView && (
@@ -4128,6 +4187,73 @@ function InfoClientes({
         </section>
         )}
       </main>
+      {isGeneralView && showBulkMonthlyReturn && (
+        <div className="modal-backdrop" onClick={() => setShowBulkMonthlyReturn(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 760 }}>
+            <div className="modal-header">
+              <strong>Aplicar rentabilidad mensual</strong>
+              <button onClick={() => setShowBulkMonthlyReturn(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p className="muted" style={{ marginTop: 0 }}>
+                Aplica una rentabilidad mensual a varios clientes. Para esos clientes, ese mes se calculará desde la rentabilidad indicada.
+              </p>
+              <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '200px 200px auto' }}>
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <span>Mes</span>
+                  <select value={bulkMonthlyMonth} onChange={(e) => setBulkMonthlyMonth(e.target.value)}>
+                    {allHistoryMonths.map((month) => (
+                      <option key={month} value={month}>{monthLabel(month)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <span>Rentabilidad %</span>
+                  <input
+                    value={bulkMonthlyReturnText}
+                    onChange={(e) => setBulkMonthlyReturnText(e.target.value)}
+                    placeholder="3,54"
+                  />
+                </label>
+                <div style={{ display: 'flex', alignItems: 'end', gap: 8 }}>
+                  <button className="ghost-btn" type="button" onClick={() => setBulkMonthlyClientIds(CLIENTS.map((client) => client.id))}>
+                    Seleccionar todos
+                  </button>
+                  <button className="ghost-btn" type="button" onClick={() => setBulkMonthlyClientIds([])}>
+                    Limpiar
+                  </button>
+                </div>
+              </div>
+
+              <div className="data-table compact" style={{ marginTop: 16, maxHeight: 360, overflow: 'auto' }}>
+                <div className="table-header" style={{ gridTemplateColumns: '70px 1fr' }}>
+                  <div>Aplicar</div>
+                  <div>Cliente</div>
+                </div>
+                {CLIENTS.map((client) => {
+                  const ct = normalizeContact(contacts[client.id]);
+                  const label = ct && (ct.name || ct.surname) ? `${client.name} - ${ct.name} ${ct.surname}`.trim() : client.name;
+                  const checked = bulkMonthlyClientIds.includes(client.id);
+                  return (
+                    <label key={client.id} className="table-row" style={{ gridTemplateColumns: '70px 1fr', alignItems: 'center', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleBulkMonthlyClient(client.id)}
+                      />
+                      <span>{label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="ghost-btn" onClick={() => setShowBulkMonthlyReturn(false)}>Cancelar</button>
+              <button className="primary" onClick={applyBulkMonthlyReturn}>Aplicar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {!isGeneralView && guaranteeTooltip && createPortal(
         <div className="mini-popup info-guarantee-tip" style={{ position: 'fixed', top: guaranteeTooltip.y, left: guaranteeTooltip.x, zIndex: 2147483647 }}>
           <div className="mini-popup-header">
