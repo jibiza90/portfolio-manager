@@ -1,5 +1,6 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent } from 'react';
+import dayjs from 'dayjs';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
 import { addClientProfile, CLIENTS, removeClientProfile } from './constants/clients';
@@ -11,6 +12,7 @@ import { useFocusDate } from './hooks/useFocusDate';
 import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
+import type { MonthlyHistoryEntry } from './types';
 import {
   fetchClientAccessProfile,
   isValidLoginId,
@@ -1246,11 +1248,15 @@ function HeroHeader({ today }: { today: string }) {
 function DailyGrid({
   focusDate,
   setFocusDate,
-  contacts
+  contacts,
+  onOpenMonthlyReturnTool,
+  latestMonthlyCoverageGap
 }: {
   focusDate: string;
   setFocusDate: (d: string) => void;
   contacts: Record<string, ContactInfo>;
+  onOpenMonthlyReturnTool: () => void;
+  latestMonthlyCoverageGap?: { month: string; missingClientIds: string[] };
 }) {
   type MovementTooltipState = {
     x: number;
@@ -1338,7 +1344,29 @@ function DailyGrid({
           <h2>Grid diario</h2>
           <p className="grid-copy">Valores finales, beneficio y % de cada día.</p>
         </div>
-        <span className="badge">{rows.length} días</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {latestMonthlyCoverageGap && (
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={onOpenMonthlyReturnTool}
+              style={{
+                padding: '6px 10px',
+                borderColor: 'rgba(249,115,22,0.35)',
+                color: '#c2410c',
+                background: 'rgba(249,115,22,0.08)'
+              }}
+            >
+              Falta {monthLabel(latestMonthlyCoverageGap.month)} · {latestMonthlyCoverageGap.missingClientIds.length}
+            </button>
+          )}
+          <div className="pill-group">
+            <button type="button" className="pill active" onClick={onOpenMonthlyReturnTool}>
+              Rentab. mensual
+            </button>
+          </div>
+          <span className="badge">{rows.length} días</span>
+        </div>
       </div>
       <div className="table-scroll general-grid-scroll">
         <table ref={tableRef}>
@@ -1454,9 +1482,25 @@ function normalizeReturnPctValue(value?: number) {
   return Math.abs(value) > 1 ? value / 100 : value;
 }
 
+function hasMonthlyHistoryValue(entry?: MonthlyHistoryEntry) {
+  return !!entry && (entry.finalBalance !== undefined || entry.returnPct !== undefined);
+}
+
+function formatClientDisplayName(clientId: string, contacts: Record<string, ContactInfo>) {
+  const client = CLIENTS.find((item) => item.id === clientId);
+  const contact = normalizeContact(contacts[clientId]);
+  const fullName = `${contact.name} ${contact.surname}`.trim();
+  return fullName ? `${client?.name ?? clientId} - ${fullName}` : client?.name ?? clientId;
+}
+
+function hasClientMetadata(contact: ContactInfo) {
+  return Object.values(contact).some((value) => value.trim() !== '');
+}
+
 function BulkMonthlyReturnModal({
   open,
   onClose,
+  clientIds,
   month,
   onMonthChange,
   returnText,
@@ -1465,12 +1509,17 @@ function BulkMonthlyReturnModal({
   onToggleClient,
   onSelectAll,
   onClear,
+  onSelectMissing,
   onApply,
   contacts,
-  months
+  months,
+  missingClientIdsForMonth,
+  latestCoverageGap,
+  generalMonthFinal
 }: {
   open: boolean;
   onClose: () => void;
+  clientIds: string[];
   month: string;
   onMonthChange: (value: string) => void;
   returnText: string;
@@ -1479,9 +1528,13 @@ function BulkMonthlyReturnModal({
   onToggleClient: (clientId: string) => void;
   onSelectAll: () => void;
   onClear: () => void;
+  onSelectMissing: () => void;
   onApply: () => void;
   contacts: Record<string, ContactInfo>;
   months: string[];
+  missingClientIdsForMonth: string[];
+  latestCoverageGap?: { month: string; missingClientIds: string[] };
+  generalMonthFinal?: number;
 }) {
   if (!open) return null;
 
@@ -1496,6 +1549,21 @@ function BulkMonthlyReturnModal({
           <p className="muted" style={{ marginTop: 0 }}>
             Aplica una rentabilidad mensual a varios clientes. Para esos clientes, ese mes se calculará desde la rentabilidad indicada.
           </p>
+          {latestCoverageGap && (
+            <div
+              style={{
+                marginBottom: 12,
+                padding: '10px 12px',
+                borderRadius: 12,
+                border: '1px solid rgba(234, 88, 12, 0.18)',
+                background: 'rgba(249, 115, 22, 0.08)',
+                fontSize: 12,
+                color: '#9a3412'
+              }}
+            >
+              Falta histórico mensual en {monthLabel(latestCoverageGap.month)} para {latestCoverageGap.missingClientIds.length} cliente(s).
+            </div>
+          )}
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '200px 200px auto' }}>
             <label style={{ display: 'grid', gap: 6 }}>
               <span>Mes</span>
@@ -1517,29 +1585,53 @@ function BulkMonthlyReturnModal({
               <button className="ghost-btn" type="button" onClick={onSelectAll}>
                 Seleccionar todos
               </button>
+              <button className="ghost-btn" type="button" onClick={onSelectMissing} disabled={missingClientIdsForMonth.length === 0}>
+                Solo pendientes
+              </button>
               <button className="ghost-btn" type="button" onClick={onClear}>
                 Limpiar
               </button>
             </div>
           </div>
+          <div style={{ marginTop: 12, fontSize: 12, color: '#64748b' }}>
+            {missingClientIdsForMonth.length > 0 ? (
+              <>
+                Pendientes en {monthLabel(month)}:{' '}
+                <strong>
+                  {missingClientIdsForMonth.map((clientId) => formatClientDisplayName(clientId, contacts)).join(', ')}
+                </strong>
+              </>
+            ) : (
+              <>Todos los clientes ya tienen histórico mensual para {monthLabel(month)}.</>
+            )}
+          </div>
+          {generalMonthFinal !== undefined && (
+            <div style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
+              Final general de cierre para {monthLabel(month)}: <strong>{formatCurrency(generalMonthFinal)}</strong>. Si bloqueas clientes con rentabilidad mensual, cualquier diferencia se reparte solo entre los no bloqueados.
+            </div>
+          )}
 
           <div className="data-table compact" style={{ marginTop: 16, maxHeight: 360, overflow: 'auto' }}>
-            <div className="table-header" style={{ gridTemplateColumns: '70px 1fr' }}>
+            <div className="table-header" style={{ gridTemplateColumns: '70px 1fr 120px' }}>
               <div>Aplicar</div>
               <div>Cliente</div>
+              <div>Estado</div>
             </div>
-            {CLIENTS.map((client) => {
-              const ct = normalizeContact(contacts[client.id]);
-              const label = ct.name || ct.surname ? `${client.name} - ${ct.name} ${ct.surname}`.trim() : client.name;
-              const checked = selectedClientIds.includes(client.id);
+            {clientIds.map((clientId) => {
+              const label = formatClientDisplayName(clientId, contacts);
+              const checked = selectedClientIds.includes(clientId);
+              const isMissing = missingClientIdsForMonth.includes(clientId);
               return (
-                <label key={client.id} className="table-row" style={{ gridTemplateColumns: '70px 1fr', alignItems: 'center', cursor: 'pointer' }}>
+                <label key={clientId} className="table-row" style={{ gridTemplateColumns: '70px 1fr 120px', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={checked}
-                    onChange={() => onToggleClient(client.id)}
+                    onChange={() => onToggleClient(clientId)}
                   />
                   <span>{label}</span>
+                  <span className={clsx('badge-soft')} style={isMissing ? { background: 'rgba(249,115,22,0.12)', color: '#c2410c' } : undefined}>
+                    {isMissing ? 'Pendiente' : 'Rellenado'}
+                  </span>
                 </label>
               );
             })}
@@ -2960,6 +3052,9 @@ export default function App() {
   const derivedFocusDate = useFocusDate();
   const removeClientData = usePortfolioStore((s) => s.removeClientData);
   const setClientMonthlyHistory = usePortfolioStore((s) => s.setClientMonthlyHistory);
+  const monthlyHistoryByClient = usePortfolioStore((s) => s.monthlyHistoryByClient);
+  const finalByDay = usePortfolioStore((s) => s.finalByDay);
+  const movementsByClient = usePortfolioStore((s) => s.movementsByClient);
   const [showBulkMonthlyReturn, setShowBulkMonthlyReturn] = useState(false);
   const [bulkMonthlyMonth, setBulkMonthlyMonth] = useState(`${getYearFromIso(derivedFocusDate)}-01`);
   const [bulkMonthlyReturnText, setBulkMonthlyReturnText] = useState('');
@@ -3054,14 +3149,56 @@ export default function App() {
     return months;
   }, []);
 
+  const relevantClientIds = useMemo(() => {
+    const ids = CLIENTS
+      .filter((client) => {
+        const contact = normalizeContact(contacts[client.id]);
+        return (
+          hasClientMetadata(contact) ||
+          !!movementsByClient[client.id] ||
+          !!monthlyHistoryByClient[client.id] ||
+          (guarantees[client.id] ?? 0) > 0
+        );
+      })
+      .map((client) => client.id);
+    return ids.length > 0 ? ids : CLIENTS.map((client) => client.id);
+  }, [contacts, guarantees, movementsByClient, monthlyHistoryByClient]);
+
+  const monthlyCoverageGaps = useMemo(() => {
+    const trackedMonths = allHistoryMonths.filter((month) =>
+      relevantClientIds.some((clientId) => hasMonthlyHistoryValue(monthlyHistoryByClient[clientId]?.[month]))
+    );
+
+    return trackedMonths
+      .map((month) => ({
+        month,
+        missingClientIds: relevantClientIds
+          .filter((clientId) => !hasMonthlyHistoryValue(monthlyHistoryByClient[clientId]?.[month]))
+      }))
+      .filter((entry) => entry.missingClientIds.length > 0);
+  }, [allHistoryMonths, monthlyHistoryByClient, relevantClientIds]);
+
+  const latestMonthlyCoverageGap = monthlyCoverageGaps[monthlyCoverageGaps.length - 1];
+  const missingClientIdsForBulkMonth = useMemo(
+    () => relevantClientIds.filter((clientId) => !hasMonthlyHistoryValue(monthlyHistoryByClient[clientId]?.[bulkMonthlyMonth])),
+    [bulkMonthlyMonth, monthlyHistoryByClient, relevantClientIds]
+  );
+
+  const bulkMonthEndIso = useMemo(() => dayjs(`${bulkMonthlyMonth}-01`).endOf('month').format('YYYY-MM-DD'), [bulkMonthlyMonth]);
+  const bulkMonthGeneralFinal = finalByDay[bulkMonthEndIso];
+
   useEffect(() => {
     setBulkMonthlyMonth((prev) => (allHistoryMonths.includes(prev) ? prev : `${generalActiveYear}-01`));
   }, [allHistoryMonths, generalActiveYear]);
 
   const openBulkMonthlyReturnModal = () => {
-    setBulkMonthlyMonth(`${generalActiveYear}-01`);
+    const defaultMonth = latestMonthlyCoverageGap?.month ?? `${generalActiveYear}-01`;
+    const defaultSelection = latestMonthlyCoverageGap?.missingClientIds.length
+      ? latestMonthlyCoverageGap.missingClientIds
+      : relevantClientIds;
+    setBulkMonthlyMonth(defaultMonth);
     setBulkMonthlyReturnText('');
-    setBulkMonthlyClientIds(CLIENTS.map((client) => client.id));
+    setBulkMonthlyClientIds(defaultSelection);
     setShowBulkMonthlyReturn(true);
   };
 
@@ -3345,20 +3482,14 @@ export default function App() {
         <ReportView token={reportToken} />
       ) : activeView === GENERAL_OPTION ? (
         <>
-          <section className="glass-card fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
-            <div>
-              <div className="eyebrow">Herramientas de General</div>
-              <strong style={{ display: 'block', marginBottom: 4 }}>Rentabilidad mensual masiva</strong>
-              <p className="hero-helper" style={{ margin: 0 }}>
-                Aplica una rentabilidad mensual a varios clientes desde la vista general.
-              </p>
-            </div>
-            <button type="button" className="ghost-btn" onClick={openBulkMonthlyReturnModal}>
-              Rentabilidad mensual
-            </button>
-          </section>
           <TotalsBanner />
-          <DailyGrid focusDate={focusDate} setFocusDate={setFocusDate} contacts={contacts} />
+          <DailyGrid
+            focusDate={focusDate}
+            setFocusDate={setFocusDate}
+            contacts={contacts}
+            onOpenMonthlyReturnTool={openBulkMonthlyReturnModal}
+            latestMonthlyCoverageGap={latestMonthlyCoverageGap}
+          />
         </>
       ) : activeView === INFO_VIEW ? (
         <InfoClientes
@@ -3412,11 +3543,16 @@ export default function App() {
         onReturnTextChange={setBulkMonthlyReturnText}
         selectedClientIds={bulkMonthlyClientIds}
         onToggleClient={toggleBulkMonthlyClient}
-        onSelectAll={() => setBulkMonthlyClientIds(CLIENTS.map((client) => client.id))}
+        onSelectAll={() => setBulkMonthlyClientIds(relevantClientIds)}
+        onSelectMissing={() => setBulkMonthlyClientIds(missingClientIdsForBulkMonth)}
         onClear={() => setBulkMonthlyClientIds([])}
         onApply={applyBulkMonthlyReturn}
         contacts={contacts}
+        clientIds={relevantClientIds}
         months={allHistoryMonths}
+        missingClientIdsForMonth={missingClientIdsForBulkMonth}
+        latestCoverageGap={latestMonthlyCoverageGap}
+        generalMonthFinal={bulkMonthGeneralFinal}
       />
       {toast && <div className="toast">{toast}</div>}
     </div>
