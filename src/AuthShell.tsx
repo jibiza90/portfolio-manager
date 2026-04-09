@@ -1,7 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import App from './App';
 import { CLIENTS } from './constants/clients';
-import { fetchAccessProfile, subscribeClientOverview, syncClientOverviews } from './services/cloudPortfolio';
+import {
+  buildClientAuthEmail,
+  fetchAccessProfile,
+  loginIdFromAuthEmail,
+  subscribeClientOverview,
+  syncClientOverviews
+} from './services/cloudPortfolio';
 import { auth, db, firebase } from './services/firebaseApp';
 import { recordLoginEvent } from './services/loginTracker';
 import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, type SupportMessage } from './services/supportInbox';
@@ -19,6 +25,7 @@ interface SessionState {
   uid: string | null;
   clientId: string | null;
   email: string | null;
+  loginId: string | null;
   displayName: string | null;
   error: string | null;
 }
@@ -247,8 +254,16 @@ const PremiumTwrBarChart = ({
   );
 };
 
-const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password: string) => Promise<void>; busy: boolean; error: string | null }) => {
-  const [email, setEmail] = useState('');
+const LoginCard = ({
+  onLogin,
+  busy,
+  error
+}: {
+  onLogin: (identifier: string, password: string) => Promise<void>;
+  busy: boolean;
+  error: string | null;
+}) => {
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const currentYear = new Date().getFullYear();
@@ -553,7 +568,7 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
 
               <h1 className="pmTitle">Accede a tu cartera en segundos.</h1>
               <p className="pmCopy">
-                Inicia sesion para ver tu informe, KPIs y movimientos en un panel claro y actualizado en tiempo real.
+                Entra con tu usuario y contrasena. El correo solo se usa para la administracion interna del sistema.
               </p>
 
               <div className="pmPills" aria-label="Caracteristicas">
@@ -579,21 +594,22 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
             <form
               onSubmit={(event) => {
                 event.preventDefault();
-                void onLogin(email, password);
+                void onLogin(identifier, password);
               }}
               noValidate
             >
               <div className="pmField">
-                <label className="pmLabel" htmlFor="pmEmail">Correo</label>
+                <label className="pmLabel" htmlFor="pmIdentifier">Usuario o email admin</label>
                 <div className="pmControl">
                   <input
-                    id="pmEmail"
+                    id="pmIdentifier"
                     className="pmInput"
-                    type="email"
+                    type="text"
                     autoComplete="username"
-                    placeholder="nombre@dominio.com"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    inputMode="numeric"
+                    placeholder="398428"
+                    value={identifier}
+                    onChange={(event) => setIdentifier(event.target.value)}
                   />
                 </div>
               </div>
@@ -621,7 +637,7 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
                 </div>
               </div>
 
-              <button className="pmSubmit" type="submit" disabled={busy || !email.trim() || !password}>
+              <button className="pmSubmit" type="submit" disabled={busy || !identifier.trim() || !password}>
                 {busy ? 'Verificando...' : 'Iniciar sesion'}
               </button>
 
@@ -637,13 +653,13 @@ const LoginCard = ({ onLogin, busy, error }: { onLogin: (email: string, password
 const ClientPortal = ({
   clientId,
   profileUid,
-  email,
+  loginId,
   displayName,
   onLogout
 }: {
   clientId: string;
   profileUid: string | null;
-  email: string | null;
+  loginId: string | null;
   displayName: string | null;
   onLogout: () => Promise<void>;
 }) => {
@@ -728,9 +744,9 @@ const ClientPortal = ({
     if (cleanDisplayName) return cleanDisplayName;
 
     if (clientName && !clientName.toLowerCase().startsWith('cliente ')) return clientName;
-    if (email) return email.split('@')[0];
+    if (loginId) return `Cliente ${loginId}`;
     return clientName;
-  }, [clientName, displayName, email, liveProfileDisplayName]);
+  }, [clientName, displayName, loginId, liveProfileDisplayName]);
 
   const sendClientSupportMessage = async () => {
     const cleanText = supportText.trim();
@@ -741,7 +757,7 @@ const ClientPortal = ({
       await sendSupportMessage({
         clientId,
         clientName: headerName,
-        clientEmail: email ?? '',
+        clientEmail: loginId ? `${loginId}@cliente.local` : '',
         senderRole: 'client',
         senderName: headerName,
         text: cleanText
@@ -908,8 +924,8 @@ const ClientPortal = ({
         doc.setFontSize(9);
         doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, pageWidth - marginX, 22, { align: 'right' });
         doc.text(`Cliente: ${headerName}`, pageWidth - marginX, 38, { align: 'right' });
-        if (email) {
-          doc.text(`Email: ${email}`, pageWidth - marginX, 54, { align: 'right' });
+        if (loginId) {
+          doc.text(`Usuario: ${loginId}`, pageWidth - marginX, 54, { align: 'right' });
         }
       };
 
@@ -1146,8 +1162,8 @@ const ClientPortal = ({
         doc.setFontSize(10);
         doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
         doc.text(`Cliente: ${headerName}`, leftX, cardY + 44);
-        if (email) {
-          doc.text(`Email: ${email}`, leftX, cardY + 64);
+        if (loginId) {
+          doc.text(`Usuario: ${loginId}`, leftX, cardY + 64);
         }
 
         doc.text(`Emitido: ${now.toLocaleDateString('es-ES')}`, rightX, cardY + 44);
@@ -1416,7 +1432,7 @@ const ClientPortal = ({
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, color: palette.muted }}>{email ?? ''}</span>
+          <span style={{ fontSize: 13, color: palette.muted }}>{loginId ? `Usuario ${loginId}` : ''}</span>
           <button
             type="button"
             onClick={() => setSupportOpen((prev) => !prev)}
@@ -1975,6 +1991,7 @@ const AuthShell = () => {
     uid: null,
     clientId: null,
     email: null,
+    loginId: null,
     displayName: null,
     error: null
   });
@@ -2010,6 +2027,7 @@ const AuthShell = () => {
         uid: null,
         clientId: null,
         email: null,
+        loginId: null,
         displayName: null,
         error
       });
@@ -2069,6 +2087,7 @@ const AuthShell = () => {
             uid: user.uid,
             clientId: null,
             email: user.email ?? null,
+            loginId: null,
             displayName: user.displayName ?? null,
             error: null
           });
@@ -2098,6 +2117,7 @@ const AuthShell = () => {
             uid: user.uid,
             clientId: null,
             email: user.email ?? tokenEmailClaim ?? null,
+            loginId: null,
             displayName: user.displayName ?? null,
             error: null
           });
@@ -2122,6 +2142,7 @@ const AuthShell = () => {
             uid: null,
             clientId: null,
             email: null,
+            loginId: null,
             displayName: null,
             error: 'Tu usuario no tiene perfil activo. Contacta con el administrador.'
           });
@@ -2135,7 +2156,8 @@ const AuthShell = () => {
           role: 'client',
           uid: user.uid,
           clientId: profile.clientId,
-          email: user.email,
+          email: null,
+          loginId: profile.loginId ?? loginIdFromAuthEmail(user.email),
           displayName: profile.displayName ?? user.displayName ?? null,
           error: null
         });
@@ -2150,6 +2172,7 @@ const AuthShell = () => {
                 uid: null,
                 clientId: null,
                 email: null,
+                loginId: null,
                 displayName: null,
                 error: 'Error validando tu sesion.'
               }
@@ -2213,15 +2236,19 @@ const AuthShell = () => {
     return () => window.clearInterval(timer);
   }, [session.loading]);
 
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogin = async (identifier: string, password: string) => {
     try {
       setLoginBusy(true);
       setSession((prev) => ({ ...prev, error: null }));
-      await auth.signInWithEmailAndPassword(normalizeEmail(email), password);
+      const normalizedIdentifier = identifier.trim();
+      const authEmail = normalizedIdentifier.includes('@')
+        ? normalizeEmail(normalizedIdentifier)
+        : buildClientAuthEmail(normalizedIdentifier);
+      await auth.signInWithEmailAndPassword(authEmail, password);
     } catch (error) {
       let message = 'No se pudo iniciar sesion';
       const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: string }).code) : '';
-      if (code === 'auth/invalid-credential') message = 'Email o contrasena incorrectos.';
+      if (code === 'auth/invalid-credential') message = 'Usuario o contrasena incorrectos.';
       if (code === 'auth/user-not-found') message = 'No existe ese usuario.';
       if (code === 'auth/wrong-password') message = 'Contrasena incorrecta.';
       if (code === 'auth/too-many-requests') message = 'Demasiados intentos. Espera un momento e intentalo otra vez.';
@@ -2334,7 +2361,15 @@ const AuthShell = () => {
   }
 
   if (session.role === 'client' && session.clientId) {
-    return <ClientPortal clientId={session.clientId} profileUid={session.uid} email={session.email} displayName={session.displayName} onLogout={handleLogout} />;
+    return (
+      <ClientPortal
+        clientId={session.clientId}
+        profileUid={session.uid}
+        loginId={session.loginId}
+        displayName={session.displayName}
+        onLogout={handleLogout}
+      />
+    );
   }
 
   return (

@@ -11,7 +11,13 @@ import { useFocusDate } from './hooks/useFocusDate';
 import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
-import { fetchClientAccessProfile, provisionClientAccess, setClientPassword, type AccessProfileRecord } from './services/cloudPortfolio';
+import {
+  fetchClientAccessProfile,
+  isValidLoginId,
+  provisionClientAccess,
+  setClientPassword,
+  type AccessProfileRecord
+} from './services/cloudPortfolio';
 import { auth, db } from './services/firebaseApp';
 import { subscribeLoginEvents, type LoginEvent } from './services/loginTracker';
 import { isValidReportToken } from './services/reportLinks';
@@ -2883,6 +2889,7 @@ function InfoClientes({
   const popupRef = useRef<HTMLDivElement>(null);
   const [guaranteeTooltip, setGuaranteeTooltip] = useState<{ x: number; y: number } | null>(null);
   const [waitlistTooltip, setWaitlistTooltip] = useState<{ x: number; y: number } | null>(null);
+  const [accessLoginId, setAccessLoginId] = useState('');
   const [accessPassword, setAccessPassword] = useState('');
   const [accessBusy, setAccessBusy] = useState(false);
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
@@ -3165,7 +3172,11 @@ function InfoClientes({
     return () => {
       cancelled = true;
     };
-  }, [currentClient, isGeneralView, contact.email]);
+  }, [currentClient, isGeneralView]);
+
+  useEffect(() => {
+    setAccessLoginId(clientAccessProfile?.loginId ?? '');
+  }, [clientAccessProfile?.loginId]);
 
   const createClient = () => {
     const created = onAddClient(newClientName);
@@ -3191,10 +3202,10 @@ function InfoClientes({
 
   const createClientLogin = async () => {
     if (!currentClient) return;
-    const email = contact.email.trim().toLowerCase();
-    if (!email || !email.includes('@')) {
-      setAccessMessage('Primero informa un email valido en la ficha del cliente.');
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Email invalido' }));
+    const loginId = accessLoginId.trim();
+    if (!isValidLoginId(loginId)) {
+      setAccessMessage('El usuario del cliente debe ser numerico y tener entre 6 y 12 digitos.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Usuario invalido' }));
       return;
     }
     if (!accessPassword || accessPassword.length < 6) {
@@ -3208,7 +3219,7 @@ function InfoClientes({
     try {
       const displayName = `${contact.name} ${contact.surname}`.trim() || currentClient.name;
       const result = await provisionClientAccess({
-        email,
+        loginId,
         password: accessPassword,
         clientId: currentClient.id,
         displayName
@@ -3216,8 +3227,10 @@ function InfoClientes({
 
       if (!result.ok) {
         const message =
-          result.reason === 'email_exists_without_profile'
-            ? 'Ese email ya existe en Authentication, pero no tiene perfil en access_profiles. Crea o vincula su perfil desde Firebase Console.'
+          result.reason === 'login_exists_without_profile'
+            ? 'Ese usuario ya existe en Authentication, pero no tiene perfil en access_profiles. Revisa Firebase Console.'
+            : result.reason === 'login_id_invalid'
+              ? 'El usuario debe ser numerico y tener entre 6 y 12 digitos.'
             : result.reason === 'password_weak' || result.reason === 'password_short'
               ? 'La password no cumple requisitos (minimo 6 caracteres).'
               : 'No se pudo crear/vincular el acceso del cliente.';
@@ -3227,8 +3240,8 @@ function InfoClientes({
       }
 
       const message = result.createdAuthUser
-        ? `Acceso creado: ${email}. Ya puede entrar con la password definida.`
-        : `Perfil vinculado: ${email}. Ya puedes cambiar la password desde este panel si eres el master.`;
+        ? `Acceso creado: usuario ${loginId}. Ya puede entrar con la password definida.`
+        : `Perfil vinculado: usuario ${loginId}. Ya puedes cambiar la password desde este panel si eres el master.`;
       setAccessMessage(message);
       setAccessPassword('');
       const updatedProfile = await fetchClientAccessProfile(currentClient.id);
@@ -3276,7 +3289,7 @@ function InfoClientes({
         return;
       }
 
-      setAccessMessage(`Password actualizada para ${clientAccessProfile.email || currentClient.id}.`);
+      setAccessMessage(`Password actualizada para el usuario ${clientAccessProfile.loginId || currentClient.id}.`);
       setAccessPassword('');
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Password actualizada' }));
     } catch (error) {
@@ -3466,6 +3479,17 @@ function InfoClientes({
               />
             </label>
             <label>
+              <span>Usuario cliente</span>
+              <input
+                id="client-access-login-id"
+                name="client-access-login-id"
+                inputMode="numeric"
+                placeholder="Ej: 398428"
+                value={accessLoginId}
+                onChange={(e) => setAccessLoginId(e.target.value.replace(/\D/g, '').slice(0, 12))}
+              />
+            </label>
+            <label>
               <span>Teléfono</span>
               <input
                 id="contact-phone"
@@ -3531,9 +3555,9 @@ function InfoClientes({
               </label>
             )}
             <label>
-              <span>Correo de acceso actual</span>
+              <span>Usuario actual</span>
               <input
-                value={clientAccessProfile?.email || 'Sin login creado'}
+                value={clientAccessProfile?.loginId || 'Sin login creado'}
                 disabled
               />
             </label>

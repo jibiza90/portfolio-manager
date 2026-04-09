@@ -165,7 +165,11 @@ export interface AccessProfileRecord extends AccessProfile {
 export const fetchAccessProfile = async (uid: string): Promise<AccessProfile | null> => {
   const doc = await db.collection('access_profiles').doc(uid).get();
   if (!doc.exists) return null;
-  return doc.data() as AccessProfile;
+  const data = doc.data() as AccessProfile;
+  return {
+    ...data,
+    loginId: data.loginId ?? loginIdFromAuthEmail(data.email)
+  };
 };
 
 export const fetchClientAccessProfile = async (clientId: string): Promise<AccessProfileRecord | null> => {
@@ -178,9 +182,11 @@ export const fetchClientAccessProfile = async (clientId: string): Promise<Access
 
   const doc = snapshot.docs[0];
   if (!doc) return null;
+  const data = doc.data() as AccessProfile;
   return {
     uid: doc.id,
-    ...(doc.data() as AccessProfile)
+    ...data,
+    loginId: data.loginId ?? loginIdFromAuthEmail(data.email)
   };
 };
 
@@ -200,6 +206,17 @@ export const subscribeClientOverview = (
     );
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
+const CLIENT_LOGIN_DOMAIN = 'clients.portfolio-manager.local';
+
+export const normalizeLoginId = (value: string) => value.trim().replace(/\s+/g, '');
+export const isValidLoginId = (value: string) => /^\d{6,12}$/.test(normalizeLoginId(value));
+export const buildClientAuthEmail = (loginId: string) => `${normalizeLoginId(loginId)}@${CLIENT_LOGIN_DOMAIN}`;
+export const loginIdFromAuthEmail = (value?: string | null) => {
+  const email = normalizeEmail(value ?? '');
+  const suffix = `@${CLIENT_LOGIN_DOMAIN}`;
+  if (!email.endsWith(suffix)) return '';
+  return email.slice(0, -suffix.length);
+};
 
 const upsertAccessProfile = async (uid: string, profile: AccessProfile) => {
   const now = Date.now();
@@ -222,11 +239,10 @@ const upsertAccessProfile = async (uid: string, profile: AccessProfile) => {
 };
 
 export interface ProvisionClientAccessInput {
-  email: string;
+  loginId: string;
   password: string;
   clientId: string;
   displayName?: string;
-  loginId?: string;
 }
 
 export interface ProvisionClientAccessResult {
@@ -240,14 +256,14 @@ export interface ProvisionClientAccessResult {
 export const provisionClientAccess = async (
   input: ProvisionClientAccessInput
 ): Promise<ProvisionClientAccessResult> => {
-  const email = normalizeEmail(input.email);
+  const loginId = normalizeLoginId(input.loginId);
+  const email = buildClientAuthEmail(loginId);
   const password = input.password;
   const clientId = input.clientId.trim();
   const displayName = input.displayName?.trim() ?? '';
-  const loginId = input.loginId?.trim() ?? '';
 
-  if (!email || !email.includes('@')) {
-    return { ok: false, reason: 'email_invalid' };
+  if (!isValidLoginId(loginId)) {
+    return { ok: false, reason: 'login_id_invalid' };
   }
   if (!clientId) {
     return { ok: false, reason: 'client_invalid' };
@@ -282,12 +298,12 @@ export const provisionClientAccess = async (
     if (code === 'auth/email-already-in-use') {
       const existing = await db
         .collection('access_profiles')
-        .where('email', '==', email)
+        .where('loginId', '==', loginId)
         .limit(1)
         .get();
       const existingDoc = existing.docs[0];
       if (!existingDoc) {
-        return { ok: false, reason: 'email_exists_without_profile' };
+        return { ok: false, reason: 'login_exists_without_profile' };
       }
       await upsertAccessProfile(existingDoc.id, {
         role: 'client',
