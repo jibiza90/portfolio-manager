@@ -640,9 +640,10 @@ const LoginCard = ({
                     type="button"
                     className="pmIconBtn"
                     aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                    title={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
                     onClick={() => setShowPassword((prev) => !prev)}
                   >
-                    {showPassword ? 'Oc' : 'Ver'}
+                    {showPassword ? 'Ocultar' : 'Mostrar'}
                   </button>
                 </div>
               </div>
@@ -656,7 +657,31 @@ const LoginCard = ({
                   />
                   Recordar usuario
                 </label>
-                <span style={{ fontSize: 12, color: '#6a7178' }}>La contrasena la puede guardar tu navegador.</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem(REMEMBERED_IDENTIFIER_KEY);
+                    setRememberIdentifier(false);
+                    setIdentifier('');
+                    setPassword('');
+                  }}
+                  style={{
+                    border: '1px solid rgba(36, 43, 54, 0.14)',
+                    background: '#fff',
+                    color: '#5b6874',
+                    borderRadius: 10,
+                    padding: '7px 10px',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Olvidar este dispositivo
+                </button>
+              </div>
+
+              <div style={{ marginBottom: 14, fontSize: 12, color: '#6a7178' }}>
+                La contrasena la puede guardar tu navegador si quieres.
               </div>
 
               <button className="pmSubmit" type="submit" disabled={busy || !identifier.trim() || !password}>
