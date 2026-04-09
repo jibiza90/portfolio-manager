@@ -1610,10 +1610,13 @@ function BulkMonthlyReturnModal({
               Final general de cierre para {monthLabel(month)}: <strong>{formatCurrency(generalMonthFinal)}</strong>. Si bloqueas clientes con rentabilidad mensual, cualquier diferencia se reparte solo entre los no bloqueados.
             </div>
           )}
+          <div style={{ marginTop: 10, fontSize: 12, color: '#0f172a' }}>
+            Seleccionados: <strong>{selectedClientIds.length}</strong> de <strong>{clientIds.length}</strong>
+          </div>
 
           <div className="data-table compact" style={{ marginTop: 16, maxHeight: 360, overflow: 'auto' }}>
-            <div className="table-header" style={{ gridTemplateColumns: '70px 1fr 120px' }}>
-              <div>Aplicar</div>
+            <div className="table-header" style={{ gridTemplateColumns: '88px 1fr 120px' }}>
+              <div>Tick</div>
               <div>Cliente</div>
               <div>Estado</div>
             </div>
@@ -1622,12 +1625,45 @@ function BulkMonthlyReturnModal({
               const checked = selectedClientIds.includes(clientId);
               const isMissing = missingClientIdsForMonth.includes(clientId);
               return (
-                <label key={clientId} className="table-row" style={{ gridTemplateColumns: '70px 1fr 120px', alignItems: 'center', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => onToggleClient(clientId)}
-                  />
+                <label
+                  key={clientId}
+                  className="table-row"
+                  style={{
+                    gridTemplateColumns: '88px 1fr 120px',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    padding: '10px 0',
+                    borderRadius: 12,
+                    background: checked ? 'rgba(15, 109, 122, 0.08)' : 'transparent'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 6,
+                        border: checked ? '1px solid #0f6d7a' : '1px solid rgba(15, 109, 122, 0.28)',
+                        background: checked ? '#0f6d7a' : '#ffffff',
+                        color: '#ffffff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 13,
+                        fontWeight: 800,
+                        boxShadow: checked ? '0 4px 10px rgba(15,109,122,0.18)' : 'none'
+                      }}
+                    >
+                      {checked ? '✓' : ''}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => onToggleClient(clientId)}
+                      style={{ width: 18, height: 18, accentColor: '#0f6d7a' }}
+                    />
+                  </span>
                   <span>{label}</span>
                   <span className={clsx('badge-soft')} style={isMissing ? { background: 'rgba(249,115,22,0.12)', color: '#c2410c' } : undefined}>
                     {isMissing ? 'Pendiente' : 'Rellenado'}
