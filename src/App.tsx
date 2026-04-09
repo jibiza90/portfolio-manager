@@ -1079,18 +1079,29 @@ function CurrencyCell({
   value,
   onChange,
   cellId,
-  onTabNext
+  onTabNext,
+  fallbackValueOnEmptyTab
 }: {
   value: number | undefined;
   onChange: (v: number | undefined) => void;
   cellId?: string;
   onTabNext?: () => void;
+  fallbackValueOnEmptyTab?: number;
 }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { if (editing) { setText(formatCurrency(value).replace('€', '').trim()); setTimeout(() => ref.current?.select(), 10); } }, [editing, value]);
-  const save = () => { const v = parseNumberEs(text); onChange(v); setEditing(false); };
+  const save = (options?: { useFallbackOnEmpty?: boolean }) => {
+    const isEmpty = text.trim() === '';
+    const parsedValue = parseNumberEs(text);
+    const nextValue =
+      isEmpty && options?.useFallbackOnEmpty && fallbackValueOnEmptyTab !== undefined
+        ? fallbackValueOnEmptyTab
+        : parsedValue;
+    onChange(nextValue);
+    setEditing(false);
+  };
   if (editing) {
     return (
       <input
@@ -1098,7 +1109,7 @@ function CurrencyCell({
         className="cell-input"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onBlur={save}
+        onBlur={() => save()}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             save();
@@ -1106,7 +1117,7 @@ function CurrencyCell({
             setEditing(false);
           } else if (e.key === 'Tab' && !e.shiftKey && onTabNext) {
             e.preventDefault();
-            save();
+            save({ useFallbackOnEmpty: true });
             window.setTimeout(() => onTabNext(), 0);
           }
         }}
@@ -1185,6 +1196,20 @@ function DailyGrid({
       const target = tableRef.current?.querySelector<HTMLElement>(`[data-final-cell="${nextRow.iso}"]`);
       target?.click();
     }, 40);
+  };
+
+  const getPreviousFinalValue = (currentIso: string) => {
+    const currentIndex = rows.findIndex((row) => row.iso === currentIso);
+    if (currentIndex <= 0) return undefined;
+
+    for (let index = currentIndex - 1; index >= 0; index -= 1) {
+      const previousValue = rows[index].final;
+      if (previousValue !== undefined && !Number.isNaN(previousValue)) {
+        return previousValue;
+      }
+    }
+
+    return undefined;
   };
 
   useEffect(() => {
@@ -1291,6 +1316,7 @@ function DailyGrid({
                       value={r.final}
                       onChange={(v) => setDayFinal(r.iso, v)}
                       onTabNext={() => focusNextEditableFinalCell(r.iso)}
+                      fallbackValueOnEmptyTab={getPreviousFinalValue(r.iso)}
                     />
                   )}
                 </td>
