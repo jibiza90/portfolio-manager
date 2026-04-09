@@ -1270,7 +1270,7 @@ function DailyGrid({
                 className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}
                 onClick={() => setFocusDate(r.iso)}
               >
-                <td><span>{r.label}</span><small>{r.weekday} · {r.iso.slice(0, 4)}</small></td>
+                <td><span>{r.label}</span><small>{r.weekday}</small><small>{r.iso.slice(0, 4)}</small></td>
                 <td
                   onMouseEnter={(e) => {
                     const clients = getMovementClients(r.iso, 'increment');
