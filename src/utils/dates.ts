@@ -8,9 +8,9 @@ export interface CalendarDay {
   isWeekend: boolean;
 }
 
-export const START_YEAR = 2026;
-export const YEAR = dayjs().year();
-export const END_YEAR = YEAR + 3;
+export const START_YEAR = 2025;
+export const YEAR = 2025;
+export const END_YEAR = 2026;
 
 dayjs.locale('es');
 
