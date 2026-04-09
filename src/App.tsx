@@ -1458,6 +1458,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   }, [focusDate, displayRows.length]);
 
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showMonthlyHistory, setShowMonthlyHistory] = useState(false);
   const [hoverOrigin, setHoverOrigin] = useState<'inc' | 'dec' | 'profit' | 'return' | 'twr' | null>(null);
   const [twrExpanded, setTwrExpanded] = useState(false);
   const [tooltip, setTooltip] = useState({ x: 0, y: 0, text: '', visible: false });
@@ -1626,49 +1627,8 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
           </div>
           <div className="panel-actions">
             <button className="ghost-btn" onClick={() => window.dispatchEvent(new CustomEvent('goto-general'))}>Volver a General</button>
+            <button className="ghost-btn" onClick={() => setShowMonthlyHistory(true)}>Histórico mensual</button>
             <button className="primary" onClick={() => setShowAnalytics(true)}>Ver estadísticas</button>
-          </div>
-        </div>
-
-        <div className="glass-card" style={{ marginBottom: 12, padding: 16 }}>
-          <div style={{ marginBottom: 10 }}>
-            <div className="eyebrow">Historico mensual</div>
-            <p className="muted" style={{ margin: '4px 0 0' }}>
-              Introduce saldo final y rentabilidad mensual para cargar meses antiguos sin rellenar el diario.
-            </p>
-          </div>
-          <div className="table-scroll" style={{ maxHeight: 260 }}>
-            <table style={{ tableLayout: 'auto' }}>
-              <thead>
-                <tr>
-                  <th>Mes</th>
-                  <th>Saldo final</th>
-                  <th>Rentab. %</th>
-                </tr>
-              </thead>
-              <tbody>
-                {historyMonths.map((month) => {
-                  const entry = monthlyHistory[month] ?? {};
-                  return (
-                    <tr key={month}>
-                      <td>{monthLabel(month)}</td>
-                      <td>
-                        <CurrencyCell
-                          value={entry.finalBalance}
-                          onChange={(v) => setClientMonthlyHistory(clientId, month, 'finalBalance', v)}
-                        />
-                      </td>
-                      <td>
-                        <PercentCell
-                          value={entry.returnPct}
-                          onChange={(v) => setClientMonthlyHistory(clientId, month, 'returnPct', v)}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
           </div>
         </div>
 
@@ -1928,6 +1888,56 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
           </table>
         </div>
       </div>
+
+      {showMonthlyHistory && (
+        <div className="client-analytics-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowMonthlyHistory(false); }}>
+          <div className="client-analytics-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Histórico mensual · {CLIENTS.find((c) => c.id === clientId)?.name || 'Cliente'}</h3>
+              <button onClick={() => setShowMonthlyHistory(false)}>×</button>
+            </div>
+
+            <div className="analytics-body">
+              <p className="muted" style={{ marginTop: 0 }}>
+                Introduce saldo final y rentabilidad mensual para cargar meses antiguos sin rellenar el diario.
+              </p>
+              <div className="table-scroll" style={{ maxHeight: '70vh' }}>
+                <table style={{ tableLayout: 'auto' }}>
+                  <thead>
+                    <tr>
+                      <th>Mes</th>
+                      <th>Saldo final</th>
+                      <th>Rentab. %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyMonths.map((month) => {
+                      const entry = monthlyHistory[month] ?? {};
+                      return (
+                        <tr key={month}>
+                          <td>{monthLabel(month)}</td>
+                          <td>
+                            <CurrencyCell
+                              value={entry.finalBalance}
+                              onChange={(v) => setClientMonthlyHistory(clientId, month, 'finalBalance', v)}
+                            />
+                          </td>
+                          <td>
+                            <PercentCell
+                              value={entry.returnPct}
+                              onChange={(v) => setClientMonthlyHistory(clientId, month, 'returnPct', v)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAnalytics && (
         <div className="client-analytics-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAnalytics(false); }}>
