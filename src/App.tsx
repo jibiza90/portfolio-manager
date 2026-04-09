@@ -3212,6 +3212,29 @@ export default function App() {
     [relevantClientIds, snapshot.clientRowsById]
   );
 
+  const firstActiveMonthByClient = useMemo(() => {
+    const result: Record<string, string | undefined> = {};
+
+    pendingEligibleClientIds.forEach((clientId) => {
+      const movementMonths = Object.entries(movementsByClient[clientId] ?? {})
+        .filter(([, movement]) =>
+          movement.increment !== undefined ||
+          movement.decrement !== undefined ||
+          movement.manualProfit !== undefined
+        )
+        .map(([iso]) => iso.slice(0, 7));
+
+      const historyMonths = Object.entries(monthlyHistoryByClient[clientId] ?? {})
+        .filter(([, entry]) => hasMonthlyHistoryValue(entry))
+        .map(([month]) => month);
+
+      const months = [...movementMonths, ...historyMonths].sort();
+      result[clientId] = months[0];
+    });
+
+    return result;
+  }, [movementsByClient, monthlyHistoryByClient, pendingEligibleClientIds]);
+
   const monthlyCoverageGaps = useMemo(() => {
     const trackedMonths = allHistoryMonths.filter((month) =>
       pendingEligibleClientIds.some((clientId) => hasMonthlyHistoryValue(monthlyHistoryByClient[clientId]?.[month]))
@@ -3221,15 +3244,26 @@ export default function App() {
       .map((month) => ({
         month,
         missingClientIds: pendingEligibleClientIds
-          .filter((clientId) => !hasMonthlyHistoryValue(monthlyHistoryByClient[clientId]?.[month]))
+          .filter((clientId) => {
+            const firstActiveMonth = firstActiveMonthByClient[clientId];
+            if (!firstActiveMonth) return false;
+            if (month <= firstActiveMonth) return false;
+            return !hasMonthlyHistoryValue(monthlyHistoryByClient[clientId]?.[month]);
+          })
       }))
       .filter((entry) => entry.missingClientIds.length > 0);
-  }, [allHistoryMonths, monthlyHistoryByClient, pendingEligibleClientIds]);
+  }, [allHistoryMonths, monthlyHistoryByClient, pendingEligibleClientIds, firstActiveMonthByClient]);
 
   const latestMonthlyCoverageGap = monthlyCoverageGaps[monthlyCoverageGaps.length - 1];
   const missingClientIdsForBulkMonth = useMemo(
-    () => pendingEligibleClientIds.filter((clientId) => !hasMonthlyHistoryValue(monthlyHistoryByClient[clientId]?.[bulkMonthlyMonth])),
-    [bulkMonthlyMonth, monthlyHistoryByClient, pendingEligibleClientIds]
+    () =>
+      pendingEligibleClientIds.filter((clientId) => {
+        const firstActiveMonth = firstActiveMonthByClient[clientId];
+        if (!firstActiveMonth) return false;
+        if (bulkMonthlyMonth <= firstActiveMonth) return false;
+        return !hasMonthlyHistoryValue(monthlyHistoryByClient[clientId]?.[bulkMonthlyMonth]);
+      }),
+    [bulkMonthlyMonth, monthlyHistoryByClient, pendingEligibleClientIds, firstActiveMonthByClient]
   );
 
   const bulkMonthEndIso = useMemo(() => dayjs(`${bulkMonthlyMonth}-01`).endOf('month').format('YYYY-MM-DD'), [bulkMonthlyMonth]);
