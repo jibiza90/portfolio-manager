@@ -1075,14 +1075,45 @@ function ModernLineChart({
   );
 }
 
-function CurrencyCell({ value, onChange }: { value: number | undefined; onChange: (v: number | undefined) => void }) {
+function CurrencyCell({
+  value,
+  onChange,
+  cellId,
+  onTabNext
+}: {
+  value: number | undefined;
+  onChange: (v: number | undefined) => void;
+  cellId?: string;
+  onTabNext?: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => { if (editing) { setText(formatCurrency(value).replace('€', '').trim()); setTimeout(() => ref.current?.select(), 10); } }, [editing, value]);
   const save = () => { const v = parseNumberEs(text); onChange(v); setEditing(false); };
-  if (editing) return <input ref={ref} className="cell-input" value={text} onChange={(e) => setText(e.target.value)} onBlur={save} onKeyDown={(e) => { if (e.key === 'Enter') save(); else if (e.key === 'Escape') setEditing(false); }} />;
-  return <span className="cell-content currency" onClick={() => setEditing(true)}>{formatCurrency(value)}</span>;
+  if (editing) {
+    return (
+      <input
+        ref={ref}
+        className="cell-input"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            save();
+          } else if (e.key === 'Escape') {
+            setEditing(false);
+          } else if (e.key === 'Tab' && !e.shiftKey && onTabNext) {
+            e.preventDefault();
+            save();
+            window.setTimeout(() => onTabNext(), 0);
+          }
+        }}
+      />
+    );
+  }
+  return <span data-final-cell={cellId} className="cell-content currency" onClick={() => setEditing(true)}>{formatCurrency(value)}</span>;
 }
 
 function AutosaveIndicator({ status }: { status: string }) {
@@ -1141,6 +1172,20 @@ function DailyGrid({
   const rows = useMemo(() => [...snapshot.dailyRows], [snapshot.dailyRows]);
   const tableRef = useRef<HTMLTableElement>(null);
   const [tooltip, setTooltip] = useState<MovementTooltipState | null>(null);
+
+  const focusNextEditableFinalCell = (currentIso: string) => {
+    const currentIndex = rows.findIndex((row) => row.iso === currentIso);
+    if (currentIndex < 0) return;
+
+    const nextRow = rows.slice(currentIndex + 1).find((row) => !row.isWeekend);
+    if (!nextRow) return;
+
+    setFocusDate(nextRow.iso);
+    window.setTimeout(() => {
+      const target = tableRef.current?.querySelector<HTMLElement>(`[data-final-cell="${nextRow.iso}"]`);
+      target?.click();
+    }, 40);
+  };
 
   useEffect(() => {
     if (!tableRef.current || !focusDate) return;
@@ -1237,7 +1282,18 @@ function DailyGrid({
                   {showValue(r.decrements)}
                 </td>
                 <td>{showValue(r.initial)}</td>
-                <td>{r.isWeekend ? showValue(r.final) : <CurrencyCell value={r.final} onChange={(v) => setDayFinal(r.iso, v)} />}</td>
+                <td>
+                  {r.isWeekend ? (
+                    showValue(r.final)
+                  ) : (
+                    <CurrencyCell
+                      cellId={r.iso}
+                      value={r.final}
+                      onChange={(v) => setDayFinal(r.iso, v)}
+                      onTabNext={() => focusNextEditableFinalCell(r.iso)}
+                    />
+                  )}
+                </td>
                 <td className={clsx(r.profit !== undefined && r.profit >= 0 ? 'profit' : 'loss')}>{showValue(r.profit)}</td>
                 <td className={clsx(r.profitPct !== undefined && r.profitPct >= 0 ? 'profit' : 'loss')}>{showPercent(r.profitPct)}</td>
                 <td>{showValue(r.cumulativeProfit)}</td>
