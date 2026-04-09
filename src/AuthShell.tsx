@@ -16,6 +16,7 @@ import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const ADMIN_EMAILS = new Set(['jibiza90@gmail.com', 'jpujola@alogroup.es'].map(normalizeEmail));
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+const SESSION_REFRESH_MS = 10 * 60 * 1000;
 const REMEMBERED_IDENTIFIER_KEY = 'portfolio-login-identifier';
 
 type Role = 'admin' | 'client';
@@ -2260,18 +2261,48 @@ const AuthShell = () => {
     }
 
     const onActivity = () => armInactivityTimer();
-    const events: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'];
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        armInactivityTimer();
+      }
+    };
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll', 'focus'];
 
     armInactivityTimer();
     events.forEach((eventName) => {
       window.addEventListener(eventName, onActivity, { passive: true });
     });
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
       clearInactivityTimer();
       events.forEach((eventName) => {
         window.removeEventListener(eventName, onActivity);
       });
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [session.role]);
+
+  useEffect(() => {
+    if (!session.role) return;
+
+    const refreshSession = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      try {
+        await user.getIdToken(true);
+      } catch (error) {
+        console.error('No se pudo refrescar la sesion activa', error);
+      }
+    };
+
+    void refreshSession();
+    const intervalId = window.setInterval(() => {
+      void refreshSession();
+    }, SESSION_REFRESH_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
     };
   }, [session.role]);
 
