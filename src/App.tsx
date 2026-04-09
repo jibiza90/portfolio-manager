@@ -1449,6 +1449,11 @@ function monthLabel(isoMonth: string): string {
   return `${months[parseInt(month) - 1]} ${year}`;
 }
 
+function normalizeReturnPctValue(value?: number) {
+  if (value === undefined || Number.isNaN(value)) return undefined;
+  return Math.abs(value) > 1 ? value / 100 : value;
+}
+
 function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   clientId: string;
   focusDate: string;
@@ -1549,8 +1554,11 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
 
     const months = Array.from(byMonth.keys()).sort();
     const monthly = months.map((month) => {
+      const historyEntry = monthlyHistory[month];
+      const normalizedHistoryReturn = normalizeReturnPctValue(historyEntry?.returnPct);
       const entry = byMonth.get(month)!;
-      const { profit, finalEnd } = entry;
+      let profit = entry.profit;
+      let finalEnd = entry.finalEnd;
       let { baseStart } = entry;
       // Fallback si baseStart es undefined o 0
       if (baseStart === undefined || baseStart === 0) {
@@ -1564,8 +1572,15 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
           baseStart = Math.max(1, finalEnd - profit);
         }
       }
-      let retPct = 0;
-      if (baseStart && baseStart > 0) {
+      if (historyEntry?.finalBalance !== undefined) {
+        finalEnd = historyEntry.finalBalance;
+      }
+      if (historyEntry?.finalBalance !== undefined && normalizedHistoryReturn !== undefined && normalizedHistoryReturn > -1) {
+        baseStart = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
+        profit = historyEntry.finalBalance - baseStart;
+      }
+      let retPct = normalizedHistoryReturn ?? 0;
+      if (normalizedHistoryReturn === undefined && baseStart && baseStart > 0) {
         retPct = profit / baseStart;
       }
       return { month, profit, retPct, finalEnd, baseStart };
@@ -1595,7 +1610,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
       retMax: Math.max(0.01, retMax),
       evoMax: Math.max(1, evoMax)
     };
-  }, [yearRows]);
+  }, [yearRows, monthlyHistory]);
 
   // Buscar último mes con beneficio distinto de 0, o el último disponible
   const latestProfitMonth = (() => {
@@ -3274,6 +3289,7 @@ function InfoClientes({
   }, [search, contacts]);
 
   const clientRows = useMemo(() => snapshot.clientRowsById[selectedId] || [], [snapshot, selectedId]);
+  const selectedMonthlyHistory = usePortfolioStore((s) => s.monthlyHistoryByClient[selectedId] ?? {});
   const yearRows = useMemo(() => clientRows.filter((r) => r.iso.startsWith(`${activeYear}-`)), [activeYear, clientRows]);
   const stats = useMemo(() => {
     const validRows = [...yearRows].reverse();
@@ -3288,7 +3304,13 @@ function InfoClientes({
 
     const lastMonthIso = last?.iso.slice(0, 7);
     const monthRows = lastMonthIso ? yearRows.filter((r) => r.iso.startsWith(lastMonthIso)) : [];
-    const monthlyProfit = monthRows.reduce((s, r) => s + (r.profit || 0), 0);
+    const lastMonthHistory = lastMonthIso ? selectedMonthlyHistory[lastMonthIso] : undefined;
+    const normalizedLastMonthReturn = normalizeReturnPctValue(lastMonthHistory?.returnPct);
+    const historyMonthlyProfit =
+      lastMonthHistory?.finalBalance !== undefined && normalizedLastMonthReturn !== undefined && normalizedLastMonthReturn > -1
+        ? lastMonthHistory.finalBalance - lastMonthHistory.finalBalance / (1 + normalizedLastMonthReturn)
+        : undefined;
+    const monthlyProfit = historyMonthlyProfit ?? monthRows.reduce((s, r) => s + (r.profit || 0), 0);
     const lastFinalInMonth = [...monthRows].reverse().find((r) => r.finalBalance !== undefined && r.finalBalance > 0)?.finalBalance;
     // Buscar baseBalance > 0
     const firstValidBase = monthRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0)?.baseBalance;
@@ -3299,12 +3321,12 @@ function InfoClientes({
     })();
     const estimatedBase = lastFinalInMonth !== undefined ? Math.max(1, lastFinalInMonth - monthlyProfit) : 0;
     const monthStart = firstValidBase ?? prevMonthFinal ?? firstValidFinal ?? estimatedBase;
-    const monthlyReturn = monthStart ? monthlyProfit / monthStart : 0;
+    const monthlyReturn = normalizedLastMonthReturn ?? (monthStart ? monthlyProfit / monthStart : 0);
 
     const proportion = snapshot.totals.assets ? estimatedBalance / snapshot.totals.assets : 0;
 
     return { estimatedBalance, totalProfit, dailyProfit, profitPct, participation, capitalInvertido, capitalRetirado, monthlyProfit, monthlyReturn, proportion, lastMonthIso };
-  }, [yearRows]);
+  }, [yearRows, selectedMonthlyHistory, snapshot.totals.assets]);
 
   const monthlySummary = useMemo(() => {
     const profitByMonth = new Map<string, number>();
@@ -3323,7 +3345,9 @@ function InfoClientes({
     });
     const months = Array.from(profitByMonth.keys()).sort();
     return months.map((m) => {
-      const profit = profitByMonth.get(m) || 0;
+      const historyEntry = selectedMonthlyHistory[m];
+      const normalizedHistoryReturn = normalizeReturnPctValue(historyEntry?.returnPct);
+      let profit = profitByMonth.get(m) || 0;
       let base = firstBaseByMonth.get(m);
       if (base === undefined || base === 0) {
         // fallback: último final del mes anterior
@@ -3339,11 +3363,15 @@ function InfoClientes({
           base = Math.max(1, lastFinal - profit);
         }
       }
+      if (historyEntry?.finalBalance !== undefined && normalizedHistoryReturn !== undefined && normalizedHistoryReturn > -1) {
+        base = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
+        profit = historyEntry.finalBalance - base;
+      }
       base = base ?? 0;
-      const ret = base ? profit / base : 0;
+      const ret = normalizedHistoryReturn ?? (base ? profit / base : 0);
       return { month: m, label: monthLabel(m), profit, ret };
     });
-  }, [yearRows]);
+  }, [yearRows, selectedMonthlyHistory]);
 
   useEffect(() => {
     if (!monthPopupKey) return;
