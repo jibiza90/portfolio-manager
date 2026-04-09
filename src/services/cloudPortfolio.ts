@@ -18,6 +18,7 @@ const buildOverviewRows = (snapshot: PortfolioSnapshot, clientId: string) => {
     .filter((row) =>
       row.increment !== undefined ||
       row.decrement !== undefined ||
+      row.manualProfit !== undefined ||
       row.finalBalance !== undefined ||
       row.profit !== undefined
     )
@@ -27,6 +28,7 @@ const buildOverviewRows = (snapshot: PortfolioSnapshot, clientId: string) => {
       label: row.label,
       increment: row.increment ?? null,
       decrement: row.decrement ?? null,
+      manualProfit: row.manualProfit ?? null,
       baseBalance: row.baseBalance ?? null,
       finalBalance: row.finalBalance ?? null,
       profit: row.profit ?? null,

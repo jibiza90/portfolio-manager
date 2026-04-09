@@ -1775,6 +1775,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 <th>Fecha</th>
                 <th>Incremento</th>
                 <th>Decremento</th>
+                <th>Beneficio manual</th>
                 <th>Inicial</th>
                 <th>Final</th>
                 <th>Beneficio</th>
@@ -1803,6 +1804,12 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                       }}
                     />
                   )}</td>
+                  <td>
+                    <CurrencyCell
+                      value={r.manualProfit}
+                      onChange={(v) => setClientMovement(clientId, r.iso, 'manualProfit', v)}
+                    />
+                  </td>
                   <td>{r.baseBalance === undefined ? '—' : formatCurrency(r.baseBalance)}</td>
                   <td>{r.finalBalance === undefined ? '—' : formatCurrency(r.finalBalance)}</td>
                   <td className={clsx(r.profit !== undefined && r.profit >= 0 ? 'profit' : 'loss')}>

@@ -10,8 +10,10 @@ import { YEAR_DAYS } from './dates';
 const sumMovements = (records: Record<string, Record<string, Movement>>, iso: string) => {
   let incrementTotal = 0;
   let decrementTotal = 0;
+  let manualProfitTotal = 0;
   let hasIncrement = false;
   let hasDecrement = false;
+  let hasManualProfit = false;
 
   CLIENTS.forEach(({ id }) => {
     const day = records[id]?.[iso];
@@ -24,11 +26,16 @@ const sumMovements = (records: Record<string, Record<string, Movement>>, iso: st
       decrementTotal += day.decrement;
       hasDecrement = true;
     }
+    if (day.manualProfit !== undefined) {
+      manualProfitTotal += day.manualProfit;
+      hasManualProfit = true;
+    }
   });
 
   return {
     increments: hasIncrement ? incrementTotal : undefined,
     decrements: hasDecrement ? decrementTotal : undefined,
+    manualProfits: hasManualProfit ? manualProfitTotal : undefined,
     net: incrementTotal - decrementTotal
   };
 };
@@ -42,6 +49,18 @@ export const buildSnapshot = (
     .map(([iso]) => iso)
     .sort((a, b) => (a > b ? 1 : -1));
   const lastRecordedFinalDay = recordedFinalDays[recordedFinalDays.length - 1];
+  const manualProfitDays = Object.values(movementsByClient)
+    .flatMap((rows) =>
+      Object.entries(rows)
+        .filter(([, movement]) => movement.manualProfit !== undefined && !Number.isNaN(movement.manualProfit))
+        .map(([iso]) => iso)
+    )
+    .sort((a, b) => (a > b ? 1 : -1));
+  const lastManualProfitDay = manualProfitDays[manualProfitDays.length - 1];
+  const lastTrackedDay =
+    lastRecordedFinalDay && lastManualProfitDay
+      ? (lastRecordedFinalDay > lastManualProfitDay ? lastRecordedFinalDay : lastManualProfitDay)
+      : lastRecordedFinalDay ?? lastManualProfitDay;
 
   const dailyRows: DailyRow[] = [];
   const dayIndex: Record<string, DailyRow> = {};
@@ -58,14 +77,22 @@ export const buildSnapshot = (
   let firstInitial: number | undefined;
 
   YEAR_DAYS.forEach((day) => {
-    const { increments, decrements, net } = sumMovements(movementsByClient, day.iso);
+    const { increments, decrements, manualProfits, net } = sumMovements(movementsByClient, day.iso);
     const netMovements = net;
     const initial = (previousFinal ?? 0) + netMovements;
     if (firstInitial === undefined && initial !== 0) {
       firstInitial = initial;
     }
     const recordedFinal = finalByDay[day.iso];
-    const effectiveFinal = recordedFinal ?? previousFinal;
+    const coreFinal =
+      recordedFinal ??
+      (manualProfits !== undefined && manualProfits !== 0 ? (previousFinal ?? 0) + netMovements : previousFinal);
+    const effectiveFinal =
+      coreFinal !== undefined
+        ? coreFinal + (manualProfits ?? 0)
+        : manualProfits !== undefined
+          ? (manualProfits ?? 0)
+          : undefined;
     const final = recordedFinal;
     const profit =
       effectiveFinal !== undefined && !Number.isNaN(effectiveFinal)
@@ -77,14 +104,20 @@ export const buildSnapshot = (
       cumulativeProfit += profit;
     }
 
-    const beyondLastRecorded = lastRecordedFinalDay !== undefined && day.iso > lastRecordedFinalDay;
+    const beyondLastRecorded = lastTrackedDay !== undefined && day.iso > lastTrackedDay;
 
     const row = {
       ...day,
       increments: beyondLastRecorded ? undefined : increments,
       decrements: beyondLastRecorded ? undefined : decrements,
+      manualProfits: beyondLastRecorded ? undefined : manualProfits,
       initial: beyondLastRecorded ? undefined : initial,
-      final: beyondLastRecorded ? undefined : final,
+      final:
+        beyondLastRecorded
+          ? undefined
+          : recordedFinal !== undefined || manualProfits !== undefined
+            ? effectiveFinal
+            : final,
       profit: beyondLastRecorded ? undefined : profit,
       profitPct: beyondLastRecorded ? undefined : profitPct,
       cumulativeProfit: beyondLastRecorded ? undefined : cumulativeProfit
@@ -109,8 +142,10 @@ export const buildSnapshot = (
     CLIENTS.forEach(({ id }) => {
       const incrementRaw = movementsByClient[id]?.[day.iso]?.increment;
       const decrementRaw = movementsByClient[id]?.[day.iso]?.decrement;
+      const manualProfitRaw = movementsByClient[id]?.[day.iso]?.manualProfit;
       const increment = incrementRaw ?? undefined;
       const decrement = decrementRaw ?? undefined;
+      const manualProfit = manualProfitRaw ?? undefined;
       const baseBalance = clientBases[id];
       let clientProfit: number | undefined;
       let clientProfitPct: number | undefined;
@@ -118,17 +153,24 @@ export const buildSnapshot = (
       let sharePct: number | undefined;
       let shareAmount: number | undefined;
 
-      if (!beyondLastRecorded && effectiveFinal !== undefined && !Number.isNaN(effectiveFinal) && totalBase > 0) {
+      if (!beyondLastRecorded && coreFinal !== undefined && !Number.isNaN(coreFinal) && totalBase > 0) {
         const weight = baseBalance > 0 ? baseBalance / totalBase : 0;
         sharePct = weight;
-        shareAmount = effectiveFinal * weight;
+        shareAmount = coreFinal * weight;
         if (shareAmount !== undefined) {
-          clientProfit = shareAmount - baseBalance;
+          clientProfit = shareAmount - baseBalance + (manualProfit ?? 0);
           clientBalances[id].cumulativeProfit += clientProfit;
-          finalBalance = shareAmount;
+          finalBalance = shareAmount + (manualProfit ?? 0);
           if (baseBalance !== 0) {
             clientProfitPct = clientProfit / baseBalance;
           }
+        }
+      } else if (!beyondLastRecorded && manualProfit !== undefined) {
+        clientProfit = manualProfit;
+        clientBalances[id].cumulativeProfit += clientProfit;
+        finalBalance = baseBalance + manualProfit;
+        if (baseBalance !== 0) {
+          clientProfitPct = clientProfit / baseBalance;
         }
       }
 
@@ -136,6 +178,7 @@ export const buildSnapshot = (
         ...day,
         increment,
         decrement,
+        manualProfit,
         baseBalance: beyondLastRecorded ? undefined : baseBalance,
         profit: beyondLastRecorded ? undefined : clientProfit,
         profitPct: beyondLastRecorded ? undefined : clientProfitPct,

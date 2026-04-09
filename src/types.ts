@@ -1,6 +1,7 @@
 export interface Movement {
   increment?: number;
   decrement?: number;
+  manualProfit?: number;
 }
 
 export interface ClientDescriptor {
@@ -15,6 +16,7 @@ export interface DailyRow {
   isWeekend: boolean;
   increments?: number;
   decrements?: number;
+  manualProfits?: number;
   initial?: number;
   final?: number;
   profit?: number;
@@ -29,6 +31,7 @@ export interface ClientDayRow {
   isWeekend: boolean;
   increment?: number;
   decrement?: number;
+  manualProfit?: number;
   baseBalance?: number;
   profit?: number;
   profitPct?: number;
