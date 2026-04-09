@@ -1,11 +1,17 @@
+import dayjs from 'dayjs';
 import { CLIENTS } from '../constants/clients';
 import {
   Movement,
+  MonthlyHistoryEntry,
   PortfolioSnapshot,
   DailyRow,
   ClientDayRow
 } from '../types';
 import { YEAR_DAYS } from './dates';
+
+const monthEndIso = (month: string) => dayjs(`${month}-01`).endOf('month').format('YYYY-MM-DD');
+const normalizeReturnPct = (value?: number) =>
+  value === undefined || Number.isNaN(value) ? undefined : Math.abs(value) > 1 ? value / 100 : value;
 
 const sumMovements = (records: Record<string, Record<string, Movement>>, iso: string) => {
   let incrementTotal = 0;
@@ -42,8 +48,33 @@ const sumMovements = (records: Record<string, Record<string, Movement>>, iso: st
 
 export const buildSnapshot = (
   finalByDay: Record<string, number | undefined>,
-  movementsByClient: Record<string, Record<string, Movement>>
+  movementsByClient: Record<string, Record<string, Movement>>,
+  monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>> = {}
 ): PortfolioSnapshot => {
+  const historicalByClientAndDay: Record<string, Record<string, MonthlyHistoryEntry>> = {};
+  const historicalTotalByDay: Record<string, number> = {};
+  const historicalDays: string[] = [];
+
+  Object.entries(monthlyHistoryByClient).forEach(([clientId, months]) => {
+    Object.entries(months).forEach(([month, entry]) => {
+      const normalizedFinal = entry.finalBalance;
+      const normalizedReturn = normalizeReturnPct(entry.returnPct);
+      if (normalizedFinal === undefined && normalizedReturn === undefined) {
+        return;
+      }
+      const iso = monthEndIso(month);
+      historicalByClientAndDay[clientId] = historicalByClientAndDay[clientId] ?? {};
+      historicalByClientAndDay[clientId][iso] = {
+        finalBalance: normalizedFinal,
+        returnPct: normalizedReturn
+      };
+      if (normalizedFinal !== undefined && !Number.isNaN(normalizedFinal)) {
+        historicalTotalByDay[iso] = (historicalTotalByDay[iso] ?? 0) + normalizedFinal;
+      }
+      historicalDays.push(iso);
+    });
+  });
+
   const recordedFinalDays = Object.entries(finalByDay)
     .filter(([, value]) => value !== undefined && !Number.isNaN(value))
     .map(([iso]) => iso)
@@ -57,10 +88,12 @@ export const buildSnapshot = (
     )
     .sort((a, b) => (a > b ? 1 : -1));
   const lastManualProfitDay = manualProfitDays[manualProfitDays.length - 1];
-  const lastTrackedDay =
-    lastRecordedFinalDay && lastManualProfitDay
-      ? (lastRecordedFinalDay > lastManualProfitDay ? lastRecordedFinalDay : lastManualProfitDay)
-      : lastRecordedFinalDay ?? lastManualProfitDay;
+  const sortedHistoricalDays = historicalDays.sort((a, b) => (a > b ? 1 : -1));
+  const lastHistoricalDay = sortedHistoricalDays[sortedHistoricalDays.length - 1];
+  const trackedDays = [lastRecordedFinalDay, lastManualProfitDay, lastHistoricalDay]
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => (a > b ? 1 : -1));
+  const lastTrackedDay = trackedDays[trackedDays.length - 1];
 
   const dailyRows: DailyRow[] = [];
   const dayIndex: Record<string, DailyRow> = {};
@@ -84,8 +117,10 @@ export const buildSnapshot = (
       firstInitial = initial;
     }
     const recordedFinal = finalByDay[day.iso];
+    const historicalFinal = historicalTotalByDay[day.iso];
     const coreFinal =
       recordedFinal ??
+      historicalFinal ??
       (manualProfits !== undefined && manualProfits !== 0 ? (previousFinal ?? 0) + netMovements : previousFinal);
     const effectiveFinal =
       coreFinal !== undefined
@@ -115,7 +150,7 @@ export const buildSnapshot = (
       final:
         beyondLastRecorded
           ? undefined
-          : recordedFinal !== undefined || manualProfits !== undefined
+          : recordedFinal !== undefined || historicalFinal !== undefined || manualProfits !== undefined
             ? effectiveFinal
             : final,
       profit: beyondLastRecorded ? undefined : profit,
@@ -143,17 +178,34 @@ export const buildSnapshot = (
       const incrementRaw = movementsByClient[id]?.[day.iso]?.increment;
       const decrementRaw = movementsByClient[id]?.[day.iso]?.decrement;
       const manualProfitRaw = movementsByClient[id]?.[day.iso]?.manualProfit;
+      const monthlyHistory = historicalByClientAndDay[id]?.[day.iso];
       const increment = incrementRaw ?? undefined;
       const decrement = decrementRaw ?? undefined;
       const manualProfit = manualProfitRaw ?? undefined;
-      const baseBalance = clientBases[id];
+      let baseBalance = clientBases[id];
       let clientProfit: number | undefined;
       let clientProfitPct: number | undefined;
       let finalBalance = beyondLastRecorded ? undefined : baseBalance;
       let sharePct: number | undefined;
       let shareAmount: number | undefined;
 
-      if (!beyondLastRecorded && coreFinal !== undefined && !Number.isNaN(coreFinal) && totalBase > 0) {
+      if (!beyondLastRecorded && monthlyHistory?.finalBalance !== undefined) {
+        const monthFinal = monthlyHistory.finalBalance;
+        const monthReturn = monthlyHistory.returnPct;
+        const derivedBase =
+          monthReturn !== undefined && monthReturn > -1
+            ? monthFinal / (1 + monthReturn)
+            : clientBalances[id].balance;
+        baseBalance = derivedBase;
+        shareAmount = monthFinal;
+        sharePct = historicalFinal !== undefined && historicalFinal > 0 ? monthFinal / historicalFinal : undefined;
+        clientProfit = monthFinal - derivedBase;
+        clientBalances[id].cumulativeProfit += clientProfit;
+        finalBalance = monthFinal;
+        if (derivedBase !== 0) {
+          clientProfitPct = clientProfit / derivedBase;
+        }
+      } else if (!beyondLastRecorded && coreFinal !== undefined && !Number.isNaN(coreFinal) && totalBase > 0) {
         const weight = baseBalance > 0 ? baseBalance / totalBase : 0;
         sharePct = weight;
         shareAmount = coreFinal * weight;

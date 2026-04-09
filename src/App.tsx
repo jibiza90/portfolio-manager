@@ -6,7 +6,7 @@ import { addClientProfile, CLIENTS, removeClientProfile } from './constants/clie
 import { GENERAL_OPTION } from './constants/generalOption';
 import { usePortfolioStore } from './store/portfolio';
 import { formatCurrency, formatPercent, formatNumberEs, parseNumberEs } from './utils/format';
-import { getYearFromIso } from './utils/dates';
+import { END_YEAR, getYearFromIso, START_YEAR } from './utils/dates';
 import { useFocusDate } from './hooks/useFocusDate';
 import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
@@ -1128,6 +1128,55 @@ function CurrencyCell({
   return <span data-final-cell={cellId} className="cell-content currency" onClick={() => setEditing(true)}>{formatCurrency(value)}</span>;
 }
 
+function PercentCell({
+  value,
+  onChange
+}: {
+  value: number | undefined;
+  onChange: (v: number | undefined) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState('');
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!editing) return;
+    setText(value === undefined ? '' : formatNumberEs(value * 100));
+    setTimeout(() => ref.current?.select(), 10);
+  }, [editing, value]);
+
+  const save = () => {
+    const normalizedText = text.trim().replace('%', '');
+    const parsedValue = parseNumberEs(normalizedText);
+    onChange(parsedValue === undefined ? undefined : parsedValue / 100);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={ref}
+        className="cell-input"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === 'Tab') {
+            if (e.key === 'Tab') {
+              e.preventDefault();
+            }
+            save();
+          } else if (e.key === 'Escape') {
+            setEditing(false);
+          }
+        }}
+      />
+    );
+  }
+
+  return <span className="cell-content currency" onClick={() => setEditing(true)}>{formatPercent(value)}</span>;
+}
+
 function AutosaveIndicator({ status }: { status: string }) {
   if (status === 'idle' || status === 'success') return null;
   const label = status === 'saving' ? 'Guardando…' : status === 'dirty' ? 'Pendiente' : 'Error';
@@ -1376,6 +1425,8 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
 }) {
   const { snapshot } = usePortfolioStore();
   const setClientMovement = usePortfolioStore((s) => s.setClientMovement);
+  const setClientMonthlyHistory = usePortfolioStore((s) => s.setClientMonthlyHistory);
+  const monthlyHistory = usePortfolioStore((s) => s.monthlyHistoryByClient[clientId] ?? {});
   const clientRows = useMemo(() => snapshot.clientRowsById[clientId] || [], [snapshot, clientId]);
   const activeYear = useMemo(() => getYearFromIso(focusDate), [focusDate]);
   const yearRows = useMemo(
@@ -1383,6 +1434,15 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     [activeYear, clientRows]
   );
   const displayRows = clientRows;
+  const historyMonths = useMemo(() => {
+    const months: string[] = [];
+    for (let year = START_YEAR; year <= END_YEAR; year += 1) {
+      for (let month = 1; month <= 12; month += 1) {
+        months.push(`${year}-${String(month).padStart(2, '0')}`);
+      }
+    }
+    return months;
+  }, []);
   const tableRef = useRef<HTMLTableElement>(null);
   const initialScrollDoneRef = useRef(false);
 
@@ -1567,6 +1627,48 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
           <div className="panel-actions">
             <button className="ghost-btn" onClick={() => window.dispatchEvent(new CustomEvent('goto-general'))}>Volver a General</button>
             <button className="primary" onClick={() => setShowAnalytics(true)}>Ver estadísticas</button>
+          </div>
+        </div>
+
+        <div className="glass-card" style={{ marginBottom: 12, padding: 16 }}>
+          <div style={{ marginBottom: 10 }}>
+            <div className="eyebrow">Historico mensual</div>
+            <p className="muted" style={{ margin: '4px 0 0' }}>
+              Introduce saldo final y rentabilidad mensual para cargar meses antiguos sin rellenar el diario.
+            </p>
+          </div>
+          <div className="table-scroll" style={{ maxHeight: 260 }}>
+            <table style={{ tableLayout: 'auto' }}>
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th>Saldo final</th>
+                  <th>Rentab. %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historyMonths.map((month) => {
+                  const entry = monthlyHistory[month] ?? {};
+                  return (
+                    <tr key={month}>
+                      <td>{monthLabel(month)}</td>
+                      <td>
+                        <CurrencyCell
+                          value={entry.finalBalance}
+                          onChange={(v) => setClientMonthlyHistory(clientId, month, 'finalBalance', v)}
+                        />
+                      </td>
+                      <td>
+                        <PercentCell
+                          value={entry.returnPct}
+                          onChange={(v) => setClientMonthlyHistory(clientId, month, 'returnPct', v)}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
 

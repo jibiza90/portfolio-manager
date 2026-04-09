@@ -1,16 +1,17 @@
 import { create } from 'zustand';
 import { CLIENTS } from '../constants/clients';
-import { Movement, PersistedState, PortfolioSnapshot } from '../types';
+import { Movement, MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
 import { buildSnapshot } from '../utils/snapshot';
 import { fetchPortfolioState, savePortfolioState, syncClientOverviews } from '../services/cloudPortfolio';
 
-const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {} };
+const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {}, monthlyHistoryByClient: {} };
 
 export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'success' | 'error';
 
 interface PortfolioState {
   finalByDay: Record<string, number | undefined>;
   movementsByClient: Record<string, Record<string, Movement>>;
+  monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>;
   snapshot: PortfolioSnapshot;
   saveStatus: SaveStatus;
   lastSavedAt?: number;
@@ -26,13 +27,23 @@ interface PortfolioState {
     field: keyof Movement,
     value?: number
   ) => void;
+  setClientMonthlyHistory: (
+    clientId: string,
+    month: string,
+    field: keyof MonthlyHistoryEntry,
+    value?: number
+  ) => void;
   removeClientData: (clientId: string) => void;
   markSaving: () => void;
   markSaved: () => void;
   markError: () => void;
 }
 
-const initialSnapshot = buildSnapshot(emptyPersisted.finalByDay, emptyPersisted.movementsByClient);
+const initialSnapshot = buildSnapshot(
+  emptyPersisted.finalByDay,
+  emptyPersisted.movementsByClient,
+  emptyPersisted.monthlyHistoryByClient
+);
 let syncOverviewTimer: ReturnType<typeof setTimeout> | null = null;
 
 const queueOverviewSync = (snapshot: PortfolioSnapshot) => {
@@ -46,10 +57,10 @@ const queueOverviewSync = (snapshot: PortfolioSnapshot) => {
 };
 
 const persistCurrentState = () => {
-  const { canWrite, finalByDay, movementsByClient, snapshot } = usePortfolioStore.getState();
+  const { canWrite, finalByDay, movementsByClient, monthlyHistoryByClient, snapshot } = usePortfolioStore.getState();
   if (!canWrite) return;
 
-  savePortfolioState({ finalByDay, movementsByClient })
+  savePortfolioState({ finalByDay, movementsByClient, monthlyHistoryByClient })
     .then(() => {
       usePortfolioStore.setState({ saveStatus: 'success', lastSavedAt: Date.now() });
       queueOverviewSync(snapshot);
@@ -63,6 +74,7 @@ const persistCurrentState = () => {
 export const usePortfolioStore = create<PortfolioState>((set) => ({
   finalByDay: emptyPersisted.finalByDay,
   movementsByClient: emptyPersisted.movementsByClient,
+  monthlyHistoryByClient: emptyPersisted.monthlyHistoryByClient,
   snapshot: initialSnapshot,
   saveStatus: 'idle',
   lastSavedAt: undefined,
@@ -73,10 +85,12 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
   hydrate: (state) => {
     const finalByDay = state.finalByDay ?? {};
     const movementsByClient = state.movementsByClient ?? {};
+    const monthlyHistoryByClient = state.monthlyHistoryByClient ?? {};
     set({
       finalByDay,
       movementsByClient,
-      snapshot: buildSnapshot(finalByDay, movementsByClient),
+      monthlyHistoryByClient,
+      snapshot: buildSnapshot(finalByDay, movementsByClient, monthlyHistoryByClient),
       saveStatus: 'success',
       lastSavedAt: Date.now(),
       initialized: true
@@ -93,7 +107,7 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
       }
       return {
         finalByDay,
-        snapshot: buildSnapshot(finalByDay, state.movementsByClient),
+        snapshot: buildSnapshot(finalByDay, state.movementsByClient, state.monthlyHistoryByClient),
         saveStatus: 'saving'
       };
     });
@@ -126,7 +140,41 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
       }
       return {
         movementsByClient,
-        snapshot: buildSnapshot(state.finalByDay, movementsByClient),
+        snapshot: buildSnapshot(state.finalByDay, movementsByClient, state.monthlyHistoryByClient),
+        saveStatus: 'saving'
+      };
+    });
+
+    persistCurrentState();
+  },
+  setClientMonthlyHistory: (clientId, month, field, value) => {
+    set((state) => {
+      if (!state.canWrite) return state;
+      const monthlyHistoryByClient = { ...state.monthlyHistoryByClient };
+      const clientMonths = { ...(monthlyHistoryByClient[clientId] ?? {}) };
+      const monthHistory = { ...(clientMonths[month] ?? {}) };
+
+      if (value === undefined || Number.isNaN(value)) {
+        delete monthHistory[field];
+      } else {
+        monthHistory[field] = value;
+      }
+
+      if (monthHistory.finalBalance === undefined && monthHistory.returnPct === undefined) {
+        delete clientMonths[month];
+      } else {
+        clientMonths[month] = monthHistory;
+      }
+
+      if (Object.keys(clientMonths).length === 0) {
+        delete monthlyHistoryByClient[clientId];
+      } else {
+        monthlyHistoryByClient[clientId] = clientMonths;
+      }
+
+      return {
+        monthlyHistoryByClient,
+        snapshot: buildSnapshot(state.finalByDay, state.movementsByClient, monthlyHistoryByClient),
         saveStatus: 'saving'
       };
     });
@@ -137,10 +185,13 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
     set((state) => {
       if (!state.canWrite) return state;
       const movementsByClient = { ...state.movementsByClient };
+      const monthlyHistoryByClient = { ...state.monthlyHistoryByClient };
       delete movementsByClient[clientId];
+      delete monthlyHistoryByClient[clientId];
       return {
         movementsByClient,
-        snapshot: buildSnapshot(state.finalByDay, movementsByClient),
+        monthlyHistoryByClient,
+        snapshot: buildSnapshot(state.finalByDay, movementsByClient, monthlyHistoryByClient),
         saveStatus: 'saving'
       };
     });

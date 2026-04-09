@@ -5,11 +5,12 @@ import { calculateAllMonthsTWR, calculateTWR } from '../utils/twr';
 const DOC_PATH = 'portfolio/state';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
 
-const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {} };
+const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {}, monthlyHistoryByClient: {} };
 
 const sanitizePersistedState = (data?: Partial<PersistedState> | null): PersistedState => ({
   finalByDay: data?.finalByDay ?? {},
-  movementsByClient: data?.movementsByClient ?? {}
+  movementsByClient: data?.movementsByClient ?? {},
+  monthlyHistoryByClient: data?.monthlyHistoryByClient ?? {}
 });
 
 const buildOverviewRows = (snapshot: PortfolioSnapshot, clientId: string) => {

@@ -4,6 +4,11 @@ export interface Movement {
   manualProfit?: number;
 }
 
+export interface MonthlyHistoryEntry {
+  finalBalance?: number;
+  returnPct?: number;
+}
+
 export interface ClientDescriptor {
   id: string;
   name: string;
@@ -55,4 +60,5 @@ export interface PortfolioSnapshot {
 export interface PersistedState {
   finalByDay: Record<string, number | undefined>;
   movementsByClient: Record<string, Record<string, Movement>>;
+  monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>;
 }
