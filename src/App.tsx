@@ -1785,7 +1785,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
             <tbody>
               {yearRows.map(r => (
                 <tr key={r.iso} data-iso={r.iso} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}>
-                  <td><span>{r.label}</span><small>{r.weekday}</small></td>
+                  <td><span>{r.label}</span><small>{r.weekday}</small><small>{r.iso.slice(0, 4)}</small></td>
                   <td>{r.isWeekend ? (r.increment === undefined ? '—' : formatCurrency(r.increment)) : <CurrencyCell value={r.increment} onChange={(v) => setClientMovement(clientId, r.iso, 'increment', v)} />}</td>
                   <td>{r.isWeekend ? (r.decrement === undefined ? '—' : formatCurrency(r.decrement)) : (
                     <CurrencyCell
