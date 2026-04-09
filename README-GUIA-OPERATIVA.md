@@ -27,7 +27,7 @@ No es una guia de marketing. Es una guia tecnica de funcionamiento real.
 - Generacion y comparticion de informes PDF.
 
 No hay backend propio Node/Express en produccion para esta app.  
-La logica y datos dependen de Firebase (Auth + Firestore) y del cliente web.
+La logica y datos dependen de Firebase (Auth + Firestore), del cliente web y ahora tambien de una Cloud Function para cambios de password gestionados por el master.
 
 ---
 
@@ -62,11 +62,15 @@ Colecciones/documentos usados:
   - Hilo de mensajeria privada admin-cliente (resumen del hilo y contadores de no leido).
 - `support_threads/{clientId}/messages/{messageId}`:
   - Mensajes del hilo, estado de lectura del cliente y marca de mensaje editado.
+- `admin_password_events/{eventId}`:
+  - Registro interno de cambios de password ejecutados por el master desde panel admin.
 
 ### Firebase Auth (nube)
 
 - Login por email/password.
 - Usuarios admin y usuarios cliente.
+- La password actual nunca se puede leer desde Firebase.
+- El master puede asignar una nueva password de cliente desde `Info Clientes` mediante la Cloud Function `setClientPassword`.
 
 ### LocalStorage (navegador admin)
 
@@ -98,6 +102,8 @@ Importante: esto significa que una parte funcional (contactos, notas, etc.) es l
   - `firestore.rules`
   - `firestore.indexes.json`
   - `firebase.json`
+- Cloud Function:
+  - `functions/index.js`
 
 ---
 

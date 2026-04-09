@@ -11,7 +11,7 @@ import { useFocusDate } from './hooks/useFocusDate';
 import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
-import { provisionClientAccess } from './services/cloudPortfolio';
+import { fetchClientAccessProfile, provisionClientAccess, setClientPassword, type AccessProfileRecord } from './services/cloudPortfolio';
 import { auth, db } from './services/firebaseApp';
 import { subscribeLoginEvents, type LoginEvent } from './services/loginTracker';
 import { isValidReportToken } from './services/reportLinks';
@@ -2824,6 +2824,7 @@ export default function App() {
           setGuarantees={setGuarantees}
           onAddClient={handleAddClient}
           onDeleteClient={handleDeleteClient}
+          isPrimaryAdmin={isPrimaryAdmin}
         />
       ) : activeView === COMISIONES_VIEW ? (
         <ComisionesView
@@ -2863,7 +2864,8 @@ function InfoClientes({
   guarantees,
   setGuarantees,
   onAddClient,
-  onDeleteClient
+  onDeleteClient,
+  isPrimaryAdmin
 }: {
   contacts: Record<string, ContactInfo>;
   setContacts: React.Dispatch<React.SetStateAction<Record<string, ContactInfo>>>;
@@ -2871,6 +2873,7 @@ function InfoClientes({
   setGuarantees: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   onAddClient: (name?: string) => { id: string; name: string };
   onDeleteClient: (clientId: string) => boolean;
+  isPrimaryAdmin: boolean;
 }) {
   const { snapshot } = usePortfolioStore();
   const [selectedId, setSelectedId] = useState(CLIENTS[0]?.id || '');
@@ -2883,6 +2886,7 @@ function InfoClientes({
   const [accessPassword, setAccessPassword] = useState('');
   const [accessBusy, setAccessBusy] = useState(false);
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
+  const [clientAccessProfile, setClientAccessProfile] = useState<AccessProfileRecord | null>(null);
   const nameSyncTimerRef = useRef<number | null>(null);
   const lastSyncedDisplayNameRef = useRef('');
 
@@ -2981,6 +2985,7 @@ function InfoClientes({
   useEffect(() => {
     setAccessPassword('');
     setAccessMessage(null);
+    setClientAccessProfile(null);
     lastSyncedDisplayNameRef.current = '';
   }, [selectedId]);
 
@@ -3139,6 +3144,29 @@ function InfoClientes({
     };
   }, [contact.name, contact.surname, currentClient, isGeneralView]);
 
+  useEffect(() => {
+    if (!currentClient || isGeneralView) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const profile = await fetchClientAccessProfile(currentClient.id);
+        if (!cancelled) {
+          setClientAccessProfile(profile);
+        }
+      } catch (error) {
+        console.error('No se pudo cargar el acceso del cliente', error);
+        if (!cancelled) {
+          setClientAccessProfile(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentClient, isGeneralView, contact.email]);
+
   const createClient = () => {
     const created = onAddClient(newClientName);
     setNewClientName('');
@@ -3200,9 +3228,11 @@ function InfoClientes({
 
       const message = result.createdAuthUser
         ? `Acceso creado: ${email}. Ya puede entrar con la password definida.`
-        : `Perfil vinculado: ${email}. Si quieres cambiar password, hazlo en Firebase Authentication.`;
+        : `Perfil vinculado: ${email}. Ya puedes cambiar la password desde este panel si eres el master.`;
       setAccessMessage(message);
       setAccessPassword('');
+      const updatedProfile = await fetchClientAccessProfile(currentClient.id);
+      setClientAccessProfile(updatedProfile);
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Acceso cliente listo' }));
     } catch (error) {
       console.error(error);
@@ -3213,21 +3243,48 @@ function InfoClientes({
     }
   };
 
-  const sendClientPasswordReset = async () => {
-    const email = contact.email.trim().toLowerCase();
-    if (!email || !email.includes('@')) {
-      setAccessMessage('Primero informa un email valido en la ficha del cliente.');
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Email invalido' }));
+  const updateClientPassword = async () => {
+    if (!currentClient) return;
+    if (!clientAccessProfile?.uid) {
+      setAccessMessage('El cliente todavia no tiene login vinculado.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Sin login vinculado' }));
       return;
     }
+    if (!accessPassword || accessPassword.length < 6) {
+      setAccessMessage('La nueva password debe tener al menos 6 caracteres.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Password demasiado corta' }));
+      return;
+    }
+
+    setAccessBusy(true);
     try {
-      await auth.sendPasswordResetEmail(email);
-      setAccessMessage(`Enlace de reseteo enviado a ${email}.`);
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Reset enviado' }));
+      const result = await setClientPassword({
+        uid: clientAccessProfile.uid,
+        password: accessPassword
+      });
+      if (!result.ok) {
+        const message =
+          result.reason === 'permission_denied'
+            ? 'Solo el master puede cambiar la password desde el panel.'
+            : result.reason === 'profile_not_found'
+              ? 'No se encontro el acceso del cliente en Firebase.'
+              : result.reason === 'password_invalid' || result.reason === 'password_short'
+                ? 'La nueva password no cumple requisitos (minimo 6 caracteres).'
+                : 'No se pudo actualizar la password del cliente.';
+        setAccessMessage(message);
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Error cambiando password' }));
+        return;
+      }
+
+      setAccessMessage(`Password actualizada para ${clientAccessProfile.email || currentClient.id}.`);
+      setAccessPassword('');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Password actualizada' }));
     } catch (error) {
       console.error(error);
-      setAccessMessage('No se pudo enviar el reset de password. Revisa que el usuario exista en Authentication.');
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Error enviando reset' }));
+      setAccessMessage('No se pudo actualizar la password del cliente.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Error cambiando password' }));
+    } finally {
+      setAccessBusy(false);
     }
   };
 
@@ -3420,7 +3477,7 @@ function InfoClientes({
               />
             </label>
             <label>
-              <span>Password acceso (cliente)</span>
+              <span>Nueva contrasena del cliente</span>
               <input
                 id="client-access-password"
                 name="client-access-password"
@@ -3432,7 +3489,7 @@ function InfoClientes({
               />
             </label>
             <label>
-              <span>Acceso cliente</span>
+              <span>Acceso en Firebase</span>
               <button
                 type="button"
                 className="info-add-btn"
@@ -3440,28 +3497,53 @@ function InfoClientes({
                 disabled={accessBusy}
                 style={{ width: '100%' }}
               >
-                {accessBusy ? 'Creando...' : 'Crear / Vincular login'}
+                {accessBusy ? 'Guardando...' : clientAccessProfile?.uid ? 'Vincular acceso existente' : 'Crear acceso cliente'}
               </button>
             </label>
             <label>
-              <span>Password olvidada</span>
+              <span>Nueva password</span>
               <button
                 type="button"
                 className="ghost-btn"
                 onClick={() => {
-                  void sendClientPasswordReset();
+                  void updateClientPassword();
                 }}
                 style={{ width: '100%', minHeight: 40 }}
+                disabled={accessBusy || !clientAccessProfile?.uid || !isPrimaryAdmin}
               >
-                Enviar reset por email
+                Guardar nueva password
               </button>
             </label>
+            <label style={{ gridColumn: '1 / -1' }}>
+              <span>Nota de seguridad</span>
+              <input value="La password actual nunca se puede ver. Desde aqui solo puedes asignar una nueva." disabled />
+            </label>
+            {!isPrimaryAdmin && (
+              <label style={{ gridColumn: '1 / -1' }}>
+                <span>Permiso</span>
+                <input value="Solo el master puede cambiar passwords desde este panel." disabled />
+              </label>
+            )}
             {accessMessage && (
               <label style={{ gridColumn: '1 / -1' }}>
                 <span>Estado acceso</span>
                 <input value={accessMessage} disabled />
               </label>
             )}
+            <label>
+              <span>Correo de acceso actual</span>
+              <input
+                value={clientAccessProfile?.email || 'Sin login creado'}
+                disabled
+              />
+            </label>
+            <label>
+              <span>UID interno del acceso</span>
+              <input
+                value={clientAccessProfile?.uid || 'Sin UID'}
+                disabled
+              />
+            </label>
             <label>
               <span>Fecha de alta</span>
               <input

@@ -1,5 +1,5 @@
 import { ClientDayRow, PersistedState, PortfolioSnapshot } from '../types';
-import { db, firebase, firebaseConfig } from './firebaseApp';
+import { db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { calculateAllMonthsTWR, calculateTWR } from '../utils/twr';
 
 const DOC_PATH = 'portfolio/state';
@@ -152,15 +152,36 @@ export interface AccessProfile {
   clientId?: string;
   displayName?: string;
   email?: string;
+  loginId?: string;
   active?: boolean;
   createdAt?: number;
   updatedAt?: number;
+}
+
+export interface AccessProfileRecord extends AccessProfile {
+  uid: string;
 }
 
 export const fetchAccessProfile = async (uid: string): Promise<AccessProfile | null> => {
   const doc = await db.collection('access_profiles').doc(uid).get();
   if (!doc.exists) return null;
   return doc.data() as AccessProfile;
+};
+
+export const fetchClientAccessProfile = async (clientId: string): Promise<AccessProfileRecord | null> => {
+  const snapshot = await db
+    .collection('access_profiles')
+    .where('clientId', '==', clientId)
+    .where('role', '==', 'client')
+    .limit(1)
+    .get();
+
+  const doc = snapshot.docs[0];
+  if (!doc) return null;
+  return {
+    uid: doc.id,
+    ...(doc.data() as AccessProfile)
+  };
 };
 
 export const subscribeClientOverview = (
@@ -191,6 +212,7 @@ const upsertAccessProfile = async (uid: string, profile: AccessProfile) => {
         clientId: profile.clientId ?? null,
         displayName: profile.displayName ?? null,
         email: profile.email ?? null,
+        loginId: profile.loginId ?? null,
         active: profile.active !== false,
         updatedAt: now,
         createdAt: profile.createdAt ?? now
@@ -204,6 +226,7 @@ export interface ProvisionClientAccessInput {
   password: string;
   clientId: string;
   displayName?: string;
+  loginId?: string;
 }
 
 export interface ProvisionClientAccessResult {
@@ -221,6 +244,7 @@ export const provisionClientAccess = async (
   const password = input.password;
   const clientId = input.clientId.trim();
   const displayName = input.displayName?.trim() ?? '';
+  const loginId = input.loginId?.trim() ?? '';
 
   if (!email || !email.includes('@')) {
     return { ok: false, reason: 'email_invalid' };
@@ -249,6 +273,7 @@ export const provisionClientAccess = async (
       clientId,
       displayName,
       email,
+      loginId,
       active: true
     });
     return { ok: true, uid, createdAuthUser: true, linkedExistingProfile: false };
@@ -269,6 +294,7 @@ export const provisionClientAccess = async (
         clientId,
         displayName,
         email,
+        loginId,
         active: true
       });
       return { ok: true, uid: existingDoc.id, createdAuthUser: false, linkedExistingProfile: true };
@@ -285,5 +311,47 @@ export const provisionClientAccess = async (
     try {
       await secondaryApp.delete();
     } catch {}
+  }
+};
+
+export interface SetClientPasswordInput {
+  uid: string;
+  password: string;
+}
+
+export interface SetClientPasswordResult {
+  ok: boolean;
+  reason?: string;
+}
+
+export const setClientPassword = async (
+  input: SetClientPasswordInput
+): Promise<SetClientPasswordResult> => {
+  const password = input.password.trim();
+  const uid = input.uid.trim();
+
+  if (!uid) return { ok: false, reason: 'uid_missing' };
+  if (!password || password.length < 6) {
+    return { ok: false, reason: 'password_short' };
+  }
+
+  try {
+    const callable = functions.httpsCallable('setClientPassword');
+    await callable({
+      uid,
+      password
+    });
+    return { ok: true };
+  } catch (error) {
+    const code =
+      typeof error === 'object' && error && 'code' in error
+        ? String((error as { code?: string }).code)
+        : '';
+
+    if (code.includes('permission-denied')) return { ok: false, reason: 'permission_denied' };
+    if (code.includes('not-found')) return { ok: false, reason: 'profile_not_found' };
+    if (code.includes('invalid-argument')) return { ok: false, reason: 'password_invalid' };
+    console.error('Error setting client password', error);
+    return { ok: false, reason: 'unknown' };
   }
 };

@@ -1,6 +1,7 @@
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
+import 'firebase/compat/functions';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDBRpCpb2xj_iHQh8JiLv0xRKjfWJj0Az8',
@@ -16,5 +17,6 @@ const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(fireb
 export { app, firebase, firebaseConfig };
 export const auth = app.auth();
 export const db = app.firestore();
+export const functions = app.functions('europe-southwest1');
 
 export type FirebaseUser = firebase.User;

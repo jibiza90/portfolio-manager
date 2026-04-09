@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "functions:install": "npm install --prefix functions",
+    "deploy:functions": "npx firebase-tools deploy --only functions:setClientPassword",
+    "deploy:rules": "npx firebase-tools deploy --only firestore:rules"
   },
   "dependencies": {
     "clsx": "^2.1.0",

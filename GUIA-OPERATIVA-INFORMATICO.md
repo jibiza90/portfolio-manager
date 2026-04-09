@@ -364,6 +364,13 @@ Hacer commits atomicos facilita rollback y auditoria.
 ### "Donde creo o vinculo un cliente con login?"
 En `Info Clientes` (admin), campo email + password + boton de provision.
 
+### "Puedo ver la password actual de un cliente?"
+No. Firebase Auth no permite leer la password actual. Solo se puede asignar una nueva.
+
+### "Como cambio la password de un cliente desde el panel?"
+En `Info Clientes`, con el cliente seleccionado, escribir nueva password y usar `Cambiar password desde admin`.  
+Solo funciona para el master `jibiza90@gmail.com` y requiere desplegar la Cloud Function `setClientPassword`.
+
 ### "Como bloqueo acceso de un cliente sin borrar cuenta Auth?"
 `access_profiles/{uid}.active=false`.
 
@@ -375,6 +382,10 @@ Quitar rol admin y, si aplica, quitar email de allowlist frontend.
 
 ### "Que comando SIEMPRE debo ejecutar si toco reglas?"
 `npx firebase-tools deploy --only firestore:rules`.
+
+### "Que comando necesito si toco el cambio de password admin?"
+`npm run functions:install`  
+`npm run deploy:functions`
 
 ### "Si Render esta bien pero permisos fallan?"
 Casi seguro no se desplegaron reglas nuevas.
