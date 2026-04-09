@@ -162,6 +162,18 @@ export interface AccessProfileRecord extends AccessProfile {
   uid: string;
 }
 
+export const listClientAccessProfiles = async (): Promise<AccessProfileRecord[]> => {
+  const snapshot = await db.collection('access_profiles').where('role', '==', 'client').get();
+  return snapshot.docs.map((doc) => {
+    const data = doc.data() as AccessProfile;
+    return {
+      uid: doc.id,
+      ...data,
+      loginId: data.loginId ?? loginIdFromAuthEmail(data.email)
+    };
+  });
+};
+
 export const fetchAccessProfile = async (uid: string): Promise<AccessProfile | null> => {
   const doc = await db.collection('access_profiles').doc(uid).get();
   if (!doc.exists) return null;
@@ -370,4 +382,8 @@ export const setClientPassword = async (
     console.error('Error setting client password', error);
     return { ok: false, reason: 'unknown' };
   }
+};
+
+export const revokeClientAccess = async (uid: string) => {
+  await db.collection('access_profiles').doc(uid).delete();
 };

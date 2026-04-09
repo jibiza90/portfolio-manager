@@ -14,8 +14,9 @@ import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import {
   fetchClientAccessProfile,
   isValidLoginId,
+  listClientAccessProfiles,
   provisionClientAccess,
-  setClientPassword,
+  revokeClientAccess,
   type AccessProfileRecord
 } from './services/cloudPortfolio';
 import { auth, db } from './services/firebaseApp';
@@ -2325,7 +2326,19 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
   );
 }
 
-function LoginAccessView({ events, error }: { events: LoginEvent[]; error: string | null }) {
+function LoginAccessView({
+  events,
+  error,
+  accessProfiles,
+  contacts,
+  onRevokeAccess
+}: {
+  events: LoginEvent[];
+  error: string | null;
+  accessProfiles: AccessProfileRecord[];
+  contacts: Record<string, ContactInfo>;
+  onRevokeAccess: (profile: AccessProfileRecord) => Promise<void>;
+}) {
   const dayKeyFromTs = (ts: number) => new Date(ts).toLocaleDateString('en-CA');
   const normalizedEvents = useMemo(() => {
     const unique = new Map<string, LoginEvent>();
@@ -2367,8 +2380,71 @@ function LoginAccessView({ events, error }: { events: LoginEvent[]; error: strin
     [normalizedEvents, todayKey]
   );
 
+  const accessRows = useMemo(
+    () =>
+      accessProfiles
+        .map((profile) => {
+          const contact = profile.clientId ? contacts[profile.clientId] : undefined;
+          const clientLabel = profile.clientId
+            ? `${CLIENTS.find((client) => client.id === profile.clientId)?.name ?? profile.clientId}${contact && (contact.name || contact.surname) ? ` - ${contact.name} ${contact.surname}` : ''}`
+            : profile.uid;
+          return {
+            ...profile,
+            clientLabel: clientLabel.trim()
+          };
+        })
+        .sort((a, b) => a.clientLabel.localeCompare(b.clientLabel)),
+    [accessProfiles, contacts]
+  );
+
   return (
     <div className="glass-card fade-in" style={{ display: 'grid', gap: 14 }}>
+      <section style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+        <header style={{ padding: '12px 14px', borderBottom: '1px solid #ebe6dd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <h3 style={{ margin: 0 }}>Asignaciones activas</h3>
+            <p className="muted" style={{ margin: '6px 0 0 0' }}>Aqui eliminas una asignacion para volver a crear otra desde Info Clientes.</p>
+          </div>
+          <span className="badge-soft">{accessRows.length} accesos activos</span>
+        </header>
+        {accessRows.length === 0 ? (
+          <p className="muted" style={{ margin: 0, padding: 14 }}>No hay clientes con acceso asignado.</p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', fontSize: 12, color: '#5f5a52', padding: '10px 12px', borderBottom: '1px solid #ebe6dd' }}>Cliente</th>
+                  <th style={{ textAlign: 'left', fontSize: 12, color: '#5f5a52', padding: '10px 12px', borderBottom: '1px solid #ebe6dd' }}>Usuario</th>
+                  <th style={{ textAlign: 'left', fontSize: 12, color: '#5f5a52', padding: '10px 12px', borderBottom: '1px solid #ebe6dd' }}>UID</th>
+                  <th style={{ textAlign: 'right', fontSize: 12, color: '#5f5a52', padding: '10px 12px', borderBottom: '1px solid #ebe6dd' }}>Accion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {accessRows.map((profile) => (
+                  <tr key={profile.uid}>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1ece2', fontSize: 13 }}>{profile.clientLabel}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1ece2', fontSize: 13, fontWeight: 700 }}>{profile.loginId || '(sin usuario)'}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1ece2', fontSize: 12, color: '#5f5a52' }}>{profile.uid}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1ece2', textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        className="ghost-btn"
+                        onClick={() => {
+                          void onRevokeAccess(profile);
+                        }}
+                      >
+                        Eliminar asignacion
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <div>
           <h3 style={{ margin: 0 }}>Registro de accesos</h3>
@@ -2424,7 +2500,7 @@ function LoginAccessView({ events, error }: { events: LoginEvent[]; error: strin
                   <thead>
                     <tr>
                       <th style={{ textAlign: 'left', fontSize: 12, color: '#5f5a52', padding: '8px 12px', borderBottom: '1px solid #ebe6dd' }}>Hora</th>
-                      <th style={{ textAlign: 'left', fontSize: 12, color: '#5f5a52', padding: '8px 12px', borderBottom: '1px solid #ebe6dd' }}>Email</th>
+                      <th style={{ textAlign: 'left', fontSize: 12, color: '#5f5a52', padding: '8px 12px', borderBottom: '1px solid #ebe6dd' }}>Usuario</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2434,7 +2510,7 @@ function LoginAccessView({ events, error }: { events: LoginEvent[]; error: strin
                           {new Date(event.loginAt).toLocaleTimeString('es-ES')}
                         </td>
                         <td style={{ padding: '8px 12px', borderBottom: '1px solid #f1ece2', fontSize: 13 }}>
-                          {event.email || '(sin email)'}
+                          {event.email?.includes('@clients.portfolio-manager.local') ? event.email.split('@')[0] : event.email || '(sin dato)'}
                         </td>
                       </tr>
                     ))}
@@ -2535,6 +2611,7 @@ export default function App() {
   const [currentUserEmail, setCurrentUserEmail] = useState(() => auth.currentUser?.email?.trim().toLowerCase() ?? '');
   const [ownerLoginEvents, setOwnerLoginEvents] = useState<LoginEvent[]>([]);
   const [ownerLoginError, setOwnerLoginError] = useState<string | null>(null);
+  const [ownerAccessProfiles, setOwnerAccessProfiles] = useState<AccessProfileRecord[]>([]);
   const handleAddClient = (name?: string) => {
     const created = addClientProfile(name);
     setContacts((prev) => {
@@ -2680,6 +2757,7 @@ export default function App() {
     if (!isPrimaryAdmin) {
       setOwnerLoginEvents([]);
       setOwnerLoginError(null);
+      setOwnerAccessProfiles([]);
       return;
     }
     const unsubscribe = subscribeLoginEvents(
@@ -2693,6 +2771,36 @@ export default function App() {
     );
     return () => unsubscribe();
   }, [isPrimaryAdmin]);
+
+  useEffect(() => {
+    if (!isPrimaryAdmin) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const profiles = await listClientAccessProfiles();
+        if (!cancelled) setOwnerAccessProfiles(profiles);
+      } catch (error) {
+        console.error('No se pudieron cargar los accesos activos', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isPrimaryAdmin, ownerLoginEvents.length]);
+
+  const handleRevokeClientAccess = async (profile: AccessProfileRecord) => {
+    const confirmed = window.confirm(`Eliminar la asignacion del usuario ${profile.loginId || profile.uid}?`);
+    if (!confirmed) return;
+
+    try {
+      await revokeClientAccess(profile.uid);
+      setOwnerAccessProfiles((prev) => prev.filter((item) => item.uid !== profile.uid));
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Asignacion eliminada' }));
+    } catch (error) {
+      console.error(error);
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'No se pudo eliminar la asignacion' }));
+    }
+  };
 
   return (
     <div className="app-shell">
@@ -2847,7 +2955,13 @@ export default function App() {
       ) : activeView === SEGUIMIENTO_VIEW ? (
         <SeguimientoView contacts={contacts} followUpByClient={followUpByClient} setFollowUpByClient={setFollowUpByClient} />
       ) : activeView === ACCESOS_VIEW && isPrimaryAdmin ? (
-        <LoginAccessView events={ownerLoginEvents} error={ownerLoginError} />
+        <LoginAccessView
+          events={ownerLoginEvents}
+          error={ownerLoginError}
+          accessProfiles={ownerAccessProfiles}
+          contacts={contacts}
+          onRevokeAccess={handleRevokeClientAccess}
+        />
       ) : activeView === MENSAJES_VIEW ? (
         <AdminMessagesView contacts={contacts} />
       ) : (
@@ -3213,10 +3327,16 @@ function InfoClientes({
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Password demasiado corta' }));
       return;
     }
+    if (clientAccessProfile?.loginId === loginId) {
+      setAccessMessage('Ese usuario ya esta asignado. Si quieres dar un acceso nuevo, usa otro numero de usuario.');
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Usuario ya asignado' }));
+      return;
+    }
 
     setAccessBusy(true);
     setAccessMessage(null);
     try {
+      const previousUid = clientAccessProfile?.uid ?? null;
       const displayName = `${contact.name} ${contact.surname}`.trim() || currentClient.name;
       const result = await provisionClientAccess({
         loginId,
@@ -3228,7 +3348,7 @@ function InfoClientes({
       if (!result.ok) {
         const message =
           result.reason === 'login_exists_without_profile'
-            ? 'Ese usuario ya existe en Authentication, pero no tiene perfil en access_profiles. Revisa Firebase Console.'
+            ? 'Ese usuario ya se uso antes. Elige otro numero de usuario.'
             : result.reason === 'login_id_invalid'
               ? 'El usuario debe ser numerico y tener entre 6 y 12 digitos.'
             : result.reason === 'password_weak' || result.reason === 'password_short'
@@ -3239,9 +3359,13 @@ function InfoClientes({
         return;
       }
 
+      if (previousUid && previousUid !== result.uid) {
+        await revokeClientAccess(previousUid);
+      }
+
       const message = result.createdAuthUser
         ? `Acceso creado: usuario ${loginId}. Ya puede entrar con la password definida.`
-        : `Perfil vinculado: usuario ${loginId}. Ya puedes cambiar la password desde este panel si eres el master.`;
+        : `Perfil vinculado: usuario ${loginId}.`;
       setAccessMessage(message);
       setAccessPassword('');
       const updatedProfile = await fetchClientAccessProfile(currentClient.id);
@@ -3251,51 +3375,6 @@ function InfoClientes({
       console.error(error);
       setAccessMessage('Error inesperado creando el acceso del cliente.');
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Error creando acceso' }));
-    } finally {
-      setAccessBusy(false);
-    }
-  };
-
-  const updateClientPassword = async () => {
-    if (!currentClient) return;
-    if (!clientAccessProfile?.uid) {
-      setAccessMessage('El cliente todavia no tiene login vinculado.');
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Sin login vinculado' }));
-      return;
-    }
-    if (!accessPassword || accessPassword.length < 6) {
-      setAccessMessage('La nueva password debe tener al menos 6 caracteres.');
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Password demasiado corta' }));
-      return;
-    }
-
-    setAccessBusy(true);
-    try {
-      const result = await setClientPassword({
-        uid: clientAccessProfile.uid,
-        password: accessPassword
-      });
-      if (!result.ok) {
-        const message =
-          result.reason === 'permission_denied'
-            ? 'Solo el master puede cambiar la password desde el panel.'
-            : result.reason === 'profile_not_found'
-              ? 'No se encontro el acceso del cliente en Firebase.'
-              : result.reason === 'password_invalid' || result.reason === 'password_short'
-                ? 'La nueva password no cumple requisitos (minimo 6 caracteres).'
-                : 'No se pudo actualizar la password del cliente.';
-        setAccessMessage(message);
-        window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Error cambiando password' }));
-        return;
-      }
-
-      setAccessMessage(`Password actualizada para el usuario ${clientAccessProfile.loginId || currentClient.id}.`);
-      setAccessPassword('');
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Password actualizada' }));
-    } catch (error) {
-      console.error(error);
-      setAccessMessage('No se pudo actualizar la password del cliente.');
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Error cambiando password' }));
     } finally {
       setAccessBusy(false);
     }
@@ -3501,19 +3580,19 @@ function InfoClientes({
               />
             </label>
             <label>
-              <span>Nueva contrasena del cliente</span>
+              <span>Contrasena del cliente</span>
               <input
                 id="client-access-password"
                 name="client-access-password"
                 type="password"
                 autoComplete="new-password"
-                placeholder="Minimo 6 caracteres"
+                placeholder="Ej: 987298"
                 value={accessPassword}
                 onChange={(e) => setAccessPassword(e.target.value)}
               />
             </label>
             <label>
-              <span>Acceso en Firebase</span>
+              <span>Asignacion de acceso</span>
               <button
                 type="button"
                 className="info-add-btn"
@@ -3521,45 +3600,25 @@ function InfoClientes({
                 disabled={accessBusy}
                 style={{ width: '100%' }}
               >
-                {accessBusy ? 'Guardando...' : clientAccessProfile?.uid ? 'Vincular acceso existente' : 'Crear acceso cliente'}
-              </button>
-            </label>
-            <label>
-              <span>Nueva password</span>
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => {
-                  void updateClientPassword();
-                }}
-                style={{ width: '100%', minHeight: 40 }}
-                disabled={accessBusy || !clientAccessProfile?.uid || !isPrimaryAdmin}
-              >
-                Guardar nueva password
+                {accessBusy ? 'Guardando...' : clientAccessProfile?.uid ? 'Reasignar acceso cliente' : 'Crear acceso cliente'}
               </button>
             </label>
             <label style={{ gridColumn: '1 / -1' }}>
-              <span>Nota de seguridad</span>
-              <input value="La password actual nunca se puede ver. Desde aqui solo puedes asignar una nueva." disabled />
+              <span>Usuario actual</span>
+              <input
+                value={clientAccessProfile?.loginId || 'Sin login creado'}
+                disabled
+              />
             </label>
-            {!isPrimaryAdmin && (
-              <label style={{ gridColumn: '1 / -1' }}>
-                <span>Permiso</span>
-                <input value="Solo el master puede cambiar passwords desde este panel." disabled />
-              </label>
-            )}
             {accessMessage && (
               <label style={{ gridColumn: '1 / -1' }}>
                 <span>Estado acceso</span>
                 <input value={accessMessage} disabled />
               </label>
             )}
-            <label>
-              <span>Usuario actual</span>
-              <input
-                value={clientAccessProfile?.loginId || 'Sin login creado'}
-                disabled
-              />
+            <label style={{ gridColumn: '1 / -1' }}>
+              <span>Nota acceso</span>
+              <input value="Si el cliente olvida la contrasena, elimina la asignacion en la pestaña Accesos y crea un usuario nuevo desde aqui." disabled />
             </label>
             <label>
               <span>UID interno del acceso</span>
