@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { CLIENTS } from '../constants/clients';
 import { usePortfolioStore } from '../store/portfolio';
 import { formatCurrency, formatPercent } from '../utils/format';
-import { YEAR } from '../utils/dates';
+import { getYearFromIso, YEAR } from '../utils/dates';
 import { buildReportUrl, saveReportLink } from '../services/reportLinks';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 
@@ -10,7 +10,23 @@ type ContactInfo = { name: string; surname: string; email: string; phone: string
 type Movement = { iso: string; type: 'increment' | 'decrement'; amount: number; balance: number };
 
 export function InformesView({ contacts }: { contacts: Record<string, ContactInfo> }) {
-  const { snapshot } = usePortfolioStore();
+  const { snapshot, finalByDay } = usePortfolioStore();
+  const activeYear = useMemo(() => {
+    const finalDates = Object.entries(finalByDay)
+      .filter(([, value]) => value !== undefined && !Number.isNaN(value))
+      .map(([iso]) => iso)
+      .sort((a, b) => (a > b ? 1 : -1));
+
+    if (finalDates.length > 0) {
+      return getYearFromIso(finalDates[finalDates.length - 1]);
+    }
+
+    const rowDates = Object.values(snapshot.clientRowsById)
+      .flatMap((rows) => rows.map((row) => row.iso))
+      .sort((a, b) => (a > b ? 1 : -1));
+
+    return rowDates.length > 0 ? getYearFromIso(rowDates[rowDates.length - 1]) : YEAR;
+  }, [snapshot.clientRowsById, finalByDay]);
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [multiMode, setMultiMode] = useState(false);
@@ -28,7 +44,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
     if (!client) return null;
 
     const rows = snapshot.clientRowsById[selectedClient] || [];
-    const yearRows = rows.filter((r) => r.iso.startsWith(`${YEAR}-`));
+    const yearRows = rows.filter((r) => r.iso.startsWith(`${activeYear}-`));
     const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
     const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
     const validRows = [...yearRows].reverse();
@@ -106,7 +122,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
     let running = lastKnownFinal;
     const patrimonioEvolution: { month: string; balance?: number; hasData: boolean }[] = [];
     for (let m = 1; m <= 12; m++) {
-      const key = `${YEAR}-${m.toString().padStart(2, '0')}`;
+      const key = `${activeYear}-${m.toString().padStart(2, '0')}`;
       const entry = byMonth.get(key);
       if (entry?.finalEnd !== undefined) {
         running = entry.finalEnd;
@@ -158,7 +174,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       twrYtd: twrYtd.twr,
       twrMonthly
     };
-  }, [selectedClient, snapshot, contacts]);
+  }, [selectedClient, snapshot, contacts, activeYear]);
 
   // Datos filtrados (solo meses con datos) para gráficos/tablas en preview
   const monthlyChart = useMemo(() => clientData?.monthlyStats ?? [], [clientData]);
@@ -766,7 +782,7 @@ Su gestor de inversiones`
                         if (!ct?.email) continue;
 
                         const rows = snapshot.clientRowsById[clientId] || [];
-                        const yearRows = rows.filter((r) => r.iso.startsWith(`${YEAR}-`));
+                        const yearRows = rows.filter((r) => r.iso.startsWith(`${activeYear}-`));
                         const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
                         const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
                         const validRows = [...yearRows].reverse();
@@ -833,7 +849,7 @@ Su gestor de inversiones`
                         const patrimonioEvolution: { month: string; balance?: number; hasData: boolean }[] = [];
                         let running = lastKnownFinal;
                         for (let m = 1; m <= 12; m++) {
-                          const key = `${YEAR}-${m.toString().padStart(2, '0')}`;
+                          const key = `${activeYear}-${m.toString().padStart(2, '0')}`;
                           const entry = byMonth.get(key);
                           if (entry?.finalEnd !== undefined) {
                             running = entry.finalEnd;
@@ -1030,7 +1046,7 @@ Su gestor de inversiones`
 
               <section className="report-pro-panel report-pro-panel-xl">
                 <div className="report-pro-panel-head">
-                  <h4>Rendimiento mensual {YEAR}</h4>
+                  <h4>Rendimiento mensual {activeYear}</h4>
                   <p>Comparativa de rentabilidad por mes</p>
                 </div>
                 <div

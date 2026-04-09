@@ -9,8 +9,8 @@ export interface CalendarDay {
 }
 
 export const START_YEAR = 2025;
-export const YEAR = 2025;
-export const END_YEAR = 2026;
+export const YEAR = dayjs().year();
+export const END_YEAR = 2027;
 
 dayjs.locale('es');
 
@@ -47,4 +47,10 @@ export const findFocusDate = (): string => {
   }
 
   return target.format('YYYY-MM-DD');
+};
+
+export const getYearFromIso = (iso?: string | null) => {
+  if (!iso) return YEAR;
+  const year = Number.parseInt(iso.slice(0, 4), 10);
+  return Number.isFinite(year) ? year : YEAR;
 };

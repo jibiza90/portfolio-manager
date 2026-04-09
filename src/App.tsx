@@ -6,7 +6,7 @@ import { addClientProfile, CLIENTS, removeClientProfile } from './constants/clie
 import { GENERAL_OPTION } from './constants/generalOption';
 import { usePortfolioStore } from './store/portfolio';
 import { formatCurrency, formatPercent, formatNumberEs, parseNumberEs } from './utils/format';
-import { YEAR } from './utils/dates';
+import { getYearFromIso } from './utils/dates';
 import { useFocusDate } from './hooks/useFocusDate';
 import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
@@ -1294,9 +1294,10 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   const { snapshot } = usePortfolioStore();
   const setClientMovement = usePortfolioStore((s) => s.setClientMovement);
   const clientRows = useMemo(() => snapshot.clientRowsById[clientId] || [], [snapshot, clientId]);
+  const activeYear = useMemo(() => getYearFromIso(focusDate), [focusDate]);
   const yearRows = useMemo(
-    () => clientRows.filter((r) => r.iso.startsWith(`${YEAR}-`)),
-    [clientRows]
+    () => clientRows.filter((r) => r.iso.startsWith(`${activeYear}-`)),
+    [activeYear, clientRows]
   );
   const tableRef = useRef<HTMLTableElement>(null);
   const initialScrollDoneRef = useRef(false);
@@ -2996,6 +2997,8 @@ function InfoClientes({
   isPrimaryAdmin: boolean;
 }) {
   const { snapshot } = usePortfolioStore();
+  const derivedFocusDate = useFocusDate();
+  const activeYear = useMemo(() => getYearFromIso(derivedFocusDate), [derivedFocusDate]);
   const [selectedId, setSelectedId] = useState(CLIENTS[0]?.id || '');
   const [search, setSearch] = useState('');
   const [newClientName, setNewClientName] = useState('');
@@ -3022,7 +3025,7 @@ function InfoClientes({
   }, [search, contacts]);
 
   const clientRows = useMemo(() => snapshot.clientRowsById[selectedId] || [], [snapshot, selectedId]);
-  const yearRows = useMemo(() => clientRows.filter((r) => r.iso.startsWith(`${YEAR}-`)), [clientRows]);
+  const yearRows = useMemo(() => clientRows.filter((r) => r.iso.startsWith(`${activeYear}-`)), [activeYear, clientRows]);
   const stats = useMemo(() => {
     const validRows = [...yearRows].reverse();
     const last = validRows.find((r) => r.finalBalance !== undefined || r.baseBalance !== undefined || r.cumulativeProfit !== undefined);
@@ -4017,6 +4020,8 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
   setComisionEstado: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
 }) {
   const { snapshot } = usePortfolioStore();
+  const derivedFocusDate = useFocusDate();
+  const activeYear = useMemo(() => getYearFromIso(derivedFocusDate), [derivedFocusDate]);
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [comisionEstadoRetiro, setComisionEstadoRetiro] = useState<Record<string, boolean>>(() => {
     const raw = localStorage.getItem('portfolio-comision-estado-retiro');
@@ -4044,7 +4049,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
   const clientStats = useMemo(() => {
     return CLIENTS.map((c) => {
       const rows = snapshot.clientRowsById[c.id] || [];
-      const yearRows = rows.filter((r) => r.iso.startsWith(`${YEAR}-`));
+      const yearRows = rows.filter((r) => r.iso.startsWith(`${activeYear}-`));
       const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
       const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
       const validRows = [...yearRows].reverse();
@@ -4110,7 +4115,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
         retiros
       };
     });
-  }, [snapshot, contacts, comisionEstado, comisionEstadoRetiro]);
+  }, [snapshot, contacts, comisionEstado, comisionEstadoRetiro, activeYear]);
 
   const totals = useMemo(() => {
     const comisionAcumuladaTotal = clientStats.reduce((s, c) => s + c.comisionGenerada, 0);
