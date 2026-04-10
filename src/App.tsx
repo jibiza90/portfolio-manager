@@ -2410,6 +2410,45 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
 function TotalsBanner() {
   const { snapshot } = usePortfolioStore();
   const { totals } = snapshot;
+  const monthlyMetrics = useMemo(() => {
+    const rowsWithData = snapshot.dailyRows.filter((row) => row.initial !== undefined || row.final !== undefined || row.profit !== undefined);
+    const byMonth = new Map<string, { profit: number; final?: number }>();
+    rowsWithData.forEach((row) => {
+      const month = row.iso.slice(0, 7);
+      if (!byMonth.has(month)) {
+        byMonth.set(month, { profit: 0, final: undefined });
+      }
+      const entry = byMonth.get(month)!;
+      if (row.profit !== undefined) entry.profit += row.profit;
+      if (row.final !== undefined && row.final > 0) entry.final = row.final;
+    });
+
+    const twrByMonth = new Map(calculateAllMonthsTWR(rowsWithData).map((item) => [item.month, item.twr]));
+
+    return Array.from(byMonth.entries())
+      .sort((a, b) => (a[0] > b[0] ? 1 : -1))
+      .map(([month, entry]) => ({
+        month,
+        profit: entry.profit,
+        endBalance: entry.final ?? 0,
+        returnPct: twrByMonth.get(month) ?? 0
+      }))
+      .filter((item) => item.endBalance > 0 || item.profit !== 0 || item.returnPct !== 0);
+  }, [snapshot.dailyRows]);
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+
+  useEffect(() => {
+    if (monthlyMetrics.length === 0) {
+      if (selectedMonth !== '') setSelectedMonth('');
+      return;
+    }
+    const latestMonth = monthlyMetrics[monthlyMetrics.length - 1]?.month ?? '';
+    if (!selectedMonth || !monthlyMetrics.some((item) => item.month === selectedMonth)) {
+      setSelectedMonth(latestMonth);
+    }
+  }, [monthlyMetrics, selectedMonth]);
+
+  const selectedMonthMetrics = monthlyMetrics.find((item) => item.month === selectedMonth) ?? monthlyMetrics[monthlyMetrics.length - 1];
   return (
     <div className="glass-card totals-banner fade-in">
       <div>
@@ -2417,12 +2456,27 @@ function TotalsBanner() {
         <h1>{formatCurrency(totals.assets)}</h1>
       </div>
       <div>
-        <p>Beneficio YTD</p>
-        <h1 className={clsx((totals.ytdProfit||0)>=0?'profit':'loss')}>{formatCurrency(totals.ytdProfit)}</h1>
+        <p>{selectedMonthMetrics ? `Beneficio ${monthLabel(selectedMonthMetrics.month)}` : 'Beneficio mes'}</p>
+        <h1 className={clsx((selectedMonthMetrics?.profit ?? 0) >= 0 ? 'profit' : 'loss')}>
+          {formatCurrency(selectedMonthMetrics?.profit)}
+        </h1>
       </div>
       <div>
-        <p>Retorno YTD</p>
-        <h1 className={clsx((totals.ytdReturnPct||0)>=0?'profit':'loss')}>{formatPercent(totals.ytdReturnPct)}</h1>
+        <div className="totals-banner-head">
+          <p>{selectedMonthMetrics ? `Rentab. ${monthLabel(selectedMonthMetrics.month)}` : 'Rentab. mes'}</p>
+          {monthlyMetrics.length > 0 && (
+            <div className="select-wrapper totals-banner-select">
+              <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+                {monthlyMetrics.map((item) => (
+                  <option key={item.month} value={item.month}>{monthLabel(item.month)}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        <h1 className={clsx((selectedMonthMetrics?.returnPct ?? 0) >= 0 ? 'profit' : 'loss')}>
+          {formatPercent(selectedMonthMetrics?.returnPct)}
+        </h1>
       </div>
     </div>
   );

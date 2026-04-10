@@ -1,4 +1,5 @@
 import type { ClientDayRow, MonthlyHistoryEntry } from '../types';
+import { calculateAllMonthsTWR } from './twr';
 
 const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 export const MONTHLY_HISTORY_TOLERANCE = 0.5;
@@ -60,6 +61,7 @@ export function buildMonthlyStatsForMonths(
   const trackedMonthSet = new Set(trackedMonths);
   const scopedRows = rows.filter((row) => trackedMonthSet.has(row.iso.slice(0, 7)));
   const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number }>();
+  const twrByMonth = new Map(calculateAllMonthsTWR(scopedRows).map((item) => [item.month, item.twr]));
   let lastKnownFinal: number | undefined;
 
   scopedRows.forEach((row) => {
@@ -87,6 +89,7 @@ export function buildMonthlyStatsForMonths(
     const derivedEntry = byMonth.get(monthKey);
     const historyEntry = monthlyHistory[monthKey];
     const normalizedHistoryReturn = normalizeMonthlyReturnPct(historyEntry?.returnPct);
+    const monthlyTwr = twrByMonth.get(monthKey);
 
     let profit = derivedEntry?.profit ?? 0;
     let baseStart = derivedEntry?.baseStart;
@@ -113,7 +116,10 @@ export function buildMonthlyStatsForMonths(
 
     const safeBase = baseStart ?? 0;
     const simpleProfitPct = safeBase > 0 ? profit / safeBase : 0;
-    const profitPct = canUseHistoryReturn && normalizedHistoryReturn !== undefined ? normalizedHistoryReturn : simpleProfitPct;
+    const profitPct =
+      canUseHistoryReturn && normalizedHistoryReturn !== undefined
+        ? normalizedHistoryReturn
+        : monthlyTwr ?? simpleProfitPct;
     const hasData = !!derivedEntry || hasMonthlyHistoryValue(historyEntry);
 
     if (finalEnd !== undefined && finalEnd > 0) {

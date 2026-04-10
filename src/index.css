@@ -3011,6 +3011,29 @@ input[type='number'] {
   font-weight: 600;
 }
 
+.totals-banner-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.totals-banner-head p {
+  margin: 0;
+}
+
+.totals-banner-select {
+  min-width: 128px;
+}
+
+.totals-banner-select select {
+  min-height: 34px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 12px;
+}
+
 .glass-card {
   padding: 24px 32px;
 }
