@@ -13,9 +13,8 @@ import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import {
-  canHonorMonthlyHistoryReturn,
-  hasMonthlyHistoryValue,
-  normalizeMonthlyReturnPct as normalizeReturnPctValue
+  buildMonthlyStatsForMonths,
+  hasMonthlyHistoryValue
 } from './utils/monthlyHistory';
 import {
   fetchClientAccessProfile,
@@ -1757,78 +1756,31 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     [statsRows]
   );
 
+  const trackedMonthKeys = useMemo(
+    () =>
+      Array.from(new Set([...statsRows.map((r) => r.iso.slice(0, 7)), ...Object.keys(monthlyHistory)])).sort((a, b) =>
+        a > b ? 1 : -1
+      ),
+    [statsRows, monthlyHistory]
+  );
+
   const analytics = useMemo(() => {
-    // Recorrer en orden para mantener datos reales
-    const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number }>();
-    let lastKnownFinal: number | undefined;
+    const { monthlyStats } = buildMonthlyStatsForMonths(statsRows, monthlyHistory, trackedMonthKeys);
+    const monthly = monthlyStats
+      .filter((item) => item.hasData && (item.profit !== 0 || item.profitPct !== 0 || item.endBalance !== 0))
+      .map((item) => ({
+        month: item.monthKey,
+        profit: item.profit,
+        retPct: item.profitPct / 100,
+        finalEnd: item.endBalance
+      }));
+    const evolution = monthly.map((item) => ({ month: item.month, balance: item.finalEnd }));
 
-    statsRows.forEach((r) => {
-      const month = r.iso.slice(0, 7);
-      if (!byMonth.has(month)) {
-        byMonth.set(month, { profit: 0, baseStart: undefined, finalEnd: undefined });
-      }
-      const entry = byMonth.get(month)!;
-      if (r.profit !== undefined) entry.profit += r.profit;
-      // Solo guardar baseStart si es > 0
-      if (entry.baseStart === undefined && r.baseBalance !== undefined && r.baseBalance > 0) entry.baseStart = r.baseBalance;
-      if (r.finalBalance !== undefined && r.finalBalance > 0) {
-        entry.finalEnd = r.finalBalance;
-        lastKnownFinal = r.finalBalance;
-      }
-    });
-
-    const months = Array.from(byMonth.keys()).sort();
-    const monthly = months.map((month) => {
-      const historyEntry = monthlyHistory[month];
-      const historyFinal = historyEntry?.finalBalance;
-      const normalizedHistoryReturn = normalizeReturnPctValue(historyEntry?.returnPct);
-      const entry = byMonth.get(month)!;
-      let profit = entry.profit;
-      let finalEnd = entry.finalEnd;
-      let { baseStart } = entry;
-      // Fallback si baseStart es undefined o 0
-      if (baseStart === undefined || baseStart === 0) {
-        const idx = months.indexOf(month);
-        if (idx > 0) {
-          baseStart = byMonth.get(months[idx - 1])?.finalEnd;
-        }
-      }
-      if (baseStart === undefined || baseStart === 0) {
-        if (finalEnd !== undefined && finalEnd > 0) {
-          baseStart = Math.max(1, finalEnd - profit);
-        }
-      }
-      if (historyFinal !== undefined) {
-        finalEnd = historyFinal;
-      }
-      const canUseHistoryReturn = canHonorMonthlyHistoryReturn(baseStart, historyEntry);
-      if (canUseHistoryReturn && normalizedHistoryReturn !== undefined && historyFinal !== undefined) {
-        baseStart = historyFinal / (1 + normalizedHistoryReturn);
-        profit = historyFinal - baseStart;
-      }
-      let retPct = normalizedHistoryReturn ?? 0;
-      if (!canUseHistoryReturn || normalizedHistoryReturn === undefined) {
-        retPct = baseStart && baseStart > 0 ? profit / baseStart : 0;
-      } else if (baseStart && baseStart > 0) {
-        retPct = normalizedHistoryReturn;
-      }
-      return { month, profit, retPct, finalEnd, baseStart };
-    });
-
-    // Evolución de patrimonio: usar último final disponible por mes; si falta, mantener último conocido
-    let running = lastKnownFinal;
-    const evolution = monthly.map((m) => {
-      if (m.finalEnd !== undefined) {
-        running = m.finalEnd;
-      }
-      return { month: m.month, balance: running ?? 0 };
-    });
-
-    const profitAbsMax = monthly.length ? Math.max(...monthly.map((m) => Math.abs(m.profit))) : 1;
-    const profitPosMax = monthly.length ? Math.max(...monthly.map((m) => Math.max(0, m.profit))) : 0;
+    const profitAbsMax = monthly.length ? Math.max(...monthly.map((item) => Math.abs(item.profit))) : 1;
+    const profitPosMax = monthly.length ? Math.max(...monthly.map((item) => Math.max(0, item.profit))) : 0;
     const hasPositive = profitPosMax > 0;
-    const retMax = monthly.length ? Math.max(...monthly.map((m) => Math.abs(m.retPct))) : 0.01;
-    const evoMax = evolution.length ? Math.max(...evolution.map((e) => Math.abs(e.balance))) : 1;
+    const retMax = monthly.length ? Math.max(...monthly.map((item) => Math.abs(item.retPct))) : 0.01;
+    const evoMax = evolution.length ? Math.max(...evolution.map((item) => Math.abs(item.balance))) : 1;
 
     return {
       monthly,
@@ -1839,7 +1791,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
       retMax: Math.max(0.01, retMax),
       evoMax: Math.max(1, evoMax)
     };
-  }, [statsRows, monthlyHistory]);
+  }, [statsRows, monthlyHistory, trackedMonthKeys]);
 
   // Buscar último mes con beneficio distinto de 0, o el último disponible
   const latestProfitMonth = (() => {
@@ -3743,6 +3695,40 @@ function InfoClientes({
   const selectedMonthlyHistory = usePortfolioStore((s) => s.monthlyHistoryByClient[selectedId] ?? {});
   const yearRows = useMemo(() => clientRows.filter((r) => r.iso.startsWith(`${activeYear}-`)), [activeYear, clientRows]);
   const summaryRows = clientRows;
+  const summaryMonthKeys = useMemo(
+    () =>
+      Array.from(new Set([...summaryRows.map((r) => r.iso.slice(0, 7)), ...Object.keys(selectedMonthlyHistory)])).sort((a, b) =>
+        a > b ? 1 : -1
+      ),
+    [summaryRows, selectedMonthlyHistory]
+  );
+
+  const monthlySummaryData = useMemo(() => {
+    const { monthlyStats, lastMonth } = buildMonthlyStatsForMonths(summaryRows, selectedMonthlyHistory, summaryMonthKeys);
+    const monthly = monthlyStats
+      .filter((item) => item.hasData && (item.profit !== 0 || item.profitPct !== 0 || item.endBalance !== 0))
+      .map((item) => ({
+        month: item.monthKey,
+        label: item.monthLabel,
+        profit: item.profit,
+        ret: item.profitPct / 100,
+        endBalance: item.endBalance
+      }));
+
+    return {
+      monthly,
+      lastMonth: lastMonth
+        ? {
+            month: lastMonth.monthKey,
+            label: lastMonth.monthLabel,
+            profit: lastMonth.profit,
+            ret: lastMonth.profitPct / 100,
+            endBalance: lastMonth.endBalance
+          }
+        : null
+    };
+  }, [summaryRows, selectedMonthlyHistory, summaryMonthKeys]);
+
   const stats = useMemo(() => {
     const validRows = [...summaryRows].reverse();
     const last = validRows.find((r) => r.finalBalance !== undefined || r.baseBalance !== undefined || r.cumulativeProfit !== undefined);
@@ -3753,84 +3739,25 @@ function InfoClientes({
     const participation = last?.sharePct ?? 0;
     const capitalInvertido = summaryRows.reduce((s, r) => s + (r.increment ?? 0), 0);
     const capitalRetirado = summaryRows.reduce((s, r) => s + (r.decrement ?? 0), 0);
-
-    const lastMonthIso = last?.iso.slice(0, 7);
-    const monthRows = lastMonthIso ? summaryRows.filter((r) => r.iso.startsWith(lastMonthIso)) : [];
-    const lastMonthHistory = lastMonthIso ? selectedMonthlyHistory[lastMonthIso] : undefined;
-    const normalizedLastMonthReturn = normalizeReturnPctValue(lastMonthHistory?.returnPct);
-    const calculatedMonthlyProfit = monthRows.reduce((s, r) => s + (r.profit || 0), 0);
-    const lastFinalInMonth = [...monthRows].reverse().find((r) => r.finalBalance !== undefined && r.finalBalance > 0)?.finalBalance;
-    // Buscar baseBalance > 0
-    const firstValidBase = monthRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0)?.baseBalance;
-    const firstValidFinal = monthRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0)?.finalBalance;
-    const prevMonthFinal = (() => {
-      const prev = [...summaryRows].reverse().find((r) => r.iso < `${lastMonthIso}-01` && r.finalBalance !== undefined && r.finalBalance > 0);
-      return prev?.finalBalance;
-    })();
-    const estimatedBase = lastFinalInMonth !== undefined ? Math.max(1, lastFinalInMonth - calculatedMonthlyProfit) : 0;
-    const monthStart = firstValidBase ?? prevMonthFinal ?? firstValidFinal ?? estimatedBase;
-    const canUseHistoryReturn = canHonorMonthlyHistoryReturn(monthStart, lastMonthHistory);
-    const monthlyProfit =
-      canUseHistoryReturn && lastMonthHistory?.finalBalance !== undefined && normalizedLastMonthReturn !== undefined
-        ? lastMonthHistory.finalBalance - lastMonthHistory.finalBalance / (1 + normalizedLastMonthReturn)
-        : calculatedMonthlyProfit;
-    const monthlyReturn =
-      canUseHistoryReturn && normalizedLastMonthReturn !== undefined
-        ? normalizedLastMonthReturn
-        : monthStart
-          ? monthlyProfit / monthStart
-          : 0;
-
+    const latestMonth = monthlySummaryData.lastMonth;
     const proportion = snapshot.totals.assets ? estimatedBalance / snapshot.totals.assets : 0;
 
-    return { estimatedBalance, totalProfit, dailyProfit, profitPct, participation, capitalInvertido, capitalRetirado, monthlyProfit, monthlyReturn, proportion, lastMonthIso };
-  }, [summaryRows, selectedMonthlyHistory, snapshot.totals.assets]);
+    return {
+      estimatedBalance,
+      totalProfit,
+      dailyProfit,
+      profitPct,
+      participation,
+      capitalInvertido,
+      capitalRetirado,
+      monthlyProfit: latestMonth?.profit ?? 0,
+      monthlyReturn: latestMonth?.ret ?? 0,
+      proportion,
+      lastMonthIso: latestMonth?.month ?? ''
+    };
+  }, [summaryRows, monthlySummaryData, snapshot.totals.assets]);
 
-  const monthlySummary = useMemo(() => {
-    const profitByMonth = new Map<string, number>();
-    const firstBaseByMonth = new Map<string, number>();
-    const lastFinalByMonth = new Map<string, number>();
-    summaryRows.forEach((r) => {
-      const m = r.iso.slice(0, 7);
-      profitByMonth.set(m, (profitByMonth.get(m) || 0) + (r.profit || 0));
-      // Solo guardar baseBalance si es > 0 (ignorar 0 como valor no válido)
-      if (!firstBaseByMonth.has(m) && r.baseBalance !== undefined && r.baseBalance > 0) {
-        firstBaseByMonth.set(m, r.baseBalance);
-      }
-      if (r.finalBalance !== undefined && r.finalBalance > 0) {
-        lastFinalByMonth.set(m, r.finalBalance);
-      }
-    });
-    const months = Array.from(profitByMonth.keys()).sort();
-    return months.map((m) => {
-      const historyEntry = selectedMonthlyHistory[m];
-      const normalizedHistoryReturn = normalizeReturnPctValue(historyEntry?.returnPct);
-      let profit = profitByMonth.get(m) || 0;
-      let base = firstBaseByMonth.get(m);
-      if (base === undefined || base === 0) {
-        // fallback: último final del mes anterior
-        const idx = months.indexOf(m);
-        if (idx > 0) {
-          base = lastFinalByMonth.get(months[idx - 1]);
-        }
-      }
-      if (base === undefined || base === 0) {
-        // fallback: estimar base = último final del mes - beneficio
-        const lastFinal = lastFinalByMonth.get(m);
-        if (lastFinal !== undefined && lastFinal > 0) {
-          base = Math.max(1, lastFinal - profit);
-        }
-      }
-      const canUseHistoryReturn = canHonorMonthlyHistoryReturn(base, historyEntry);
-      if (canUseHistoryReturn && historyEntry?.finalBalance !== undefined && normalizedHistoryReturn !== undefined) {
-        base = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
-        profit = historyEntry.finalBalance - base;
-      }
-      base = base ?? 0;
-      const ret = canUseHistoryReturn && normalizedHistoryReturn !== undefined ? normalizedHistoryReturn : base ? profit / base : 0;
-      return { month: m, label: monthLabel(m), profit, ret };
-    });
-  }, [summaryRows, selectedMonthlyHistory]);
+  const monthlySummary = useMemo(() => monthlySummaryData.monthly, [monthlySummaryData]);
 
   useEffect(() => {
     if (!monthPopupKey) return;
