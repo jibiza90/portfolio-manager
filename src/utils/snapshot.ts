@@ -13,6 +13,7 @@ const monthEndIso = (month: string) => dayjs(`${month}-01`).endOf('month').forma
 const normalizeReturnPct = (value?: number) =>
   value === undefined || Number.isNaN(value) ? undefined : Math.abs(value) > 1 ? value / 100 : value;
 const MONTHLY_HISTORY_TOLERANCE = 0.5;
+const hasMeaningfulAmount = (value?: number) => value !== undefined && Math.abs(value) > MONTHLY_HISTORY_TOLERANCE;
 
 const sumMovements = (records: Record<string, Record<string, Movement>>, iso: string) => {
   let incrementTotal = 0;
@@ -191,11 +192,21 @@ export const buildSnapshot = (
     const lockedClientCount = clientDrafts.filter((draft) => draft.lockedCoreFinal !== undefined).length;
     const unlockedDrafts = clientDrafts.filter((draft) => draft.lockedCoreFinal === undefined);
     const unlockedBaseTotal = unlockedDrafts.reduce((sum, draft) => sum + Math.max(0, draft.baseBalance ?? 0), 0);
+    const activeUnlockedDrafts = unlockedDrafts.filter(
+      (draft) =>
+        hasMeaningfulAmount(draft.baseBalance) ||
+        hasMeaningfulAmount(draft.increment) ||
+        hasMeaningfulAmount(draft.decrement) ||
+        hasMeaningfulAmount(draft.manualProfit)
+    );
+    const allActiveClientsLocked = lockedClientCount > 0 && activeUnlockedDrafts.length === 0;
 
     const globalCoreFinalTarget =
       beyondLastRecorded
         ? undefined
-        : recordedFinal !== undefined
+        : allActiveClientsLocked
+          ? lockedCoreFinalTotal
+          : recordedFinal !== undefined
           ? recordedFinal
           : lockedClientCount > 0
             ? lockedCoreFinalTotal + unlockedDrafts.reduce((sum, draft) => sum + Math.max(0, draft.baseBalance ?? 0), 0)
