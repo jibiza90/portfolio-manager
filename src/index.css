@@ -2471,6 +2471,32 @@ input[type='number'] {
   color: #0f172a;
 }
 
+.report-pro-note {
+  margin: 0 36px 18px;
+  padding: 14px 16px;
+  background: linear-gradient(145deg, #f8fbff, #eef5ff);
+  border: 1px solid rgba(30, 64, 99, 0.14);
+  border-radius: 14px;
+}
+
+.report-pro-note strong {
+  display: block;
+  color: #0f172a;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.report-pro-note p {
+  margin: 0 0 6px;
+  color: #4b5f7d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.report-pro-note p:last-child {
+  margin-bottom: 0;
+}
+
 .report-pro-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -2819,12 +2845,14 @@ input[type='number'] {
   .report-pro-client,
   .report-pro-executive,
   .report-pro-kpis,
+  .report-pro-note,
   .report-pro-grid {
     padding-left: 16px;
     padding-right: 16px;
   }
 
-  .report-pro-panel {
+  .report-pro-panel,
+  .report-pro-note {
     margin-left: 16px;
     margin-right: 16px;
   }

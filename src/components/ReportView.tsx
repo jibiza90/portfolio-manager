@@ -12,6 +12,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
   const [loading, setLoading] = useState(true);
   const [expired, setExpired] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+  const twrExplanation = 'mide el rendimiento de la estrategia aislando el efecto de aportes y retiradas.';
+  const totalReturnExplanation = 'compara el beneficio total frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
 
   useEffect(() => {
     const loadReport = async () => {
@@ -80,10 +82,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
       { label: 'Capital Retirado', value: formatCurrency(report.decrementos) },
       { label: 'Saldo Actual', value: formatCurrency(report.saldo) },
       { label: 'Beneficio Total', value: formatCurrency(report.beneficioTotal) },
-      { label: 'Rentabilidad', value: `${report.rentabilidad.toFixed(2)}%` },
+      { label: 'TWR', value: `${((report.twrYtd ?? 0) * 100).toFixed(2)}%` },
       { label: 'Beneficio Último Mes', value: formatCurrency(report.beneficioUltimoMes) },
       { label: 'Rentab. Último Mes', value: `${report.rentabilidadUltimoMes.toFixed(2)}%` },
-      { label: 'Rentabilidad TWR', value: `${((report.twrYtd ?? 0) * 100).toFixed(2)}%` }
+      { label: 'Rentabilidad Total', value: `${report.rentabilidad.toFixed(2)}%` }
     ];
 
     doc.setFontSize(10);
@@ -97,7 +99,25 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
       y += 7;
     });
 
-    y += 10;
+    y += 3;
+
+    checkNewPage(24);
+    doc.setFillColor(247, 250, 252);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 2, 2, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.25);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 2, 2, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Como leer estas metricas', margin + 4, y + 6);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text(doc.splitTextToSize(`TWR: ${twrExplanation}`, pageWidth - margin * 2 - 8), margin + 4, y + 11);
+    doc.text(doc.splitTextToSize(`Rentabilidad total: ${totalReturnExplanation}`, pageWidth - margin * 2 - 8), margin + 4, y + 17);
+
+    y += 30;
 
     const safeCurrency = (v: number) => formatCurrency(Number.isFinite(v) ? v : 0);
     const safePercent = (v: number) => `${(Number.isFinite(v) ? v : 0).toFixed(2)}%`;
@@ -490,8 +510,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
             <strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong>
           </div>
           <div>
-            <p>Rentabilidad total</p>
-            <strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{report.rentabilidad.toFixed(2)}%</strong>
+            <p>TWR</p>
+            <strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{((report.twrYtd ?? 0) * 100).toFixed(2)}%</strong>
           </div>
         </section>
 
@@ -500,7 +520,13 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
           <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
           <div className="report-pro-kpi"><span>Beneficio ultimo mes</span><strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioUltimoMes)}</strong></div>
           <div className="report-pro-kpi"><span>Rentab. ultimo mes</span><strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{report.rentabilidadUltimoMes.toFixed(2)}%</strong></div>
-          <div className="report-pro-kpi"><span>TWR</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{((report.twrYtd ?? 0) * 100).toFixed(2)}%</strong></div>
+          <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{report.rentabilidad.toFixed(2)}%</strong></div>
+        </section>
+
+        <section className="report-pro-note">
+          <strong>Como leer TWR y rentabilidad total</strong>
+          <p><strong>TWR:</strong> {twrExplanation}</p>
+          <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
         </section>
 
         <section className="report-pro-panel report-pro-panel-xl">

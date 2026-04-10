@@ -144,6 +144,8 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
 
   const monthlyChart = useMemo(() => clientData?.monthlyStats ?? [], [clientData]);
   const patrimonioChart = useMemo(() => clientData?.patrimonioEvolution ?? [], [clientData]);
+  const twrExplanation = 'mide el rendimiento de la estrategia aislando el efecto de aportes y retiradas.';
+  const totalReturnExplanation = 'compara el beneficio total frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
 
   const generatePDF = async () => {
     if (!clientData) return;
@@ -236,10 +238,10 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       { label: 'Capital Retirado', value: formatCurrency(clientData.decrementos), accent: false },
       { label: 'Saldo Actual', value: formatCurrency(clientData.saldo), accent: true, positive: true },
       { label: 'Beneficio Total', value: formatCurrency(clientData.beneficioTotal), accent: true, positive: clientData.beneficioTotal >= 0 },
-      { label: 'Rentabilidad Total', value: `${clientData.rentabilidad.toFixed(2)}%`, accent: true, positive: clientData.rentabilidad >= 0 },
+      { label: 'TWR', value: `${(clientData.twrYtd * 100).toFixed(2)}%`, accent: true, positive: clientData.twrYtd >= 0 },
       { label: 'Beneficio Último Mes', value: formatCurrency(clientData.beneficioUltimoMes), accent: true, positive: clientData.beneficioUltimoMes >= 0 },
       { label: 'Rentab. Último Mes', value: `${clientData.rentabilidadUltimoMes.toFixed(2)}%`, accent: true, positive: clientData.rentabilidadUltimoMes >= 0 },
-      { label: 'Rentabilidad TWR', value: `${(clientData.twrYtd * 100).toFixed(2)}%`, accent: true, positive: clientData.twrYtd >= 0 }
+      { label: 'Rentabilidad Total', value: `${clientData.rentabilidad.toFixed(2)}%`, accent: true, positive: clientData.rentabilidad >= 0 }
     ];
 
     kpis.forEach((kpi, i) => {
@@ -278,7 +280,25 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       doc.text(kpi.value, x + 4, yPos + 17);
     });
 
-    y += Math.ceil(kpis.length / 3) * (kpiHeight + kpiGap) + 15;
+    y += Math.ceil(kpis.length / 3) * (kpiHeight + kpiGap) + 8;
+
+    checkNewPage(24);
+    doc.setFillColor(247, 250, 252);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 2, 2, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.25);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 2, 2, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Como leer estas metricas', margin + 4, y + 6);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text(doc.splitTextToSize(`TWR: ${twrExplanation}`, pageWidth - margin * 2 - 8), margin + 4, y + 11);
+    doc.text(doc.splitTextToSize(`Rentabilidad total: ${totalReturnExplanation}`, pageWidth - margin * 2 - 8), margin + 4, y + 17);
+
+    y += 30;
 
     // Monthly performance with chart (% rentabilidad)
     const monthlyData = clientData.monthlyStats;
@@ -620,7 +640,8 @@ Le envío su Informe de Inversión actualizado a fecha ${fecha}.
 • Capital retirado: ${formatCurrency(clientData.decrementos)}
 • Saldo actual: ${formatCurrency(clientData.saldo)}
 • Beneficio total: ${formatCurrency(clientData.beneficioTotal)}
-• Rentabilidad: ${clientData.rentabilidad.toFixed(2)}%
+• TWR: ${((clientData.twrYtd ?? 0) * 100).toFixed(2)}%
+• Rentabilidad total: ${clientData.rentabilidad.toFixed(2)}%
 
 🔗 ACCEDER AL INFORME:
 ${reportUrl}
@@ -914,8 +935,8 @@ Su gestor de inversiones`
                   <strong className={clientData.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(clientData.beneficioTotal)}</strong>
                 </div>
                 <div>
-                  <p>Rentabilidad total</p>
-                  <strong className={clientData.rentabilidad >= 0 ? 'positive' : 'negative'}>{clientData.rentabilidad.toFixed(2)}%</strong>
+                  <p>TWR</p>
+                  <strong className={clientData.twrYtd >= 0 ? 'positive' : 'negative'}>{(clientData.twrYtd * 100).toFixed(2)}%</strong>
                 </div>
               </section>
 
@@ -924,7 +945,13 @@ Su gestor de inversiones`
                 <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(clientData.decrementos)}</strong></div>
                 <div className="report-pro-kpi"><span>Beneficio ultimo mes</span><strong className={clientData.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(clientData.beneficioUltimoMes)}</strong></div>
                 <div className="report-pro-kpi"><span>Rentab. ultimo mes</span><strong className={clientData.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{clientData.rentabilidadUltimoMes.toFixed(2)}%</strong></div>
-                <div className="report-pro-kpi"><span>TWR</span><strong className={clientData.twrYtd >= 0 ? 'positive' : 'negative'}>{(clientData.twrYtd * 100).toFixed(2)}%</strong></div>
+                <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={clientData.rentabilidad >= 0 ? 'positive' : 'negative'}>{clientData.rentabilidad.toFixed(2)}%</strong></div>
+              </section>
+
+              <section className="report-pro-note">
+                <strong>Como leer TWR y rentabilidad total</strong>
+                <p><strong>TWR:</strong> {twrExplanation}</p>
+                <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
               </section>
 
               <section className="report-pro-panel report-pro-panel-xl">
