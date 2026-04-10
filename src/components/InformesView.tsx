@@ -836,7 +836,9 @@ Su gestor de inversiones`
       </section>
 
       {clientData && (() => {
-        const monthlyWithData = clientData.monthlyStats.filter((m) => m.hasData);
+        const monthlyWithData = clientData.monthlyStats.filter(
+          (m) => m.hasData && (m.profit !== 0 || m.profitPct !== 0 || m.endBalance !== 0)
+        );
         const hasNegativeMonth = monthlyWithData.some((m) => m.profitPct < 0);
         const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(m.profitPct)));
         const patrimonioWithData = clientData.patrimonioEvolution.filter((p) => p.balance !== undefined);
@@ -1021,16 +1023,16 @@ Su gestor de inversiones`
                       </tr>
                     </thead>
                     <tbody>
-                      {clientData.monthlyStats.map((m) => (
+                      {monthlyWithData.map((m) => (
                         <tr key={m.monthKey}>
-                          <td>{m.hasData ? m.monthLabel : '-'}</td>
-                          <td className={`text-right ${m.hasData ? (m.profit >= 0 ? 'positive' : 'negative') : ''}`}>
-                            {m.hasData ? formatCurrency(m.profit) : '-'}
+                          <td>{m.monthLabel}</td>
+                          <td className={`text-right ${m.profit >= 0 ? 'positive' : 'negative'}`}>
+                            {formatCurrency(m.profit)}
                           </td>
-                          <td className={`text-right ${m.hasData ? (m.profitPct >= 0 ? 'positive' : 'negative') : ''}`}>
-                            {m.hasData ? `${m.profitPct.toFixed(2)}%` : '-'}
+                          <td className={`text-right ${m.profitPct >= 0 ? 'positive' : 'negative'}`}>
+                            {`${m.profitPct.toFixed(2)}%`}
                           </td>
-                          <td className="text-right">{m.hasData ? formatCurrency(m.endBalance) : '-'}</td>
+                          <td className="text-right">{formatCurrency(m.endBalance)}</td>
                         </tr>
                       ))}
                     </tbody>
