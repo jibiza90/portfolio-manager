@@ -22,6 +22,12 @@ export interface PatrimonyPoint {
   hasData: boolean;
 }
 
+interface MonthlyStatsResult {
+  monthlyStats: MonthlyStatPoint[];
+  patrimonioEvolution: PatrimonyPoint[];
+  lastMonth: MonthlyStatPoint | null;
+}
+
 export function normalizeMonthlyReturnPct(value?: number) {
   if (value === undefined || Number.isNaN(value)) return undefined;
   return Math.abs(value) > 1 ? value / 100 : value;
@@ -45,20 +51,18 @@ export function canHonorMonthlyHistoryReturn(baseStart: number | undefined, entr
   return Math.abs(derivedBase - baseStart) <= MONTHLY_HISTORY_TOLERANCE;
 }
 
-export function buildMonthlyStatsForYear(
+export function buildMonthlyStatsForMonths(
   rows: ClientDayRow[],
   monthlyHistory: Record<string, MonthlyHistoryEntry>,
-  year: number
-): {
-  monthlyStats: MonthlyStatPoint[];
-  patrimonioEvolution: PatrimonyPoint[];
-  lastMonth: MonthlyStatPoint | null;
-} {
-  const yearRows = rows.filter((row) => row.iso.startsWith(`${year}-`));
+  monthKeys: string[]
+): MonthlyStatsResult {
+  const trackedMonths = [...monthKeys].sort((a, b) => (a > b ? 1 : -1));
+  const trackedMonthSet = new Set(trackedMonths);
+  const scopedRows = rows.filter((row) => trackedMonthSet.has(row.iso.slice(0, 7)));
   const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number }>();
   let lastKnownFinal: number | undefined;
 
-  yearRows.forEach((row) => {
+  scopedRows.forEach((row) => {
     const monthKey = row.iso.slice(0, 7);
     if (!byMonth.has(monthKey)) {
       byMonth.set(monthKey, { profit: 0, baseStart: undefined, finalEnd: undefined });
@@ -77,8 +81,9 @@ export function buildMonthlyStatsForYear(
 
   const monthlyStats: MonthlyStatPoint[] = [];
 
-  for (let month = 1; month <= 12; month += 1) {
-    const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+  trackedMonths.forEach((monthKey) => {
+    const year = Number.parseInt(monthKey.slice(0, 4), 10);
+    const month = Number.parseInt(monthKey.slice(5, 7), 10);
     const derivedEntry = byMonth.get(monthKey);
     const historyEntry = monthlyHistory[monthKey];
     const normalizedHistoryReturn = normalizeMonthlyReturnPct(historyEntry?.returnPct);
@@ -118,7 +123,7 @@ export function buildMonthlyStatsForYear(
     monthlyStats.push({
       monthKey,
       month: MONTH_NAMES[month - 1],
-      monthLabel: MONTH_NAMES[month - 1],
+      monthLabel: `${MONTH_NAMES[month - 1]} ${year}`,
       monthNum: month,
       profit,
       profitPct: profitPct * 100,
@@ -126,7 +131,7 @@ export function buildMonthlyStatsForYear(
       endBalance: finalEnd ?? 0,
       hasData
     });
-  }
+  });
 
   let running = lastKnownFinal;
   const patrimonioEvolution = monthlyStats.map((item) => {
@@ -145,4 +150,13 @@ export function buildMonthlyStatsForYear(
     patrimonioEvolution,
     lastMonth: monthlyWithData.length > 0 ? monthlyWithData[monthlyWithData.length - 1] : null
   };
+}
+
+export function buildMonthlyStatsForYear(
+  rows: ClientDayRow[],
+  monthlyHistory: Record<string, MonthlyHistoryEntry>,
+  year: number
+): MonthlyStatsResult {
+  const monthKeys = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`);
+  return buildMonthlyStatsForMonths(rows, monthlyHistory, monthKeys);
 }

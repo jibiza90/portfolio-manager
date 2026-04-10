@@ -5,14 +5,15 @@ import { formatCurrency, formatPercent } from '../utils/format';
 import { getYearFromIso, YEAR } from '../utils/dates';
 import { buildReportUrl, saveReportLink } from '../services/reportLinks';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
-import { buildMonthlyStatsForYear } from '../utils/monthlyHistory';
+import { buildMonthlyStatsForMonths, buildMonthlyStatsForYear } from '../utils/monthlyHistory';
 
 type ContactInfo = { name: string; surname: string; email: string; phone: string };
 type Movement = { iso: string; type: 'increment' | 'decrement'; amount: number; balance: number };
 
 function buildClientReportData(
   clientId: string,
-  year: number,
+  selectedYear: number | 'all',
+  availableYears: number[],
   contacts: Record<string, ContactInfo>,
   snapshot: ReturnType<typeof usePortfolioStore.getState>['snapshot'],
   monthlyHistoryByClient: ReturnType<typeof usePortfolioStore.getState>['monthlyHistoryByClient']
@@ -21,10 +22,12 @@ function buildClientReportData(
   if (!client) return null;
 
   const rows = snapshot.clientRowsById[clientId] || [];
-  const yearRows = rows.filter((row) => row.iso.startsWith(`${year}-`));
-  const incrementos = yearRows.reduce((sum, row) => sum + (row.increment || 0), 0);
-  const decrementos = yearRows.reduce((sum, row) => sum + (row.decrement || 0), 0);
-  const validRows = [...yearRows].reverse();
+  const periodRows = selectedYear === 'all'
+    ? rows
+    : rows.filter((row) => row.iso.startsWith(`${selectedYear}-`));
+  const incrementos = periodRows.reduce((sum, row) => sum + (row.increment || 0), 0);
+  const decrementos = periodRows.reduce((sum, row) => sum + (row.decrement || 0), 0);
+  const validRows = [...periodRows].reverse();
   const lastWithFinal = validRows.find((row) => row.finalBalance !== undefined && row.finalBalance > 0);
   const lastWithBase = validRows.find((row) => row.baseBalance !== undefined && row.baseBalance > 0);
   const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
@@ -32,10 +35,17 @@ function buildClientReportData(
   const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
 
   const monthlyHistory = monthlyHistoryByClient[clientId] ?? {};
-  const { monthlyStats, patrimonioEvolution, lastMonth } = buildMonthlyStatsForYear(rows, monthlyHistory, year);
+  const periodYears = selectedYear === 'all' ? availableYears : [selectedYear];
+  const periodMonthKeys = periodYears.flatMap((year) =>
+    Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`)
+  );
+  const { monthlyStats, patrimonioEvolution, lastMonth } =
+    selectedYear === 'all'
+      ? buildMonthlyStatsForMonths(rows, monthlyHistory, periodMonthKeys)
+      : buildMonthlyStatsForYear(rows, monthlyHistory, selectedYear);
 
   const movements: Movement[] = [];
-  [...yearRows].sort((a, b) => a.iso.localeCompare(b.iso)).forEach((row) => {
+  [...periodRows].sort((a, b) => a.iso.localeCompare(b.iso)).forEach((row) => {
     if (row.increment && row.increment > 0) {
       movements.push({ iso: row.iso, type: 'increment', amount: row.increment, balance: row.finalBalance || 0 });
     }
@@ -46,8 +56,8 @@ function buildClientReportData(
 
   const contact = contacts[clientId];
   const displayName = contact && (contact.name || contact.surname) ? `${contact.name} ${contact.surname}`.trim() : client.name;
-  const twrYtd = calculateTWR(yearRows).twr;
-  const twrMonthly = calculateAllMonthsTWR(yearRows);
+  const twrYtd = calculateTWR(periodRows).twr;
+  const twrMonthly = calculateAllMonthsTWR(periodRows);
 
   return {
     id: client.id,
@@ -102,7 +112,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       .filter((year) => Number.isFinite(year))
       .sort((a, b) => a - b);
   }, [finalByDay, snapshot.clientRowsById, monthlyHistoryByClient]);
-  const [selectedYear, setSelectedYear] = useState<number>(latestYearWithData);
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [multiMode, setMultiMode] = useState(false);
@@ -111,14 +121,16 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
 
   useEffect(() => {
     if (availableYears.length === 0) {
-      if (selectedYear !== YEAR) setSelectedYear(YEAR);
+      if (selectedYear !== 'all') setSelectedYear('all');
       return;
     }
 
-    if (!availableYears.includes(selectedYear)) {
-      setSelectedYear(availableYears[availableYears.length - 1]);
+    if (selectedYear !== 'all' && !availableYears.includes(selectedYear)) {
+      setSelectedYear('all');
     }
   }, [availableYears, selectedYear]);
+
+  const selectedPeriodLabel = selectedYear === 'all' ? 'Historico completo' : String(selectedYear);
 
   const formatDate = (iso: string) => {
     const [y, m, d] = iso.split('-');
@@ -127,8 +139,8 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
 
   const clientData = useMemo(() => {
     if (!selectedClient) return null;
-    return buildClientReportData(selectedClient, selectedYear, contacts, snapshot, monthlyHistoryByClient);
-  }, [selectedClient, selectedYear, snapshot, contacts, monthlyHistoryByClient]);
+    return buildClientReportData(selectedClient, selectedYear, availableYears, contacts, snapshot, monthlyHistoryByClient);
+  }, [selectedClient, selectedYear, availableYears, snapshot, contacts, monthlyHistoryByClient]);
 
   const monthlyChart = useMemo(() => clientData?.monthlyStats ?? [], [clientData]);
   const patrimonioChart = useMemo(() => clientData?.patrimonioEvolution ?? [], [clientData]);
@@ -324,7 +336,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
         // Month label
         doc.setFontSize(7);
         doc.setTextColor(100, 100, 100);
-        doc.text(m.month, barX + barWidth / 2, y + chartHeight + 5, { align: 'center' });
+        doc.text(m.monthLabel, barX + barWidth / 2, y + chartHeight + 5, { align: 'center' });
       });
 
       y += chartHeight + 20;
@@ -361,7 +373,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
         // Mes
         doc.setTextColor(60, 60, 60);
         doc.setFontSize(9);
-        doc.text(m.month, colX[0] + 4, y);
+        doc.text(m.monthLabel, colX[0] + 4, y);
         // Beneficio
         doc.setTextColor(m.hasData ? (m.profit >= 0 ? 5 : 220) : 100, m.hasData ? (m.profit >= 0 ? 150 : 38) : 100, m.hasData ? (m.profit >= 0 ? 105 : 38) : 100);
         doc.text(m.hasData ? formatCurrency(m.profit) : '-', colX[1] + 4, y);
@@ -444,7 +456,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
         const x = margin + 8 + (i / 11) * (chartWidth - 16);
         doc.setFontSize(7);
         doc.setTextColor(p.hasData ? 60 : 160, p.hasData ? 60 : 160, p.hasData ? 60 : 160);
-        doc.text(p.month, x, y + chartHeight + 6, { align: 'center' });
+        doc.text(p.monthLabel, x, y + chartHeight + 6, { align: 'center' });
       });
 
       y += chartHeight + 18;
@@ -570,14 +582,14 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       rentabilidadUltimoMes: clientData.rentabilidadUltimoMes ?? 0,
       twrYtd: clientData.twrYtd ?? 0,
       monthlyStats: clientData.monthlyStats.map(m => ({
-        month: m.month,
+        month: m.monthLabel,
         profit: m.profit ?? 0,
         profitPct: m.profitPct ?? 0,
         endBalance: m.endBalance ?? 0,
         hasData: m.hasData ?? false
       })),
       patrimonioEvolution: clientData.patrimonioEvolution.map(p => ({
-        month: p.month,
+        month: p.monthLabel,
         balance: p.balance ?? 0,
         hasData: p.hasData ?? false
       })),
@@ -660,8 +672,12 @@ Su gestor de inversiones`
               <select
                 id="report-year-select"
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(Number.parseInt(e.target.value, 10))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSelectedYear(value === 'all' ? 'all' : Number.parseInt(value, 10));
+                }}
               >
+                <option value="all">Todo el historico</option>
                 {availableYears.map((year) => (
                   <option key={year} value={year}>{year}</option>
                 ))}
@@ -743,7 +759,7 @@ Su gestor de inversiones`
                     onClick={async () => {
                       setSendingMultiple(true);
                       for (const clientId of selectedClients) {
-                        const clientDataForEmail = buildClientReportData(clientId, selectedYear, contacts, snapshot, monthlyHistoryByClient);
+                        const clientDataForEmail = buildClientReportData(clientId, selectedYear, availableYears, contacts, snapshot, monthlyHistoryByClient);
                         if (!clientDataForEmail?.contact?.email) continue;
 
                         const token = await saveReportLink({
@@ -759,14 +775,14 @@ Su gestor de inversiones`
                           rentabilidadUltimoMes: clientDataForEmail.rentabilidadUltimoMes ?? 0,
                           twrYtd: clientDataForEmail.twrYtd ?? 0,
                           monthlyStats: clientDataForEmail.monthlyStats.map((m) => ({
-                            month: m.month,
+                            month: m.monthLabel,
                             profit: m.profit ?? 0,
                             profitPct: m.profitPct ?? 0,
                             endBalance: m.endBalance ?? 0,
                             hasData: m.hasData ?? false
                           })),
                           patrimonioEvolution: clientDataForEmail.patrimonioEvolution.map((p) => ({
-                            month: p.month,
+                            month: p.monthLabel,
                             balance: p.balance ?? 0,
                             hasData: p.hasData ?? false
                           })),
@@ -846,7 +862,7 @@ Su gestor de inversiones`
             ? padL + plotW / 2
             : padL + (idx / (patrimonioWithData.length - 1)) * plotW;
           const y = padT + (1 - (value - minAxis) / axisSpan) * plotH;
-          return { x, y, value, month: p.month };
+          return { x, y, value, month: p.monthLabel };
         });
         const patrLinePoints = patrPoints.map((pt) => `${pt.x},${pt.y}`).join(' ');
         const patrAreaPath = patrPoints.length > 1
@@ -911,7 +927,7 @@ Su gestor de inversiones`
 
               <section className="report-pro-panel report-pro-panel-xl">
                 <div className="report-pro-panel-head">
-                  <h4>Rendimiento mensual {selectedYear}</h4>
+                  <h4>Rendimiento mensual {selectedPeriodLabel}</h4>
                   <p>Comparativa de rentabilidad por mes</p>
                 </div>
                 <div
@@ -922,7 +938,7 @@ Su gestor de inversiones`
                     const maxBarHeight = hasNegativeMonth ? 46 : 92;
                     const height = Math.min(maxBarHeight, Math.max(4, (Math.abs(m.profitPct) / maxMonthPct) * maxBarHeight));
                     return (
-                      <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${m.profitPct.toFixed(2)}%`}>
+                      <div key={m.monthKey} className="report-pro-bar-col" title={`${m.monthLabel}: ${m.profitPct.toFixed(2)}%`}>
                         <span className={`report-pro-bar-value ${m.profitPct >= 0 ? 'positive' : 'negative'}`}>{m.profitPct.toFixed(2)}%</span>
                         <div className="report-pro-bar-track">
                           <div
@@ -935,7 +951,7 @@ Su gestor de inversiones`
                             }}
                           />
                         </div>
-                        <span className="report-pro-bar-label">{m.month}</span>
+                        <span className="report-pro-bar-label">{m.monthLabel}</span>
                       </div>
                     );
                   })}
@@ -977,14 +993,14 @@ Su gestor de inversiones`
                   className="report-pro-month-row"
                   style={{ gridTemplateColumns: `repeat(${Math.max(1, patrimonioWithData.length)}, minmax(0, 1fr))` }}
                 >
-                  {patrimonioWithData.map((p) => <span key={p.month}>{p.month}</span>)}
+                  {patrimonioWithData.map((p) => <span key={p.monthLabel}>{p.monthLabel}</span>)}
                 </div>
                 <div
                   className="report-pro-value-row"
                   style={{ gridTemplateColumns: `repeat(${Math.max(1, patrimonioWithData.length)}, minmax(0, 1fr))` }}
                 >
                   {patrimonioWithData.map((p) => (
-                    <span key={`${p.month}-value`}>{formatCurrency(p.balance)}</span>
+                    <span key={`${p.monthLabel}-value`}>{formatCurrency(p.balance)}</span>
                   ))}
                 </div>
               </section>
@@ -1006,8 +1022,8 @@ Su gestor de inversiones`
                     </thead>
                     <tbody>
                       {clientData.monthlyStats.map((m) => (
-                        <tr key={m.month}>
-                          <td>{m.hasData ? m.month : '-'}</td>
+                        <tr key={m.monthKey}>
+                          <td>{m.hasData ? m.monthLabel : '-'}</td>
                           <td className={`text-right ${m.hasData ? (m.profit >= 0 ? 'positive' : 'negative') : ''}`}>
                             {m.hasData ? formatCurrency(m.profit) : '-'}
                           </td>
