@@ -12,6 +12,7 @@ import { YEAR_DAYS } from './dates';
 const monthEndIso = (month: string) => dayjs(`${month}-01`).endOf('month').format('YYYY-MM-DD');
 const normalizeReturnPct = (value?: number) =>
   value === undefined || Number.isNaN(value) ? undefined : Math.abs(value) > 1 ? value / 100 : value;
+const MONTHLY_HISTORY_TOLERANCE = 0.5;
 
 const sumMovements = (records: Record<string, Record<string, Movement>>, iso: string) => {
   let incrementTotal = 0;
@@ -120,6 +121,8 @@ export const buildSnapshot = (
       const prevBalance = clientState[id].balance;
       const actualBase = beyondLastRecorded ? undefined : prevBalance + (increment ?? 0) - (decrement ?? 0);
       const monthlyHistory = historicalByClientAndDay[id]?.[day.iso];
+      const hasCarryBalance = actualBase !== undefined && Math.abs(actualBase) > MONTHLY_HISTORY_TOLERANCE;
+      const isBootstrapMonth = actualBase === undefined || !hasCarryBalance;
 
       let syntheticFlow = 0;
       let baseBalance = actualBase;
@@ -129,13 +132,29 @@ export const buildSnapshot = (
       if (!beyondLastRecorded && monthlyHistory) {
         const normalizedReturn = normalizeReturnPct(monthlyHistory.returnPct);
         if (monthlyHistory.finalBalance !== undefined && normalizedReturn !== undefined && normalizedReturn > -1) {
-          baseBalance = monthlyHistory.finalBalance / (1 + normalizedReturn);
-          syntheticFlow = (baseBalance ?? 0) - (actualBase ?? 0);
+          const derivedBase = monthlyHistory.finalBalance / (1 + normalizedReturn);
+          const derivedDiff = derivedBase - (actualBase ?? 0);
+          const derivedBaseMatchesCarry = Math.abs(derivedDiff) <= MONTHLY_HISTORY_TOLERANCE;
+          if (isBootstrapMonth) {
+            baseBalance = derivedBase;
+            syntheticFlow = derivedDiff;
+            lockedReturnPct = normalizedReturn;
+          } else {
+            baseBalance = actualBase;
+            syntheticFlow = 0;
+            if (derivedBaseMatchesCarry) {
+              lockedReturnPct = normalizedReturn;
+            }
+          }
           lockedCoreFinal = monthlyHistory.finalBalance;
-          lockedReturnPct = normalizedReturn;
         } else if (monthlyHistory.finalBalance !== undefined) {
-          baseBalance = actualBase;
-          syntheticFlow = monthlyHistory.finalBalance - (actualBase ?? 0);
+          if (isBootstrapMonth) {
+            baseBalance = monthlyHistory.finalBalance;
+            syntheticFlow = monthlyHistory.finalBalance - (actualBase ?? 0);
+          } else {
+            baseBalance = actualBase;
+            syntheticFlow = 0;
+          }
           lockedCoreFinal = monthlyHistory.finalBalance;
         } else if (normalizedReturn !== undefined) {
           baseBalance = actualBase;

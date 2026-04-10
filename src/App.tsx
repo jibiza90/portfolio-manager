@@ -1482,6 +1482,20 @@ function normalizeReturnPctValue(value?: number) {
   return Math.abs(value) > 1 ? value / 100 : value;
 }
 
+const MONTHLY_HISTORY_TOLERANCE = 0.5;
+
+function canHonorMonthlyHistoryReturn(baseStart: number | undefined, entry?: MonthlyHistoryEntry) {
+  const normalizedReturn = normalizeReturnPctValue(entry?.returnPct);
+  if (entry?.finalBalance === undefined || normalizedReturn === undefined || normalizedReturn <= -1) {
+    return false;
+  }
+  const derivedBase = entry.finalBalance / (1 + normalizedReturn);
+  if (baseStart === undefined || Math.abs(baseStart) <= MONTHLY_HISTORY_TOLERANCE) {
+    return true;
+  }
+  return Math.abs(derivedBase - baseStart) <= MONTHLY_HISTORY_TOLERANCE;
+}
+
 function hasMonthlyHistoryValue(entry?: MonthlyHistoryEntry) {
   return !!entry && (entry.finalBalance !== undefined || entry.returnPct !== undefined);
 }
@@ -1784,6 +1798,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     const months = Array.from(byMonth.keys()).sort();
     const monthly = months.map((month) => {
       const historyEntry = monthlyHistory[month];
+      const historyFinal = historyEntry?.finalBalance;
       const normalizedHistoryReturn = normalizeReturnPctValue(historyEntry?.returnPct);
       const entry = byMonth.get(month)!;
       let profit = entry.profit;
@@ -1801,16 +1816,19 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
           baseStart = Math.max(1, finalEnd - profit);
         }
       }
-      if (historyEntry?.finalBalance !== undefined) {
-        finalEnd = historyEntry.finalBalance;
+      if (historyFinal !== undefined) {
+        finalEnd = historyFinal;
       }
-      if (historyEntry?.finalBalance !== undefined && normalizedHistoryReturn !== undefined && normalizedHistoryReturn > -1) {
-        baseStart = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
-        profit = historyEntry.finalBalance - baseStart;
+      const canUseHistoryReturn = canHonorMonthlyHistoryReturn(baseStart, historyEntry);
+      if (canUseHistoryReturn && normalizedHistoryReturn !== undefined && historyFinal !== undefined) {
+        baseStart = historyFinal / (1 + normalizedHistoryReturn);
+        profit = historyFinal - baseStart;
       }
       let retPct = normalizedHistoryReturn ?? 0;
-      if (normalizedHistoryReturn === undefined && baseStart && baseStart > 0) {
-        retPct = profit / baseStart;
+      if (!canUseHistoryReturn || normalizedHistoryReturn === undefined) {
+        retPct = baseStart && baseStart > 0 ? profit / baseStart : 0;
+      } else if (baseStart && baseStart > 0) {
+        retPct = normalizedHistoryReturn;
       }
       return { month, profit, retPct, finalEnd, baseStart };
     });
@@ -3704,11 +3722,7 @@ function InfoClientes({
     const monthRows = lastMonthIso ? summaryRows.filter((r) => r.iso.startsWith(lastMonthIso)) : [];
     const lastMonthHistory = lastMonthIso ? selectedMonthlyHistory[lastMonthIso] : undefined;
     const normalizedLastMonthReturn = normalizeReturnPctValue(lastMonthHistory?.returnPct);
-    const historyMonthlyProfit =
-      lastMonthHistory?.finalBalance !== undefined && normalizedLastMonthReturn !== undefined && normalizedLastMonthReturn > -1
-        ? lastMonthHistory.finalBalance - lastMonthHistory.finalBalance / (1 + normalizedLastMonthReturn)
-        : undefined;
-    const monthlyProfit = historyMonthlyProfit ?? monthRows.reduce((s, r) => s + (r.profit || 0), 0);
+    const calculatedMonthlyProfit = monthRows.reduce((s, r) => s + (r.profit || 0), 0);
     const lastFinalInMonth = [...monthRows].reverse().find((r) => r.finalBalance !== undefined && r.finalBalance > 0)?.finalBalance;
     // Buscar baseBalance > 0
     const firstValidBase = monthRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0)?.baseBalance;
@@ -3717,9 +3731,19 @@ function InfoClientes({
       const prev = [...summaryRows].reverse().find((r) => r.iso < `${lastMonthIso}-01` && r.finalBalance !== undefined && r.finalBalance > 0);
       return prev?.finalBalance;
     })();
-    const estimatedBase = lastFinalInMonth !== undefined ? Math.max(1, lastFinalInMonth - monthlyProfit) : 0;
+    const estimatedBase = lastFinalInMonth !== undefined ? Math.max(1, lastFinalInMonth - calculatedMonthlyProfit) : 0;
     const monthStart = firstValidBase ?? prevMonthFinal ?? firstValidFinal ?? estimatedBase;
-    const monthlyReturn = normalizedLastMonthReturn ?? (monthStart ? monthlyProfit / monthStart : 0);
+    const canUseHistoryReturn = canHonorMonthlyHistoryReturn(monthStart, lastMonthHistory);
+    const monthlyProfit =
+      canUseHistoryReturn && lastMonthHistory?.finalBalance !== undefined && normalizedLastMonthReturn !== undefined
+        ? lastMonthHistory.finalBalance - lastMonthHistory.finalBalance / (1 + normalizedLastMonthReturn)
+        : calculatedMonthlyProfit;
+    const monthlyReturn =
+      canUseHistoryReturn && normalizedLastMonthReturn !== undefined
+        ? normalizedLastMonthReturn
+        : monthStart
+          ? monthlyProfit / monthStart
+          : 0;
 
     const proportion = snapshot.totals.assets ? estimatedBalance / snapshot.totals.assets : 0;
 
@@ -3761,12 +3785,13 @@ function InfoClientes({
           base = Math.max(1, lastFinal - profit);
         }
       }
-      if (historyEntry?.finalBalance !== undefined && normalizedHistoryReturn !== undefined && normalizedHistoryReturn > -1) {
+      const canUseHistoryReturn = canHonorMonthlyHistoryReturn(base, historyEntry);
+      if (canUseHistoryReturn && historyEntry?.finalBalance !== undefined && normalizedHistoryReturn !== undefined) {
         base = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
         profit = historyEntry.finalBalance - base;
       }
       base = base ?? 0;
-      const ret = normalizedHistoryReturn ?? (base ? profit / base : 0);
+      const ret = canUseHistoryReturn && normalizedHistoryReturn !== undefined ? normalizedHistoryReturn : base ? profit / base : 0;
       return { month: m, label: monthLabel(m), profit, ret };
     });
   }, [summaryRows, selectedMonthlyHistory]);
