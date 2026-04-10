@@ -12,7 +12,11 @@ import { useFocusDate } from './hooks/useFocusDate';
 import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
-import type { MonthlyHistoryEntry } from './types';
+import {
+  canHonorMonthlyHistoryReturn,
+  hasMonthlyHistoryValue,
+  normalizeMonthlyReturnPct as normalizeReturnPctValue
+} from './utils/monthlyHistory';
 import {
   fetchClientAccessProfile,
   isValidLoginId,
@@ -280,7 +284,8 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
       .sort((a, b) => (a.month > b.month ? 1 : -1))
       .map((m) => ({
         ...m,
-        returnPct: m.start !== 0 ? m.profit / m.start : 0,
+        simpleReturnPct: m.start !== 0 ? m.profit / m.start : 0,
+        returnPct: twrMonthMap.get(m.month) ?? (m.start !== 0 ? m.profit / m.start : 0),
         hitRate: m.days > 0 ? m.positiveDays / m.days : 0,
         twr: twrMonthMap.get(m.month) ?? 0
       }));
@@ -733,7 +738,7 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
                 <button key={m.month} className="stats-heat-cell" style={{ background: bg }} onClick={() => setSelectedMonth(m.month)}>
                   <span>{monthLabel(m.month)}</span>
                   <strong>{formatPercent(m.returnPct)}</strong>
-                  <small>TWR {formatPercent(m.twr)}</small>
+                  <small>Simple {formatPercent(m.simpleReturnPct)}</small>
                 </button>
               );
             })}
@@ -1475,29 +1480,6 @@ function monthLabel(isoMonth: string): string {
   const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const [year, month] = isoMonth.split('-');
   return `${months[parseInt(month) - 1]} ${year}`;
-}
-
-function normalizeReturnPctValue(value?: number) {
-  if (value === undefined || Number.isNaN(value)) return undefined;
-  return Math.abs(value) > 1 ? value / 100 : value;
-}
-
-const MONTHLY_HISTORY_TOLERANCE = 0.5;
-
-function canHonorMonthlyHistoryReturn(baseStart: number | undefined, entry?: MonthlyHistoryEntry) {
-  const normalizedReturn = normalizeReturnPctValue(entry?.returnPct);
-  if (entry?.finalBalance === undefined || normalizedReturn === undefined || normalizedReturn <= -1) {
-    return false;
-  }
-  const derivedBase = entry.finalBalance / (1 + normalizedReturn);
-  if (baseStart === undefined || Math.abs(baseStart) <= MONTHLY_HISTORY_TOLERANCE) {
-    return true;
-  }
-  return Math.abs(derivedBase - baseStart) <= MONTHLY_HISTORY_TOLERANCE;
-}
-
-function hasMonthlyHistoryValue(entry?: MonthlyHistoryEntry) {
-  return !!entry && (entry.finalBalance !== undefined || entry.returnPct !== undefined);
 }
 
 function formatClientDisplayName(clientId: string, contacts: Record<string, ContactInfo>) {

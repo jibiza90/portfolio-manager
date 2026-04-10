@@ -1,17 +1,77 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CLIENTS } from '../constants/clients';
 import { usePortfolioStore } from '../store/portfolio';
 import { formatCurrency, formatPercent } from '../utils/format';
 import { getYearFromIso, YEAR } from '../utils/dates';
 import { buildReportUrl, saveReportLink } from '../services/reportLinks';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
+import { buildMonthlyStatsForYear } from '../utils/monthlyHistory';
 
 type ContactInfo = { name: string; surname: string; email: string; phone: string };
 type Movement = { iso: string; type: 'increment' | 'decrement'; amount: number; balance: number };
 
+function buildClientReportData(
+  clientId: string,
+  year: number,
+  contacts: Record<string, ContactInfo>,
+  snapshot: ReturnType<typeof usePortfolioStore.getState>['snapshot'],
+  monthlyHistoryByClient: ReturnType<typeof usePortfolioStore.getState>['monthlyHistoryByClient']
+) {
+  const client = CLIENTS.find((entry) => entry.id === clientId);
+  if (!client) return null;
+
+  const rows = snapshot.clientRowsById[clientId] || [];
+  const yearRows = rows.filter((row) => row.iso.startsWith(`${year}-`));
+  const incrementos = yearRows.reduce((sum, row) => sum + (row.increment || 0), 0);
+  const decrementos = yearRows.reduce((sum, row) => sum + (row.decrement || 0), 0);
+  const validRows = [...yearRows].reverse();
+  const lastWithFinal = validRows.find((row) => row.finalBalance !== undefined && row.finalBalance > 0);
+  const lastWithBase = validRows.find((row) => row.baseBalance !== undefined && row.baseBalance > 0);
+  const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
+  const beneficioTotal = saldo + decrementos - incrementos;
+  const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
+
+  const monthlyHistory = monthlyHistoryByClient[clientId] ?? {};
+  const { monthlyStats, patrimonioEvolution, lastMonth } = buildMonthlyStatsForYear(rows, monthlyHistory, year);
+
+  const movements: Movement[] = [];
+  [...yearRows].sort((a, b) => a.iso.localeCompare(b.iso)).forEach((row) => {
+    if (row.increment && row.increment > 0) {
+      movements.push({ iso: row.iso, type: 'increment', amount: row.increment, balance: row.finalBalance || 0 });
+    }
+    if (row.decrement && row.decrement > 0) {
+      movements.push({ iso: row.iso, type: 'decrement', amount: row.decrement, balance: row.finalBalance || 0 });
+    }
+  });
+
+  const contact = contacts[clientId];
+  const displayName = contact && (contact.name || contact.surname) ? `${contact.name} ${contact.surname}`.trim() : client.name;
+  const twrYtd = calculateTWR(yearRows).twr;
+  const twrMonthly = calculateAllMonthsTWR(yearRows);
+
+  return {
+    id: client.id,
+    code: client.name,
+    name: displayName,
+    contact,
+    incrementos,
+    decrementos,
+    saldo,
+    beneficioTotal,
+    rentabilidad,
+    monthlyStats,
+    movements,
+    patrimonioEvolution,
+    beneficioUltimoMes: lastMonth?.profit ?? 0,
+    rentabilidadUltimoMes: lastMonth?.profitPct ?? 0,
+    twrYtd,
+    twrMonthly
+  };
+}
+
 export function InformesView({ contacts }: { contacts: Record<string, ContactInfo> }) {
-  const { snapshot, finalByDay } = usePortfolioStore();
-  const activeYear = useMemo(() => {
+  const { snapshot, finalByDay, monthlyHistoryByClient } = usePortfolioStore();
+  const latestYearWithData = useMemo(() => {
     const finalDates = Object.entries(finalByDay)
       .filter(([, value]) => value !== undefined && !Number.isNaN(value))
       .map(([iso]) => iso)
@@ -27,11 +87,38 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
 
     return rowDates.length > 0 ? getYearFromIso(rowDates[rowDates.length - 1]) : YEAR;
   }, [snapshot.clientRowsById, finalByDay]);
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+
+    Object.keys(finalByDay).forEach((iso) => years.add(getYearFromIso(iso)));
+    Object.values(snapshot.clientRowsById).forEach((rows) => {
+      rows.forEach((row) => years.add(getYearFromIso(row.iso)));
+    });
+    Object.values(monthlyHistoryByClient).forEach((months) => {
+      Object.keys(months).forEach((monthKey) => years.add(Number.parseInt(monthKey.slice(0, 4), 10)));
+    });
+
+    return Array.from(years)
+      .filter((year) => Number.isFinite(year))
+      .sort((a, b) => a - b);
+  }, [finalByDay, snapshot.clientRowsById, monthlyHistoryByClient]);
+  const [selectedYear, setSelectedYear] = useState<number>(latestYearWithData);
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [multiMode, setMultiMode] = useState(false);
   const [sendingMultiple, setSendingMultiple] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (availableYears.length === 0) {
+      if (selectedYear !== YEAR) setSelectedYear(YEAR);
+      return;
+    }
+
+    if (!availableYears.includes(selectedYear)) {
+      setSelectedYear(availableYears[availableYears.length - 1]);
+    }
+  }, [availableYears, selectedYear]);
 
   const formatDate = (iso: string) => {
     const [y, m, d] = iso.split('-');
@@ -40,143 +127,9 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
 
   const clientData = useMemo(() => {
     if (!selectedClient) return null;
-    const client = CLIENTS.find((c) => c.id === selectedClient);
-    if (!client) return null;
+    return buildClientReportData(selectedClient, selectedYear, contacts, snapshot, monthlyHistoryByClient);
+  }, [selectedClient, selectedYear, snapshot, contacts, monthlyHistoryByClient]);
 
-    const rows = snapshot.clientRowsById[selectedClient] || [];
-    const yearRows = rows.filter((r) => r.iso.startsWith(`${activeYear}-`));
-    const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
-    const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
-    const validRows = [...yearRows].reverse();
-    const lastWithFinal = validRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0);
-    const lastWithBase = validRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0);
-    const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
-    const beneficioTotal = saldo + decrementos - incrementos;
-    const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
-
-    // Monthly stats - MISMO CÁLCULO QUE ClientPanel analytics
-    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number }>();
-    let lastKnownFinal: number | undefined;
-
-    yearRows.forEach((r) => {
-      const month = r.iso.slice(0, 7);
-      if (!byMonth.has(month)) {
-        byMonth.set(month, { profit: 0, baseStart: undefined, finalEnd: undefined });
-      }
-      const entry = byMonth.get(month)!;
-      if (r.profit !== undefined) entry.profit += r.profit;
-      if (entry.baseStart === undefined && r.baseBalance !== undefined && r.baseBalance > 0) entry.baseStart = r.baseBalance;
-      if (r.finalBalance !== undefined && r.finalBalance > 0) {
-        entry.finalEnd = r.finalBalance;
-        lastKnownFinal = r.finalBalance;
-      }
-    });
-
-    const monthKeys = Array.from(byMonth.keys()).sort();
-    const monthlyStats: { month: string; monthNum: number; profit: number; profitPct: number; endBalance: number; hasData: boolean }[] = [];
-
-    monthKeys.forEach((monthKey) => {
-      const entry = byMonth.get(monthKey)!;
-      const { profit, finalEnd } = entry;
-      let { baseStart } = entry;
-      
-      // Fallback si baseStart es undefined o 0
-      if (baseStart === undefined || baseStart === 0) {
-        const idx = monthKeys.indexOf(monthKey);
-        if (idx > 0) {
-          baseStart = byMonth.get(monthKeys[idx - 1])?.finalEnd;
-        }
-      }
-      if (baseStart === undefined || baseStart === 0) {
-        if (finalEnd !== undefined && finalEnd > 0) {
-          baseStart = Math.max(1, finalEnd - profit);
-        }
-      }
-      
-      let retPct = 0;
-      if (baseStart && baseStart > 0) {
-        retPct = (profit / baseStart) * 100;
-      }
-      
-      const monthNum = parseInt(monthKey.slice(5, 7));
-      monthlyStats.push({
-        month: monthNames[monthNum - 1],
-        monthNum,
-        profit,
-        profitPct: retPct,
-        endBalance: finalEnd ?? 0,
-        hasData: true
-      });
-    });
-
-    // Rellenar meses sin datos con guion (sin datos reales)
-    for (let m = 1; m <= 12; m++) {
-      if (!monthlyStats.find((ms) => ms.monthNum === m)) {
-        monthlyStats.push({ month: monthNames[m - 1], monthNum: m, profit: 0, profitPct: 0, endBalance: 0, hasData: false });
-      }
-    }
-    monthlyStats.sort((a, b) => a.monthNum - b.monthNum);
-
-    // Evolución patrimonio - MISMO CÁLCULO QUE ClientPanel
-    let running = lastKnownFinal;
-    const patrimonioEvolution: { month: string; balance?: number; hasData: boolean }[] = [];
-    for (let m = 1; m <= 12; m++) {
-      const key = `${activeYear}-${m.toString().padStart(2, '0')}`;
-      const entry = byMonth.get(key);
-      if (entry?.finalEnd !== undefined) {
-        running = entry.finalEnd;
-        patrimonioEvolution.push({ month: monthNames[m - 1], balance: running, hasData: true });
-      } else {
-        patrimonioEvolution.push({ month: monthNames[m - 1], balance: undefined, hasData: false });
-      }
-    }
-
-    // Movements (incrementos y decrementos)
-    const movements: Movement[] = [];
-    yearRows.sort((a, b) => a.iso.localeCompare(b.iso)).forEach((r) => {
-      if (r.increment && r.increment > 0) {
-        movements.push({ iso: r.iso, type: 'increment', amount: r.increment, balance: r.finalBalance || 0 });
-      }
-      if (r.decrement && r.decrement > 0) {
-        movements.push({ iso: r.iso, type: 'decrement', amount: r.decrement, balance: r.finalBalance || 0 });
-      }
-    });
-
-    const ct = contacts[selectedClient];
-    const displayName = ct && (ct.name || ct.surname) ? `${ct.name} ${ct.surname}`.trim() : client.name;
-
-    // Calcular TWR
-    const twrYtd = calculateTWR(yearRows);
-    const twrMonthly = calculateAllMonthsTWR(yearRows);
-
-    // Último mes
-    const monthlyWithData = monthlyStats.filter((m) => m.hasData && (m.profit !== 0 || m.profitPct !== 0 || m.endBalance !== 0));
-    const lastMonth = monthlyWithData.length > 0 ? monthlyWithData[monthlyWithData.length - 1] : null;
-    const beneficioUltimoMes = lastMonth?.profit ?? 0;
-    const rentabilidadUltimoMes = lastMonth?.profitPct ?? 0;
-
-    return {
-      id: client.id,
-      code: client.name,
-      name: displayName,
-      contact: ct,
-      incrementos,
-      decrementos,
-      saldo,
-      beneficioTotal,
-      rentabilidad,
-      monthlyStats,
-      movements,
-      patrimonioEvolution,
-      beneficioUltimoMes,
-      rentabilidadUltimoMes,
-      twrYtd: twrYtd.twr,
-      twrMonthly
-    };
-  }, [selectedClient, snapshot, contacts, activeYear]);
-
-  // Datos filtrados (solo meses con datos) para gráficos/tablas en preview
   const monthlyChart = useMemo(() => clientData?.monthlyStats ?? [], [clientData]);
   const patrimonioChart = useMemo(() => clientData?.patrimonioEvolution ?? [], [clientData]);
 
@@ -701,6 +654,20 @@ Su gestor de inversiones`
               </select>
             </div>
           </div>
+          <div className="selector-row">
+            <label htmlFor="report-year-select">Año del informe</label>
+            <div className="select-wrapper">
+              <select
+                id="report-year-select"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number.parseInt(e.target.value, 10))}
+              >
+                {availableYears.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         <div className="informes-multi glass-card report-pro-control-card">
@@ -776,132 +743,34 @@ Su gestor de inversiones`
                     onClick={async () => {
                       setSendingMultiple(true);
                       for (const clientId of selectedClients) {
-                        const client = CLIENTS.find((c) => c.id === clientId);
-                        if (!client) continue;
-                        const ct = contacts[clientId];
-                        if (!ct?.email) continue;
-
-                        const rows = snapshot.clientRowsById[clientId] || [];
-                        const yearRows = rows.filter((r) => r.iso.startsWith(`${activeYear}-`));
-                        const incrementos = yearRows.reduce((s, r) => s + (r.increment || 0), 0);
-                        const decrementos = yearRows.reduce((s, r) => s + (r.decrement || 0), 0);
-                        const validRows = [...yearRows].reverse();
-                        const lastWithFinal = validRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0);
-                        const lastWithBase = validRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0);
-                        const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
-                        const beneficioTotal = saldo + decrementos - incrementos;
-                        const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
-
-                        // Build full report details (same depth as single-send flow)
-                        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                        const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number }>();
-                        let lastKnownFinal: number | undefined;
-
-                        yearRows.forEach((r) => {
-                          const month = r.iso.slice(0, 7);
-                          if (!byMonth.has(month)) {
-                            byMonth.set(month, { profit: 0, baseStart: undefined, finalEnd: undefined });
-                          }
-                          const entry = byMonth.get(month)!;
-                          if (r.profit !== undefined) entry.profit += r.profit;
-                          if (entry.baseStart === undefined && r.baseBalance !== undefined && r.baseBalance > 0) entry.baseStart = r.baseBalance;
-                          if (r.finalBalance !== undefined && r.finalBalance > 0) {
-                            entry.finalEnd = r.finalBalance;
-                            lastKnownFinal = r.finalBalance;
-                          }
-                        });
-
-                        const monthKeys = Array.from(byMonth.keys()).sort();
-                        const monthlyStats: { month: string; monthNum: number; profit: number; profitPct: number; endBalance: number; hasData: boolean }[] = [];
-
-                        monthKeys.forEach((monthKey) => {
-                          const entry = byMonth.get(monthKey)!;
-                          const { profit, finalEnd } = entry;
-                          let { baseStart } = entry;
-
-                          if (baseStart === undefined || baseStart === 0) {
-                            const idx = monthKeys.indexOf(monthKey);
-                            if (idx > 0) baseStart = byMonth.get(monthKeys[idx - 1])?.finalEnd;
-                          }
-                          if ((baseStart === undefined || baseStart === 0) && finalEnd !== undefined && finalEnd > 0) {
-                            baseStart = Math.max(1, finalEnd - profit);
-                          }
-
-                          const retPct = baseStart && baseStart > 0 ? (profit / baseStart) * 100 : 0;
-                          const monthNum = parseInt(monthKey.slice(5, 7));
-                          monthlyStats.push({
-                            month: monthNames[monthNum - 1],
-                            monthNum,
-                            profit,
-                            profitPct: retPct,
-                            endBalance: finalEnd ?? 0,
-                            hasData: true
-                          });
-                        });
-
-                        for (let m = 1; m <= 12; m++) {
-                          if (!monthlyStats.find((ms) => ms.monthNum === m)) {
-                            monthlyStats.push({ month: monthNames[m - 1], monthNum: m, profit: 0, profitPct: 0, endBalance: 0, hasData: false });
-                          }
-                        }
-                        monthlyStats.sort((a, b) => a.monthNum - b.monthNum);
-
-                        const patrimonioEvolution: { month: string; balance?: number; hasData: boolean }[] = [];
-                        let running = lastKnownFinal;
-                        for (let m = 1; m <= 12; m++) {
-                          const key = `${activeYear}-${m.toString().padStart(2, '0')}`;
-                          const entry = byMonth.get(key);
-                          if (entry?.finalEnd !== undefined) {
-                            running = entry.finalEnd;
-                            patrimonioEvolution.push({ month: monthNames[m - 1], balance: running, hasData: true });
-                          } else {
-                            patrimonioEvolution.push({ month: monthNames[m - 1], balance: undefined, hasData: false });
-                          }
-                        }
-
-                        const movements: Movement[] = [];
-                        [...yearRows].sort((a, b) => a.iso.localeCompare(b.iso)).forEach((r) => {
-                          if (r.increment && r.increment > 0) {
-                            movements.push({ iso: r.iso, type: 'increment', amount: r.increment, balance: r.finalBalance || 0 });
-                          }
-                          if (r.decrement && r.decrement > 0) {
-                            movements.push({ iso: r.iso, type: 'decrement', amount: r.decrement, balance: r.finalBalance || 0 });
-                          }
-                        });
-
-                        const twrYtd = calculateTWR(yearRows).twr;
-                        const monthlyWithData = monthlyStats.filter((m) => m.hasData && (m.profit !== 0 || m.profitPct !== 0 || m.endBalance !== 0));
-                        const lastMonth = monthlyWithData.length > 0 ? monthlyWithData[monthlyWithData.length - 1] : null;
-                        const beneficioUltimoMes = lastMonth?.profit ?? 0;
-                        const rentabilidadUltimoMes = lastMonth?.profitPct ?? 0;
-
-                        const displayName = ct && (ct.name || ct.surname) ? `${ct.name} ${ct.surname}`.trim() : client.name;
+                        const clientDataForEmail = buildClientReportData(clientId, selectedYear, contacts, snapshot, monthlyHistoryByClient);
+                        if (!clientDataForEmail?.contact?.email) continue;
 
                         const token = await saveReportLink({
-                          clientId: client.id,
-                          clientName: displayName,
-                          clientCode: client.name,
-                          incrementos: incrementos ?? 0,
-                          decrementos: decrementos ?? 0,
-                          saldo: saldo ?? 0,
-                          beneficioTotal: beneficioTotal ?? 0,
-                          rentabilidad: rentabilidad ?? 0,
-                          beneficioUltimoMes: beneficioUltimoMes ?? 0,
-                          rentabilidadUltimoMes: rentabilidadUltimoMes ?? 0,
-                          twrYtd: twrYtd ?? 0,
-                          monthlyStats: monthlyStats.map((m) => ({
+                          clientId: clientDataForEmail.id,
+                          clientName: clientDataForEmail.name,
+                          clientCode: clientDataForEmail.code,
+                          incrementos: clientDataForEmail.incrementos ?? 0,
+                          decrementos: clientDataForEmail.decrementos ?? 0,
+                          saldo: clientDataForEmail.saldo ?? 0,
+                          beneficioTotal: clientDataForEmail.beneficioTotal ?? 0,
+                          rentabilidad: clientDataForEmail.rentabilidad ?? 0,
+                          beneficioUltimoMes: clientDataForEmail.beneficioUltimoMes ?? 0,
+                          rentabilidadUltimoMes: clientDataForEmail.rentabilidadUltimoMes ?? 0,
+                          twrYtd: clientDataForEmail.twrYtd ?? 0,
+                          monthlyStats: clientDataForEmail.monthlyStats.map((m) => ({
                             month: m.month,
                             profit: m.profit ?? 0,
                             profitPct: m.profitPct ?? 0,
                             endBalance: m.endBalance ?? 0,
                             hasData: m.hasData ?? false
                           })),
-                          patrimonioEvolution: patrimonioEvolution.map((p) => ({
+                          patrimonioEvolution: clientDataForEmail.patrimonioEvolution.map((p) => ({
                             month: p.month,
                             balance: p.balance ?? 0,
                             hasData: p.hasData ?? false
                           })),
-                          movements: movements.map((m) => ({
+                          movements: clientDataForEmail.movements.map((m) => ({
                             iso: m.iso,
                             type: m.type,
                             amount: m.amount ?? 0,
@@ -912,23 +781,20 @@ Su gestor de inversiones`
                         const baseUrl = `${window.location.origin}${window.location.pathname}`;
                         const reportUrl = buildReportUrl(baseUrl, token);
                         const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-                        const to = encodeURIComponent(ct.email);
-                        const subject = encodeURIComponent(`Informe de Inversion - ${client.name} - ${fecha}`);
+                        const to = encodeURIComponent(clientDataForEmail.contact.email);
+                        const subject = encodeURIComponent(`Informe de Inversion - ${clientDataForEmail.code} - ${fecha}`);
                         const body = encodeURIComponent(
-`Estimado/a ${ct.name || 'cliente'},
+`Estimado/a ${clientDataForEmail.contact.name || 'cliente'},
 
 Le envio su Informe de Inversion actualizado a fecha ${fecha}.
 
-Resumen:
-- Capital invertido: ${formatCurrency(incrementos)}
-- Saldo actual: ${formatCurrency(saldo)}
-- Beneficio total: ${formatCurrency(beneficioTotal)}
-- Rentabilidad: ${rentabilidad.toFixed(2)}%
+Puede acceder a su informe completo y seguro desde el siguiente enlace:
 
-Acceder al informe:
 ${reportUrl}
 
-Este enlace caduca en 24 horas.
+IMPORTANTE: Este enlace es confidencial y caduca en 24 horas. Por favor, descargue o imprima el informe antes de esa fecha.
+
+Si tiene alguna pregunta sobre su inversion, no dude en contactarme.
 
 Atentamente,
 Su gestor de inversiones`
@@ -936,7 +802,6 @@ Su gestor de inversiones`
 
                         const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`;
                         window.open(gmailUrl, '_blank');
-                        await new Promise((r) => setTimeout(r, 500));
                       }
                       setSendingMultiple(false);
                       setSelectedClients([]);
@@ -1046,7 +911,7 @@ Su gestor de inversiones`
 
               <section className="report-pro-panel report-pro-panel-xl">
                 <div className="report-pro-panel-head">
-                  <h4>Rendimiento mensual {activeYear}</h4>
+                  <h4>Rendimiento mensual {selectedYear}</h4>
                   <p>Comparativa de rentabilidad por mes</p>
                 </div>
                 <div
