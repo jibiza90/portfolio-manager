@@ -46,10 +46,13 @@ const initialSnapshot = buildSnapshot(
 );
 let syncOverviewTimer: ReturnType<typeof setTimeout> | null = null;
 
-const queueOverviewSync = (snapshot: PortfolioSnapshot) => {
+const queueOverviewSync = (
+  snapshot: PortfolioSnapshot,
+  monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>
+) => {
   if (syncOverviewTimer) clearTimeout(syncOverviewTimer);
   syncOverviewTimer = setTimeout(() => {
-    void syncClientOverviews(snapshot, CLIENTS).catch((error) => {
+    void syncClientOverviews(snapshot, CLIENTS, monthlyHistoryByClient).catch((error) => {
       console.error('No se pudieron sincronizar los resúmenes de clientes', error);
     });
     syncOverviewTimer = null;
@@ -63,7 +66,7 @@ const persistCurrentState = () => {
   savePortfolioState({ finalByDay, movementsByClient, monthlyHistoryByClient })
     .then(() => {
       usePortfolioStore.setState({ saveStatus: 'success', lastSavedAt: Date.now() });
-      queueOverviewSync(snapshot);
+      queueOverviewSync(snapshot, monthlyHistoryByClient);
     })
     .catch((error) => {
       console.error('Error guardando portfolio', error);

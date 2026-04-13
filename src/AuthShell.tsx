@@ -45,7 +45,7 @@ interface ClientOverview {
   ytdReturnPct: number;
   latestProfitMonth?: { month: string; profit: number; retPct: number } | null;
   latestReturnMonth?: { month: string; profit: number; retPct: number } | null;
-  monthly?: Array<{ month: string; profit: number; retPct: number }>;
+  monthly?: Array<{ month: string; profit: number; retPct: number; endBalance?: number }>;
   twrYtd?: number;
   twrMonthly?: Array<{ month: string; twr: number; periods: Array<unknown> }>;
   updatedAt: number;
@@ -821,7 +821,13 @@ const ClientPortal = ({
   const monthlyRaw = overview?.monthly ?? [];
   const twrMonthlyRaw = overview?.twrMonthly ?? [];
   const monthly = useMemo(
-    () => monthlyRaw.filter((item) => Math.abs(item.profit) > 0.0001 || Math.abs(item.retPct) > 0.0001),
+    () =>
+      monthlyRaw.filter(
+        (item) =>
+          Math.abs(item.profit) > 0.0001 ||
+          Math.abs(item.retPct) > 0.0001 ||
+          Math.abs(item.endBalance ?? 0) > 0.0001
+      ),
     [monthlyRaw]
   );
   const twrMonthly = useMemo(
@@ -2169,13 +2175,14 @@ const AuthShell = () => {
             displayName: user.displayName ?? null,
             error: null
           });
-          void initializePortfolioStore().catch((initError) => {
-            console.error('Admin store init failed', initError);
-          });
-          // Sync in background to avoid blocking admin login UX.
-          void syncClientOverviews(usePortfolioStore.getState().snapshot, CLIENTS).catch((syncError) => {
-            console.error('Background admin sync failed', syncError);
-          });
+          void initializePortfolioStore()
+            .then(() => {
+              const state = usePortfolioStore.getState();
+              return syncClientOverviews(state.snapshot, CLIENTS, state.monthlyHistoryByClient);
+            })
+            .catch((initError) => {
+              console.error('Admin store init failed', initError);
+            });
           return;
         }
 

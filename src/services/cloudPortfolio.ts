@@ -1,6 +1,7 @@
-import { ClientDayRow, PersistedState, PortfolioSnapshot } from '../types';
+import { ClientDayRow, MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
 import { db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { calculateAllMonthsTWR, calculateTWR } from '../utils/twr';
+import { buildMonthlyStatsForMonths } from '../utils/monthlyHistory';
 
 const DOC_PATH = 'portfolio/state';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
@@ -39,47 +40,39 @@ const buildOverviewRows = (snapshot: PortfolioSnapshot, clientId: string) => {
     }));
 };
 
-const buildMonthlyAnalytics = (rows: ClientDayRow[]) => {
-  const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number }>();
+const buildMonthlyAnalytics = (rows: ClientDayRow[], monthlyHistory: Record<string, MonthlyHistoryEntry>) => {
+  const monthKeys = Array.from(new Set([...rows.map((row) => row.iso.slice(0, 7)), ...Object.keys(monthlyHistory)])).sort((a, b) =>
+    a > b ? 1 : -1
+  );
+  const { monthlyStats, lastMonth } = buildMonthlyStatsForMonths(rows, monthlyHistory, monthKeys);
+  const monthly = monthlyStats
+    .filter((item) => item.hasData && (item.profit !== 0 || item.profitPct !== 0 || item.endBalance !== 0))
+    .map((item) => ({
+      month: item.monthKey,
+      profit: item.profit,
+      retPct: item.profitPct / 100,
+      endBalance: item.endBalance
+    }));
 
-  rows.forEach((row) => {
-    const month = row.iso.slice(0, 7);
-    if (!byMonth.has(month)) {
-      byMonth.set(month, { profit: 0, baseStart: undefined, finalEnd: undefined });
-    }
-    const entry = byMonth.get(month)!;
-    if (row.profit !== undefined) entry.profit += row.profit;
-    if (entry.baseStart === undefined && row.baseBalance !== undefined && row.baseBalance > 0) {
-      entry.baseStart = row.baseBalance;
-    }
-    if (row.finalBalance !== undefined && row.finalBalance > 0) {
-      entry.finalEnd = row.finalBalance;
-    }
-  });
-
-  const months = Array.from(byMonth.keys()).sort();
-  return months.map((month, idx) => {
-    const entry = byMonth.get(month)!;
-    const profit = entry.profit;
-    let baseStart = entry.baseStart;
-
-    if ((baseStart === undefined || baseStart === 0) && idx > 0) {
-      baseStart = byMonth.get(months[idx - 1])?.finalEnd;
-    }
-    if ((baseStart === undefined || baseStart === 0) && entry.finalEnd !== undefined && entry.finalEnd > 0) {
-      baseStart = Math.max(1, entry.finalEnd - profit);
-    }
-
-    const retPct = baseStart && baseStart > 0 ? profit / baseStart : 0;
-    return {
-      month,
-      profit,
-      retPct
-    };
-  });
+  return {
+    monthly,
+    latestProfitMonth: [...monthly].reverse().find((item) => item.profit !== 0) ?? monthly[monthly.length - 1] ?? null,
+    latestReturnMonth: lastMonth
+      ? {
+          month: lastMonth.monthKey,
+          profit: lastMonth.profit,
+          retPct: lastMonth.profitPct / 100
+        }
+      : monthly[monthly.length - 1] ?? null
+  };
 };
 
-const buildClientOverview = (snapshot: PortfolioSnapshot, clientId: string, clientName: string) => {
+const buildClientOverview = (
+  snapshot: PortfolioSnapshot,
+  clientId: string,
+  clientName: string,
+  monthlyHistory: Record<string, MonthlyHistoryEntry>
+) => {
   const rows = snapshot.clientRowsById[clientId] ?? [];
   const latestWithBalance = [...rows].reverse().find((row) => row.finalBalance !== undefined || row.baseBalance !== undefined);
   const latestWithProfit = [...rows].reverse().find((row) => row.cumulativeProfit !== undefined || row.profit !== undefined);
@@ -93,10 +86,7 @@ const buildClientOverview = (snapshot: PortfolioSnapshot, clientId: string, clie
   const participation = latestWithShare?.sharePct ?? 0;
   const totalIncrements = rows.reduce((sum, row) => sum + (row.increment ?? 0), 0);
   const totalDecrements = rows.reduce((sum, row) => sum + (row.decrement ?? 0), 0);
-  const monthly = buildMonthlyAnalytics(rows);
-
-  const latestProfitMonth = [...monthly].reverse().find((item) => item.profit !== 0) ?? monthly[monthly.length - 1] ?? null;
-  const latestReturnMonth = [...monthly].reverse().find((item) => item.retPct !== 0) ?? monthly[monthly.length - 1] ?? null;
+  const { monthly, latestProfitMonth, latestReturnMonth } = buildMonthlyAnalytics(rows, monthlyHistory);
 
   const twrYtd = calculateTWR(rows);
   const twrMonthly = calculateAllMonthsTWR(rows);
@@ -140,12 +130,13 @@ export const savePortfolioState = async (state: PersistedState) => {
 
 export const syncClientOverviews = async (
   snapshot: PortfolioSnapshot,
-  clients: Array<{ id: string; name: string }>
+  clients: Array<{ id: string; name: string }>,
+  monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>
 ) => {
   const batch = db.batch();
   clients.forEach((client) => {
     const docRef = db.collection(CLIENT_OVERVIEW_COLLECTION).doc(client.id);
-    batch.set(docRef, buildClientOverview(snapshot, client.id, client.name), { merge: true });
+    batch.set(docRef, buildClientOverview(snapshot, client.id, client.name, monthlyHistoryByClient[client.id] ?? {}), { merge: true });
   });
   await batch.commit();
 };
