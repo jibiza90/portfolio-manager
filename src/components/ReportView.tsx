@@ -509,11 +509,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
       doc.text('FECHA', margin + 4, y);
       doc.text('TIPO', margin + 42, y);
       doc.text('IMPORTE', margin + 84, y);
-      doc.text('SALDO', margin + 126, y);
+      doc.text('CAPITAL NETO', margin + 126, y);
       y += 9;
 
       doc.setFont('helvetica', 'normal');
-      pdfMovements.forEach((mov, i) => {
+      movementCapitalSeries.forEach((mov, i) => {
         checkNewPage(8);
         if (i % 2 === 0) {
           doc.setFillColor(248, 250, 252);
@@ -533,7 +533,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
         doc.text(amountText, margin + 84, y);
 
         doc.setTextColor(15, 23, 42);
-        doc.text(formatCurrency(mov.balance ?? 0), margin + 126, y);
+        doc.text(formatCurrency(mov.netCapital), margin + 126, y);
         y += 7;
       });
     }
@@ -619,6 +619,16 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     value,
     y: padT + (1 - (value - minAxis) / axisSpan) * plotH
   }));
+  const movementCapitalSeries = (report.movements ?? []).reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
+    const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
+    acc.push({
+      iso: mov.iso,
+      type: mov.type,
+      amount: mov.amount,
+      netCapital: previousNet + (mov.type === 'increment' ? mov.amount : -mov.amount)
+    });
+    return acc;
+  }, []);
 
   return (
     <div className="informes-container informes-pro-page fade-in">
@@ -837,11 +847,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                     <th>Fecha</th>
                     <th>Tipo</th>
                     <th className="text-right">Importe</th>
-                    <th className="text-right">Saldo</th>
+                    <th className="text-right">Capital neto</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(report.movements ?? []).map((mov, i) => {
+                  {movementCapitalSeries.map((mov, i) => {
                     const [yy, mm, dd] = mov.iso.split('-');
                     const isIncrement = mov.type === 'increment';
                     return (
@@ -853,7 +863,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                         <td className={`text-right ${isIncrement ? 'positive' : 'negative'}`}>
                           {isIncrement ? '+' : '-'}{formatCurrency(mov.amount ?? 0)}
                         </td>
-                        <td className="text-right">{formatCurrency(mov.balance ?? 0)}</td>
+                        <td className="text-right">{formatCurrency(mov.netCapital)}</td>
                       </tr>
                     );
                   })}

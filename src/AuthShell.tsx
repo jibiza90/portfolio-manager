@@ -1613,9 +1613,6 @@ const ClientPortal = ({
       >
         <div>
           <h1 style={{ margin: 0, color: palette.text }}>Area Cliente</h1>
-          <p style={{ margin: '6px 0 0 0', color: palette.muted }}>
-            {headerName}
-          </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 13, color: palette.muted }}>{loginId ? `Usuario ${loginId}` : ''}</span>
