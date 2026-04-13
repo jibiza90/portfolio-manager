@@ -1,6 +1,6 @@
 import { CLIENTS } from '../constants/clients';
 import { PortfolioSnapshot, MonthlyHistoryEntry } from '../types';
-import { calculateAllMonthsTWR, calculateTWR } from './twr';
+import { calculateAllMonthsTWR } from './twr';
 import { buildMonthlyStatsForMonths, buildMonthlyStatsForYear } from './monthlyHistory';
 import { getYearFromIso, YEAR } from './dates';
 
@@ -116,7 +116,8 @@ export function buildClientReportData(
   const contact = contacts[clientId];
   const contactName = contact && (contact.name || contact.surname) ? `${contact.name ?? ''} ${contact.surname ?? ''}`.trim() : '';
   const displayName = contactName || fallbackName || client?.name || clientId;
-  const twrYtd = calculateTWR(periodRows).twr;
+  const twrMonths = monthlyStats.filter((item) => item.hasData && (item.profit !== 0 || item.profitPct !== 0 || item.endBalance !== 0));
+  const twrYtd = twrMonths.reduce((acc, item) => acc * (1 + (item.profitPct ?? 0) / 100), 1) - 1;
   const twrMonthly = calculateAllMonthsTWR(periodRows);
 
   return {
