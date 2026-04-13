@@ -22,6 +22,7 @@ import {
   listClientAccessProfiles,
   provisionClientAccess,
   revokeClientAccess,
+  syncClientOverviews,
   type AccessProfileRecord
 } from './services/cloudPortfolio';
 import { auth, db } from './services/firebaseApp';
@@ -3430,6 +3431,17 @@ export default function App() {
       cancelled = true;
     };
   }, [isPrimaryAdmin, ownerLoginEvents.length]);
+
+  useEffect(() => {
+    if (!isPrimaryAdmin) return;
+    if (!usePortfolioStore.getState().initialized) return;
+    const timer = window.setTimeout(() => {
+      void syncClientOverviews(usePortfolioStore.getState().snapshot, CLIENTS, usePortfolioStore.getState().monthlyHistoryByClient).catch((error) => {
+        console.error('No se pudo resincronizar el portal cliente', error);
+      });
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [isPrimaryAdmin, snapshot, monthlyHistoryByClient]);
 
   const handleRevokeClientAccess = async (profile: AccessProfileRecord) => {
     const confirmed = window.confirm(`Eliminar la asignacion del usuario ${profile.loginId || profile.uid}?`);
