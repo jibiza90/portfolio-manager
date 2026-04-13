@@ -15,6 +15,10 @@ interface PatrimonyTooltipState {
   y: number;
 }
 
+interface InfoTooltipState {
+  visible: boolean;
+}
+
 const axisCurrencyFormatter = new Intl.NumberFormat('es-ES', {
   style: 'currency',
   currency: 'EUR',
@@ -67,13 +71,71 @@ const buildNiceAxis = (values: number[], approxTickCount = 6) => {
   return { min, max, ticks: buildAxisTicks(min, max, step) };
 };
 
+const monthIndexByLabel: Record<string, number> = {
+  ene: 0,
+  enero: 0,
+  jan: 0,
+  january: 0,
+  feb: 1,
+  febrero: 1,
+  february: 1,
+  mar: 2,
+  marzo: 2,
+  march: 2,
+  abr: 3,
+  abril: 3,
+  apr: 3,
+  april: 3,
+  may: 4,
+  mayo: 4,
+  jun: 5,
+  junio: 5,
+  june: 5,
+  jul: 6,
+  julio: 6,
+  july: 6,
+  ago: 7,
+  agosto: 7,
+  aug: 7,
+  august: 7,
+  sep: 8,
+  sept: 8,
+  septiembre: 8,
+  september: 8,
+  oct: 9,
+  octubre: 9,
+  october: 9,
+  nov: 10,
+  noviembre: 10,
+  november: 10,
+  dic: 11,
+  diciembre: 11,
+  dec: 11,
+  december: 11
+};
+
+const getMonthEndLabel = (monthLabel: string) => {
+  const parts = monthLabel.trim().split(/\s+/);
+  if (parts.length < 2) return monthLabel;
+  const monthIndex = monthIndexByLabel[parts[0].toLowerCase()];
+  const year = Number(parts[parts.length - 1]);
+  if (monthIndex === undefined || !Number.isFinite(year)) return monthLabel;
+  const monthEnd = new Date(year, monthIndex + 1, 0);
+  return monthEnd.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
 export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => {
   const [report, setReport] = useState<ReportData | null>(reportData ?? null);
   const [loading, setLoading] = useState(!reportData);
   const [expired, setExpired] = useState(false);
   const [hoveredPatrimonyPoint, setHoveredPatrimonyPoint] = useState<PatrimonyTooltipState | null>(null);
+  const [infoTooltip, setInfoTooltip] = useState<InfoTooltipState>({ visible: false });
   const reportRef = useRef<HTMLDivElement>(null);
-  const twrExplanation = 'mide el rendimiento de la estrategia aislando el efecto de aportes y retiradas. Ejemplo facil: empiezas con 10.000 EUR, anades 5.000 EUR a mitad de mes y acabas con 15.500 EUR. El TWR no cuenta esos 5.000 EUR como ganancia; solo mide lo que rindio la cartera.';
+  const twrExplanation = 'mide la rentabilidad de la inversion sin contar aportaciones ni retiradas.';
   const totalReturnExplanation = 'compara el beneficio total frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
 
   useEffect(() => {
@@ -137,7 +199,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     doc.text('INFORME DE INVERSIÓN', margin, 25);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text(report.clientName, margin, 35);
+    doc.text(report.clientCode, margin, 35);
     doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, pageWidth - margin - 50, 35);
 
     y = 60;
@@ -311,7 +373,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           doc.rect(margin, y - 5, pageWidth - margin * 2, 7, 'F');
         }
         doc.setTextColor(60, 60, 60);
-        doc.text(m.month, margin + 4, y);
+        doc.text(getMonthEndLabel(m.month), margin + 4, y);
         if (m.profit >= 0) {
           doc.setTextColor(15, 109, 122);
         } else {
@@ -576,10 +638,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           <div className="report-pro-client-tag">{report.clientCode}</div>
         </header>
 
-        <section className="report-pro-client">
-          <h3>{report.clientName}</h3>
-        </section>
-
         <section className="report-pro-executive">
           <div>
             <p>Saldo actual</p>
@@ -604,7 +662,29 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
         </section>
 
         <section className="report-pro-note">
-          <strong>Como leer TWR y rentabilidad total</strong>
+          <div className="report-pro-note-head">
+            <strong>Como leer TWR y rentabilidad total</strong>
+            <button
+              type="button"
+              className="report-pro-note-help"
+              onMouseEnter={() => setInfoTooltip({ visible: true })}
+              onMouseLeave={() => setInfoTooltip({ visible: false })}
+              onFocus={() => setInfoTooltip({ visible: true })}
+              onBlur={() => setInfoTooltip({ visible: false })}
+            >
+              Ejemplo
+            </button>
+            {infoTooltip.visible ? (
+              <div className="report-pro-note-tooltip">
+                <strong>TWR:</strong>
+                <p>Mide la rentabilidad de la inversion sin contar aportaciones ni retiradas.</p>
+                <p>Ejemplo: inviertes 10.000 EUR y sube a 11.000 EUR. El TWR es +10 %. Si despues anades 20.000 EUR mas, el TWR sigue siendo +10 %.</p>
+                <strong>Rentabilidad total:</strong>
+                <p>Mide cuanto has ganado sobre todo el dinero aportado.</p>
+                <p>En ese ejemplo, si has aportado 30.000 EUR y ahora tienes 31.000 EUR, la rentabilidad total es +3,33 %.</p>
+              </div>
+            ) : null}
+          </div>
           <p><strong>TWR:</strong> {twrExplanation}</p>
           <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
         </section>
@@ -729,7 +809,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
               <tbody>
                 {monthlyWithData.map((m) => (
                   <tr key={m.month}>
-                    <td>{m.month}</td>
+                    <td>{getMonthEndLabel(m.month)}</td>
                     <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
                       {formatCurrency(m.profit ?? 0)}
                     </td>

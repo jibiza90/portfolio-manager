@@ -2472,6 +2472,7 @@ input[type='number'] {
 }
 
 .report-pro-note {
+  position: relative;
   margin: 0 36px 18px;
   padding: 14px 16px;
   background: linear-gradient(145deg, #f8fbff, #eef5ff);
@@ -2479,11 +2480,64 @@ input[type='number'] {
   border-radius: 14px;
 }
 
+.report-pro-note-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
 .report-pro-note strong {
   display: block;
   color: #0f172a;
   font-size: 14px;
   margin-bottom: 8px;
+}
+
+.report-pro-note-head strong {
+  margin-bottom: 0;
+}
+
+.report-pro-note-help {
+  border: 1px solid rgba(15, 95, 138, 0.2);
+  background: linear-gradient(180deg, #f7fbff, #e8f3fb);
+  color: #0f5f8a;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: help;
+}
+
+.report-pro-note-tooltip {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 16px;
+  z-index: 6;
+  width: min(460px, calc(100vw - 64px));
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 95, 138, 0.2);
+  background: rgba(9, 23, 38, 0.96);
+  color: #f8fbff;
+  box-shadow: 0 18px 40px rgba(9, 23, 38, 0.22);
+}
+
+.report-pro-note-tooltip strong {
+  display: block;
+  margin: 0 0 6px;
+  color: #ffffff;
+}
+
+.report-pro-note-tooltip p {
+  margin: 0 0 8px;
+  color: #d8e8f5;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.report-pro-note-tooltip p:last-child {
+  margin-bottom: 0;
 }
 
 .report-pro-note p {
