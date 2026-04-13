@@ -51,9 +51,9 @@ interface ClientOverview {
   latestReturnMonth?: { month: string; profit: number; retPct: number } | null;
   monthly?: Array<{ month: string; profit: number; retPct: number; endBalance?: number }>;
   twrYtd?: number;
-  twrMonthly?: Array<{ month: string; twr: number; periods: Array<unknown> }>;
+  twrMonthly?: Array<{ month: string; twr: number }>;
   updatedAt: number;
-  rows: Array<{
+  rows?: Array<{
     iso: string;
     label: string;
     increment: number | null;

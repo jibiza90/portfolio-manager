@@ -14,32 +14,6 @@ const sanitizePersistedState = (data?: Partial<PersistedState> | null): Persiste
   monthlyHistoryByClient: data?.monthlyHistoryByClient ?? {}
 });
 
-const buildOverviewRows = (snapshot: PortfolioSnapshot, clientId: string) => {
-  const rows = snapshot.clientRowsById[clientId] ?? [];
-  return rows
-    .filter((row) =>
-      row.increment !== undefined ||
-      row.decrement !== undefined ||
-      row.manualProfit !== undefined ||
-      row.finalBalance !== undefined ||
-      row.profit !== undefined
-    )
-    .slice(-370)
-    .map((row) => ({
-      iso: row.iso,
-      label: row.label,
-      increment: row.increment ?? null,
-      decrement: row.decrement ?? null,
-      manualProfit: row.manualProfit ?? null,
-      baseBalance: row.baseBalance ?? null,
-      finalBalance: row.finalBalance ?? null,
-      profit: row.profit ?? null,
-      profitPct: row.profitPct ?? null,
-      sharePct: row.sharePct ?? null,
-      cumulativeProfit: row.cumulativeProfit ?? null
-    }));
-};
-
 const buildClientOverview = (
   snapshot: PortfolioSnapshot,
   clientId: string,
@@ -80,7 +54,10 @@ const buildClientOverview = (
     : null;
 
   const twrYtd = report?.twrYtd ?? calculateTWR(rows).twr;
-  const twrMonthly = report?.twrMonthly ?? calculateAllMonthsTWR(rows);
+  const twrMonthly = (report?.twrMonthly ?? calculateAllMonthsTWR(rows)).map((item) => ({
+    month: item.month,
+    twr: item.twr
+  }));
   const ytdReturnPct = twrYtd;
 
   return {
@@ -100,7 +77,6 @@ const buildClientOverview = (
     monthly,
     twrYtd,
     twrMonthly,
-    rows: buildOverviewRows(snapshot, clientId),
     updatedAt: Date.now()
   };
 };
