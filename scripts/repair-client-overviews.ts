@@ -148,11 +148,13 @@ const run = async () => {
       client.name
     );
     if (!reportData) continue;
+    const report = toClientReportPayload(reportData);
+    report.clientCode = reportData.name;
 
     await replaceOverviewDoc(token, client.id, {
       clientId: client.id,
       clientName: reportData.name,
-      report: toClientReportPayload(reportData),
+      report,
       updatedAt
     });
   }
