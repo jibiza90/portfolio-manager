@@ -8,12 +8,72 @@ interface ReportViewProps {
   reportData?: ReportData | null;
 }
 
+interface PatrimonyTooltipState {
+  month: string;
+  value: number;
+  x: number;
+  y: number;
+}
+
+const axisCurrencyFormatter = new Intl.NumberFormat('es-ES', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 0,
+  minimumFractionDigits: 0
+});
+
+const formatAxisCurrency = (value: number) => axisCurrencyFormatter.format(value);
+
+const getNiceStep = (rawStep: number) => {
+  if (!Number.isFinite(rawStep) || rawStep <= 0) return 1;
+  const power = 10 ** Math.floor(Math.log10(rawStep));
+  const fraction = rawStep / power;
+  if (fraction <= 1) return power;
+  if (fraction <= 2) return 2 * power;
+  if (fraction <= 5) return 5 * power;
+  return 10 * power;
+};
+
+const buildAxisTicks = (minValue: number, maxValue: number, step: number) => {
+  const ticks: number[] = [];
+  for (let value = maxValue; value >= minValue; value -= step) {
+    ticks.push(value);
+  }
+  if (ticks[ticks.length - 1] !== minValue) {
+    ticks.push(minValue);
+  }
+  return ticks;
+};
+
+const buildNiceAxis = (values: number[], approxTickCount = 6) => {
+  if (!values.length) {
+    const fallbackTicks = [100000, 75000, 50000, 25000, 0];
+    return { min: 0, max: 100000, ticks: fallbackTicks };
+  }
+
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+
+  if (minValue === maxValue) {
+    const step = getNiceStep(Math.max(1, Math.abs(maxValue) / Math.max(1, approxTickCount - 1)));
+    const min = Math.max(0, Math.floor((minValue - step) / step) * step);
+    const max = Math.ceil((maxValue + step) / step) * step;
+    return { min, max, ticks: buildAxisTicks(min, max, step) };
+  }
+
+  const step = getNiceStep((maxValue - minValue) / Math.max(1, approxTickCount - 1));
+  const min = Math.max(0, Math.floor(minValue / step) * step);
+  const max = Math.ceil(maxValue / step) * step;
+  return { min, max, ticks: buildAxisTicks(min, max, step) };
+};
+
 export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => {
   const [report, setReport] = useState<ReportData | null>(reportData ?? null);
   const [loading, setLoading] = useState(!reportData);
   const [expired, setExpired] = useState(false);
+  const [hoveredPatrimonyPoint, setHoveredPatrimonyPoint] = useState<PatrimonyTooltipState | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
-  const twrExplanation = 'mide el rendimiento de la estrategia aislando el efecto de aportes y retiradas.';
+  const twrExplanation = 'mide el rendimiento de la estrategia aislando el efecto de aportes y retiradas. Ejemplo facil: empiezas con 10.000 EUR, anades 5.000 EUR a mitad de mes y acabas con 15.500 EUR. El TWR no cuenta esos 5.000 EUR como ganancia; solo mide lo que rindio la cartera.';
   const totalReturnExplanation = 'compara el beneficio total frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
 
   useEffect(() => {
@@ -113,12 +173,17 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
 
     y += 3;
 
-    checkNewPage(24);
+    const noteWidth = pageWidth - margin * 2 - 8;
+    const twrNoteLines = doc.splitTextToSize(`TWR: ${twrExplanation}`, noteWidth);
+    const totalReturnLines = doc.splitTextToSize(`Rentabilidad total: ${totalReturnExplanation}`, noteWidth);
+    const noteHeight = 10 + twrNoteLines.length * 3.4 + totalReturnLines.length * 3.4 + 4;
+
+    checkNewPage(noteHeight + 2);
     doc.setFillColor(247, 250, 252);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 2, 2, 'F');
+    doc.roundedRect(margin, y, pageWidth - margin * 2, noteHeight, 2, 2, 'F');
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.25);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 2, 2, 'S');
+    doc.roundedRect(margin, y, pageWidth - margin * 2, noteHeight, 2, 2, 'S');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(15, 23, 42);
@@ -126,10 +191,12 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(71, 85, 105);
-    doc.text(doc.splitTextToSize(`TWR: ${twrExplanation}`, pageWidth - margin * 2 - 8), margin + 4, y + 11);
-    doc.text(doc.splitTextToSize(`Rentabilidad total: ${totalReturnExplanation}`, pageWidth - margin * 2 - 8), margin + 4, y + 17);
+    let noteY = y + 11;
+    doc.text(twrNoteLines, margin + 4, noteY);
+    noteY += twrNoteLines.length * 3.4 + 2;
+    doc.text(totalReturnLines, margin + 4, noteY);
 
-    y += 30;
+    y += noteHeight + 8;
 
     const safeCurrency = (v: number) => formatCurrency(Number.isFinite(v) ? v : 0);
     const safePercent = (v: number) => `${(Number.isFinite(v) ? v : 0).toFixed(2)}%`;
@@ -472,11 +539,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const plotH = chartH - padT - padB;
   const plotBottom = padT + plotH;
   const patrValues = patrimonioWithData.map((p) => p.balance as number);
-  const minPat = patrValues.length ? Math.min(...patrValues) : 0;
-  const maxPat = patrValues.length ? Math.max(...patrValues) : 1;
-  const rawSpan = Math.max(1, maxPat - minPat);
-  const minAxis = Math.max(0, minPat - rawSpan * 0.08);
-  const maxAxis = maxPat + rawSpan * 0.08;
+  const { min: minAxis, max: maxAxis, ticks: axisTickValues } = buildNiceAxis(patrValues);
   const axisSpan = Math.max(1, maxAxis - minAxis);
   const patrPoints = patrimonioWithData.map((p, idx) => {
     const value = p.balance as number;
@@ -490,12 +553,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const patrAreaPath = patrPoints.length > 1
     ? `M ${patrPoints[0].x},${plotBottom} L ${patrLinePoints} L ${patrPoints[patrPoints.length - 1].x},${plotBottom} Z`
     : '';
-  const yTicks = Array.from({ length: 5 }, (_, i) => {
-    const ratio = i / 4;
-    const value = maxAxis - ratio * axisSpan;
-    const y = padT + ratio * plotH;
-    return { y, value };
-  });
+  const yTicks = axisTickValues.map((value) => ({
+    value,
+    y: padT + (1 - (value - minAxis) / axisSpan) * plotH
+  }));
 
   return (
     <div className="informes-container informes-pro-page fade-in">
@@ -587,6 +648,18 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
             <p>Linea de cierre mensual con importe en cada punto</p>
           </div>
           <div className="report-pro-line-wrap">
+            {hoveredPatrimonyPoint ? (
+              <div
+                className="report-pro-line-tooltip"
+                style={{
+                  left: `clamp(88px, ${(hoveredPatrimonyPoint.x / chartW) * 100}%, calc(100% - 88px))`,
+                  top: `clamp(64px, ${(hoveredPatrimonyPoint.y / chartH) * 100}%, calc(100% - 20px))`
+                }}
+              >
+                <strong>{hoveredPatrimonyPoint.month}</strong>
+                <span>{formatCurrency(hoveredPatrimonyPoint.value)}</span>
+              </div>
+            ) : null}
             <svg viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="none" className="report-pro-line-chart">
               <defs>
                 <linearGradient id="patrimonyAreaShared" x1="0" y1="0" x2="0" y2="1">
@@ -598,7 +671,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                 <g key={`tick-${idx}`}>
                   <line className="report-pro-grid-line" x1={padL} y1={tick.y} x2={chartW - padR} y2={tick.y} />
                   <text className="report-pro-y-label" x={padL - 10} y={tick.y + 4} textAnchor="end">
-                    {formatCurrency(tick.value)}
+                    {formatAxisCurrency(tick.value)}
                   </text>
                 </g>
               ))}
@@ -606,8 +679,18 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
               {patrPoints.length > 1 && <polyline className="report-pro-line" points={patrLinePoints} />}
               {patrPoints.map((pt, idx) => (
                 <g key={`${pt.month}-${idx}`}>
-                  <circle cx={pt.x} cy={pt.y} r="4.2" className="report-pro-dot" />
-                  <title>{`${pt.month}: ${formatCurrency(pt.value)}`}</title>
+                  <circle cx={pt.x} cy={pt.y} r="4.2" className="report-pro-dot" pointerEvents="none" />
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r="18"
+                    className="report-pro-dot-hit"
+                    fill="transparent"
+                    pointerEvents="all"
+                    onMouseEnter={() => setHoveredPatrimonyPoint(pt)}
+                    onMouseMove={() => setHoveredPatrimonyPoint(pt)}
+                    onMouseLeave={() => setHoveredPatrimonyPoint(null)}
+                  />
                 </g>
               ))}
             </svg>

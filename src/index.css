@@ -2593,6 +2593,7 @@ input[type='number'] {
 }
 
 .report-pro-line-wrap {
+  position: relative;
   margin-top: 14px;
   border: 1px solid rgba(30, 64, 99, 0.2);
   background:
@@ -2601,6 +2602,34 @@ input[type='number'] {
   border-radius: 14px;
   padding: 12px 10px 10px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.report-pro-line-tooltip {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 132px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 95, 138, 0.22);
+  background: rgba(9, 23, 38, 0.94);
+  color: #f8fbff;
+  box-shadow: 0 12px 24px rgba(9, 23, 38, 0.2);
+}
+
+.report-pro-line-tooltip strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.report-pro-line-tooltip span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #c8f1ff;
 }
 
 .report-pro-line-chart {
@@ -2637,6 +2666,10 @@ input[type='number'] {
   stroke: #ffffff;
   stroke-width: 2;
   filter: drop-shadow(0 3px 6px rgba(11, 79, 115, 0.25));
+}
+
+.report-pro-dot-hit {
+  cursor: crosshair;
 }
 
 .report-pro-point-value {
