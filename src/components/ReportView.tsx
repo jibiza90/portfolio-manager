@@ -579,7 +579,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
 
   if (!report) return null;
 
-  const expiresIn = report.expiresAt ? Math.max(0, Math.floor((report.expiresAt - Date.now()) / (1000 * 60 * 60))) : null;
   const monthlyWithData = report.monthlyStats.filter(
     (m) =>
       m.hasData &&
@@ -635,7 +634,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
       <div className="informe-actions glass-card report-pro-actions">
         <button className="btn-action primary" onClick={handleDownload}>Descargar PDF</button>
         <button className="btn-action secondary" onClick={handlePrint}>Imprimir</button>
-        {expiresIn !== null ? <div className="actions-note">Enlace temporal: caduca en {expiresIn} horas.</div> : null}
       </div>
 
       <article className="informe-preview glass-card report-pro-sheet" ref={reportRef}>
@@ -808,6 +806,12 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           </div>
           <div className="table-scroll">
             <table className="monthly-table report-pro-table">
+              <colgroup>
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '26%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '32%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Mes</th>

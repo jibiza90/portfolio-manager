@@ -869,17 +869,14 @@ const ClientPortal = ({
         ? report
           ? {
               ...report,
-              clientName: headerName,
-              clientCode:
-                report.clientCode && !report.clientCode.toLowerCase().startsWith('cliente ')
-                  ? report.clientCode
-                  : headerName,
+              clientName: loginId ?? clientId,
+              clientCode: loginId ?? clientId,
               createdAt: overview.updatedAt,
               expiresAt: overview.updatedAt
             }
-          : buildFallbackReportFromOverview(overview, headerName)
+          : buildFallbackReportFromOverview(overview, loginId ?? clientId)
         : null,
-    [headerName, overview, report]
+    [clientId, loginId, overview, report]
   );
 
   const sendClientSupportMessage = async () => {
