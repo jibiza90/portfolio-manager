@@ -81,8 +81,45 @@ const palette = {
 
 const formatEuro = (value: number) =>
   new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value);
+const formatEuroRounded = (value: number) =>
+  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(value);
 
 const formatPct = (value: number) => `${(value * 100).toFixed(2)}%`;
+const formatPctRounded = (value: number) => `${Math.round(value * 100)}%`;
+const getNiceStep = (rawStep: number) => {
+  if (!Number.isFinite(rawStep) || rawStep <= 0) return 1;
+  const power = 10 ** Math.floor(Math.log10(rawStep));
+  const fraction = rawStep / power;
+  if (fraction <= 1) return power;
+  if (fraction <= 2) return 2 * power;
+  if (fraction <= 5) return 5 * power;
+  return 10 * power;
+};
+const buildNiceAxisTicks = (minValue: number, maxValue: number, desiredTicks = 5, clampZero = false) => {
+  let min = minValue;
+  let max = maxValue;
+  if (clampZero) {
+    min = Math.min(min, 0);
+    max = Math.max(max, 0);
+  }
+  if (Math.abs(max - min) < 0.000001) {
+    const pad = Math.max(1, Math.abs(max) * 0.1);
+    min -= pad;
+    max += pad;
+  }
+  const step = getNiceStep((max - min) / Math.max(1, desiredTicks - 1));
+  const niceMin = clampZero ? Math.min(0, Math.floor(min / step) * step) : Math.floor(min / step) * step;
+  const niceMax = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+  for (let tick = niceMin; tick <= niceMax + step * 0.5; tick += step) {
+    ticks.push(Number(tick.toFixed(10)));
+  }
+  return {
+    min: niceMin,
+    max: niceMax,
+    ticks
+  };
+};
 const formatMonthLabel = (monthIso: string) => {
   const [year, month] = monthIso.split('-');
   const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -1156,33 +1193,17 @@ const ClientPortal = ({
         }
 
         const values = data.map((item) => item.value);
-        let minValue = Math.min(...values);
-        let maxValue = Math.max(...values);
-        if (clampZero) {
-          minValue = Math.min(minValue, 0);
-          maxValue = Math.max(maxValue, 0);
-        }
-        if (Math.abs(maxValue - minValue) < 0.000001) {
-          const pad = Math.max(1, Math.abs(maxValue) * 0.1);
-          minValue -= pad;
-          maxValue += pad;
-        }
-        const pad = (maxValue - minValue) * 0.12;
-        minValue -= pad;
-        maxValue += pad;
-        const range = Math.max(0.000001, maxValue - minValue);
+        const axis = buildNiceAxisTicks(Math.min(...values), Math.max(...values), 5, clampZero);
+        const range = Math.max(0.000001, axis.max - axis.min);
 
-        const yTicks = 4;
-        for (let i = 0; i <= yTicks; i += 1) {
-          const ratio = i / yTicks;
-          const y = plotY + plotH - ratio * plotH;
-          const tickValue = minValue + ratio * range;
+        axis.ticks.forEach((tickValue) => {
+          const y = plotY + plotH - ((tickValue - axis.min) / range) * plotH;
           doc.setDrawColor(231, 227, 218);
           doc.line(plotX, y, plotX + plotW, y);
           doc.setFontSize(8);
           doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
           doc.text(valueFormatter(tickValue), plotX - 8, y + 3, { align: 'right' });
-        }
+        });
 
         doc.setDrawColor(198, 193, 183);
         doc.line(plotX, plotY, plotX, plotY + plotH);
@@ -1192,7 +1213,7 @@ const ClientPortal = ({
         const xStep = dataCount > 1 ? plotW / (dataCount - 1) : 0;
         const coords = data.map((item, idx) => {
           const x = dataCount > 1 ? plotX + idx * xStep : plotX + plotW / 2;
-          const y = plotY + plotH - ((item.value - minValue) / range) * plotH;
+          const y = plotY + plotH - ((item.value - axis.min) / range) * plotH;
           return { x, y, ...item };
         });
 
@@ -1205,6 +1226,20 @@ const ClientPortal = ({
         doc.setFillColor(color[0], color[1], color[2]);
         coords.forEach((point) => {
           doc.circle(point.x, point.y, 2.6, 'F');
+        });
+        coords.forEach((point, idx) => {
+          const label = valueFormatter(point.value);
+          doc.setFontSize(7.5);
+          const textWidth = doc.getTextWidth(label);
+          const labelHeight = 12;
+          const labelX = Math.max(plotX + textWidth / 2 + 4, Math.min(point.x, plotX + plotW - textWidth / 2 - 4));
+          const verticalOffset = idx % 2 === 0 ? -16 : 18;
+          const labelY = Math.max(plotY + 10, Math.min(point.y + verticalOffset, plotY + plotH - 10));
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(214, 222, 232);
+          doc.roundedRect(labelX - textWidth / 2 - 3, labelY - 8, textWidth + 6, labelHeight, 4, 4, 'FD');
+          doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
+          doc.text(label, labelX, labelY, { align: 'center' });
         });
 
         const labelStep = Math.max(1, Math.ceil(dataCount / 6));
@@ -1255,22 +1290,25 @@ const ClientPortal = ({
           return panelY + panelH + 14;
         }
 
-        const maxAbsRaw = Math.max(...data.map((item) => Math.abs(item.value)));
-        const maxAbs = Math.max(0.01, maxAbsRaw * 1.2);
-        const yMin = -maxAbs;
-        const yMax = maxAbs;
+        const axis = buildNiceAxisTicks(
+          Math.min(...data.map((item) => item.value)),
+          Math.max(...data.map((item) => item.value)),
+          5,
+          true
+        );
+        const yMin = axis.min;
+        const yMax = axis.max;
         const yRange = yMax - yMin;
         const getY = (value: number) => plotY + (1 - (value - yMin) / yRange) * plotH;
         const zeroY = getY(0);
 
-        const yTicks = [-maxAbs, -maxAbs / 2, 0, maxAbs / 2, maxAbs];
-        yTicks.forEach((tick) => {
+        axis.ticks.forEach((tick) => {
           const y = getY(tick);
           doc.setDrawColor(tick === 0 ? 170 : 231, tick === 0 ? 164 : 227, tick === 0 ? 152 : 218);
           doc.line(plotX, y, plotX + plotW, y);
           doc.setFontSize(8);
           doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
-          doc.text(formatPct(tick), plotX - 8, y + 3, { align: 'right' });
+          doc.text(formatPctRounded(tick), plotX - 8, y + 3, { align: 'right' });
         });
 
         doc.setDrawColor(198, 193, 183);
@@ -1293,11 +1331,6 @@ const ClientPortal = ({
 
           doc.setFillColor(fill[0], fill[1], fill[2]);
           doc.roundedRect(centerX - barW / 2, topY, barW, height, 6, 6, 'F');
-
-          doc.setFontSize(7.5);
-          doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
-          const labelY = isPositive ? topY - 6 : bottomY + 10;
-          doc.text(formatPct(item.value), centerX, labelY, { align: 'center' });
 
           if (idx % labelStep === 0 || idx === count - 1) {
             doc.setFontSize(8);
@@ -1413,14 +1446,13 @@ const ClientPortal = ({
         margin: tableMargin,
         didDrawPage,
         pageBreak: 'avoid',
-        head: [['Mes', 'Estado', 'Saldo fin de mes', 'Beneficio', 'TWR mensual', 'TWR acumulado anual']],
+        head: [['Mes', 'Saldo fin de mes', 'Beneficio', 'TWR mensual', 'TWR acumulado']],
         body: monthly.map((item) => {
-          const twr = twrMonthly.find((row) => row.month === item.month)?.twr ?? 0;
+          const twr = item.retPct ?? twrMonthly.find((row) => row.month === item.month)?.twr ?? 0;
           const twrCumulative = twrCumulativeByMonth.get(item.month) ?? 0;
           const monthBalance = monthEndBalance.get(item.month) ?? 0;
           return [
             formatMonthLabel(item.month),
-            monthBalance !== 0 ? 'Cerrado' : 'En curso',
             formatEuro(monthBalance),
             formatEuro(item.profit),
             formatPct(twr),
@@ -1442,10 +1474,10 @@ const ClientPortal = ({
         },
         alternateRowStyles: { fillColor: brand.soft },
         columnStyles: {
+          1: { halign: 'right' },
           2: { halign: 'right' },
           3: { halign: 'right' },
-          4: { halign: 'right' },
-          5: { halign: 'right' }
+          4: { halign: 'right' }
         }
       });
 
