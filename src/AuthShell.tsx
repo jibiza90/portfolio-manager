@@ -12,7 +12,7 @@ import {
 import { auth, db, firebase } from './services/firebaseApp';
 import { recordLoginEvent } from './services/loginTracker';
 import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, type SupportMessage } from './services/supportInbox';
-import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
+import { initializePortfolioStore, usePortfolioStore, waitForPendingPortfolioSave } from './store/portfolio';
 import type { ReportData } from './services/reportLinks';
 import type { ClientReportPayload } from './utils/clientReport';
 
@@ -1785,6 +1785,7 @@ const AuthShell = () => {
   });
   const [loginBusy, setLoginBusy] = useState(false);
   const [loadingDots, setLoadingDots] = useState('.');
+  const saveStatus = usePortfolioStore((state) => state.saveStatus);
   const pendingLogoutTimerRef = useRef<number | null>(null);
   const inactivityTimerRef = useRef<number | null>(null);
   const inactivityLogoutRef = useRef(false);
@@ -1797,6 +1798,17 @@ const AuthShell = () => {
       inactivityTimerRef.current = null;
     }
   };
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (session.role !== 'admin' || saveStatus !== 'saving') return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveStatus, session.role]);
 
   useEffect(() => {
     const clearPendingLogoutTimer = () => {
@@ -1984,11 +1996,18 @@ const AuthShell = () => {
       setSession((prev) =>
         prev.role ? { ...prev, loading: true, error: 'Sesion cerrandose por inactividad...' } : prev
       );
-      void auth.signOut().catch((error) => {
-        console.error('Error cerrando sesion por inactividad', error);
-        inactivityLogoutRef.current = false;
-        setSession((prev) => ({ ...prev, loading: false, error: 'No se pudo cerrar sesion por inactividad.' }));
-      });
+      void (async () => {
+        try {
+          if (session.role === 'admin') {
+            await waitForPendingPortfolioSave();
+          }
+          await auth.signOut();
+        } catch (error) {
+          console.error('Error cerrando sesion por inactividad', error);
+          inactivityLogoutRef.current = false;
+          setSession((prev) => ({ ...prev, loading: false, error: 'No se pudo cerrar sesion por inactividad.' }));
+        }
+      })();
     };
 
     const armInactivityTimer = () => {
@@ -2084,11 +2103,18 @@ const AuthShell = () => {
     clearInactivityTimer();
     setSession((prev) => ({ ...prev, loading: true, error: null }));
     try {
+      if (session.role === 'admin') {
+        await waitForPendingPortfolioSave();
+      }
       await auth.signOut();
     } catch (error) {
       console.error('Error cerrando sesion', error);
       manualLogoutRef.current = false;
-      setSession((prev) => ({ ...prev, loading: false, error: 'No se pudo cerrar sesion.' }));
+      setSession((prev) => ({
+        ...prev,
+        loading: false,
+        error: session.role === 'admin' ? 'No se pudo guardar antes de salir.' : 'No se pudo cerrar sesion.'
+      }));
     }
   };
 

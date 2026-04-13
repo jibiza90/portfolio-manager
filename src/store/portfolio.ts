@@ -45,6 +45,10 @@ const initialSnapshot = buildSnapshot(
   emptyPersisted.monthlyHistoryByClient
 );
 let syncOverviewTimer: ReturnType<typeof setTimeout> | null = null;
+let saveInFlight = false;
+let saveQueued = false;
+let currentSavePromise: Promise<void> = Promise.resolve();
+let lastSaveError: unknown = null;
 
 const queueOverviewSync = (
   snapshot: PortfolioSnapshot,
@@ -60,18 +64,49 @@ const queueOverviewSync = (
 };
 
 const persistCurrentState = () => {
-  const { canWrite, finalByDay, movementsByClient, monthlyHistoryByClient, snapshot } = usePortfolioStore.getState();
-  if (!canWrite) return;
+  const runSaveLoop = async () => {
+    let lastError: unknown = null;
 
-  savePortfolioState({ finalByDay, movementsByClient, monthlyHistoryByClient })
-    .then(() => {
-      usePortfolioStore.setState({ saveStatus: 'success', lastSavedAt: Date.now() });
-      queueOverviewSync(snapshot, monthlyHistoryByClient);
-    })
-    .catch((error) => {
-      console.error('Error guardando portfolio', error);
-      usePortfolioStore.setState({ saveStatus: 'error' });
-    });
+    do {
+      saveQueued = false;
+      const { canWrite, finalByDay, movementsByClient, monthlyHistoryByClient, snapshot } = usePortfolioStore.getState();
+      if (!canWrite) break;
+
+      try {
+        await savePortfolioState({ finalByDay, movementsByClient, monthlyHistoryByClient });
+        usePortfolioStore.setState({ saveStatus: 'success', lastSavedAt: Date.now() });
+        queueOverviewSync(snapshot, monthlyHistoryByClient);
+        lastError = null;
+      } catch (error) {
+        console.error('Error guardando portfolio', error);
+        usePortfolioStore.setState({ saveStatus: 'error' });
+        lastError = error;
+      }
+    } while (saveQueued);
+
+    saveInFlight = false;
+    lastSaveError = lastError;
+  };
+
+  if (saveInFlight) {
+    saveQueued = true;
+    return currentSavePromise;
+  }
+
+  const { canWrite } = usePortfolioStore.getState();
+  if (!canWrite) return Promise.resolve();
+
+  saveInFlight = true;
+  currentSavePromise = runSaveLoop();
+  return currentSavePromise;
+};
+
+export const waitForPendingPortfolioSave = async () => {
+  if (!saveInFlight) return;
+  await currentSavePromise;
+  if (lastSaveError) {
+    throw lastSaveError;
+  }
 };
 
 export const usePortfolioStore = create<PortfolioState>((set) => ({
