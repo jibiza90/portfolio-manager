@@ -140,6 +140,13 @@ export function buildClientReportData(
 }
 
 export function toClientReportPayload(data: ClientReportData): ClientReportPayload {
+  const monthlyStats = data.monthlyStats.filter(
+    (item) => item.hasData && (item.profit !== 0 || item.profitPct !== 0 || item.endBalance !== 0)
+  );
+  const patrimonioEvolution = data.patrimonioEvolution.filter(
+    (item) => item.hasData && (item.balance ?? 0) !== 0
+  );
+
   return {
     clientId: data.id,
     clientName: data.name,
@@ -152,14 +159,14 @@ export function toClientReportPayload(data: ClientReportData): ClientReportPaylo
     beneficioUltimoMes: data.beneficioUltimoMes ?? 0,
     rentabilidadUltimoMes: data.rentabilidadUltimoMes ?? 0,
     twrYtd: data.twrYtd ?? 0,
-    monthlyStats: data.monthlyStats.map((item) => ({
+    monthlyStats: monthlyStats.map((item) => ({
       month: item.monthLabel,
       profit: item.profit ?? 0,
       profitPct: item.profitPct ?? 0,
       endBalance: item.endBalance ?? 0,
       hasData: item.hasData ?? false
     })),
-    patrimonioEvolution: data.patrimonioEvolution.map((item) => ({
+    patrimonioEvolution: patrimonioEvolution.map((item) => ({
       month: item.monthLabel,
       balance: item.balance ?? 0,
       hasData: item.hasData ?? false

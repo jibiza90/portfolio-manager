@@ -39,14 +39,14 @@ interface ClientOverview {
   clientId: string;
   clientName: string;
   report?: ClientReportPayload | null;
-  currentBalance: number;
-  cumulativeProfit: number;
-  dailyProfit: number;
-  dailyProfitPct: number;
-  participation: number;
-  totalIncrements: number;
-  totalDecrements: number;
-  ytdReturnPct: number;
+  currentBalance?: number;
+  cumulativeProfit?: number;
+  dailyProfit?: number;
+  dailyProfitPct?: number;
+  participation?: number;
+  totalIncrements?: number;
+  totalDecrements?: number;
+  ytdReturnPct?: number;
   latestProfitMonth?: { month: string; profit: number; retPct: number } | null;
   latestReturnMonth?: { month: string; profit: number; retPct: number } | null;
   monthly?: Array<{ month: string; profit: number; retPct: number; endBalance?: number }>;
@@ -867,7 +867,16 @@ const ClientPortal = ({
     () =>
       overview
         ? report
-          ? { ...report, createdAt: overview.updatedAt, expiresAt: overview.updatedAt }
+          ? {
+              ...report,
+              clientName: headerName,
+              clientCode:
+                report.clientCode && !report.clientCode.toLowerCase().startsWith('cliente ')
+                  ? report.clientCode
+                  : headerName,
+              createdAt: overview.updatedAt,
+              expiresAt: overview.updatedAt
+            }
           : buildFallbackReportFromOverview(overview, headerName)
         : null,
     [headerName, overview, report]
@@ -1411,8 +1420,8 @@ const ClientPortal = ({
       const latestProfitLabel = latestProfitMonth ? `${formatMonthLabel(latestProfitMonth.month)}: ${formatEuro(latestProfitMonth.profit)}` : '-';
       const latestTwrLabel = latestTwrMonth ? `${formatMonthLabel(latestTwrMonth.month)}: ${formatPct(latestTwrMonth.twr)}` : '-';
       const kpis = [
-        { label: 'Saldo actual', value: formatEuro(overview.currentBalance) },
-        { label: 'Beneficio total', value: formatEuro(overview.cumulativeProfit) },
+        { label: 'Saldo actual', value: formatEuro(overview.currentBalance ?? 0) },
+        { label: 'Beneficio total', value: formatEuro(overview.cumulativeProfit ?? 0) },
         { label: 'Incrementos totales', value: formatEuro(overview.totalIncrements ?? 0) },
         { label: 'Decrementos totales', value: formatEuro(overview.totalDecrements ?? 0) },
         { label: 'Beneficio ultimo mes', value: latestProfitLabel },

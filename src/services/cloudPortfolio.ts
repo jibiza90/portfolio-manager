@@ -1,6 +1,5 @@
 import { MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
 import { db, firebase, firebaseConfig, functions } from './firebaseApp';
-import { calculateAllMonthsTWR, calculateTWR } from '../utils/twr';
 import { buildClientReportData, toClientReportPayload } from '../utils/clientReport';
 
 const DOC_PATH = 'portfolio/state';
@@ -20,63 +19,12 @@ const buildClientOverview = (
   clientName: string,
   monthlyHistory: Record<string, MonthlyHistoryEntry>
 ) => {
-  const rows = snapshot.clientRowsById[clientId] ?? [];
-  const latestWithBalance = [...rows].reverse().find((row) => row.finalBalance !== undefined || row.baseBalance !== undefined);
-  const latestWithProfit = [...rows].reverse().find((row) => row.profit !== undefined);
-  const latestWithShare = [...rows].reverse().find((row) => row.sharePct !== undefined);
-  const latestWithProfitPct = [...rows].reverse().find((row) => row.profitPct !== undefined);
   const report = buildClientReportData(clientId, 'all', {}, snapshot, { [clientId]: monthlyHistory }, clientName);
-  const currentBalance = report?.saldo ?? latestWithBalance?.finalBalance ?? latestWithBalance?.baseBalance ?? 0;
-  const cumulativeProfit = report?.beneficioTotal ?? 0;
-  const dailyProfit = latestWithProfit?.profit ?? 0;
-  const dailyProfitPct = latestWithProfitPct?.profitPct ?? 0;
-  const participation = latestWithShare?.sharePct ?? 0;
-  const totalIncrements = report?.incrementos ?? rows.reduce((sum, row) => sum + (row.increment ?? 0), 0);
-  const totalDecrements = report?.decrementos ?? rows.reduce((sum, row) => sum + (row.decrement ?? 0), 0);
-  const monthly = (report?.monthlyStats ?? [])
-    .filter((item) => item.hasData && (item.profit !== 0 || item.profitPct !== 0 || item.endBalance !== 0))
-    .map((item) => ({
-      month: item.monthKey,
-      profit: item.profit,
-      retPct: item.profitPct / 100,
-      endBalance: item.endBalance
-    }));
-  const latestProfitMonth = monthly.length
-    ? [...monthly].reverse().find((item) => item.profit !== 0) ?? monthly[monthly.length - 1]
-    : null;
-  const latestReturnMonth = report?.monthlyStats
-    ? (() => {
-        const lastMonth = [...report.monthlyStats].reverse().find((item) => item.hasData) ?? null;
-        return lastMonth
-          ? { month: lastMonth.monthKey, profit: lastMonth.profit, retPct: lastMonth.profitPct / 100 }
-          : null;
-      })()
-    : null;
-
-  const twrYtd = report?.twrYtd ?? calculateTWR(rows).twr;
-  const twrMonthly = (report?.twrMonthly ?? calculateAllMonthsTWR(rows)).map((item) => ({
-    month: item.month,
-    twr: item.twr
-  }));
-  const ytdReturnPct = twrYtd;
 
   return {
     clientId,
     clientName: report?.name ?? clientName,
     report: report ? toClientReportPayload(report) : null,
-    currentBalance,
-    cumulativeProfit,
-    dailyProfit,
-    dailyProfitPct,
-    participation,
-    totalIncrements,
-    totalDecrements,
-    ytdReturnPct,
-    latestProfitMonth,
-    latestReturnMonth,
-    monthly,
-    twrYtd,
-    twrMonthly,
     updatedAt: Date.now()
   };
 };
