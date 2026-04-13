@@ -1714,6 +1714,12 @@ input[type='number'] {
   text-align: right;
 }
 
+.monthly-table th.text-right,
+.movements-table th.text-right,
+.report-pro-table thead th.text-right {
+  text-align: right;
+}
+
 .monthly-table .positive {
   color: #059669;
   font-weight: 600;
@@ -2501,14 +2507,15 @@ input[type='number'] {
 }
 
 .report-pro-note-help {
-  border: 1px solid rgba(15, 95, 138, 0.2);
-  background: linear-gradient(180deg, #f7fbff, #e8f3fb);
-  color: #0f5f8a;
+  border: 1px solid rgba(180, 83, 9, 0.35);
+  background: linear-gradient(180deg, #fff4cc, #ffd76a);
+  color: #6b3e00;
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   font-size: 12px;
   font-weight: 700;
   cursor: help;
+  box-shadow: 0 6px 16px rgba(180, 83, 9, 0.16);
 }
 
 .report-pro-note-tooltip {
@@ -2519,21 +2526,21 @@ input[type='number'] {
   width: min(460px, calc(100vw - 64px));
   padding: 14px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(15, 95, 138, 0.2);
-  background: rgba(9, 23, 38, 0.96);
-  color: #f8fbff;
-  box-shadow: 0 18px 40px rgba(9, 23, 38, 0.22);
+  border: 2px solid rgba(245, 158, 11, 0.55);
+  background: linear-gradient(180deg, #fff9e7, #ffe7a8);
+  color: #332100;
+  box-shadow: 0 20px 42px rgba(120, 53, 15, 0.28);
 }
 
 .report-pro-note-tooltip strong {
   display: block;
   margin: 0 0 6px;
-  color: #ffffff;
+  color: #6b3e00;
 }
 
 .report-pro-note-tooltip p {
   margin: 0 0 8px;
-  color: #d8e8f5;
+  color: #4a2d00;
   font-size: 13px;
   line-height: 1.45;
 }
