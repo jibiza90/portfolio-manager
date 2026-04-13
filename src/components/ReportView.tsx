@@ -631,11 +631,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
 
   return (
     <div className="informes-container informes-pro-page fade-in">
-      <div className="informe-actions glass-card report-pro-actions">
-        <button className="btn-action primary" onClick={handleDownload}>Descargar PDF</button>
-        <button className="btn-action secondary" onClick={handlePrint}>Imprimir</button>
-      </div>
-
       <article className="informe-preview glass-card report-pro-sheet" ref={reportRef}>
         <header className="report-pro-header">
           <div>
