@@ -30,6 +30,38 @@ export interface ClientReportData {
   twrMonthly: Array<{ month: string; twr: number; periods: Array<unknown> }>;
 }
 
+export interface ClientReportPayload {
+  clientId: string;
+  clientName: string;
+  clientCode: string;
+  incrementos: number;
+  decrementos: number;
+  saldo: number;
+  beneficioTotal: number;
+  rentabilidad: number;
+  beneficioUltimoMes: number;
+  rentabilidadUltimoMes: number;
+  twrYtd: number;
+  monthlyStats: Array<{
+    month: string;
+    profit: number;
+    profitPct: number;
+    endBalance: number;
+    hasData: boolean;
+  }>;
+  patrimonioEvolution: Array<{
+    month: string;
+    balance: number;
+    hasData: boolean;
+  }>;
+  movements: Array<{
+    iso: string;
+    type: 'increment' | 'decrement';
+    amount: number;
+    balance: number;
+  }>;
+}
+
 const buildAvailableYears = (rows: PortfolioSnapshot['clientRowsById'][string], monthlyHistory: Record<string, MonthlyHistoryEntry>) => {
   const years = new Set<number>();
   rows.forEach((row) => years.add(getYearFromIso(row.iso)));
@@ -104,5 +136,39 @@ export function buildClientReportData(
     rentabilidadUltimoMes: lastMonth?.profitPct ?? 0,
     twrYtd,
     twrMonthly
+  };
+}
+
+export function toClientReportPayload(data: ClientReportData): ClientReportPayload {
+  return {
+    clientId: data.id,
+    clientName: data.name,
+    clientCode: data.code,
+    incrementos: data.incrementos ?? 0,
+    decrementos: data.decrementos ?? 0,
+    saldo: data.saldo ?? 0,
+    beneficioTotal: data.beneficioTotal ?? 0,
+    rentabilidad: data.rentabilidad ?? 0,
+    beneficioUltimoMes: data.beneficioUltimoMes ?? 0,
+    rentabilidadUltimoMes: data.rentabilidadUltimoMes ?? 0,
+    twrYtd: data.twrYtd ?? 0,
+    monthlyStats: data.monthlyStats.map((item) => ({
+      month: item.monthLabel,
+      profit: item.profit ?? 0,
+      profitPct: item.profitPct ?? 0,
+      endBalance: item.endBalance ?? 0,
+      hasData: item.hasData ?? false
+    })),
+    patrimonioEvolution: data.patrimonioEvolution.map((item) => ({
+      month: item.monthLabel,
+      balance: item.balance ?? 0,
+      hasData: item.hasData ?? false
+    })),
+    movements: data.movements.map((item) => ({
+      iso: item.iso,
+      type: item.type,
+      amount: item.amount ?? 0,
+      balance: item.balance ?? 0
+    }))
   };
 }

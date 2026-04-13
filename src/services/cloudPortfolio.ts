@@ -1,7 +1,7 @@
 import { MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
 import { db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { calculateAllMonthsTWR, calculateTWR } from '../utils/twr';
-import { buildClientReportData } from '../utils/clientReport';
+import { buildClientReportData, toClientReportPayload } from '../utils/clientReport';
 
 const DOC_PATH = 'portfolio/state';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
@@ -86,6 +86,7 @@ const buildClientOverview = (
   return {
     clientId,
     clientName: report?.name ?? clientName,
+    report: report ? toClientReportPayload(report) : null,
     currentBalance,
     cumulativeProfit,
     dailyProfit,

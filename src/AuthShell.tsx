@@ -12,6 +12,7 @@ import { auth, db, firebase } from './services/firebaseApp';
 import { recordLoginEvent } from './services/loginTracker';
 import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, type SupportMessage } from './services/supportInbox';
 import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
+import type { ClientReportPayload } from './utils/clientReport';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const ADMIN_EMAILS = new Set(['jibiza90@gmail.com', 'jpujola@alogroup.es'].map(normalizeEmail));
@@ -35,6 +36,7 @@ interface SessionState {
 interface ClientOverview {
   clientId: string;
   clientName: string;
+  report?: ClientReportPayload | null;
   currentBalance: number;
   cumulativeProfit: number;
   dailyProfit: number;
@@ -783,7 +785,11 @@ const ClientPortal = ({
     });
   }, [clientId, clientUnreadCount, supportOpen]);
 
-  const clientName = useMemo(() => overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId, [clientId, overview]);
+  const report = overview?.report ?? null;
+  const clientName = useMemo(
+    () => report?.clientName ?? overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId,
+    [clientId, overview, report]
+  );
   const headerName = useMemo(() => {
     if (clientName && !clientName.toLowerCase().startsWith('cliente ')) return clientName;
 
@@ -818,7 +824,13 @@ const ClientPortal = ({
       setSupportBusy(false);
     }
   };
-  const monthlyRaw = overview?.monthly ?? [];
+  const monthlyRaw =
+    report?.monthlyStats.map((item) => ({
+      month: item.month,
+      profit: item.profit,
+      retPct: item.profitPct / 100,
+      endBalance: item.endBalance
+    })) ?? overview?.monthly ?? [];
   const twrMonthlyRaw = overview?.twrMonthly ?? [];
   const monthly = useMemo(
     () =>
@@ -838,13 +850,22 @@ const ClientPortal = ({
     () => [...monthly].reverse().find((item) => item.profit !== 0) ?? monthly[monthly.length - 1] ?? null,
     [monthly]
   );
-  const twrYtd = overview?.twrYtd ?? overview?.ytdReturnPct ?? 0;
+  const twrYtd = report?.twrYtd ?? overview?.twrYtd ?? overview?.ytdReturnPct ?? 0;
   const currentMonthIso = currentMonthIsoMadrid();
   const latestMonthIso = monthly.length ? monthly[monthly.length - 1].month : null;
   const activeMonthIso =
     latestMonthIso && latestMonthIso > currentMonthIso ? latestMonthIso : currentMonthIso;
   const monthEndBalance = useMemo(() => {
     const map = new Map<string, number>();
+    if (report?.patrimonioEvolution?.length) {
+      report.patrimonioEvolution.forEach((row) => {
+        if (row.hasData && row.balance !== undefined) {
+          map.set(row.month, row.balance);
+        }
+      });
+      return map;
+    }
+
     const orderedRows = [...(overview?.rows ?? [])].sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
     for (const row of orderedRows) {
       const month = row.iso.slice(0, 7);
@@ -853,7 +874,7 @@ const ClientPortal = ({
       }
     }
     return map;
-  }, [overview?.rows]);
+  }, [overview?.rows, report?.patrimonioEvolution]);
   const balanceSeries = useMemo(
     () =>
       monthly.map((item) => ({
@@ -864,25 +885,47 @@ const ClientPortal = ({
     [monthEndBalance, monthly]
   );
   const twrSeries = useMemo(
-    () =>
-      monthly.map((item) => ({
+    () => {
+      if (report?.monthlyStats?.length) {
+        return report.monthlyStats
+          .filter((item) => item.hasData)
+          .map((item) => ({
+            month: item.month,
+            label: formatMonthLabel(item.month),
+            value: item.profitPct / 100
+          }));
+      }
+
+      return monthly.map((item) => ({
         month: item.month,
         label: formatMonthLabel(item.month),
         value: twrMonthly.find((row) => row.month === item.month)?.twr ?? 0
-      })),
-    [monthly, twrMonthly]
+      }));
+    },
+    [monthly, report?.monthlyStats, twrMonthly]
   );
   const twrCumulativeByMonth = useMemo(() => {
     const map = new Map<string, number>();
     let factor = 1;
+    if (report?.monthlyStats?.length) {
+      for (const item of report.monthlyStats.filter((row) => row.hasData)) {
+        factor *= 1 + item.profitPct / 100;
+        map.set(item.month, factor - 1);
+      }
+      return map;
+    }
     for (const item of monthly) {
       const twr = twrMonthly.find((row) => row.month === item.month)?.twr ?? 0;
       factor *= 1 + twr;
       map.set(item.month, factor - 1);
     }
     return map;
-  }, [monthly, twrMonthly]);
+  }, [monthly, report?.monthlyStats, twrMonthly]);
   const latestTwrMonth = useMemo(() => {
+    if (report?.monthlyStats?.length) {
+      const last = [...report.monthlyStats].reverse().find((item) => item.hasData) ?? null;
+      return last ? { month: last.month, twr: last.profitPct / 100 } : null;
+    }
     for (let i = monthly.length - 1; i >= 0; i -= 1) {
       const month = monthly[i];
       const twr = twrMonthly.find((row) => row.month === month.month)?.twr ?? 0;
@@ -891,15 +934,24 @@ const ClientPortal = ({
     if (monthly.length === 0) return null;
     const last = monthly[monthly.length - 1];
     return { month: last.month, twr: twrMonthly.find((row) => row.month === last.month)?.twr ?? 0 };
-  }, [monthly, twrMonthly]);
-  const movementRows = useMemo(
-    () =>
-      (overview?.rows ?? [])
-        .filter((row) => (row.increment ?? 0) !== 0 || (row.decrement ?? 0) !== 0)
-        .slice()
-        .sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0)),
-    [overview?.rows]
-  );
+  }, [monthly, report?.monthlyStats, twrMonthly]);
+  const movementRows = useMemo(() => {
+    if (report?.movements?.length) {
+      return report.movements
+        .map((row) => ({
+          iso: row.iso,
+          increment: row.type === 'increment' ? row.amount : 0,
+          decrement: row.type === 'decrement' ? row.amount : 0,
+          finalBalance: row.balance
+        }))
+        .sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
+    }
+
+    return (overview?.rows ?? [])
+      .filter((row) => (row.increment ?? 0) !== 0 || (row.decrement ?? 0) !== 0)
+      .slice()
+      .sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
+  }, [overview?.rows, report?.movements]);
   const incrementDetailRows = useMemo(
     () => movementRows.filter((row) => (row.increment ?? 0) > 0).slice(-24).reverse(),
     [movementRows]
@@ -1645,7 +1697,7 @@ const ClientPortal = ({
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Saldo actual</p>
-              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.currentBalance)}</h3>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(report?.saldo ?? overview.currentBalance)}</h3>
             </article>
             <article
               onMouseEnter={(event) => showKpiHint(event, 'Dinero ganado o perdido sumando todo el ano.')}
@@ -1654,38 +1706,38 @@ const ClientPortal = ({
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Beneficio total</p>
-              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.cumulativeProfit)}</h3>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(report?.beneficioTotal ?? overview.cumulativeProfit)}</h3>
             </article>
             <article
-              onMouseEnter={(event) => showKpiHint(event, 'Cuanto ganaste o perdiste solo en el ultimo dia con datos.')}
+              onMouseEnter={(event) => showKpiHint(event, 'TWR mide el rendimiento real de la estrategia sin contaminarlo con aportaciones y retiradas.')}
               onMouseMove={moveKpiHint}
               onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
-              <p style={{ margin: 0, color: palette.muted }}>Beneficio dia</p>
-              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.dailyProfit ?? 0)}</h3>
+              <p style={{ margin: 0, color: palette.muted }}>TWR</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(report?.twrYtd ?? twrYtd)}</h3>
             </article>
             <article
-              onMouseEnter={(event) => showKpiHint(event, 'Porcentaje ganado o perdido en el ultimo dia comparado con el dinero que habia ese dia.')}
+              onMouseEnter={(event) => showKpiHint(event, 'Capital total aportado por el cliente.')}
               onMouseMove={moveKpiHint}
               onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
-              <p style={{ margin: 0, color: palette.muted }}>% dia</p>
-              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.dailyProfitPct ?? 0)}</h3>
+              <p style={{ margin: 0, color: palette.muted }}>Capital invertido</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(report?.incrementos ?? overview.totalIncrements ?? 0)}</h3>
             </article>
             <article
-              onMouseEnter={(event) => showKpiHint(event, 'Que parte del total de la cartera representas.')}
+              onMouseEnter={(event) => showKpiHint(event, 'Capital total retirado por el cliente.')}
               onMouseMove={moveKpiHint}
               onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
-              <p style={{ margin: 0, color: palette.muted }}>Participacion</p>
-              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(overview.participation ?? 0)}</h3>
+              <p style={{ margin: 0, color: palette.muted }}>Capital retirado</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(report?.decrementos ?? overview.totalDecrements ?? 0)}</h3>
             </article>
             <article
               onMouseEnter={(event) => {
-                showKpiHint(event, 'Suma de todas tus entradas de dinero del ano.');
+                showKpiHint(event, 'Detalle de tus aportaciones registradas.');
                 setFlowPopup('inc');
               }}
               onMouseMove={moveKpiHint}
@@ -1695,8 +1747,8 @@ const ClientPortal = ({
               }}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, position: 'relative' }}
             >
-              <p style={{ margin: 0, color: palette.muted }}>Incrementos totales</p>
-              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.totalIncrements ?? 0)}</h3>
+              <p style={{ margin: 0, color: palette.muted }}>Detalle capital invertido</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(report?.incrementos ?? overview.totalIncrements ?? 0)}</h3>
               {flowPopup === 'inc' ? (
                 <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, zIndex: 70, width: 340, maxHeight: 260, overflow: 'auto', background: '#fff', border: `1px solid ${palette.border}`, borderRadius: 12, boxShadow: '0 18px 34px rgba(0,0,0,0.14)', padding: 10 }}>
                   <strong style={{ fontSize: 12 }}>Detalle incrementos</strong>
@@ -1717,7 +1769,7 @@ const ClientPortal = ({
             </article>
             <article
               onMouseEnter={(event) => {
-                showKpiHint(event, 'Suma de todas tus retiradas de dinero del ano.');
+                showKpiHint(event, 'Detalle de tus retiradas registradas.');
                 setFlowPopup('dec');
               }}
               onMouseMove={moveKpiHint}
@@ -1727,8 +1779,8 @@ const ClientPortal = ({
               }}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, position: 'relative' }}
             >
-              <p style={{ margin: 0, color: palette.muted }}>Decrementos totales</p>
-              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(overview.totalDecrements ?? 0)}</h3>
+              <p style={{ margin: 0, color: palette.muted }}>Detalle capital retirado</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(report?.decrementos ?? overview.totalDecrements ?? 0)}</h3>
               {flowPopup === 'dec' ? (
                 <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, zIndex: 70, width: 340, maxHeight: 260, overflow: 'auto', background: '#fff', border: `1px solid ${palette.border}`, borderRadius: 12, boxShadow: '0 18px 34px rgba(0,0,0,0.14)', padding: 10 }}>
                   <strong style={{ fontSize: 12 }}>Detalle decrementos</strong>
@@ -1760,7 +1812,7 @@ const ClientPortal = ({
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, position: 'relative' }}
             >
               <p style={{ margin: 0, color: palette.muted }}>Beneficio mensual</p>
-              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(latestProfitMonth?.profit ?? 0)}</h3>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatEuro(report?.beneficioUltimoMes ?? latestProfitMonth?.profit ?? 0)}</h3>
               <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>
                 {latestProfitMonth ? formatMonthLabel(latestProfitMonth.month) : '-'}
               </p>
@@ -1788,21 +1840,21 @@ const ClientPortal = ({
               onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
-              <p style={{ margin: 0, color: palette.muted }}>TWR mensual</p>
-              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(latestTwrMonth?.twr ?? 0)}</h3>
+              <p style={{ margin: 0, color: palette.muted }}>Rentab. ultimo mes</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct((report?.rentabilidadUltimoMes ?? 0) / 100)}</h3>
               <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>
                 {latestTwrMonth ? formatMonthLabel(latestTwrMonth.month) : '-'}
               </p>
             </article>
             <article
-              onMouseEnter={(event) => showKpiHint(event, 'TWR mide el rendimiento real evitando que entradas y salidas distorsionen el resultado.')}
+              onMouseEnter={(event) => showKpiHint(event, 'Rentabilidad total frente al capital neto aportado.')}
               onMouseMove={moveKpiHint}
               onMouseLeave={() => setKpiHint(null)}
               style={{ padding: 14, borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card }}
             >
-              <p style={{ margin: 0, color: palette.muted }}>Rentabilidad acumulada anual</p>
-              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct(twrYtd)}</h3>
-              <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>TWR YTD</p>
+              <p style={{ margin: 0, color: palette.muted }}>Rentabilidad total</p>
+              <h3 style={{ margin: '8px 0 0 0', color: palette.text }}>{formatPct((report?.rentabilidad ?? 0) / 100)}</h3>
+              <p style={{ marginTop: 6, color: palette.muted, fontSize: 12 }}>Sobre capital neto aportado</p>
             </article>
             <article
               onMouseEnter={(event) => showKpiHint(event, 'Fecha y hora de la ultima actualizacion de tus datos.')}
@@ -1890,8 +1942,8 @@ const ClientPortal = ({
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
                 <div>
-                  <p style={{ margin: 0, color: palette.muted }}>Grafico TWR mensual</p>
-                  <h4 style={{ margin: '6px 0 0', color: palette.text }}>Rendimiento mensual sin flujos</h4>
+                  <p style={{ margin: 0, color: palette.muted }}>Grafico rentabilidad mensual</p>
+                  <h4 style={{ margin: '6px 0 0', color: palette.text }}>Rendimiento mensual</h4>
                 </div>
                 <button
                   type="button"
@@ -1911,7 +1963,7 @@ const ClientPortal = ({
                 </button>
               </div>
               {twrSeries.length === 0 ? (
-                <p style={{ margin: 0, color: palette.muted }}>Aun no hay datos de TWR mensual.</p>
+                <p style={{ margin: 0, color: palette.muted }}>Aun no hay datos de rentabilidad mensual.</p>
               ) : (
                 <PremiumTwrBarChart data={twrSeries} valueFormatter={formatPct} expanded={expandedTwrChart} />
               )}
@@ -1921,8 +1973,8 @@ const ClientPortal = ({
                     <thead>
                       <tr>
                         <th style={{ textAlign: 'left', padding: 10, color: palette.muted, fontSize: 12 }}>Mes</th>
-                        <th style={{ textAlign: 'right', padding: 10, color: palette.muted, fontSize: 12 }}>TWR mensual</th>
-                        <th style={{ textAlign: 'right', padding: 10, color: palette.muted, fontSize: 12 }}>TWR acumulado</th>
+                        <th style={{ textAlign: 'right', padding: 10, color: palette.muted, fontSize: 12 }}>Rentabilidad mensual</th>
+                        <th style={{ textAlign: 'right', padding: 10, color: palette.muted, fontSize: 12 }}>Rentabilidad acumulada</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1959,8 +2011,8 @@ const ClientPortal = ({
                     <th style={{ textAlign: 'left', padding: 12, color: palette.muted }}>Mes</th>
                     <th style={{ textAlign: 'left', padding: 12, color: palette.muted }}>Estado</th>
                     <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Beneficio</th>
-                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>TWR mensual</th>
-                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>TWR acumulado ano</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Rentabilidad mensual</th>
+                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Rentabilidad acumulada</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1970,7 +2022,6 @@ const ClientPortal = ({
                     </tr>
                   ) : (
                     monthly.map((month) => {
-                      const twrItem = twrMonthly.find((row) => row.month === month.month);
                       const twrCumulative = twrCumulativeByMonth.get(month.month) ?? 0;
                       return (
                         <tr key={month.month}>
@@ -1979,7 +2030,7 @@ const ClientPortal = ({
                             {month.month === activeMonthIso ? 'En curso' : 'Cerrado'}
                           </td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatEuro(month.profit)}</td>
-                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatPct(twrItem?.twr ?? 0)}</td>
+                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatPct(month.retPct)}</td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{formatPct(twrCumulative)}</td>
                         </tr>
                       );
@@ -1992,24 +2043,22 @@ const ClientPortal = ({
 
           <section style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.cardAlt, overflow: 'hidden' }}>
             <div style={{ padding: 14, borderBottom: `1px solid ${palette.border}` }}>
-              <strong>Detalle de movimientos (incrementos y decrementos)</strong>
+              <strong>Historial de movimientos</strong>
             </div>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
                 <thead>
                   <tr>
                     <th style={{ textAlign: 'left', padding: 12, color: palette.muted }}>Fecha</th>
                     <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Ingreso</th>
                     <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Retiro</th>
                     <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Saldo</th>
-                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>Beneficio dia</th>
-                    <th style={{ textAlign: 'right', padding: 12, color: palette.muted }}>% dia</th>
                   </tr>
                 </thead>
                 <tbody>
                   {movementRows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ padding: 12, color: palette.muted }}>Sin movimientos recientes.</td>
+                      <td colSpan={4} style={{ padding: 12, color: palette.muted }}>Sin movimientos registrados.</td>
                     </tr>
                   ) : (
                     movementRows
@@ -2023,8 +2072,6 @@ const ClientPortal = ({
                             {row.decrement ? formatEuro(row.decrement) : '-'}
                           </td>
                           <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.finalBalance !== null ? formatEuro(row.finalBalance) : '-'}</td>
-                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.profit !== null ? formatEuro(row.profit) : '-'}</td>
-                          <td style={{ padding: 12, textAlign: 'right', borderTop: `1px solid ${palette.border}` }}>{row.profitPct !== null ? formatPct(row.profitPct) : '-'}</td>
                         </tr>
                       ))
                   )}
