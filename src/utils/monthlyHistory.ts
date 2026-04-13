@@ -29,6 +29,10 @@ interface MonthlyStatsResult {
   lastMonth: MonthlyStatPoint | null;
 }
 
+interface MonthlyStatsOptions {
+  forceHistoryReturn?: boolean;
+}
+
 export function normalizeMonthlyReturnPct(value?: number) {
   if (value === undefined || Number.isNaN(value)) return undefined;
   return Math.abs(value) > 1 ? value / 100 : value;
@@ -55,8 +59,10 @@ export function canHonorMonthlyHistoryReturn(baseStart: number | undefined, entr
 export function buildMonthlyStatsForMonths(
   rows: ClientDayRow[],
   monthlyHistory: Record<string, MonthlyHistoryEntry>,
-  monthKeys: string[]
+  monthKeys: string[],
+  options: MonthlyStatsOptions = {}
 ): MonthlyStatsResult {
+  const forceHistoryReturn = options.forceHistoryReturn === true;
   const trackedMonths = [...monthKeys].sort((a, b) => (a > b ? 1 : -1));
   const trackedMonthSet = new Set(trackedMonths);
   const scopedRows = rows.filter((row) => trackedMonthSet.has(row.iso.slice(0, 7)));
@@ -109,7 +115,23 @@ export function buildMonthlyStatsForMonths(
     }
 
     const canUseHistoryReturn = canHonorMonthlyHistoryReturn(baseStart, historyEntry);
-    if (canUseHistoryReturn && historyEntry?.finalBalance !== undefined && normalizedHistoryReturn !== undefined) {
+    if (forceHistoryReturn && normalizedHistoryReturn !== undefined) {
+      if (historyEntry?.finalBalance !== undefined && normalizedHistoryReturn > -1) {
+        finalEnd = historyEntry.finalBalance;
+        baseStart = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
+        profit = historyEntry.finalBalance - baseStart;
+      } else {
+        if ((baseStart === undefined || baseStart === 0) && finalEnd !== undefined && finalEnd > 0 && normalizedHistoryReturn > -1) {
+          baseStart = finalEnd / (1 + normalizedHistoryReturn);
+        }
+        if (baseStart !== undefined && baseStart > 0) {
+          profit = baseStart * normalizedHistoryReturn;
+          if (finalEnd === undefined || finalEnd === 0) {
+            finalEnd = baseStart + profit;
+          }
+        }
+      }
+    } else if (canUseHistoryReturn && historyEntry?.finalBalance !== undefined && normalizedHistoryReturn !== undefined) {
       baseStart = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
       profit = historyEntry.finalBalance - baseStart;
     }
@@ -117,7 +139,8 @@ export function buildMonthlyStatsForMonths(
     const safeBase = baseStart ?? 0;
     const simpleProfitPct = safeBase > 0 ? profit / safeBase : 0;
     const profitPct =
-      canUseHistoryReturn && normalizedHistoryReturn !== undefined
+      (forceHistoryReturn && normalizedHistoryReturn !== undefined) ||
+      (canUseHistoryReturn && normalizedHistoryReturn !== undefined)
         ? normalizedHistoryReturn
         : monthlyTwr ?? simpleProfitPct;
     const hasData = !!derivedEntry || hasMonthlyHistoryValue(historyEntry);
@@ -161,8 +184,9 @@ export function buildMonthlyStatsForMonths(
 export function buildMonthlyStatsForYear(
   rows: ClientDayRow[],
   monthlyHistory: Record<string, MonthlyHistoryEntry>,
-  year: number
+  year: number,
+  options: MonthlyStatsOptions = {}
 ): MonthlyStatsResult {
   const monthKeys = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`);
-  return buildMonthlyStatsForMonths(rows, monthlyHistory, monthKeys);
+  return buildMonthlyStatsForMonths(rows, monthlyHistory, monthKeys, options);
 }

@@ -100,8 +100,8 @@ export function buildClientReportData(
   );
   const { monthlyStats, patrimonioEvolution, lastMonth } =
     selectedYear === 'all'
-      ? buildMonthlyStatsForMonths(rows, monthlyHistory, periodMonthKeys)
-      : buildMonthlyStatsForYear(rows, monthlyHistory, selectedYear);
+      ? buildMonthlyStatsForMonths(rows, monthlyHistory, periodMonthKeys, { forceHistoryReturn: true })
+      : buildMonthlyStatsForYear(rows, monthlyHistory, selectedYear, { forceHistoryReturn: true });
 
   const movements: ClientReportData['movements'] = [];
   [...periodRows].sort((a, b) => a.iso.localeCompare(b.iso)).forEach((row) => {
