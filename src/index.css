@@ -2883,11 +2883,6 @@ input[type='number'] {
   letter-spacing: 0.65px;
 }
 
-.report-pro-table {
-  width: 100%;
-  table-layout: fixed;
-}
-
 .report-pro-month-row span {
   padding: 2px 0;
   border-radius: 6px;

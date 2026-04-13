@@ -806,12 +806,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           </div>
           <div className="table-scroll">
             <table className="monthly-table report-pro-table">
-              <colgroup>
-                <col style={{ width: '22%' }} />
-                <col style={{ width: '26%' }} />
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '32%' }} />
-              </colgroup>
               <thead>
                 <tr>
                   <th>Mes</th>
