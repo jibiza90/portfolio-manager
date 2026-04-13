@@ -4,80 +4,9 @@ import { usePortfolioStore } from '../store/portfolio';
 import { formatCurrency, formatPercent } from '../utils/format';
 import { getYearFromIso, YEAR } from '../utils/dates';
 import { buildReportUrl, saveReportLink } from '../services/reportLinks';
-import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
-import { buildMonthlyStatsForMonths, buildMonthlyStatsForYear } from '../utils/monthlyHistory';
+import { buildClientReportData, type ClientContactInfo } from '../utils/clientReport';
 
-type ContactInfo = { name: string; surname: string; email: string; phone: string };
-type Movement = { iso: string; type: 'increment' | 'decrement'; amount: number; balance: number };
-
-function buildClientReportData(
-  clientId: string,
-  selectedYear: number | 'all',
-  availableYears: number[],
-  contacts: Record<string, ContactInfo>,
-  snapshot: ReturnType<typeof usePortfolioStore.getState>['snapshot'],
-  monthlyHistoryByClient: ReturnType<typeof usePortfolioStore.getState>['monthlyHistoryByClient']
-) {
-  const client = CLIENTS.find((entry) => entry.id === clientId);
-  if (!client) return null;
-
-  const rows = snapshot.clientRowsById[clientId] || [];
-  const periodRows = selectedYear === 'all'
-    ? rows
-    : rows.filter((row) => row.iso.startsWith(`${selectedYear}-`));
-  const incrementos = periodRows.reduce((sum, row) => sum + (row.increment || 0), 0);
-  const decrementos = periodRows.reduce((sum, row) => sum + (row.decrement || 0), 0);
-  const validRows = [...periodRows].reverse();
-  const lastWithFinal = validRows.find((row) => row.finalBalance !== undefined && row.finalBalance > 0);
-  const lastWithBase = validRows.find((row) => row.baseBalance !== undefined && row.baseBalance > 0);
-  const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
-  const beneficioTotal = saldo + decrementos - incrementos;
-  const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
-
-  const monthlyHistory = monthlyHistoryByClient[clientId] ?? {};
-  const periodYears = selectedYear === 'all' ? availableYears : [selectedYear];
-  const periodMonthKeys = periodYears.flatMap((year) =>
-    Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`)
-  );
-  const { monthlyStats, patrimonioEvolution, lastMonth } =
-    selectedYear === 'all'
-      ? buildMonthlyStatsForMonths(rows, monthlyHistory, periodMonthKeys)
-      : buildMonthlyStatsForYear(rows, monthlyHistory, selectedYear);
-
-  const movements: Movement[] = [];
-  [...periodRows].sort((a, b) => a.iso.localeCompare(b.iso)).forEach((row) => {
-    if (row.increment && row.increment > 0) {
-      movements.push({ iso: row.iso, type: 'increment', amount: row.increment, balance: row.finalBalance || 0 });
-    }
-    if (row.decrement && row.decrement > 0) {
-      movements.push({ iso: row.iso, type: 'decrement', amount: row.decrement, balance: row.finalBalance || 0 });
-    }
-  });
-
-  const contact = contacts[clientId];
-  const displayName = contact && (contact.name || contact.surname) ? `${contact.name} ${contact.surname}`.trim() : client.name;
-  const twrYtd = calculateTWR(periodRows).twr;
-  const twrMonthly = calculateAllMonthsTWR(periodRows);
-
-  return {
-    id: client.id,
-    code: client.name,
-    name: displayName,
-    contact,
-    incrementos,
-    decrementos,
-    saldo,
-    beneficioTotal,
-    rentabilidad,
-    monthlyStats,
-    movements,
-    patrimonioEvolution,
-    beneficioUltimoMes: lastMonth?.profit ?? 0,
-    rentabilidadUltimoMes: lastMonth?.profitPct ?? 0,
-    twrYtd,
-    twrMonthly
-  };
-}
+type ContactInfo = ClientContactInfo & { name: string; surname: string; email: string; phone: string };
 
 export function InformesView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const { snapshot, finalByDay, monthlyHistoryByClient } = usePortfolioStore();
@@ -139,8 +68,8 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
 
   const clientData = useMemo(() => {
     if (!selectedClient) return null;
-    return buildClientReportData(selectedClient, selectedYear, availableYears, contacts, snapshot, monthlyHistoryByClient);
-  }, [selectedClient, selectedYear, availableYears, snapshot, contacts, monthlyHistoryByClient]);
+    return buildClientReportData(selectedClient, selectedYear, contacts, snapshot, monthlyHistoryByClient);
+  }, [selectedClient, selectedYear, snapshot, contacts, monthlyHistoryByClient]);
 
   const monthlyChart = useMemo(() => clientData?.monthlyStats ?? [], [clientData]);
   const patrimonioChart = useMemo(() => clientData?.patrimonioEvolution ?? [], [clientData]);
@@ -780,7 +709,7 @@ Su gestor de inversiones`
                     onClick={async () => {
                       setSendingMultiple(true);
                       for (const clientId of selectedClients) {
-                        const clientDataForEmail = buildClientReportData(clientId, selectedYear, availableYears, contacts, snapshot, monthlyHistoryByClient);
+                        const clientDataForEmail = buildClientReportData(clientId, selectedYear, contacts, snapshot, monthlyHistoryByClient);
                         if (!clientDataForEmail?.contact?.email) continue;
 
                         const token = await saveReportLink({

@@ -785,13 +785,13 @@ const ClientPortal = ({
 
   const clientName = useMemo(() => overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId, [clientId, overview]);
   const headerName = useMemo(() => {
+    if (clientName && !clientName.toLowerCase().startsWith('cliente ')) return clientName;
+
     const cleanLiveProfileName = liveProfileDisplayName?.trim();
     if (cleanLiveProfileName) return cleanLiveProfileName;
 
     const cleanDisplayName = displayName?.trim();
     if (cleanDisplayName) return cleanDisplayName;
-
-    if (clientName && !clientName.toLowerCase().startsWith('cliente ')) return clientName;
     if (loginId) return `Cliente ${loginId}`;
     return clientName;
   }, [clientName, displayName, loginId, liveProfileDisplayName]);

@@ -1,7 +1,7 @@
-import { ClientDayRow, MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
+import { MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
 import { db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { calculateAllMonthsTWR, calculateTWR } from '../utils/twr';
-import { buildMonthlyStatsForMonths } from '../utils/monthlyHistory';
+import { buildClientReportData } from '../utils/clientReport';
 
 const DOC_PATH = 'portfolio/state';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
@@ -40,33 +40,6 @@ const buildOverviewRows = (snapshot: PortfolioSnapshot, clientId: string) => {
     }));
 };
 
-const buildMonthlyAnalytics = (rows: ClientDayRow[], monthlyHistory: Record<string, MonthlyHistoryEntry>) => {
-  const monthKeys = Array.from(new Set([...rows.map((row) => row.iso.slice(0, 7)), ...Object.keys(monthlyHistory)])).sort((a, b) =>
-    a > b ? 1 : -1
-  );
-  const { monthlyStats, lastMonth } = buildMonthlyStatsForMonths(rows, monthlyHistory, monthKeys);
-  const monthly = monthlyStats
-    .filter((item) => item.hasData && (item.profit !== 0 || item.profitPct !== 0 || item.endBalance !== 0))
-    .map((item) => ({
-      month: item.monthKey,
-      profit: item.profit,
-      retPct: item.profitPct / 100,
-      endBalance: item.endBalance
-    }));
-
-  return {
-    monthly,
-    latestProfitMonth: [...monthly].reverse().find((item) => item.profit !== 0) ?? monthly[monthly.length - 1] ?? null,
-    latestReturnMonth: lastMonth
-      ? {
-          month: lastMonth.monthKey,
-          profit: lastMonth.profit,
-          retPct: lastMonth.profitPct / 100
-        }
-      : monthly[monthly.length - 1] ?? null
-  };
-};
-
 const buildClientOverview = (
   snapshot: PortfolioSnapshot,
   clientId: string,
@@ -75,26 +48,44 @@ const buildClientOverview = (
 ) => {
   const rows = snapshot.clientRowsById[clientId] ?? [];
   const latestWithBalance = [...rows].reverse().find((row) => row.finalBalance !== undefined || row.baseBalance !== undefined);
-  const latestWithProfit = [...rows].reverse().find((row) => row.cumulativeProfit !== undefined || row.profit !== undefined);
+  const latestWithProfit = [...rows].reverse().find((row) => row.profit !== undefined);
   const latestWithShare = [...rows].reverse().find((row) => row.sharePct !== undefined);
   const latestWithProfitPct = [...rows].reverse().find((row) => row.profitPct !== undefined);
-
-  const currentBalance = latestWithBalance?.finalBalance ?? latestWithBalance?.baseBalance ?? 0;
-  const cumulativeProfit = latestWithProfit?.cumulativeProfit ?? 0;
+  const report = buildClientReportData(clientId, 'all', {}, snapshot, { [clientId]: monthlyHistory }, clientName);
+  const currentBalance = report?.saldo ?? latestWithBalance?.finalBalance ?? latestWithBalance?.baseBalance ?? 0;
+  const cumulativeProfit = report?.beneficioTotal ?? 0;
   const dailyProfit = latestWithProfit?.profit ?? 0;
   const dailyProfitPct = latestWithProfitPct?.profitPct ?? 0;
   const participation = latestWithShare?.sharePct ?? 0;
-  const totalIncrements = rows.reduce((sum, row) => sum + (row.increment ?? 0), 0);
-  const totalDecrements = rows.reduce((sum, row) => sum + (row.decrement ?? 0), 0);
-  const { monthly, latestProfitMonth, latestReturnMonth } = buildMonthlyAnalytics(rows, monthlyHistory);
+  const totalIncrements = report?.incrementos ?? rows.reduce((sum, row) => sum + (row.increment ?? 0), 0);
+  const totalDecrements = report?.decrementos ?? rows.reduce((sum, row) => sum + (row.decrement ?? 0), 0);
+  const monthly = (report?.monthlyStats ?? [])
+    .filter((item) => item.hasData && (item.profit !== 0 || item.profitPct !== 0 || item.endBalance !== 0))
+    .map((item) => ({
+      month: item.monthKey,
+      profit: item.profit,
+      retPct: item.profitPct / 100,
+      endBalance: item.endBalance
+    }));
+  const latestProfitMonth = monthly.length
+    ? [...monthly].reverse().find((item) => item.profit !== 0) ?? monthly[monthly.length - 1]
+    : null;
+  const latestReturnMonth = report?.monthlyStats
+    ? (() => {
+        const lastMonth = [...report.monthlyStats].reverse().find((item) => item.hasData) ?? null;
+        return lastMonth
+          ? { month: lastMonth.monthKey, profit: lastMonth.profit, retPct: lastMonth.profitPct / 100 }
+          : null;
+      })()
+    : null;
 
-  const twrYtd = calculateTWR(rows);
-  const twrMonthly = calculateAllMonthsTWR(rows);
-  const ytdReturnPct = twrYtd.twr;
+  const twrYtd = report?.twrYtd ?? calculateTWR(rows).twr;
+  const twrMonthly = report?.twrMonthly ?? calculateAllMonthsTWR(rows);
+  const ytdReturnPct = twrYtd;
 
   return {
     clientId,
-    clientName,
+    clientName: report?.name ?? clientName,
     currentBalance,
     cumulativeProfit,
     dailyProfit,
@@ -106,7 +97,7 @@ const buildClientOverview = (
     latestProfitMonth,
     latestReturnMonth,
     monthly,
-    twrYtd: twrYtd.twr,
+    twrYtd,
     twrMonthly,
     rows: buildOverviewRows(snapshot, clientId),
     updatedAt: Date.now()
@@ -136,7 +127,7 @@ export const syncClientOverviews = async (
   const batch = db.batch();
   clients.forEach((client) => {
     const docRef = db.collection(CLIENT_OVERVIEW_COLLECTION).doc(client.id);
-    batch.set(docRef, buildClientOverview(snapshot, client.id, client.name, monthlyHistoryByClient[client.id] ?? {}), { merge: true });
+    batch.set(docRef, buildClientOverview(snapshot, client.id, client.name, monthlyHistoryByClient[client.id] ?? {}));
   });
   await batch.commit();
 };
