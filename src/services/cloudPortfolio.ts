@@ -41,7 +41,8 @@ export const fetchPortfolioState = async (): Promise<PersistedState> => {
 };
 
 export const savePortfolioState = async (state: PersistedState) => {
-  await db.doc(DOC_PATH).set(state, { merge: true });
+  // Overwrite the state document so deleted nested fields are really removed in Firestore.
+  await db.doc(DOC_PATH).set(state);
 };
 
 export const syncClientOverviews = async (
