@@ -4,18 +4,30 @@ import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 
 interface ReportViewProps {
-  token: string;
+  token?: string;
+  reportData?: ReportData | null;
 }
 
-export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
-  const [report, setReport] = useState<ReportData | null>(null);
-  const [loading, setLoading] = useState(true);
+export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => {
+  const [report, setReport] = useState<ReportData | null>(reportData ?? null);
+  const [loading, setLoading] = useState(!reportData);
   const [expired, setExpired] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const twrExplanation = 'mide el rendimiento de la estrategia aislando el efecto de aportes y retiradas.';
   const totalReturnExplanation = 'compara el beneficio total frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
 
   useEffect(() => {
+    if (reportData) {
+      setReport(reportData);
+      setLoading(false);
+      setExpired(false);
+      return;
+    }
+    if (!token) {
+      setLoading(false);
+      setExpired(true);
+      return;
+    }
     const loadReport = async () => {
       if (!isValidReportToken(token)) {
         setExpired(true);
@@ -31,7 +43,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
       setLoading(false);
     };
     loadReport();
-  }, [token]);
+  }, [reportData, token]);
 
   const handleDownload = async () => {
     if (!report) return;
@@ -438,7 +450,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
 
   if (!report) return null;
 
-  const expiresIn = Math.max(0, Math.floor((report.expiresAt - Date.now()) / (1000 * 60 * 60)));
+  const expiresIn = report.expiresAt ? Math.max(0, Math.floor((report.expiresAt - Date.now()) / (1000 * 60 * 60))) : null;
   const monthlyWithData = report.monthlyStats.filter((m) => m.hasData && m.profit !== null && m.profitPct !== null && m.endBalance !== null);
   const hasNegativeMonth = monthlyWithData.some((m) => m.profitPct < 0);
   const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(m.profitPct)));
@@ -483,7 +495,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token }) => {
       <div className="informe-actions glass-card report-pro-actions">
         <button className="btn-action primary" onClick={handleDownload}>Descargar PDF</button>
         <button className="btn-action secondary" onClick={handlePrint}>Imprimir</button>
-        <div className="actions-note">Enlace temporal: caduca en {expiresIn} horas.</div>
+        {expiresIn !== null ? <div className="actions-note">Enlace temporal: caduca en {expiresIn} horas.</div> : null}
       </div>
 
       <article className="informe-preview glass-card report-pro-sheet" ref={reportRef}>
