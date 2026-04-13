@@ -13,6 +13,7 @@ import { auth, db, firebase } from './services/firebaseApp';
 import { recordLoginEvent } from './services/loginTracker';
 import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, type SupportMessage } from './services/supportInbox';
 import { initializePortfolioStore, usePortfolioStore } from './store/portfolio';
+import type { ReportData } from './services/reportLinks';
 import type { ClientReportPayload } from './utils/clientReport';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
@@ -98,6 +99,66 @@ const currentMonthIsoMadrid = () => {
   const year = parts.find((part) => part.type === 'year')?.value ?? '0000';
   const month = parts.find((part) => part.type === 'month')?.value ?? '01';
   return `${year}-${month}`;
+};
+
+const buildFallbackReportFromOverview = (
+  overview: ClientOverview,
+  fallbackClientName: string
+): ReportData => {
+  const monthly = (overview.monthly ?? []).map((item) => ({
+    month: formatMonthLabel(item.month),
+    profit: item.profit ?? 0,
+    profitPct: (item.retPct ?? 0) * 100,
+    endBalance: item.endBalance ?? 0,
+    hasData: true
+  }));
+
+  const monthEndBalance = new Map<string, number>();
+  [...(overview.rows ?? [])]
+    .sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0))
+    .forEach((row) => {
+      if (row.finalBalance !== null) {
+        monthEndBalance.set(row.iso.slice(0, 7), row.finalBalance);
+      }
+    });
+
+  const patrimonioEvolution = monthly.map((item) => ({
+    month: item.month,
+    balance: monthEndBalance.get(item.month.slice(4).includes(' ') ? '' : item.month) ?? item.endBalance ?? 0,
+    hasData: true
+  }));
+
+  const movements = (overview.rows ?? [])
+    .filter((row) => (row.increment ?? 0) !== 0 || (row.decrement ?? 0) !== 0)
+    .map((row) => ({
+      iso: row.iso,
+      type: (row.increment ?? 0) > 0 ? 'increment' : 'decrement',
+      amount: (row.increment ?? 0) > 0 ? row.increment ?? 0 : row.decrement ?? 0,
+      balance: row.finalBalance ?? 0
+    }));
+
+  return {
+    clientId: overview.clientId,
+    clientName: overview.clientName || fallbackClientName,
+    clientCode: overview.clientId,
+    incrementos: overview.totalIncrements ?? 0,
+    decrementos: overview.totalDecrements ?? 0,
+    saldo: overview.currentBalance ?? 0,
+    beneficioTotal: overview.cumulativeProfit ?? 0,
+    rentabilidad: 0,
+    beneficioUltimoMes: overview.latestProfitMonth?.profit ?? 0,
+    rentabilidadUltimoMes: ((overview.latestReturnMonth?.retPct ?? 0) * 100),
+    twrYtd: overview.twrYtd ?? overview.ytdReturnPct ?? 0,
+    monthlyStats: monthly,
+    patrimonioEvolution: monthly.map((item) => ({
+      month: item.month,
+      balance: item.endBalance,
+      hasData: item.hasData
+    })),
+    movements,
+    createdAt: overview.updatedAt,
+    expiresAt: overview.updatedAt
+  };
 };
 
 const PremiumAreaChart = ({
@@ -802,6 +863,15 @@ const ClientPortal = ({
     if (loginId) return `Cliente ${loginId}`;
     return clientName;
   }, [clientName, displayName, loginId, liveProfileDisplayName]);
+  const clientReportData = useMemo(
+    () =>
+      overview
+        ? report
+          ? { ...report, createdAt: overview.updatedAt, expiresAt: overview.updatedAt }
+          : buildFallbackReportFromOverview(overview, headerName)
+        : null,
+    [headerName, overview, report]
+  );
 
   const sendClientSupportMessage = async () => {
     const cleanText = supportText.trim();
@@ -1688,7 +1758,7 @@ const ClientPortal = ({
         </section>
       ) : null}
 
-      {overview && report ? <ReportView reportData={{ ...report, createdAt: overview.updatedAt, expiresAt: overview.updatedAt }} /> : null}
+      {clientReportData ? <ReportView reportData={clientReportData} /> : null}
     </main>
   );
 };
