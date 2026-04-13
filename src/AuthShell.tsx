@@ -90,17 +90,26 @@ const formatMonthLabel = (monthIso: string) => {
   if (!Number.isFinite(idx) || idx < 1 || idx > 12) return monthIso;
   return `${monthNames[idx - 1]} ${year}`;
 };
-const currentMonthIsoMadrid = () => {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric',
-    month: '2-digit',
-    timeZone: 'Europe/Madrid'
-  }).formatToParts(new Date());
-  const year = parts.find((part) => part.type === 'year')?.value ?? '0000';
-  const month = parts.find((part) => part.type === 'month')?.value ?? '01';
-  return `${year}-${month}`;
+const formatMonthEndDate = (monthValue: string) => {
+  const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  if (/^\d{4}-\d{2}$/.test(monthValue)) {
+    const [yearRaw, monthRaw] = monthValue.split('-');
+    const year = Number(yearRaw);
+    const month = Number(monthRaw);
+    if (Number.isFinite(year) && Number.isFinite(month)) {
+      return new Date(year, month, 0).toLocaleDateString('es-ES');
+    }
+  }
+  const parts = monthValue.trim().toLowerCase().split(/\s+/);
+  if (parts.length === 2) {
+    const monthIndex = monthNames.indexOf(parts[0].slice(0, 3));
+    const year = Number(parts[1]);
+    if (monthIndex >= 0 && Number.isFinite(year)) {
+      return new Date(year, monthIndex + 1, 0).toLocaleDateString('es-ES');
+    }
+  }
+  return monthValue;
 };
-
 const buildFallbackReportFromOverview = (
   overview: ClientOverview,
   fallbackClientName: string
@@ -928,10 +937,6 @@ const ClientPortal = ({
     [monthly]
   );
   const twrYtd = report?.twrYtd ?? overview?.twrYtd ?? overview?.ytdReturnPct ?? 0;
-  const currentMonthIso = currentMonthIsoMadrid();
-  const latestMonthIso = monthly.length ? monthly[monthly.length - 1].month : null;
-  const activeMonthIso =
-    latestMonthIso && latestMonthIso > currentMonthIso ? latestMonthIso : currentMonthIso;
   const monthEndBalance = useMemo(() => {
     const map = new Map<string, number>();
     if (report?.patrimonioEvolution?.length) {
@@ -1063,7 +1068,7 @@ const ClientPortal = ({
       ]);
       const doc = new jsPDF({ unit: 'pt', format: 'a4' });
       const now = new Date();
-      const safeName = headerName.replace(/[^a-zA-Z0-9-_]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'cliente';
+      const safeName = (loginId ?? clientId).replace(/[^a-zA-Z0-9-_]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'cliente';
 
       const brand = {
         teal: [15, 109, 122] as [number, number, number],
@@ -1106,9 +1111,8 @@ const ClientPortal = ({
 
         doc.setFontSize(9);
         doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, pageWidth - marginX, 22, { align: 'right' });
-        doc.text(`Cliente: ${headerName}`, pageWidth - marginX, 38, { align: 'right' });
         if (loginId) {
-          doc.text(`Usuario: ${loginId}`, pageWidth - marginX, 54, { align: 'right' });
+          doc.text(`Usuario: ${loginId}`, pageWidth - marginX, 38, { align: 'right' });
         }
       };
 
@@ -1320,42 +1324,6 @@ const ClientPortal = ({
 
       drawHeader();
 
-      const periodLabel = monthly.length
-        ? `${formatMonthLabel(monthly[0].month)} - ${formatMonthLabel(monthly[monthly.length - 1].month)}`
-        : formatMonthLabel(activeMonthIso);
-      const updatedAtLabel = overview.updatedAt ? new Date(overview.updatedAt).toLocaleDateString('es-ES') : '-';
-
-      const drawInfoCard = (startY: number) => {
-        const cardX = marginX;
-        const cardY = startY;
-        const cardW = pageWidth - marginX * 2;
-        const cardH = 94;
-
-        doc.setDrawColor(brand.border[0], brand.border[1], brand.border[2]);
-        doc.setFillColor(brand.soft[0], brand.soft[1], brand.soft[2]);
-        doc.roundedRect(cardX, cardY, cardW, cardH, 14, 14, 'FD');
-
-        doc.setFontSize(9);
-        doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
-        doc.text('Datos del informe', cardX + 14, cardY + 20);
-
-        const leftX = cardX + 14;
-        const rightX = cardX + Math.round(cardW * 0.56);
-
-        doc.setFontSize(10);
-        doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
-        doc.text(`Cliente: ${headerName}`, leftX, cardY + 44);
-        if (loginId) {
-          doc.text(`Usuario: ${loginId}`, leftX, cardY + 64);
-        }
-
-        doc.text(`Emitido: ${now.toLocaleDateString('es-ES')}`, rightX, cardY + 44);
-        doc.text(`Actualizado: ${updatedAtLabel}`, rightX, cardY + 64);
-        doc.text(`Periodo: ${periodLabel}`, rightX, cardY + 84);
-
-        return cardY + cardH + space.l;
-      };
-
       const ensureRoom = (y: number, minRoom: number) => {
         const bottomLimit = pageHeight - tableMargin.bottom;
         if (y + minRoom <= bottomLimit) return y;
@@ -1413,18 +1381,17 @@ const ClientPortal = ({
         return startY + rows * cardH + Math.max(0, rows - 1) * gapY;
       };
 
-      let cursorY = drawInfoCard(contentTop);
+      let cursorY = contentTop;
       const latestProfitLabel = latestProfitMonth ? `${formatMonthLabel(latestProfitMonth.month)}: ${formatEuro(latestProfitMonth.profit)}` : '-';
       const latestTwrLabel = latestTwrMonth ? `${formatMonthLabel(latestTwrMonth.month)}: ${formatPct(latestTwrMonth.twr)}` : '-';
       const kpis = [
-        { label: 'Saldo actual', value: formatEuro(overview.currentBalance ?? 0) },
-        { label: 'Beneficio total', value: formatEuro(overview.cumulativeProfit ?? 0) },
-        { label: 'Incrementos totales', value: formatEuro(overview.totalIncrements ?? 0) },
-        { label: 'Decrementos totales', value: formatEuro(overview.totalDecrements ?? 0) },
+        { label: 'Saldo actual', value: formatEuro(report?.saldo ?? overview.currentBalance ?? 0) },
+        { label: 'Beneficio total', value: formatEuro(report?.beneficioTotal ?? overview.cumulativeProfit ?? 0) },
+        { label: 'Incrementos totales', value: formatEuro(report?.incrementos ?? overview.totalIncrements ?? 0) },
+        { label: 'Decrementos totales', value: formatEuro(report?.decrementos ?? overview.totalDecrements ?? 0) },
         { label: 'Beneficio ultimo mes', value: latestProfitLabel },
         { label: 'TWR ultimo mes', value: latestTwrLabel },
-        { label: 'TWR acumulado anual (YTD)', value: formatPct(twrYtd) },
-        { label: 'Periodo en curso', value: formatMonthLabel(activeMonthIso) }
+        { label: 'TWR acumulado anual (YTD)', value: formatPct(twrYtd) }
       ];
 
       const maxSummaryRoom = pageHeight - tableMargin.bottom - contentTop - 20;
@@ -1453,7 +1420,7 @@ const ClientPortal = ({
           const monthBalance = monthEndBalance.get(item.month) ?? 0;
           return [
             formatMonthLabel(item.month),
-            item.month === activeMonthIso ? 'En curso' : 'Cerrado',
+            monthBalance !== 0 ? 'Cerrado' : 'En curso',
             formatEuro(monthBalance),
             formatEuro(item.profit),
             formatPct(twr),
@@ -1537,8 +1504,8 @@ const ClientPortal = ({
         startY: balanceChartEndY + space.s,
         margin: tableMargin,
         didDrawPage,
-        head: [['Mes', 'Saldo fin de mes']],
-        body: balanceSeries.map((row) => [row.label, formatEuro(row.value)]),
+        head: [['Fecha', 'Saldo']],
+        body: balanceSeries.map((row) => [formatMonthEndDate(row.month), formatEuro(row.value)]),
         theme: 'grid',
         styles: { fontSize: 9, cellPadding: 6, textColor: brand.text, lineColor: brand.border, lineWidth: 0.6 },
         headStyles: { fillColor: brand.teal, textColor: 255, fontStyle: 'bold' },
