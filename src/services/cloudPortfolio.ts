@@ -1,5 +1,5 @@
 import { MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
-import { db, functions } from './firebaseApp';
+import { db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { buildClientReportData, toClientReportPayload } from '../utils/clientReport';
 
 const DOC_PATH = 'portfolio/state';
@@ -146,6 +146,21 @@ export const loginIdFromAuthEmail = (value?: string | null) => {
   return email.slice(0, -suffix.length);
 };
 
+const upsertAccessProfile = async (uid: string, profile: AccessProfile) => {
+  const now = Date.now();
+  await db
+    .collection('access_profiles')
+    .doc(uid)
+    .set(
+      {
+        ...profile,
+        updatedAt: now,
+        createdAt: profile.createdAt ?? now
+      },
+      { merge: true }
+    );
+};
+
 export interface ProvisionClientAccessInput {
   loginId: string;
   password: string;
@@ -180,25 +195,45 @@ export const provisionClientAccess = async (
   }
 
   try {
-    const callable = functions.httpsCallable('provisionClientAccess');
-    const result = await callable({
-      loginId,
-      password,
-      clientId,
-      displayName
-    });
-    const data = result.data as ProvisionClientAccessResult;
-    return {
-      ok: data.ok === true,
-      uid: data.uid,
-      createdAuthUser: data.createdAuthUser,
-      linkedExistingProfile: data.linkedExistingProfile
-    };
+    const existingProfile = await fetchClientAccessProfile(clientId);
+    if (existingProfile) {
+      await upsertAccessProfile(existingProfile.uid, {
+        role: 'client',
+        clientId,
+        displayName: displayName || undefined,
+        email: buildClientAuthEmail(loginId),
+        loginId,
+        active: true,
+        createdAt: existingProfile.createdAt
+      });
+      return { ok: true, uid: existingProfile.uid, createdAuthUser: false, linkedExistingProfile: true };
+    }
+
+    const secondaryName = `client-provision-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const secondaryApp = firebase.initializeApp(firebaseConfig, secondaryName);
+    try {
+      const credential = await secondaryApp.auth().createUserWithEmailAndPassword(buildClientAuthEmail(loginId), password);
+      const uid = credential.user?.uid;
+      if (!uid) return { ok: false, reason: 'auth_user_missing' };
+
+      await upsertAccessProfile(uid, {
+        role: 'client',
+        clientId,
+        displayName: displayName || undefined,
+        email: buildClientAuthEmail(loginId),
+        loginId,
+        active: true
+      });
+      return { ok: true, uid, createdAuthUser: true, linkedExistingProfile: false };
+    } finally {
+      await secondaryApp.auth().signOut().catch(() => undefined);
+      await secondaryApp.delete().catch(() => undefined);
+    }
   } catch (error) {
     const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: string }).code) : '';
     if (code.includes('permission-denied')) return { ok: false, reason: 'permission_denied' };
-    if (code.includes('invalid-argument')) return { ok: false, reason: 'password_weak' };
-    if (code.includes('failed-precondition')) return { ok: false, reason: 'login_exists_without_profile' };
+    if (code.includes('weak-password')) return { ok: false, reason: 'password_weak' };
+    if (code.includes('email-already-in-use')) return { ok: false, reason: 'login_exists_without_profile' };
     console.error('Error provisioning client access', error);
     return { ok: false, reason: 'unknown' };
   }
