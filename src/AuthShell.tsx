@@ -17,7 +17,6 @@ import type { ReportData } from './services/reportLinks';
 import type { ClientReportPayload } from './utils/clientReport';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
-const ADMIN_EMAILS = new Set(['jibiza90@gmail.com', 'jpujola@alogroup.es'].map(normalizeEmail));
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_REFRESH_MS = 10 * 60 * 1000;
 const REMEMBERED_IDENTIFIER_KEY = 'portfolio-login-identifier';
@@ -1840,8 +1839,8 @@ const AuthShell = () => {
       }, 4000);
     };
 
-    void auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((error) => {
-      console.error('No se pudo fijar persistencia LOCAL en auth', error);
+    void auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch((error) => {
+      console.error('No se pudo fijar persistencia SESSION en auth', error);
     });
 
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -1889,17 +1888,8 @@ const AuthShell = () => {
 
         const tokenResult = await user.getIdTokenResult().catch(() => null);
         const tokenEmailClaim = typeof tokenResult?.claims?.email === 'string' ? tokenResult.claims.email : '';
-        const providerEmail = user.providerData.map((provider) => provider?.email ?? '').find((value) => !!value) ?? '';
-        const email = normalizeEmail(user.email ?? tokenEmailClaim ?? providerEmail ?? '');
-        let profile: Awaited<ReturnType<typeof fetchAccessProfile>> = null;
-        const adminByEmail = ADMIN_EMAILS.has(email);
-
-        if (!adminByEmail) {
-          profile = await fetchAccessProfile(user.uid);
-        }
-
-        const adminByProfile = profile?.role === 'admin' && profile.active !== false;
-        const isAdmin = adminByEmail || adminByProfile;
+        let profile: Awaited<ReturnType<typeof fetchAccessProfile>> = await fetchAccessProfile(user.uid);
+        const isAdmin = profile?.role === 'admin' && profile.active !== false;
 
         if (isAdmin) {
           adminUidRef.current = user.uid;

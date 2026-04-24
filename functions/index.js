@@ -6,17 +6,28 @@ admin.initializeApp();
 setGlobalOptions({ region: 'europe-southwest1', maxInstances: 5 });
 
 const MASTER_EMAIL = 'jibiza90@gmail.com';
+const CLIENT_LOGIN_DOMAIN = 'clients.portfolio-manager.local';
 
-exports.setClientPassword = onCall(async (request) => {
+const normalizeLoginId = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+const isValidLoginId = (value) => /^[a-z0-9]{4,20}$/.test(normalizeLoginId(value));
+const buildClientAuthEmail = (loginId) => `${normalizeLoginId(loginId)}@${CLIENT_LOGIN_DOMAIN}`;
+
+const assertMaster = (request, action) => {
   const auth = request.auth;
   if (!auth) {
     throw new HttpsError('unauthenticated', 'Debes iniciar sesion.');
   }
 
   const callerEmail = String(auth.token.email || '').trim().toLowerCase();
-  if (callerEmail !== MASTER_EMAIL) {
-    throw new HttpsError('permission-denied', 'Solo el master puede cambiar passwords.');
+  const emailVerified = auth.token.email_verified === true;
+  if (callerEmail !== MASTER_EMAIL || !emailVerified) {
+    throw new HttpsError('permission-denied', `Solo el master verificado puede ${action}.`);
   }
+  return { auth, callerEmail };
+};
+
+exports.setClientPassword = onCall(async (request) => {
+  const { auth, callerEmail } = assertMaster(request, 'cambiar passwords');
 
   const uid = String(request.data?.uid || '').trim();
   const password = String(request.data?.password || '');
@@ -76,4 +87,93 @@ exports.setClientPassword = onCall(async (request) => {
   });
 
   return { ok: true };
+});
+
+exports.provisionClientAccess = onCall(async (request) => {
+  const { auth, callerEmail } = assertMaster(request, 'crear accesos de cliente');
+
+  const loginId = normalizeLoginId(request.data?.loginId);
+  const password = String(request.data?.password || '');
+  const clientId = String(request.data?.clientId || '').trim();
+  const displayName = String(request.data?.displayName || '').trim();
+  const email = buildClientAuthEmail(loginId);
+
+  if (!isValidLoginId(loginId)) {
+    throw new HttpsError('invalid-argument', 'Usuario invalido.');
+  }
+  if (!clientId) {
+    throw new HttpsError('invalid-argument', 'Falta clientId.');
+  }
+  if (!password || password.length < 6) {
+    throw new HttpsError('invalid-argument', 'La password debe tener al menos 6 caracteres.');
+  }
+
+  const now = Date.now();
+  let userRecord = null;
+  let createdAuthUser = false;
+
+  try {
+    userRecord = await admin.auth().createUser({
+      email,
+      password,
+      displayName: displayName || loginId,
+      emailVerified: true,
+      disabled: false
+    });
+    createdAuthUser = true;
+  } catch (error) {
+    const code = typeof error === 'object' && error && 'code' in error ? String(error.code || '') : '';
+    if (code.includes('email-already-exists')) {
+      userRecord = await admin.auth().getUserByEmail(email);
+    } else if (code.includes('invalid-password')) {
+      throw new HttpsError('invalid-argument', 'Password invalida.');
+    } else {
+      throw new HttpsError('internal', 'No se pudo crear el usuario.');
+    }
+  }
+
+  if (!userRecord?.uid) {
+    throw new HttpsError('internal', 'No se pudo resolver el usuario.');
+  }
+
+  const profileRef = admin.firestore().collection('access_profiles').doc(userRecord.uid);
+  const profileSnap = await profileRef.get();
+  const existingProfile = profileSnap.exists ? profileSnap.data() || {} : null;
+  const linkedExistingProfile = !createdAuthUser;
+
+  if (existingProfile && existingProfile.role && existingProfile.role !== 'client') {
+    throw new HttpsError('failed-precondition', 'Ese usuario no es cliente.');
+  }
+
+  await profileRef.set(
+    {
+      role: 'client',
+      clientId,
+      displayName: displayName || null,
+      email,
+      loginId,
+      active: true,
+      updatedAt: now,
+      createdAt: existingProfile?.createdAt || now
+    },
+    { merge: true }
+  );
+
+  await admin.firestore().collection('admin_access_events').add({
+    uid: userRecord.uid,
+    clientId,
+    clientEmail: email,
+    loginId,
+    action: createdAuthUser ? 'created' : 'linked',
+    changedByUid: auth.uid,
+    changedByEmail: callerEmail,
+    createdAt: now
+  });
+
+  return {
+    ok: true,
+    uid: userRecord.uid,
+    createdAuthUser,
+    linkedExistingProfile
+  };
 });

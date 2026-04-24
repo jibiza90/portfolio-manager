@@ -5,14 +5,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function adminEmail() {
-      return signedIn() && request.auth.token.email in ['jibiza90@gmail.com', 'jpujola@alogroup.es'];
-    }
-    
-    function primaryAdminEmail() {
-      return signedIn() && request.auth.token.email == 'jibiza90@gmail.com';
-    }
-
     function adminProfile() {
       return signedIn() &&
         exists(/databases/$(database)/documents/access_profiles/$(request.auth.uid)) &&
@@ -21,7 +13,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return adminEmail() || adminProfile();
+      return adminProfile();
     }
 
     function clientOwns(clientId) {
@@ -101,7 +93,7 @@ service cloud.firestore {
     }
 
     match /auth_login_events/{eventId} {
-      allow read: if primaryAdminEmail();
+      allow read: if isAdmin();
       allow create: if signedIn() &&
         request.resource.data.uid is string &&
         request.resource.data.uid == request.auth.uid &&
