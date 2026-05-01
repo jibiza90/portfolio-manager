@@ -144,11 +144,10 @@ export function buildMonthlyStatsForMonths(
 
     const safeBase = baseStart ?? 0;
     const simpleProfitPct = safeBase > 0 ? profit / safeBase : 0;
-    const profitPct =
-      (forceHistoryReturn && normalizedHistoryReturn !== undefined) ||
-      (canUseHistoryReturn && normalizedHistoryReturn !== undefined)
-        ? normalizedHistoryReturn
-        : monthlyTwr ?? simpleProfitPct;
+    const shouldUseHistoryReturn =
+      normalizedHistoryReturn !== undefined &&
+      (forceHistoryReturn || canUseHistoryReturn || derivedEntry?.hasIncrementReturnOverride);
+    const profitPct = shouldUseHistoryReturn ? normalizedHistoryReturn : monthlyTwr ?? simpleProfitPct;
     const hasData = !!derivedEntry || hasMonthlyHistoryValue(historyEntry);
 
     if (finalEnd !== undefined && finalEnd > 0) {

@@ -14,7 +14,8 @@ import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import {
   buildMonthlyStatsForMonths,
-  hasMonthlyHistoryValue
+  hasMonthlyHistoryValue,
+  normalizeMonthlyReturnPct
 } from './utils/monthlyHistory';
 import {
   fetchClientAccessProfile,
@@ -1813,9 +1814,22 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   // Calcular TWR (Time-Weighted Return)
   const twrData = useMemo(() => {
     const ytdResult = calculateTWR(statsRows);
-    const monthlyTWR = calculateAllMonthsTWR(statsRows);
-    return { ytd: ytdResult, monthly: monthlyTWR };
-  }, [statsRows]);
+    const overrideMonths = new Set(
+      statsRows
+        .filter((row) => (row.increment ?? 0) > 0 && row.incrementReturnPct !== undefined)
+        .map((row) => row.iso.slice(0, 7))
+    );
+    const monthlyTWR = calculateAllMonthsTWR(statsRows).map((item) => {
+      const historyReturn = overrideMonths.has(item.month)
+        ? normalizeMonthlyReturnPct(monthlyHistory[item.month]?.returnPct)
+        : undefined;
+      return historyReturn === undefined ? item : { ...item, twr: historyReturn };
+    });
+    const adjustedTwr = monthlyTWR.length
+      ? monthlyTWR.reduce((factor, item) => factor * (1 + item.twr), 1) - 1
+      : ytdResult.twr;
+    return { ytd: { ...ytdResult, twr: adjustedTwr }, monthly: monthlyTWR };
+  }, [statsRows, monthlyHistory]);
 
   const handleMouseMove = (e: React.MouseEvent, text: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
