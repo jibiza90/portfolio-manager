@@ -1753,6 +1753,15 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
   const popupRef = useRef<HTMLDivElement>(null);
   const analyticsScrollRef = useRef<HTMLDivElement>(null);
 
+  const getClientDisplayProfitPct = (row?: (typeof statsRows)[number] | null) => {
+    if (!row) return undefined;
+    const month = row.iso.slice(0, 7);
+    const isMonthEnd = dayjs(row.iso).endOf('month').format('YYYY-MM-DD') === row.iso;
+    return isMonthEnd
+      ? normalizeMonthlyReturnPct(monthlyHistory[month]?.returnPct) ?? row.profitPct
+      : row.profitPct;
+  };
+
   const stats = useMemo(() => {
     const validRows = [...statsRows].reverse();
     const last = validRows.find((r) =>
@@ -1762,11 +1771,11 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     const totalProfit = last?.cumulativeProfit ?? 0;
     const dailyProfit = last?.profit ?? 0;
     const participation = last?.sharePct ?? 0;
-    const profitPct = last?.profitPct ?? 0;
+    const profitPct = getClientDisplayProfitPct(last) ?? 0;
     const totalIncrements = statsRows.reduce((sum, r) => sum + (r.increment ?? 0), 0);
     const totalDecrements = statsRows.reduce((sum, r) => sum + (r.decrement ?? 0), 0);
     return { estimatedBalance, totalProfit, dailyProfit, participation, profitPct, totalIncrements, totalDecrements };
-  }, [statsRows]);
+  }, [statsRows, monthlyHistory]);
 
   const movementDetails = useMemo(
     () =>
@@ -2113,7 +2122,10 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
               </tr>
             </thead>
             <tbody>
-              {displayRows.map(r => (
+              {displayRows.map((r) => {
+                const displayProfitPct = getClientDisplayProfitPct(r);
+
+                return (
                 <tr key={r.iso} data-iso={r.iso} className={clsx(focusDate === r.iso && 'focus', r.isWeekend && 'weekend')}>
                   <td><span>{r.label}</span><small>{r.weekday}</small><small>{r.iso.slice(0, 4)}</small></td>
                   <td>{r.isWeekend ? (r.increment === undefined ? '—' : formatCurrency(r.increment)) : <CurrencyCell value={r.increment} onChange={(v) => setClientMovement(clientId, r.iso, 'increment', v)} />}</td>
@@ -2162,13 +2174,14 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                   <td className={clsx(r.profit !== undefined && r.profit >= 0 ? 'profit' : 'loss')}>
                     {r.profit === undefined ? '—' : formatCurrency(r.profit)}
                   </td>
-                  <td className={clsx(r.profitPct !== undefined && r.profitPct >= 0 ? 'profit' : 'loss')}>
-                    {r.profitPct === undefined ? '—' : formatPercent(r.profitPct)}
+                  <td className={clsx(displayProfitPct !== undefined && displayProfitPct >= 0 ? 'profit' : 'loss')}>
+                    {displayProfitPct === undefined ? '—' : formatPercent(displayProfitPct)}
                   </td>
                   <td>{r.cumulativeProfit === undefined ? '—' : formatCurrency(r.cumulativeProfit)}</td>
                   <td>{r.sharePct === undefined ? '—' : formatPercent(r.sharePct)}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
