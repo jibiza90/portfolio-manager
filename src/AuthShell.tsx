@@ -1331,6 +1331,22 @@ const ClientPortal = ({
           doc.setFillColor(fill[0], fill[1], fill[2]);
           doc.roundedRect(centerX - barW / 2, topY, barW, height, 6, 6, 'F');
 
+          const shouldShowValue = xStep >= 22 || idx % labelStep === 0 || idx === count - 1;
+          if (shouldShowValue) {
+            const valueLabel = formatPct(item.value);
+            doc.setFontSize(7);
+            const textWidth = doc.getTextWidth(valueLabel);
+            const labelY = isPositive
+              ? Math.max(plotY + 9, topY - 5)
+              : Math.min(plotY + plotH - 3, bottomY + 11);
+            const labelX = Math.max(plotX + textWidth / 2 + 3, Math.min(centerX, plotX + plotW - textWidth / 2 - 3));
+            doc.setFillColor(255, 255, 255);
+            doc.setDrawColor(226, 232, 240);
+            doc.roundedRect(labelX - textWidth / 2 - 2, labelY - 7, textWidth + 4, 10, 3, 3, 'FD');
+            doc.setTextColor(fill[0], fill[1], fill[2]);
+            doc.text(valueLabel, labelX, labelY, { align: 'center' });
+          }
+
           if (idx % labelStep === 0 || idx === count - 1) {
             doc.setFontSize(8);
             doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
@@ -1483,14 +1499,19 @@ const ClientPortal = ({
       cursorY = lastTableY() + space.l;
       cursorY = ensureRoom(cursorY, Math.min(movementsEstimatedHeight, maxSummaryRoom));
       cursorY = drawSectionTitle('Ingresos y retiradas', cursorY);
+      let runningNetCapital = 0;
+      const movementCapitalRows = movementRows.map((row) => {
+        runningNetCapital += (row.increment ?? 0) - (row.decrement ?? 0);
+        return { ...row, netCapital: runningNetCapital };
+      });
 
       autoTable(doc, {
         startY: cursorY + space.xs,
         margin: tableMargin,
         didDrawPage,
         pageBreak: 'avoid',
-        head: [['Fecha', 'Ingreso', 'Retiro', 'Saldo']],
-        body: movementRows.map((row) => [
+        head: [['Fecha', 'Ingreso', 'Retiro', 'Capital aportado']],
+        body: movementCapitalRows.map((row) => [
           { content: new Date(row.iso).toLocaleDateString('es-ES') },
           row.increment
             ? { content: formatEuro(row.increment), styles: { textColor: brand.green, fontStyle: 'bold', halign: 'right' } }
@@ -1498,7 +1519,7 @@ const ClientPortal = ({
           row.decrement
             ? { content: formatEuro(row.decrement), styles: { textColor: brand.red, fontStyle: 'bold', halign: 'right' } }
             : { content: '-', styles: { textColor: brand.muted, halign: 'right' } },
-          { content: row.finalBalance !== null ? formatEuro(row.finalBalance) : '-', styles: { halign: 'right' } }
+          { content: formatEuro(row.netCapital), styles: { halign: 'right' } }
         ]),
         theme: 'grid',
         styles: {
