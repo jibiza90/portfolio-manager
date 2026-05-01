@@ -2096,7 +2096,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 <th>Incremento</th>
                 <th>Rentab. ingreso</th>
                 <th>Decremento</th>
-                <th>Beneficio manual</th>
+                <th>Beneficio manual %</th>
                 <th>Inicial</th>
                 <th>Final</th>
                 <th>Beneficio</th>
@@ -2140,10 +2140,15 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                     />
                   )}</td>
                   <td>
-                    <CurrencyCell
-                      value={r.manualProfit}
-                      onChange={(v) => setClientMovement(clientId, r.iso, 'manualProfit', v)}
+                    <PercentCell
+                      value={r.manualProfitPct ?? (r.baseBalance ? (r.manualProfit ?? 0) / r.baseBalance : undefined)}
+                      onChange={(v) => setClientMovement(clientId, r.iso, 'manualProfitPct', v)}
                     />
+                    {r.manualProfit !== undefined && (
+                      <small style={{ display: 'block', marginTop: 4, color: '#64748b' }}>
+                        {formatCurrency(r.manualProfit)}
+                      </small>
+                    )}
                   </td>
                   <td>{r.baseBalance === undefined ? '—' : formatCurrency(r.baseBalance)}</td>
                   <td>{r.finalBalance === undefined ? '—' : formatCurrency(r.finalBalance)}</td>

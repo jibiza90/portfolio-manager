@@ -3,6 +3,7 @@ export interface Movement {
   incrementReturnPct?: number;
   decrement?: number;
   manualProfit?: number;
+  manualProfitPct?: number;
 }
 
 export interface MonthlyHistoryEntry {
@@ -39,6 +40,7 @@ export interface ClientDayRow {
   incrementReturnPct?: number;
   decrement?: number;
   manualProfit?: number;
+  manualProfitPct?: number;
   baseBalance?: number;
   profit?: number;
   profitPct?: number;

@@ -169,7 +169,7 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
         delete dayMovement.incrementReturnPct;
       }
 
-      if (!dayMovement.increment && !dayMovement.decrement && !dayMovement.manualProfit) {
+      if (!dayMovement.increment && !dayMovement.decrement && !dayMovement.manualProfit && !dayMovement.manualProfitPct) {
         delete clientDays[iso];
       } else {
         clientDays[iso] = dayMovement;

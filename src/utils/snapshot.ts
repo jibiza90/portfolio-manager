@@ -53,10 +53,7 @@ const sumMovements = (records: Record<string, Record<string, Movement>>, iso: st
       decrementTotal += day.decrement;
       hasDecrement = true;
     }
-    if (day.manualProfit !== undefined) {
-      manualProfitTotal += day.manualProfit;
-      hasManualProfit = true;
-    }
+    if (day.manualProfit !== undefined) hasManualProfit = true;
   });
 
   return {
@@ -103,7 +100,8 @@ export const buildSnapshot = (
         .filter(([, movement]) =>
           (movement.increment !== undefined && !Number.isNaN(movement.increment)) ||
           (movement.decrement !== undefined && !Number.isNaN(movement.decrement)) ||
-          (movement.manualProfit !== undefined && !Number.isNaN(movement.manualProfit))
+          (movement.manualProfit !== undefined && !Number.isNaN(movement.manualProfit)) ||
+          (movement.manualProfitPct !== undefined && !Number.isNaN(movement.manualProfitPct))
         )
         .map(([iso]) => iso)
     )
@@ -138,9 +136,12 @@ export const buildSnapshot = (
       const increment = movement?.increment;
       const incrementReturnPct = movement?.incrementReturnPct;
       const decrement = movement?.decrement;
-      const manualProfit = movement?.manualProfit;
+      const manualProfitPct = movement?.manualProfitPct;
       const prevBalance = clientState[id].balance;
       const actualBase = beyondLastRecorded ? undefined : prevBalance + (increment ?? 0) - (decrement ?? 0);
+      const manualProfit = movement?.manualProfit ?? (
+        manualProfitPct !== undefined && actualBase !== undefined ? actualBase * manualProfitPct : undefined
+      );
       const monthlyHistory = historicalByClientAndDay[id]?.[day.iso];
       const hasCarryBalance = actualBase !== undefined && Math.abs(actualBase) > MONTHLY_HISTORY_TOLERANCE;
       const isBootstrapMonth = actualBase === undefined || !hasCarryBalance;
@@ -196,6 +197,7 @@ export const buildSnapshot = (
         incrementReturnPct,
         decrement,
         manualProfit,
+        manualProfitPct,
         prevBalance,
         actualBase,
         baseBalance,
@@ -249,6 +251,7 @@ export const buildSnapshot = (
       const incrementReturnPct = draft.incrementReturnPct;
       const decrement = draft.decrement;
       const manualProfit = draft.manualProfit;
+      const manualProfitPct = draft.manualProfitPct;
       const baseBalance = beyondLastRecorded ? undefined : draft.baseBalance;
       let coreFinal = draft.lockedCoreFinal;
       if (!beyondLastRecorded && coreFinal === undefined) {
@@ -296,6 +299,7 @@ export const buildSnapshot = (
         incrementReturnPct,
         decrement,
         manualProfit,
+        manualProfitPct,
         baseBalance,
         profit: clientProfit,
         profitPct: clientProfitPct,
