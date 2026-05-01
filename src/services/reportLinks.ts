@@ -30,6 +30,19 @@ export interface ReportData {
     amount: number;
     balance: number;
   }>;
+  contributionBreakdowns?: Array<{
+    month: string;
+    initialCapital: number;
+    initialReturnPct: number;
+    initialProfit: number;
+    contributions: Array<{
+      iso: string;
+      amount: number;
+      returnPct: number;
+      profit: number;
+    }>;
+    totalProfit: number;
+  }>;
   createdAt: number;
   expiresAt: number;
 }

@@ -128,6 +128,12 @@ const getMonthEndLabel = (monthLabel: string) => {
   });
 };
 
+const getShortDateLabel = (iso: string) => {
+  const [year, month, day] = iso.split('-');
+  if (!year || !month || !day) return iso;
+  return `${day}.${month}.${year}`;
+};
+
 export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => {
   const [report, setReport] = useState<ReportData | null>(reportData ?? null);
   const [loading, setLoading] = useState(!reportData);
@@ -587,6 +593,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
       m.endBalance !== null &&
       ((m.profit ?? 0) !== 0 || (m.profitPct ?? 0) !== 0 || (m.endBalance ?? 0) !== 0)
   );
+  const contributionBreakdowns = report.contributionBreakdowns ?? [];
   const hasNegativeMonth = monthlyWithData.some((m) => m.profitPct < 0);
   const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(m.profitPct)));
   const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.hasData && p.balance !== undefined && (p.balance ?? 0) !== 0);
@@ -691,6 +698,69 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           <p><strong>TWR:</strong> {twrExplanation}</p>
           <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
         </section>
+
+        {contributionBreakdowns.length > 0 && (
+          <section className="report-pro-panel">
+            <div className="report-pro-panel-head">
+              <h4>Detalle de meses con aportaciones</h4>
+              <p>Separamos el capital inicial del mes y cada aportación para que veas qué ha generado cada parte.</p>
+            </div>
+            <div className="report-pro-breakdown-list">
+              {contributionBreakdowns.map((breakdown) => (
+                <div className="report-pro-breakdown-card" key={breakdown.month}>
+                  <div className="report-pro-breakdown-title">
+                    <strong>{breakdown.month}</strong>
+                    <span>Beneficio explicado: {formatCurrency(breakdown.totalProfit)}</span>
+                  </div>
+                  <div className="table-scroll">
+                    <table className="monthly-table report-pro-table">
+                      <thead>
+                        <tr>
+                          <th>Concepto</th>
+                          <th className="text-right">Capital</th>
+                          <th className="text-right">Rentabilidad</th>
+                          <th className="text-right">Beneficio</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Capital inicial del mes</td>
+                          <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
+                          <td className={`text-right ${breakdown.initialReturnPct >= 0 ? 'positive' : 'negative'}`}>
+                            {(breakdown.initialReturnPct * 100).toFixed(2)}%
+                          </td>
+                          <td className={`text-right ${breakdown.initialProfit >= 0 ? 'positive' : 'negative'}`}>
+                            {formatCurrency(breakdown.initialProfit)}
+                          </td>
+                        </tr>
+                        {breakdown.contributions.map((contribution) => (
+                          <tr key={`${breakdown.month}-${contribution.iso}-${contribution.amount}`}>
+                            <td>Aportación {getShortDateLabel(contribution.iso)}</td>
+                            <td className="text-right">{formatCurrency(contribution.amount)}</td>
+                            <td className={`text-right ${contribution.returnPct >= 0 ? 'positive' : 'negative'}`}>
+                              {(contribution.returnPct * 100).toFixed(2)}%
+                            </td>
+                            <td className={`text-right ${contribution.profit >= 0 ? 'positive' : 'negative'}`}>
+                              {formatCurrency(contribution.profit)}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="report-pro-breakdown-total">
+                          <td>Beneficio total del mes</td>
+                          <td className="text-right">—</td>
+                          <td className="text-right">—</td>
+                          <td className={`text-right ${breakdown.totalProfit >= 0 ? 'positive' : 'negative'}`}>
+                            {formatCurrency(breakdown.totalProfit)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="report-pro-panel report-pro-panel-xl">
           <div className="report-pro-panel-head">

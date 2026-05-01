@@ -2598,6 +2598,43 @@ input[type='number'] {
   color: #60718b;
 }
 
+.report-pro-breakdown-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.report-pro-breakdown-card {
+  border: 1px solid rgba(30, 64, 99, 0.12);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fbfdff, #f6f9fc);
+  overflow: hidden;
+}
+
+.report-pro-breakdown-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(30, 64, 99, 0.1);
+}
+
+.report-pro-breakdown-title strong {
+  color: #102845;
+}
+
+.report-pro-breakdown-title span {
+  color: #0f6d7a;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-pro-breakdown-total td {
+  font-weight: 800;
+  background: rgba(15, 109, 122, 0.06);
+}
+
 .report-pro-bars {
   margin-top: 14px;
   height: 360px;

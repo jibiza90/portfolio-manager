@@ -1,7 +1,7 @@
 import { CLIENTS } from '../constants/clients';
 import { PortfolioSnapshot, MonthlyHistoryEntry } from '../types';
 import { calculateAllMonthsTWR } from './twr';
-import { buildMonthlyStatsForMonths, buildMonthlyStatsForYear } from './monthlyHistory';
+import { buildMonthlyStatsForMonths, buildMonthlyStatsForYear, normalizeMonthlyReturnPct } from './monthlyHistory';
 import { getYearFromIso, YEAR } from './dates';
 
 export type ClientContactInfo = {
@@ -23,6 +23,15 @@ export interface ClientReportData {
   rentabilidad: number;
   monthlyStats: ReturnType<typeof buildMonthlyStatsForMonths>['monthlyStats'];
   movements: Array<{ iso: string; type: 'increment' | 'decrement'; amount: number; balance: number }>;
+  contributionBreakdowns: Array<{
+    month: string;
+    monthLabel: string;
+    initialCapital: number;
+    initialReturnPct: number;
+    initialProfit: number;
+    contributions: Array<{ iso: string; amount: number; returnPct: number; profit: number }>;
+    totalProfit: number;
+  }>;
   patrimonioEvolution: ReturnType<typeof buildMonthlyStatsForMonths>['patrimonioEvolution'];
   beneficioUltimoMes: number;
   rentabilidadUltimoMes: number;
@@ -59,6 +68,19 @@ export interface ClientReportPayload {
     type: 'increment' | 'decrement';
     amount: number;
     balance: number;
+  }>;
+  contributionBreakdowns: Array<{
+    month: string;
+    initialCapital: number;
+    initialReturnPct: number;
+    initialProfit: number;
+    contributions: Array<{
+      iso: string;
+      amount: number;
+      returnPct: number;
+      profit: number;
+    }>;
+    totalProfit: number;
   }>;
 }
 
@@ -113,6 +135,49 @@ export function buildClientReportData(
     }
   });
 
+  const rowsByMonth = new Map<string, typeof periodRows>();
+  [...periodRows].sort((a, b) => a.iso.localeCompare(b.iso)).forEach((row) => {
+    const monthKey = row.iso.slice(0, 7);
+    rowsByMonth.set(monthKey, [...(rowsByMonth.get(monthKey) ?? []), row]);
+  });
+
+  const contributionBreakdowns: ClientReportData['contributionBreakdowns'] = monthlyStats
+    .map((monthStat) => {
+      const monthRows = rowsByMonth.get(monthStat.monthKey) ?? [];
+      const contributionRows = monthRows.filter((row) => (row.increment ?? 0) > 0);
+      if (!monthStat.hasData || contributionRows.length === 0) return null;
+
+      const firstRow = monthRows[0];
+      const initialCapital = Math.max(
+        0,
+        (firstRow?.baseBalance ?? 0) - (firstRow?.increment ?? 0) + (firstRow?.decrement ?? 0)
+      );
+      const initialReturnPct = (monthStat.profitPct ?? 0) / 100;
+      const initialProfit = initialCapital * initialReturnPct;
+      const contributions = contributionRows.map((row) => {
+        const amount = row.increment ?? 0;
+        const returnPct = normalizeMonthlyReturnPct(row.incrementReturnPct) ?? initialReturnPct;
+        return {
+          iso: row.iso,
+          amount,
+          returnPct,
+          profit: amount * returnPct
+        };
+      });
+      const totalProfit = initialProfit + contributions.reduce((sum, item) => sum + item.profit, 0);
+
+      return {
+        month: monthStat.monthKey,
+        monthLabel: monthStat.monthLabel,
+        initialCapital,
+        initialReturnPct,
+        initialProfit,
+        contributions,
+        totalProfit
+      };
+    })
+    .filter((item): item is ClientReportData['contributionBreakdowns'][number] => item !== null);
+
   const contact = contacts[clientId];
   const contactName = contact && (contact.name || contact.surname) ? `${contact.name ?? ''} ${contact.surname ?? ''}`.trim() : '';
   const displayName = contactName || fallbackName || client?.name || clientId;
@@ -132,6 +197,7 @@ export function buildClientReportData(
     rentabilidad,
     monthlyStats,
     movements,
+    contributionBreakdowns,
     patrimonioEvolution,
     beneficioUltimoMes: lastMonth?.profit ?? 0,
     rentabilidadUltimoMes: lastMonth?.profitPct ?? 0,
@@ -177,6 +243,19 @@ export function toClientReportPayload(data: ClientReportData): ClientReportPaylo
       type: item.type,
       amount: item.amount ?? 0,
       balance: item.balance ?? 0
+    })),
+    contributionBreakdowns: data.contributionBreakdowns.map((item) => ({
+      month: item.monthLabel,
+      initialCapital: item.initialCapital ?? 0,
+      initialReturnPct: item.initialReturnPct ?? 0,
+      initialProfit: item.initialProfit ?? 0,
+      contributions: item.contributions.map((contribution) => ({
+        iso: contribution.iso,
+        amount: contribution.amount ?? 0,
+        returnPct: contribution.returnPct ?? 0,
+        profit: contribution.profit ?? 0
+      })),
+      totalProfit: item.totalProfit ?? 0
     }))
   };
 }

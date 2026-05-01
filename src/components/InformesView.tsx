@@ -547,6 +547,19 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
         type: m.type,
         amount: m.amount ?? 0,
         balance: m.balance ?? 0
+      })),
+      contributionBreakdowns: clientData.contributionBreakdowns.map((item) => ({
+        month: item.monthLabel,
+        initialCapital: item.initialCapital ?? 0,
+        initialReturnPct: item.initialReturnPct ?? 0,
+        initialProfit: item.initialProfit ?? 0,
+        contributions: item.contributions.map((contribution) => ({
+          iso: contribution.iso,
+          amount: contribution.amount ?? 0,
+          returnPct: contribution.returnPct ?? 0,
+          profit: contribution.profit ?? 0
+        })),
+        totalProfit: item.totalProfit ?? 0
       }))
     });
     
@@ -741,6 +754,19 @@ Su gestor de inversiones`
                             type: m.type,
                             amount: m.amount ?? 0,
                             balance: m.balance ?? 0
+                          })),
+                          contributionBreakdowns: clientDataForEmail.contributionBreakdowns.map((item) => ({
+                            month: item.monthLabel,
+                            initialCapital: item.initialCapital ?? 0,
+                            initialReturnPct: item.initialReturnPct ?? 0,
+                            initialProfit: item.initialProfit ?? 0,
+                            contributions: item.contributions.map((contribution) => ({
+                              iso: contribution.iso,
+                              amount: contribution.amount ?? 0,
+                              returnPct: contribution.returnPct ?? 0,
+                              profit: contribution.profit ?? 0
+                            })),
+                            totalProfit: item.totalProfit ?? 0
                           }))
                         });
 
