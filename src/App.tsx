@@ -1289,7 +1289,7 @@ function DailyGrid({
     items: { name: string; amount: number }[];
     total: number;
   };
-  const { snapshot } = usePortfolioStore();
+  const { snapshot, monthlyHistoryByClient } = usePortfolioStore();
   const setDayFinal = usePortfolioStore((s) => s.setDayFinal);
   const rows = useMemo(() => [...snapshot.dailyRows], [snapshot.dailyRows]);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -1348,6 +1348,11 @@ function DailyGrid({
 
   const showValue = (v?: number) => (v === undefined ? '-' : formatCurrency(v));
   const showPercent = (v?: number) => (v === undefined ? '-' : formatPercent(v));
+  const getDisplayProfitPct = (row: typeof rows[number]) => {
+    const month = row.iso.slice(0, 7);
+    const isMonthEnd = dayjs(row.iso).endOf('month').format('YYYY-MM-DD') === row.iso;
+    return isMonthEnd ? getConsensusMonthlyReturn(monthlyHistoryByClient, month) ?? row.profitPct : row.profitPct;
+  };
   const showMovementTooltip = (
     e: React.MouseEvent<HTMLTableCellElement>,
     data: Omit<MovementTooltipState, 'x' | 'y'>
@@ -1454,7 +1459,9 @@ function DailyGrid({
                   )}
                 </td>
                 <td className={clsx(r.profit !== undefined && r.profit >= 0 ? 'profit' : 'loss')}>{showValue(r.profit)}</td>
-                <td className={clsx(r.profitPct !== undefined && r.profitPct >= 0 ? 'profit' : 'loss')}>{showPercent(r.profitPct)}</td>
+                <td className={clsx(getDisplayProfitPct(r) !== undefined && (getDisplayProfitPct(r) ?? 0) >= 0 ? 'profit' : 'loss')}>
+                  {showPercent(getDisplayProfitPct(r))}
+                </td>
                 <td>{showValue(r.cumulativeProfit)}</td>
               </tr>
             ))}
