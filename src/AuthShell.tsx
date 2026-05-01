@@ -126,6 +126,16 @@ const formatMonthLabel = (monthIso: string) => {
   if (!Number.isFinite(idx) || idx < 1 || idx > 12) return monthIso;
   return `${monthNames[idx - 1]} ${year}`;
 };
+const reportMonthToKey = (monthValue: string) => {
+  const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  if (/^\d{4}-\d{2}$/.test(monthValue)) return monthValue;
+  const parts = monthValue.trim().toLowerCase().split(/\s+/);
+  if (parts.length < 2) return monthValue;
+  const monthIndex = monthNames.indexOf(parts[0].slice(0, 3));
+  const year = Number(parts[parts.length - 1]);
+  if (monthIndex < 0 || !Number.isFinite(year)) return monthValue;
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+};
 const formatMonthEndDate = (monthValue: string) => {
   const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   if (/^\d{4}-\d{2}$/.test(monthValue)) {
@@ -145,6 +155,52 @@ const formatMonthEndDate = (monthValue: string) => {
     }
   }
   return monthValue;
+};
+const formatShortDate = (iso: string) => {
+  const [year, month, day] = iso.split('-');
+  if (!year || !month || !day) return iso;
+  return `${day}.${month}.${year}`;
+};
+const deriveContributionBreakdowns = (
+  report: Pick<ReportData, 'monthlyStats' | 'movements'>
+): NonNullable<ReportData['contributionBreakdowns']> => {
+  const monthly = [...(report.monthlyStats ?? [])]
+    .filter((item) => item.hasData)
+    .map((item) => ({ ...item, monthKey: reportMonthToKey(item.month) }))
+    .sort((a, b) => a.monthKey.localeCompare(b.monthKey));
+  const movements = [...(report.movements ?? [])].sort((a, b) => a.iso.localeCompare(b.iso));
+
+  return monthly
+    .map((month, index) => {
+      const contributionRows = movements.filter(
+        (movement) => movement.type === 'increment' && movement.iso.slice(0, 7) === month.monthKey
+      );
+      if (contributionRows.length === 0) return null;
+
+      const initialCapital = Math.max(0, monthly[index - 1]?.endBalance ?? 0);
+      const initialReturnPct = (month.profitPct ?? 0) / 100;
+      const initialProfit = initialCapital * initialReturnPct;
+      const contributionProfit = (month.profit ?? 0) - initialProfit;
+      const totalContribution = contributionRows.reduce((sum, item) => sum + (item.amount ?? 0), 0);
+      const impliedContributionReturn = totalContribution !== 0 ? contributionProfit / totalContribution : 0;
+      const contributions = contributionRows.map((item) => ({
+        iso: item.iso,
+        amount: item.amount ?? 0,
+        returnPct: impliedContributionReturn,
+        profit: (item.amount ?? 0) * impliedContributionReturn
+      }));
+      const totalProfit = initialProfit + contributions.reduce((sum, item) => sum + item.profit, 0);
+
+      return {
+        month: month.month,
+        initialCapital,
+        initialReturnPct,
+        initialProfit,
+        contributions,
+        totalProfit
+      };
+    })
+    .filter((item): item is NonNullable<ReportData['contributionBreakdowns']>[number] => item !== null);
 };
 const buildFallbackReportFromOverview = (
   overview: ClientOverview,
@@ -201,6 +257,10 @@ const buildFallbackReportFromOverview = (
       hasData: item.hasData
     })),
     movements,
+    contributionBreakdowns: deriveContributionBreakdowns({
+      monthlyStats: monthly,
+      movements
+    }),
     createdAt: overview.updatedAt,
     expiresAt: overview.updatedAt
   };
@@ -916,6 +976,10 @@ const ClientPortal = ({
               ...report,
               clientName: loginId ?? clientId,
               clientCode: loginId ?? clientId,
+              contributionBreakdowns:
+                report.contributionBreakdowns && report.contributionBreakdowns.length > 0
+                  ? report.contributionBreakdowns
+                  : deriveContributionBreakdowns(report),
               createdAt: overview.updatedAt,
               expiresAt: overview.updatedAt
             }
@@ -1446,6 +1510,7 @@ const ClientPortal = ({
       const kpiRowsCount = Math.ceil(kpis.length / 2);
       const kpiEstimatedHeight = kpiRowsCount * 64 + Math.max(0, kpiRowsCount - 1) * 12 + 20;
       const monthlyEstimatedHeight = estimateTableHeight(monthly.length, 18) + 34;
+      const contributionBreakdowns = clientReportData?.contributionBreakdowns ?? [];
       const movementsEstimatedHeight = estimateTableHeight(movementRows.length, 17) + 34;
       const summaryEstimate = kpiEstimatedHeight + monthlyEstimatedHeight + movementsEstimatedHeight + 56;
 
@@ -1497,6 +1562,67 @@ const ClientPortal = ({
       });
 
       cursorY = lastTableY() + space.l;
+      if (contributionBreakdowns.length > 0) {
+        cursorY = ensureRoom(cursorY, 120);
+        cursorY = drawSectionTitle('Detalle de meses con aportaciones', cursorY);
+
+        contributionBreakdowns.forEach((breakdown) => {
+          cursorY = ensureRoom(cursorY, estimateTableHeight(breakdown.contributions.length + 2, 18) + 36);
+          doc.setFontSize(10);
+          doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
+          doc.text(`${breakdown.month} · beneficio explicado: ${formatEuro(breakdown.totalProfit)}`, marginX, cursorY);
+
+          autoTable(doc, {
+            startY: cursorY + space.xs,
+            margin: tableMargin,
+            didDrawPage,
+            pageBreak: 'avoid',
+            head: [['Concepto', 'Capital', 'Rentabilidad', 'Beneficio']],
+            body: [
+              [
+                'Capital inicial del mes',
+                { content: formatEuro(breakdown.initialCapital), styles: { halign: 'right' } },
+                { content: formatPct(breakdown.initialReturnPct), styles: { halign: 'right' } },
+                { content: formatEuro(breakdown.initialProfit), styles: { halign: 'right' } }
+              ],
+              ...breakdown.contributions.map((contribution) => [
+                `Aportacion ${formatShortDate(contribution.iso)}`,
+                { content: formatEuro(contribution.amount), styles: { halign: 'right' } },
+                { content: formatPct(contribution.returnPct), styles: { halign: 'right' } },
+                { content: formatEuro(contribution.profit), styles: { halign: 'right' } }
+              ]),
+              [
+                { content: 'Beneficio total del mes', styles: { fontStyle: 'bold' } },
+                { content: '-', styles: { halign: 'right' } },
+                { content: '-', styles: { halign: 'right' } },
+                { content: formatEuro(breakdown.totalProfit), styles: { halign: 'right', fontStyle: 'bold' } }
+              ]
+            ] as any,
+            theme: 'grid',
+            styles: {
+              fontSize: 8.5,
+              cellPadding: 6,
+              textColor: brand.text,
+              lineColor: brand.border,
+              lineWidth: 0.6
+            },
+            headStyles: {
+              fillColor: brand.teal,
+              textColor: 255,
+              fontStyle: 'bold'
+            },
+            alternateRowStyles: { fillColor: brand.soft },
+            columnStyles: {
+              1: { halign: 'right' },
+              2: { halign: 'right' },
+              3: { halign: 'right' }
+            }
+          });
+
+          cursorY = lastTableY() + space.m;
+        });
+      }
+
       cursorY = ensureRoom(cursorY, Math.min(movementsEstimatedHeight, maxSummaryRoom));
       cursorY = drawSectionTitle('Ingresos y retiradas', cursorY);
       let runningNetCapital = 0;
