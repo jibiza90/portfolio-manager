@@ -1,5 +1,6 @@
 export interface Movement {
   increment?: number;
+  incrementReturnPct?: number;
   decrement?: number;
   manualProfit?: number;
 }
@@ -35,6 +36,7 @@ export interface ClientDayRow {
   weekday: string;
   isWeekend: boolean;
   increment?: number;
+  incrementReturnPct?: number;
   decrement?: number;
   manualProfit?: number;
   baseBalance?: number;

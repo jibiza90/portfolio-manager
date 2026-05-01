@@ -15,6 +15,25 @@ const normalizeReturnPct = (value?: number) =>
 const MONTHLY_HISTORY_TOLERANCE = 0.5;
 const hasMeaningfulAmount = (value?: number) => value !== undefined && Math.abs(value) > MONTHLY_HISTORY_TOLERANCE;
 
+const getIncrementReturnAdjustment = (
+  records: Record<string, Record<string, Movement>>,
+  clientId: string,
+  monthKey: string,
+  monthlyReturnPct: number
+) =>
+  Object.entries(records[clientId] ?? {}).reduce((adjustment, [iso, movement]) => {
+    if (iso.slice(0, 7) !== monthKey || !movement.increment || movement.increment <= 0) {
+      return adjustment;
+    }
+
+    const customReturnPct = normalizeReturnPct(movement.incrementReturnPct);
+    if (customReturnPct === undefined) {
+      return adjustment;
+    }
+
+    return adjustment + movement.increment * (customReturnPct - monthlyReturnPct);
+  }, 0);
+
 const sumMovements = (records: Record<string, Record<string, Movement>>, iso: string) => {
   let incrementTotal = 0;
   let decrementTotal = 0;
@@ -117,6 +136,7 @@ export const buildSnapshot = (
     const clientDrafts = CLIENTS.map(({ id }) => {
       const movement = movementsByClient[id]?.[day.iso];
       const increment = movement?.increment;
+      const incrementReturnPct = movement?.incrementReturnPct;
       const decrement = movement?.decrement;
       const manualProfit = movement?.manualProfit;
       const prevBalance = clientState[id].balance;
@@ -159,7 +179,13 @@ export const buildSnapshot = (
           lockedCoreFinal = monthlyHistory.finalBalance;
         } else if (normalizedReturn !== undefined) {
           baseBalance = actualBase;
-          lockedCoreFinal = (actualBase ?? 0) * (1 + normalizedReturn);
+          const incrementReturnAdjustment = getIncrementReturnAdjustment(
+            movementsByClient,
+            id,
+            day.iso.slice(0, 7),
+            normalizedReturn
+          );
+          lockedCoreFinal = (actualBase ?? 0) * (1 + normalizedReturn) + incrementReturnAdjustment;
           lockedReturnPct = normalizedReturn;
         }
       }
@@ -167,6 +193,7 @@ export const buildSnapshot = (
       return {
         id,
         increment,
+        incrementReturnPct,
         decrement,
         manualProfit,
         prevBalance,
@@ -219,6 +246,7 @@ export const buildSnapshot = (
 
     clientDrafts.forEach((draft) => {
       const increment = draft.increment;
+      const incrementReturnPct = draft.incrementReturnPct;
       const decrement = draft.decrement;
       const manualProfit = draft.manualProfit;
       const baseBalance = beyondLastRecorded ? undefined : draft.baseBalance;
@@ -265,6 +293,7 @@ export const buildSnapshot = (
       clientRowsById[draft.id].push({
         ...day,
         increment,
+        incrementReturnPct,
         decrement,
         manualProfit,
         baseBalance,

@@ -66,7 +66,7 @@ export function buildMonthlyStatsForMonths(
   const trackedMonths = [...monthKeys].sort((a, b) => (a > b ? 1 : -1));
   const trackedMonthSet = new Set(trackedMonths);
   const scopedRows = rows.filter((row) => trackedMonthSet.has(row.iso.slice(0, 7)));
-  const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number }>();
+  const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number; hasIncrementReturnOverride?: boolean }>();
   const twrByMonth = new Map(calculateAllMonthsTWR(scopedRows).map((item) => [item.month, item.twr]));
   let lastKnownFinal: number | undefined;
 
@@ -84,6 +84,9 @@ export function buildMonthlyStatsForMonths(
     if (row.finalBalance !== undefined && row.finalBalance > 0) {
       entry.finalEnd = row.finalBalance;
       lastKnownFinal = row.finalBalance;
+    }
+    if ((row.increment ?? 0) > 0 && row.incrementReturnPct !== undefined) {
+      entry.hasIncrementReturnOverride = true;
     }
   });
 
@@ -120,6 +123,9 @@ export function buildMonthlyStatsForMonths(
         finalEnd = historyEntry.finalBalance;
         baseStart = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
         profit = historyEntry.finalBalance - baseStart;
+      } else if (derivedEntry?.hasIncrementReturnOverride) {
+        // El historico fija la rentabilidad mensual, pero cada ingreso con override
+        // aporta su propio beneficio en euros; conservamos el saldo/profit derivado.
       } else {
         if ((baseStart === undefined || baseStart === 0) && finalEnd !== undefined && finalEnd > 0 && normalizedHistoryReturn > -1) {
           baseStart = finalEnd / (1 + normalizedHistoryReturn);
