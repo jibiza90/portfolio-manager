@@ -94,8 +94,21 @@ function EditableCell({ value, onChange, isPercent = false }: { value: number | 
   return <span className="cell-content" onClick={() => setEditing(true)}>{isPercent ? formatPercent(value) : formatNumberEs(value)}</span>;
 }
 
+const getConsensusMonthlyReturn = (
+  monthlyHistoryByClient: Record<string, Record<string, { returnPct?: number }>>,
+  month: string
+) => {
+  const returns = Object.values(monthlyHistoryByClient)
+    .map((months) => normalizeMonthlyReturnPct(months[month]?.returnPct))
+    .filter((value): value is number => value !== undefined);
+
+  if (returns.length === 0) return undefined;
+  const [first] = returns;
+  return returns.every((value) => Math.abs(value - first) < 0.000001) ? first : undefined;
+};
+
 function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
-  const { snapshot } = usePortfolioStore();
+  const { snapshot, monthlyHistoryByClient } = usePortfolioStore();
   const dailyRows = snapshot.dailyRows;
   const [periodMode, setPeriodMode] = useState<'annual' | 'month'>('annual');
   const [selectedFilterMonth, setSelectedFilterMonth] = useState<string>('');
@@ -283,13 +296,17 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
     const twrMonthMap = new Map(twrData.monthly.map((m) => [m.month, m.twr]));
     const monthly = Array.from(byMonth.values())
       .sort((a, b) => (a.month > b.month ? 1 : -1))
-      .map((m) => ({
-        ...m,
-        simpleReturnPct: m.start !== 0 ? m.profit / m.start : 0,
-        returnPct: twrMonthMap.get(m.month) ?? (m.start !== 0 ? m.profit / m.start : 0),
-        hitRate: m.days > 0 ? m.positiveDays / m.days : 0,
-        twr: twrMonthMap.get(m.month) ?? 0
-      }));
+      .map((m) => {
+        const historyReturn = getConsensusMonthlyReturn(monthlyHistoryByClient, m.month);
+        const calculatedTwr = twrMonthMap.get(m.month);
+        return {
+          ...m,
+          simpleReturnPct: m.start !== 0 ? m.profit / m.start : 0,
+          returnPct: historyReturn ?? calculatedTwr ?? (m.start !== 0 ? m.profit / m.start : 0),
+          hitRate: m.days > 0 ? m.positiveDays / m.days : 0,
+          twr: historyReturn ?? calculatedTwr ?? 0
+        };
+      });
 
     const bestDay = filteredPoints.reduce((best, p) => (best === null || p.profit > best.profit ? p : best), null as (typeof filteredPoints[number] | null));
     const worstDay = filteredPoints.reduce((worst, p) => (worst === null || p.profit < worst.profit ? p : worst), null as (typeof filteredPoints[number] | null));
@@ -421,7 +438,7 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
       bestMonth,
       worstMonth
     };
-  }, [filteredPoints, snapshot, contacts, lastIso, fullRows, twrData]);
+  }, [filteredPoints, snapshot, contacts, lastIso, fullRows, twrData, monthlyHistoryByClient]);
 
   const chartData = useMemo(() => {
     const labels = filteredPoints.map((p) => p.label);
@@ -2390,7 +2407,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
 }
 
 function TotalsBanner() {
-  const { snapshot } = usePortfolioStore();
+  const { snapshot, monthlyHistoryByClient } = usePortfolioStore();
   const { totals } = snapshot;
   const monthlyMetrics = useMemo(() => {
     const rowsWithData = snapshot.dailyRows.filter((row) => row.initial !== undefined || row.final !== undefined || row.profit !== undefined);
@@ -2413,10 +2430,10 @@ function TotalsBanner() {
         month,
         profit: entry.profit,
         endBalance: entry.final ?? 0,
-        returnPct: twrByMonth.get(month) ?? 0
+        returnPct: getConsensusMonthlyReturn(monthlyHistoryByClient, month) ?? twrByMonth.get(month) ?? 0
       }))
       .filter((item) => item.endBalance > 0 || item.profit !== 0 || item.returnPct !== 0);
-  }, [snapshot.dailyRows]);
+  }, [snapshot.dailyRows, monthlyHistoryByClient]);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
 
   useEffect(() => {
