@@ -4,14 +4,29 @@ export interface ClientProfile {
 }
 
 const STORAGE_KEY = 'portfolio-clients';
+export const DEMO_CLIENT_ID = 'client-demo';
 
-const defaultClients = Array.from({ length: 100 }, (_, index) => {
+export const isDemoClient = (clientId: string) => clientId === DEMO_CLIENT_ID;
+
+const numberedClients = Array.from({ length: 100 }, (_, index) => {
   const padded = String(index + 1).padStart(3, '0');
   return {
     id: `client-${padded}`,
     name: `Cliente ${padded}`
   };
 });
+
+const defaultClients: ClientProfile[] = [
+  { id: DEMO_CLIENT_ID, name: 'Cliente Demo' },
+  ...numberedClients
+];
+
+const mergeWithDefaultClients = (clients: ClientProfile[]) => {
+  const merged = new Map<string, ClientProfile>();
+  defaultClients.forEach((client) => merged.set(client.id, client));
+  clients.forEach((client) => merged.set(client.id, client));
+  return Array.from(merged.values());
+};
 
 const loadClients = (): ClientProfile[] => {
   if (typeof window === 'undefined') return defaultClients;
@@ -22,7 +37,10 @@ const loadClients = (): ClientProfile[] => {
     const parsed = JSON.parse(raw) as ClientProfile[];
     if (!Array.isArray(parsed) || parsed.length === 0) return defaultClients;
     const valid = parsed.filter((c) => typeof c?.id === 'string' && typeof c?.name === 'string');
-    return valid.length > 0 ? valid : defaultClients;
+    if (valid.length === 0) return defaultClients;
+    const merged = mergeWithDefaultClients(valid);
+    if (merged.length !== valid.length) persistClients(merged);
+    return merged;
   } catch {
     return defaultClients;
   }
