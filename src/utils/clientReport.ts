@@ -185,7 +185,14 @@ export function buildClientReportData(
   const displayName = contactName || fallbackName || client?.name || clientId;
   const twrMonths = monthlyStats.filter((item) => item.hasData && (item.profit !== 0 || item.profitPct !== 0 || item.endBalance !== 0));
   const twrYtd = twrMonths.reduce((acc, item) => acc * (1 + (item.profitPct ?? 0) / 100), 1) - 1;
-  const twrMonthly = calculateAllMonthsTWR(periodRows);
+  const twrPeriodsByMonth = new Map(calculateAllMonthsTWR(periodRows).map((item) => [item.month, item.periods]));
+  const twrMonthly = monthlyStats
+    .filter((item) => item.hasData)
+    .map((item) => ({
+      month: item.monthKey,
+      twr: (item.profitPct ?? 0) / 100,
+      periods: twrPeriodsByMonth.get(item.monthKey) ?? []
+    }));
 
   return {
     id: clientId,

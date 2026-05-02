@@ -109,6 +109,7 @@ export function buildMonthlyStatsForMonths(
     const historyEntry = monthlyHistory[monthKey];
     const normalizedHistoryReturn = normalizeMonthlyReturnPct(historyEntry?.returnPct);
     const monthlyTwr = twrByMonth.get(monthKey);
+    const hasManualReturnAdjustment = Math.abs(derivedEntry?.manualReturnAdjustment ?? 0) > 0.0000001;
 
     let profit = derivedEntry?.profit ?? 0;
     let baseStart = derivedEntry?.baseStart;
@@ -123,13 +124,16 @@ export function buildMonthlyStatsForMonths(
       baseStart = Math.max(1, finalEnd - profit);
     }
 
-    if (historyEntry?.finalBalance !== undefined) {
+    if (historyEntry?.finalBalance !== undefined && !hasManualReturnAdjustment) {
       finalEnd = historyEntry.finalBalance;
     }
 
     const canUseHistoryReturn = canHonorMonthlyHistoryReturn(baseStart, historyEntry);
     if (forceHistoryReturn && normalizedHistoryReturn !== undefined) {
-      if (historyEntry?.finalBalance !== undefined && normalizedHistoryReturn > -1) {
+      if (hasManualReturnAdjustment && derivedEntry) {
+        // El % manual se suma al TWR visible del cliente, pero el saldo/profit
+        // se conserva derivado de la ficha para no afectar al general.
+      } else if (historyEntry?.finalBalance !== undefined && normalizedHistoryReturn > -1) {
         finalEnd = historyEntry.finalBalance;
         baseStart = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
         profit = historyEntry.finalBalance - baseStart;
