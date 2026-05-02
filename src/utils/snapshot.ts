@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { CLIENTS } from '../constants/clients';
+import { CLIENTS, isDemoClient } from '../constants/clients';
 import {
   Movement,
   MonthlyHistoryEntry,
@@ -34,6 +34,8 @@ const getIncrementReturnAdjustment = (
     return adjustment + movement.increment * (customReturnPct - monthlyReturnPct);
   }, 0);
 
+const getPortfolioClients = () => CLIENTS.filter(({ id }) => !isDemoClient(id));
+
 const sumMovements = (records: Record<string, Record<string, Movement>>, iso: string) => {
   let incrementTotal = 0;
   let decrementTotal = 0;
@@ -42,7 +44,7 @@ const sumMovements = (records: Record<string, Record<string, Movement>>, iso: st
   let hasDecrement = false;
   let hasManualProfit = false;
 
-  CLIENTS.forEach(({ id }) => {
+  getPortfolioClients().forEach(({ id }) => {
     const day = records[id]?.[iso];
     if (!day) return;
     if (day.increment !== undefined) {
@@ -71,6 +73,8 @@ export const buildSnapshot = (
 ): PortfolioSnapshot => {
   const historicalByClientAndDay: Record<string, Record<string, MonthlyHistoryEntry>> = {};
   const historicalDays: string[] = [];
+  const portfolioHistoricalDays: string[] = [];
+  const clientTrackedDays: Record<string, string[]> = {};
 
   Object.entries(monthlyHistoryByClient).forEach(([clientId, months]) => {
     Object.entries(months).forEach(([month, entry]) => {
@@ -86,6 +90,11 @@ export const buildSnapshot = (
         returnPct: normalizedReturn
       };
       historicalDays.push(iso);
+      clientTrackedDays[clientId] = clientTrackedDays[clientId] ?? [];
+      clientTrackedDays[clientId].push(iso);
+      if (!isDemoClient(clientId)) {
+        portfolioHistoricalDays.push(iso);
+      }
     });
   });
 
@@ -94,8 +103,8 @@ export const buildSnapshot = (
     .map(([iso]) => iso)
     .sort((a, b) => (a > b ? 1 : -1));
   const lastRecordedFinalDay = recordedFinalDays[recordedFinalDays.length - 1];
-  const movementDays = Object.values(movementsByClient)
-    .flatMap((rows) =>
+  const movementEntries = Object.entries(movementsByClient)
+    .flatMap(([clientId, rows]) =>
       Object.entries(rows)
         .filter(([, movement]) =>
           (movement.increment !== undefined && !Number.isNaN(movement.increment)) ||
@@ -103,16 +112,29 @@ export const buildSnapshot = (
           (movement.manualProfit !== undefined && !Number.isNaN(movement.manualProfit)) ||
           (movement.manualProfitPct !== undefined && !Number.isNaN(movement.manualProfitPct))
         )
-        .map(([iso]) => iso)
-    )
+        .map(([iso]) => ({ clientId, iso }))
+    );
+  movementEntries.forEach(({ clientId, iso }) => {
+    clientTrackedDays[clientId] = clientTrackedDays[clientId] ?? [];
+    clientTrackedDays[clientId].push(iso);
+  });
+  const portfolioMovementDays = movementEntries
+    .filter(({ clientId }) => !isDemoClient(clientId))
+    .map(({ iso }) => iso)
     .sort((a, b) => (a > b ? 1 : -1));
-  const lastMovementDay = movementDays[movementDays.length - 1];
-  const sortedHistoricalDays = historicalDays.sort((a, b) => (a > b ? 1 : -1));
-  const lastHistoricalDay = sortedHistoricalDays[sortedHistoricalDays.length - 1];
-  const trackedDays = [lastRecordedFinalDay, lastMovementDay, lastHistoricalDay]
+  const lastPortfolioMovementDay = portfolioMovementDays[portfolioMovementDays.length - 1];
+  const sortedPortfolioHistoricalDays = portfolioHistoricalDays.sort((a, b) => (a > b ? 1 : -1));
+  const lastPortfolioHistoricalDay = sortedPortfolioHistoricalDays[sortedPortfolioHistoricalDays.length - 1];
+  const trackedDays = [lastRecordedFinalDay, lastPortfolioMovementDay, lastPortfolioHistoricalDay]
     .filter((value): value is string => Boolean(value))
     .sort((a, b) => (a > b ? 1 : -1));
   const lastTrackedDay = trackedDays[trackedDays.length - 1];
+  const lastTrackedDayByClient = Object.fromEntries(
+    Object.entries(clientTrackedDays).map(([clientId, days]) => {
+      const sortedDays = [...days].sort((a, b) => (a > b ? 1 : -1));
+      return [clientId, sortedDays[sortedDays.length - 1]];
+    })
+  );
 
   const dailyRows: DailyRow[] = [];
   const dayIndex: Record<string, DailyRow> = {};
@@ -132,13 +154,16 @@ export const buildSnapshot = (
     const beyondLastRecorded = lastTrackedDay !== undefined && day.iso > lastTrackedDay;
     const { increments, decrements, manualProfits, net } = sumMovements(movementsByClient, day.iso);
     const clientDrafts = CLIENTS.map(({ id }) => {
+      const demo = isDemoClient(id);
+      const clientLastTrackedDay = demo ? lastTrackedDayByClient[id] : lastTrackedDay;
+      const beyondClientLastRecorded = clientLastTrackedDay !== undefined && day.iso > clientLastTrackedDay;
       const movement = movementsByClient[id]?.[day.iso];
       const increment = movement?.increment;
       const incrementReturnPct = movement?.incrementReturnPct;
       const decrement = movement?.decrement;
       const manualProfitPct = movement?.manualProfitPct;
       const prevBalance = clientState[id].balance;
-      const actualBase = beyondLastRecorded ? undefined : prevBalance + (increment ?? 0) - (decrement ?? 0);
+      const actualBase = beyondClientLastRecorded ? undefined : prevBalance + (increment ?? 0) - (decrement ?? 0);
       const manualProfit = movement?.manualProfit ?? (
         manualProfitPct !== undefined && actualBase !== undefined ? actualBase * manualProfitPct : undefined
       );
@@ -151,7 +176,7 @@ export const buildSnapshot = (
       let lockedCoreFinal: number | undefined;
       let lockedReturnPct: number | undefined;
 
-      if (!beyondLastRecorded && monthlyHistory) {
+      if (!beyondClientLastRecorded && monthlyHistory) {
         const normalizedReturn = normalizeReturnPct(monthlyHistory.returnPct);
         if (monthlyHistory.finalBalance !== undefined && normalizedReturn !== undefined && normalizedReturn > -1) {
           const derivedBase = monthlyHistory.finalBalance / (1 + normalizedReturn);
@@ -193,6 +218,8 @@ export const buildSnapshot = (
 
       return {
         id,
+        isDemo: demo,
+        beyondClientLastRecorded,
         increment,
         incrementReturnPct,
         decrement,
@@ -207,7 +234,8 @@ export const buildSnapshot = (
       };
     });
 
-    const syntheticFlowTotal = clientDrafts.reduce((sum, draft) => sum + draft.syntheticFlow, 0);
+    const portfolioDrafts = clientDrafts.filter((draft) => !draft.isDemo);
+    const syntheticFlowTotal = portfolioDrafts.reduce((sum, draft) => sum + draft.syntheticFlow, 0);
     const generalInitial =
       beyondLastRecorded
         ? undefined
@@ -217,9 +245,9 @@ export const buildSnapshot = (
     }
 
     const recordedFinal = beyondLastRecorded ? undefined : finalByDay[day.iso];
-    const lockedCoreFinalTotal = clientDrafts.reduce((sum, draft) => sum + (draft.lockedCoreFinal ?? 0), 0);
-    const lockedClientCount = clientDrafts.filter((draft) => draft.lockedCoreFinal !== undefined).length;
-    const unlockedDrafts = clientDrafts.filter((draft) => draft.lockedCoreFinal === undefined);
+    const lockedCoreFinalTotal = portfolioDrafts.reduce((sum, draft) => sum + (draft.lockedCoreFinal ?? 0), 0);
+    const lockedClientCount = portfolioDrafts.filter((draft) => draft.lockedCoreFinal !== undefined).length;
+    const unlockedDrafts = portfolioDrafts.filter((draft) => draft.lockedCoreFinal === undefined);
     const unlockedBaseTotal = unlockedDrafts.reduce((sum, draft) => sum + Math.max(0, draft.baseBalance ?? 0), 0);
     const activeUnlockedDrafts = unlockedDrafts.filter(
       (draft) =>
@@ -252,10 +280,12 @@ export const buildSnapshot = (
       const decrement = draft.decrement;
       const manualProfit = draft.manualProfit;
       const manualProfitPct = draft.manualProfitPct;
-      const baseBalance = beyondLastRecorded ? undefined : draft.baseBalance;
+      const baseBalance = draft.beyondClientLastRecorded ? undefined : draft.baseBalance;
       let coreFinal = draft.lockedCoreFinal;
-      if (!beyondLastRecorded && coreFinal === undefined) {
-        if (unlockedCoreTargetTotal !== undefined && unlockedBaseTotal > 0 && (draft.baseBalance ?? 0) > 0) {
+      if (!draft.beyondClientLastRecorded && coreFinal === undefined) {
+        if (draft.isDemo) {
+          coreFinal = draft.baseBalance;
+        } else if (unlockedCoreTargetTotal !== undefined && unlockedBaseTotal > 0 && (draft.baseBalance ?? 0) > 0) {
           const weight = (draft.baseBalance ?? 0) / unlockedBaseTotal;
           coreFinal = unlockedCoreTargetTotal * weight;
         } else {
@@ -264,7 +294,7 @@ export const buildSnapshot = (
       }
 
       const finalBalance =
-        beyondLastRecorded
+        draft.beyondClientLastRecorded
           ? undefined
           : coreFinal !== undefined
             ? coreFinal + (manualProfit ?? 0)
@@ -272,12 +302,12 @@ export const buildSnapshot = (
               ? (draft.baseBalance ?? 0) + manualProfit
               : draft.baseBalance;
 
-      if (!beyondLastRecorded) {
+      if (!draft.beyondClientLastRecorded) {
         clientState[draft.id].netInvested += (increment ?? 0) - (decrement ?? 0) + draft.syntheticFlow;
       }
 
       const clientProfit =
-        !beyondLastRecorded && finalBalance !== undefined && baseBalance !== undefined
+        !draft.beyondClientLastRecorded && finalBalance !== undefined && baseBalance !== undefined
           ? finalBalance - baseBalance
           : undefined;
       const clientProfitPct =
@@ -285,11 +315,11 @@ export const buildSnapshot = (
           ? clientProfit / baseBalance
           : draft.lockedReturnPct;
       const cumulativeClientProfit =
-        !beyondLastRecorded && finalBalance !== undefined
+        !draft.beyondClientLastRecorded && finalBalance !== undefined
           ? finalBalance - clientState[draft.id].netInvested
           : undefined;
       const sharePct =
-        !beyondLastRecorded && globalCoreFinalTarget !== undefined && globalCoreFinalTarget > 0 && coreFinal !== undefined
+        !draft.isDemo && !draft.beyondClientLastRecorded && globalCoreFinalTarget !== undefined && globalCoreFinalTarget > 0 && coreFinal !== undefined
           ? coreFinal / globalCoreFinalTarget
           : undefined;
 
@@ -309,7 +339,7 @@ export const buildSnapshot = (
         shareAmount: coreFinal
       });
 
-      if (!beyondLastRecorded && finalBalance !== undefined) {
+      if (!draft.beyondClientLastRecorded && finalBalance !== undefined) {
         clientState[draft.id].balance = finalBalance;
       }
     });

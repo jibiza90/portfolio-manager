@@ -17,15 +17,17 @@ const numberedClients = Array.from({ length: 100 }, (_, index) => {
 });
 
 const defaultClients: ClientProfile[] = [
-  { id: DEMO_CLIENT_ID, name: 'Cliente Demo' },
-  ...numberedClients
+  ...numberedClients,
+  { id: DEMO_CLIENT_ID, name: 'Cliente Demo' }
 ];
 
 const mergeWithDefaultClients = (clients: ClientProfile[]) => {
   const merged = new Map<string, ClientProfile>();
   defaultClients.forEach((client) => merged.set(client.id, client));
   clients.forEach((client) => merged.set(client.id, client));
-  return Array.from(merged.values());
+  const ordered = Array.from(merged.values()).filter((client) => !isDemoClient(client.id));
+  const demoClient = merged.get(DEMO_CLIENT_ID);
+  return demoClient ? [...ordered, demoClient] : ordered;
 };
 
 const loadClients = (): ClientProfile[] => {
@@ -72,6 +74,7 @@ export const addClientProfile = (name?: string): ClientProfile => {
 };
 
 export const removeClientProfile = (clientId: string): boolean => {
+  if (isDemoClient(clientId)) return false;
   const idx = CLIENTS.findIndex((c) => c.id === clientId);
   if (idx < 0) return false;
   CLIENTS.splice(idx, 1);

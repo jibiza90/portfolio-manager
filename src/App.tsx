@@ -3,7 +3,7 @@ import type { MouseEvent } from 'react';
 import dayjs from 'dayjs';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
-import { addClientProfile, CLIENTS, removeClientProfile } from './constants/clients';
+import { addClientProfile, CLIENTS, isDemoClient, removeClientProfile } from './constants/clients';
 import { GENERAL_OPTION } from './constants/generalOption';
 import { usePortfolioStore } from './store/portfolio';
 import { formatCurrency, formatPercent, formatNumberEs, parseNumberEs } from './utils/format';
@@ -38,6 +38,7 @@ const STATS_VIEW = 'STATS_VIEW';
 const SEGUIMIENTO_VIEW = 'SEGUIMIENTO_VIEW';
 const MENSAJES_VIEW = 'MENSAJES_VIEW';
 const ACCESOS_VIEW = 'ACCESOS_VIEW';
+const getPortfolioClients = () => CLIENTS.filter((client) => !isDemoClient(client.id));
 type ContactInfo = {
   name: string;
   surname: string;
@@ -340,7 +341,7 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
     const missingClosures = fullRows.filter((r) => r.final === undefined).length;
     const extremeReturns = filteredPoints.filter((p) => Math.abs(p.ret) > 0.03).length;
 
-    const clientSnapshot = CLIENTS.map((c) => {
+    const clientSnapshot = getPortfolioClients().map((c) => {
       const rows = snapshot.clientRowsById[c.id] ?? [];
       const last = [...rows]
         .reverse()
@@ -1333,7 +1334,7 @@ function DailyGrid({
 
   const getMovementClients = (iso: string, type: 'increment' | 'decrement') => {
     const clients: { name: string; amount: number }[] = [];
-    CLIENTS.forEach((c) => {
+    getPortfolioClients().forEach((c) => {
       const row = snapshot.clientRowsById[c.id]?.find((r) => r.iso === iso);
       const amount = type === 'increment' ? row?.increment : row?.decrement;
       if (amount && amount !== 0) {
@@ -3271,7 +3272,8 @@ export default function App() {
   }, []);
 
   const relevantClientIds = useMemo(() => {
-    const ids = CLIENTS
+    const portfolioClients = getPortfolioClients();
+    const ids = portfolioClients
       .filter((client) => {
         const contact = normalizeContact(contacts[client.id]);
         return (
@@ -3282,7 +3284,7 @@ export default function App() {
         );
       })
       .map((client) => client.id);
-    return ids.length > 0 ? ids : CLIENTS.map((client) => client.id);
+    return ids.length > 0 ? ids : portfolioClients.map((client) => client.id);
   }, [contacts, guarantees, movementsByClient, monthlyHistoryByClient]);
 
   const pendingEligibleClientIds = useMemo(
@@ -3886,7 +3888,7 @@ function InfoClientes({
     [summaryRows]
   );
   const guaranteeCurrentTotal = useMemo(
-    () => CLIENTS.reduce((sum, c) => {
+    () => getPortfolioClients().reduce((sum, c) => {
       const rows = snapshot.clientRowsById[c.id] ?? [];
       const withdrawn = rows.reduce((acc, r) => acc + (r.decrement ?? 0), 0);
       const current = Math.max(0, (guarantees[c.id] ?? 0) - withdrawn);
@@ -3895,7 +3897,7 @@ function InfoClientes({
     [snapshot.clientRowsById, guarantees]
   );
   const waitlistClients = useMemo(
-    () => CLIENTS.map((c) => {
+    () => getPortfolioClients().map((c) => {
       const ct = normalizeContact(contacts[c.id]);
       const amount = parseNumberEs(ct.waitlistAmount) ?? 0;
       if (amount <= 0) return null;
@@ -3914,19 +3916,19 @@ function InfoClientes({
     [waitlistClients]
   );
   const guaranteeInitialTotal = useMemo(
-    () => CLIENTS.reduce((sum, c) => sum + (guarantees[c.id] ?? 0), 0),
+    () => getPortfolioClients().reduce((sum, c) => sum + (guarantees[c.id] ?? 0), 0),
     [guarantees]
   );
   const clientsWithEmail = useMemo(
-    () => CLIENTS.filter((c) => !!normalizeContact(contacts[c.id]).email).length,
+    () => getPortfolioClients().filter((c) => !!normalizeContact(contacts[c.id]).email).length,
     [contacts]
   );
   const clientsWithPhone = useMemo(
-    () => CLIENTS.filter((c) => !!normalizeContact(contacts[c.id]).phone).length,
+    () => getPortfolioClients().filter((c) => !!normalizeContact(contacts[c.id]).phone).length,
     [contacts]
   );
   const topGuarantees = useMemo(
-    () => CLIENTS.map((c) => {
+    () => getPortfolioClients().map((c) => {
       const ct = normalizeContact(contacts[c.id]);
       const namePart = `${ct.name} ${ct.surname}`.trim();
       const rows = snapshot.clientRowsById[c.id] ?? [];
@@ -4504,7 +4506,7 @@ function InfoClientes({
               <>
                 <div className="info-check ok">
                   <span>Base</span>
-                  <strong>Clientes totales: {CLIENTS.length}</strong>
+                  <strong>Clientes totales: {getPortfolioClients().length}</strong>
                 </div>
                 <div className="info-check ok">
                   <span>Base</span>
@@ -4801,7 +4803,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
   };
 
   const clientStats = useMemo(() => {
-    return CLIENTS.map((c) => {
+    return getPortfolioClients().map((c) => {
       const rows = snapshot.clientRowsById[c.id] || [];
       const yearRows = rows.filter((r) => r.iso.startsWith(`${activeYear}-`));
       const incrementos = yearRows.reduce((s, r) => s + (r.increment ?? 0), 0);
