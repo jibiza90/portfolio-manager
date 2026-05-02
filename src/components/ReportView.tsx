@@ -128,6 +128,18 @@ const getMonthEndLabel = (monthLabel: string) => {
   });
 };
 
+const CONTRIBUTION_BREAKDOWN_START_MONTH = '2026-04';
+
+const reportMonthToKey = (monthValue: string) => {
+  if (/^\d{4}-\d{2}$/.test(monthValue)) return monthValue;
+  const parts = monthValue.trim().toLowerCase().split(/\s+/);
+  if (parts.length < 2) return monthValue;
+  const monthIndex = monthIndexByLabel[parts[0]];
+  const year = Number(parts[parts.length - 1]);
+  if (monthIndex === undefined || !Number.isFinite(year)) return monthValue;
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+};
+
 const getShortDateLabel = (iso: string) => {
   const [year, month, day] = iso.split('-');
   if (!year || !month || !day) return iso;
@@ -593,7 +605,9 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
       m.endBalance !== null &&
       ((m.profit ?? 0) !== 0 || (m.profitPct ?? 0) !== 0 || (m.endBalance ?? 0) !== 0)
   );
-  const contributionBreakdowns = report.contributionBreakdowns ?? [];
+  const contributionBreakdowns = (report.contributionBreakdowns ?? []).filter(
+    (item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH
+  );
   const hasNegativeMonth = monthlyWithData.some((m) => m.profitPct < 0);
   const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(m.profitPct)));
   const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.hasData && p.balance !== undefined && (p.balance ?? 0) !== 0);

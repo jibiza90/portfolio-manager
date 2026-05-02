@@ -203,6 +203,10 @@ const deriveContributionBreakdowns = (
     })
     .filter((item): item is NonNullable<ReportData['contributionBreakdowns']>[number] => item !== null);
 };
+const filterVisibleContributionBreakdowns = (
+  breakdowns?: ReportData['contributionBreakdowns']
+): NonNullable<ReportData['contributionBreakdowns']> =>
+  (breakdowns ?? []).filter((item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH);
 const buildFallbackReportFromOverview = (
   overview: ClientOverview,
   fallbackClientName: string
@@ -979,7 +983,7 @@ const ClientPortal = ({
               clientCode: loginId ?? clientId,
               contributionBreakdowns:
                 report.contributionBreakdowns && report.contributionBreakdowns.length > 0
-                  ? report.contributionBreakdowns
+                  ? filterVisibleContributionBreakdowns(report.contributionBreakdowns)
                   : deriveContributionBreakdowns(report),
               createdAt: overview.updatedAt,
               expiresAt: overview.updatedAt
