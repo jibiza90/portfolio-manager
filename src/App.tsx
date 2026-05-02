@@ -1757,9 +1757,12 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
     if (!row) return undefined;
     const month = row.iso.slice(0, 7);
     const isMonthEnd = dayjs(row.iso).endOf('month').format('YYYY-MM-DD') === row.iso;
-    return isMonthEnd
-      ? normalizeMonthlyReturnPct(monthlyHistory[month]?.returnPct) ?? row.profitPct
-      : row.profitPct;
+    if (!isMonthEnd) return row.profitPct;
+    const manualReturnAdjustment = statsRows
+      .filter((item) => item.iso.startsWith(month))
+      .reduce((sum, item) => sum + (normalizeMonthlyReturnPct(item.manualProfitPct) ?? 0), 0);
+    const historyReturn = normalizeMonthlyReturnPct(monthlyHistory[month]?.returnPct);
+    return historyReturn !== undefined ? historyReturn + manualReturnAdjustment : row.profitPct;
   };
 
   const stats = useMemo(() => {
@@ -1853,10 +1856,13 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
         .map((row) => row.iso.slice(0, 7))
     );
     const monthlyTWR = calculateAllMonthsTWR(statsRows).map((item) => {
-      const historyReturn = overrideMonths.has(item.month)
+      const manualReturnAdjustment = statsRows
+        .filter((row) => row.iso.startsWith(item.month))
+        .reduce((sum, row) => sum + (normalizeMonthlyReturnPct(row.manualProfitPct) ?? 0), 0);
+      const historyReturn = overrideMonths.has(item.month) || manualReturnAdjustment !== 0
         ? normalizeMonthlyReturnPct(monthlyHistory[item.month]?.returnPct)
         : undefined;
-      return historyReturn === undefined ? item : { ...item, twr: historyReturn };
+      return historyReturn === undefined ? item : { ...item, twr: historyReturn + manualReturnAdjustment };
     });
     const adjustedTwr = monthlyTWR.length
       ? monthlyTWR.reduce((factor, item) => factor * (1 + item.twr), 1) - 1

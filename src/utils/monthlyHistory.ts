@@ -66,7 +66,13 @@ export function buildMonthlyStatsForMonths(
   const trackedMonths = [...monthKeys].sort((a, b) => (a > b ? 1 : -1));
   const trackedMonthSet = new Set(trackedMonths);
   const scopedRows = rows.filter((row) => trackedMonthSet.has(row.iso.slice(0, 7)));
-  const byMonth = new Map<string, { profit: number; baseStart?: number; finalEnd?: number; hasIncrementReturnOverride?: boolean }>();
+  const byMonth = new Map<string, {
+    profit: number;
+    baseStart?: number;
+    finalEnd?: number;
+    hasIncrementReturnOverride?: boolean;
+    manualReturnAdjustment?: number;
+  }>();
   const twrByMonth = new Map(calculateAllMonthsTWR(scopedRows).map((item) => [item.month, item.twr]));
   let lastKnownFinal: number | undefined;
 
@@ -87,6 +93,10 @@ export function buildMonthlyStatsForMonths(
     }
     if ((row.increment ?? 0) > 0 && row.incrementReturnPct !== undefined) {
       entry.hasIncrementReturnOverride = true;
+    }
+    const manualReturnPct = normalizeMonthlyReturnPct(row.manualProfitPct);
+    if (manualReturnPct !== undefined) {
+      entry.manualReturnAdjustment = (entry.manualReturnAdjustment ?? 0) + manualReturnPct;
     }
   });
 
@@ -147,7 +157,8 @@ export function buildMonthlyStatsForMonths(
     const shouldUseHistoryReturn =
       normalizedHistoryReturn !== undefined &&
       (forceHistoryReturn || canUseHistoryReturn || derivedEntry?.hasIncrementReturnOverride);
-    const profitPct = shouldUseHistoryReturn ? normalizedHistoryReturn : monthlyTwr ?? simpleProfitPct;
+    const baseProfitPct = shouldUseHistoryReturn ? normalizedHistoryReturn : monthlyTwr ?? simpleProfitPct;
+    const profitPct = baseProfitPct + (shouldUseHistoryReturn ? derivedEntry?.manualReturnAdjustment ?? 0 : 0);
     const hasData = !!derivedEntry || hasMonthlyHistoryValue(historyEntry);
 
     if (finalEnd !== undefined && finalEnd > 0) {

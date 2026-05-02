@@ -4,6 +4,8 @@ import { calculateAllMonthsTWR } from './twr';
 import { buildMonthlyStatsForMonths, buildMonthlyStatsForYear, normalizeMonthlyReturnPct } from './monthlyHistory';
 import { getYearFromIso, YEAR } from './dates';
 
+const CONTRIBUTION_BREAKDOWN_START_MONTH = '2026-04';
+
 export type ClientContactInfo = {
   name?: string;
   surname?: string;
@@ -145,7 +147,7 @@ export function buildClientReportData(
     .map((monthStat) => {
       const monthRows = rowsByMonth.get(monthStat.monthKey) ?? [];
       const contributionRows = monthRows.filter((row) => (row.increment ?? 0) > 0);
-      if (!monthStat.hasData || contributionRows.length === 0) return null;
+      if (!monthStat.hasData || monthStat.monthKey < CONTRIBUTION_BREAKDOWN_START_MONTH || contributionRows.length === 0) return null;
 
       const firstRow = monthRows[0];
       const initialCapital = Math.max(

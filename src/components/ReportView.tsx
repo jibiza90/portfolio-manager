@@ -795,6 +795,33 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           </div>
         </section>
 
+        <section className="report-pro-panel">
+          <div className="report-pro-panel-head">
+            <h4>Beneficios mensuales</h4>
+            <p>Beneficio generado en cada cierre de mes</p>
+          </div>
+          <div className="table-scroll">
+            <table className="monthly-table report-pro-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th className="text-right">Beneficio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyWithData.map((m) => (
+                  <tr key={`${m.month}-benefit`}>
+                    <td>{getMonthEndLabel(m.month)}</td>
+                    <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                      {formatCurrency(m.profit ?? 0)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <section className="report-pro-panel report-pro-panel-xl">
           <div className="report-pro-panel-head">
             <h4>Evolucion patrimonio</h4>
@@ -846,6 +873,19 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                   />
                 </g>
               ))}
+              {patrPoints.map((pt, idx) => {
+                const label = formatCurrency(pt.value);
+                const approxWidth = Math.min(104, Math.max(58, label.length * 5.3));
+                const labelX = Math.max(padL + approxWidth / 2, Math.min(pt.x, chartW - padR - approxWidth / 2));
+                const preferredY = pt.y + (idx % 2 === 0 ? -18 : 22);
+                const labelY = Math.max(padT + 10, Math.min(preferredY, plotBottom - 10));
+                return (
+                  <g key={`${pt.month}-${idx}-label`} className="report-pro-point-label" pointerEvents="none">
+                    <rect x={labelX - approxWidth / 2} y={labelY - 13} width={approxWidth} height="18" rx="6" />
+                    <text x={labelX} y={labelY} textAnchor="middle">{label}</text>
+                  </g>
+                );
+              })}
             </svg>
           </div>
           <div

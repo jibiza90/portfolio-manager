@@ -2774,6 +2774,19 @@ input[type='number'] {
   cursor: crosshair;
 }
 
+.report-pro-point-label rect {
+  fill: rgba(255, 255, 255, 0.92);
+  stroke: rgba(15, 95, 138, 0.2);
+  stroke-width: 1;
+}
+
+.report-pro-point-label text {
+  fill: #102845;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
 .report-pro-point-value {
   fill: #0f2f4d;
   font-size: 3.4px;

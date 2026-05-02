@@ -20,6 +20,7 @@ const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_REFRESH_MS = 10 * 60 * 1000;
 const REMEMBERED_IDENTIFIER_KEY = 'portfolio-login-identifier';
+const CONTRIBUTION_BREAKDOWN_START_MONTH = '2026-04';
 
 type Role = 'admin' | 'client';
 
@@ -175,7 +176,7 @@ const deriveContributionBreakdowns = (
       const contributionRows = movements.filter(
         (movement) => movement.type === 'increment' && movement.iso.slice(0, 7) === month.monthKey
       );
-      if (contributionRows.length === 0) return null;
+      if (month.monthKey < CONTRIBUTION_BREAKDOWN_START_MONTH || contributionRows.length === 0) return null;
 
       const initialCapital = Math.max(0, monthly[index - 1]?.endBalance ?? 0);
       const initialReturnPct = (month.profitPct ?? 0) / 100;
