@@ -139,11 +139,18 @@ export const buildSnapshot = (
   const dailyRows: DailyRow[] = [];
   const dayIndex: Record<string, DailyRow> = {};
   const clientRowsById: Record<string, ClientDayRow[]> = {};
-  const clientState: Record<string, { balance: number; netInvested: number }> = {};
+  // Manual client adjustments are visible in the client balance but never
+  // participate in the real portfolio allocation.
+  const clientState: Record<string, {
+    balance: number;
+    coreBalance: number;
+    isolatedBalance: number;
+    netInvested: number;
+  }> = {};
 
   CLIENTS.forEach(({ id }) => {
     clientRowsById[id] = [];
-    clientState[id] = { balance: 0, netInvested: 0 };
+    clientState[id] = { balance: 0, coreBalance: 0, isolatedBalance: 0, netInvested: 0 };
   });
 
   let previousFinal: number | undefined;
@@ -163,7 +170,17 @@ export const buildSnapshot = (
       const decrement = movement?.decrement;
       const manualProfitPct = movement?.manualProfitPct;
       const prevBalance = clientState[id].balance;
-      const actualBase = beyondClientLastRecorded ? undefined : prevBalance + (increment ?? 0) - (decrement ?? 0);
+      const netFlow = (increment ?? 0) - (decrement ?? 0);
+      let allocatableBase = beyondClientLastRecorded ? undefined : clientState[id].coreBalance + netFlow;
+      let isolatedBalance = beyondClientLastRecorded ? undefined : clientState[id].isolatedBalance;
+      if (allocatableBase !== undefined && isolatedBalance !== undefined && allocatableBase < 0) {
+        isolatedBalance += allocatableBase;
+        allocatableBase = 0;
+      }
+      const actualBase =
+        allocatableBase !== undefined && isolatedBalance !== undefined
+          ? allocatableBase + isolatedBalance
+          : undefined;
       const manualProfit = movement?.manualProfit ?? (
         manualProfitPct !== undefined && actualBase !== undefined ? actualBase * manualProfitPct : undefined
       );
@@ -175,15 +192,19 @@ export const buildSnapshot = (
       let baseBalance = actualBase;
       let lockedCoreFinal: number | undefined;
       let lockedReturnPct: number | undefined;
+      let isolatedReturnPct: number | undefined;
 
       if (!beyondClientLastRecorded && monthlyHistory) {
         const normalizedReturn = normalizeReturnPct(monthlyHistory.returnPct);
+        isolatedReturnPct = normalizedReturn;
         if (monthlyHistory.finalBalance !== undefined && normalizedReturn !== undefined && normalizedReturn > -1) {
           const derivedBase = monthlyHistory.finalBalance / (1 + normalizedReturn);
           const derivedDiff = derivedBase - (actualBase ?? 0);
           const derivedBaseMatchesCarry = Math.abs(derivedDiff) <= MONTHLY_HISTORY_TOLERANCE;
           if (isBootstrapMonth) {
             baseBalance = derivedBase;
+            allocatableBase = derivedBase;
+            isolatedBalance = 0;
             syntheticFlow = derivedDiff;
             lockedReturnPct = normalizedReturn;
           } else {
@@ -197,6 +218,8 @@ export const buildSnapshot = (
         } else if (monthlyHistory.finalBalance !== undefined) {
           if (isBootstrapMonth) {
             baseBalance = monthlyHistory.finalBalance;
+            allocatableBase = monthlyHistory.finalBalance;
+            isolatedBalance = 0;
             syntheticFlow = monthlyHistory.finalBalance - (actualBase ?? 0);
           } else {
             baseBalance = actualBase;
@@ -211,7 +234,7 @@ export const buildSnapshot = (
             day.iso.slice(0, 7),
             normalizedReturn
           );
-          lockedCoreFinal = (actualBase ?? 0) * (1 + normalizedReturn) + incrementReturnAdjustment;
+          lockedCoreFinal = (allocatableBase ?? 0) * (1 + normalizedReturn) + incrementReturnAdjustment;
           lockedReturnPct = normalizedReturn;
         }
       }
@@ -228,9 +251,12 @@ export const buildSnapshot = (
         prevBalance,
         actualBase,
         baseBalance,
+        allocatableBase,
+        isolatedBalance,
         syntheticFlow,
         lockedCoreFinal,
-        lockedReturnPct
+        lockedReturnPct,
+        isolatedReturnPct
       };
     });
 
@@ -248,10 +274,10 @@ export const buildSnapshot = (
     const lockedCoreFinalTotal = portfolioDrafts.reduce((sum, draft) => sum + (draft.lockedCoreFinal ?? 0), 0);
     const lockedClientCount = portfolioDrafts.filter((draft) => draft.lockedCoreFinal !== undefined).length;
     const unlockedDrafts = portfolioDrafts.filter((draft) => draft.lockedCoreFinal === undefined);
-    const unlockedBaseTotal = unlockedDrafts.reduce((sum, draft) => sum + Math.max(0, draft.baseBalance ?? 0), 0);
+    const unlockedBaseTotal = unlockedDrafts.reduce((sum, draft) => sum + Math.max(0, draft.allocatableBase ?? 0), 0);
     const activeUnlockedDrafts = unlockedDrafts.filter(
       (draft) =>
-        hasMeaningfulAmount(draft.baseBalance) ||
+        hasMeaningfulAmount(draft.allocatableBase) ||
         hasMeaningfulAmount(draft.increment) ||
         hasMeaningfulAmount(draft.decrement) ||
         hasMeaningfulAmount(draft.manualProfit)
@@ -266,7 +292,7 @@ export const buildSnapshot = (
           : recordedFinal !== undefined
           ? recordedFinal
           : lockedClientCount > 0
-            ? lockedCoreFinalTotal + unlockedDrafts.reduce((sum, draft) => sum + Math.max(0, draft.baseBalance ?? 0), 0)
+            ? lockedCoreFinalTotal + unlockedDrafts.reduce((sum, draft) => sum + Math.max(0, draft.allocatableBase ?? 0), 0)
             : generalInitial;
 
     const unlockedCoreTargetTotal =
@@ -284,12 +310,21 @@ export const buildSnapshot = (
       let coreFinal = draft.lockedCoreFinal;
       if (!draft.beyondClientLastRecorded && coreFinal === undefined) {
         if (draft.isDemo) {
-          coreFinal = draft.baseBalance;
-        } else if (unlockedCoreTargetTotal !== undefined && unlockedBaseTotal > 0 && (draft.baseBalance ?? 0) > 0) {
-          const weight = (draft.baseBalance ?? 0) / unlockedBaseTotal;
+          coreFinal = draft.allocatableBase;
+        } else if (unlockedCoreTargetTotal !== undefined && unlockedBaseTotal > 0 && (draft.allocatableBase ?? 0) > 0) {
+          const weight = (draft.allocatableBase ?? 0) / unlockedBaseTotal;
           coreFinal = unlockedCoreTargetTotal * weight;
         } else {
-          coreFinal = draft.baseBalance;
+          coreFinal = draft.allocatableBase;
+        }
+      }
+
+      let isolatedFinal = draft.isolatedBalance;
+      if (isolatedFinal !== undefined) {
+        if (draft.isolatedReturnPct !== undefined) {
+          isolatedFinal *= 1 + draft.isolatedReturnPct;
+        } else if (draft.allocatableBase !== undefined && draft.allocatableBase !== 0 && coreFinal !== undefined) {
+          isolatedFinal *= coreFinal / draft.allocatableBase;
         }
       }
 
@@ -297,7 +332,7 @@ export const buildSnapshot = (
         draft.beyondClientLastRecorded
           ? undefined
           : coreFinal !== undefined
-            ? coreFinal + (manualProfit ?? 0)
+            ? coreFinal + (isolatedFinal ?? 0) + (manualProfit ?? 0)
             : manualProfit !== undefined
               ? (draft.baseBalance ?? 0) + manualProfit
               : draft.baseBalance;
@@ -341,6 +376,8 @@ export const buildSnapshot = (
 
       if (!draft.beyondClientLastRecorded && finalBalance !== undefined) {
         clientState[draft.id].balance = finalBalance;
+        clientState[draft.id].coreBalance = coreFinal ?? 0;
+        clientState[draft.id].isolatedBalance = (isolatedFinal ?? 0) + (manualProfit ?? 0);
       }
     });
 
