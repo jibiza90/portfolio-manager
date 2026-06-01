@@ -38,6 +38,24 @@ export function normalizeMonthlyReturnPct(value?: number) {
   return Math.abs(value) > 1 ? value / 100 : value;
 }
 
+export function getDominantMonthlyReturn(values: Array<number | undefined>) {
+  const normalized = values
+    .map((value) => normalizeMonthlyReturnPct(value))
+    .filter((value): value is number => value !== undefined);
+  if (normalized.length === 0) return undefined;
+
+  const groups = new Map<string, { value: number; count: number }>();
+  normalized.forEach((value) => {
+    const key = value.toFixed(10);
+    const current = groups.get(key);
+    groups.set(key, { value, count: (current?.count ?? 0) + 1 });
+  });
+
+  const ranked = [...groups.values()].sort((a, b) => b.count - a.count);
+  if (ranked.length === 1) return ranked[0].value;
+  return ranked[0].count > ranked[1].count ? ranked[0].value : undefined;
+}
+
 export function hasMonthlyHistoryValue(entry?: MonthlyHistoryEntry) {
   return !!entry && (entry.finalBalance !== undefined || entry.returnPct !== undefined);
 }

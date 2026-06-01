@@ -14,6 +14,7 @@ import { ReportView } from './components/ReportView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import {
   buildMonthlyStatsForMonths,
+  getDominantMonthlyReturn,
   hasMonthlyHistoryValue,
   normalizeMonthlyReturnPct
 } from './utils/monthlyHistory';
@@ -103,9 +104,7 @@ const getConsensusMonthlyReturn = (
     .map((months) => normalizeMonthlyReturnPct(months[month]?.returnPct))
     .filter((value): value is number => value !== undefined);
 
-  if (returns.length === 0) return undefined;
-  const [first] = returns;
-  return returns.every((value) => Math.abs(value - first) < 0.000001) ? first : undefined;
+  return getDominantMonthlyReturn(returns);
 };
 
 function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {

@@ -8,6 +8,7 @@ import {
   ClientDayRow
 } from '../types';
 import { YEAR_DAYS } from './dates';
+import { getDominantMonthlyReturn } from './monthlyHistory';
 
 const monthEndIso = (month: string) => dayjs(`${month}-01`).endOf('month').format('YYYY-MM-DD');
 const normalizeReturnPct = (value?: number) =>
@@ -72,9 +73,17 @@ export const buildSnapshot = (
   monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>> = {}
 ): PortfolioSnapshot => {
   const historicalByClientAndDay: Record<string, Record<string, MonthlyHistoryEntry>> = {};
+  const portfolioReturnByMonth: Record<string, number | undefined> = {};
   const historicalDays: string[] = [];
   const portfolioHistoricalDays: string[] = [];
   const clientTrackedDays: Record<string, string[]> = {};
+
+  const months = new Set(Object.values(monthlyHistoryByClient).flatMap((entries) => Object.keys(entries)));
+  months.forEach((month) => {
+    portfolioReturnByMonth[month] = getDominantMonthlyReturn(
+      getPortfolioClients().map(({ id }) => monthlyHistoryByClient[id]?.[month]?.returnPct)
+    );
+  });
 
   Object.entries(monthlyHistoryByClient).forEach(([clientId, months]) => {
     Object.entries(months).forEach(([month, entry]) => {
@@ -193,9 +202,14 @@ export const buildSnapshot = (
       let lockedCoreFinal: number | undefined;
       let lockedReturnPct: number | undefined;
       let isolatedReturnPct: number | undefined;
+      let isolatedProfitAdjustment = 0;
 
       if (!beyondClientLastRecorded && monthlyHistory) {
         const normalizedReturn = normalizeReturnPct(monthlyHistory.returnPct);
+        const portfolioReturn = portfolioReturnByMonth[day.iso.slice(0, 7)];
+        const coreReturn = monthlyHistory.finalBalance === undefined
+          ? portfolioReturn ?? normalizedReturn
+          : normalizedReturn;
         isolatedReturnPct = normalizedReturn;
         if (monthlyHistory.finalBalance !== undefined && normalizedReturn !== undefined && normalizedReturn > -1) {
           const derivedBase = monthlyHistory.finalBalance / (1 + normalizedReturn);
@@ -232,9 +246,10 @@ export const buildSnapshot = (
             movementsByClient,
             id,
             day.iso.slice(0, 7),
-            normalizedReturn
+            coreReturn ?? normalizedReturn
           );
-          lockedCoreFinal = (allocatableBase ?? 0) * (1 + normalizedReturn) + incrementReturnAdjustment;
+          lockedCoreFinal = (allocatableBase ?? 0) * (1 + (coreReturn ?? normalizedReturn)) + incrementReturnAdjustment;
+          isolatedProfitAdjustment = (allocatableBase ?? 0) * (normalizedReturn - (coreReturn ?? normalizedReturn));
           lockedReturnPct = normalizedReturn;
         }
       }
@@ -253,6 +268,7 @@ export const buildSnapshot = (
         baseBalance,
         allocatableBase,
         isolatedBalance,
+        isolatedProfitAdjustment,
         syntheticFlow,
         lockedCoreFinal,
         lockedReturnPct,
@@ -332,7 +348,7 @@ export const buildSnapshot = (
         draft.beyondClientLastRecorded
           ? undefined
           : coreFinal !== undefined
-            ? coreFinal + (isolatedFinal ?? 0) + (manualProfit ?? 0)
+            ? coreFinal + (isolatedFinal ?? 0) + draft.isolatedProfitAdjustment + (manualProfit ?? 0)
             : manualProfit !== undefined
               ? (draft.baseBalance ?? 0) + manualProfit
               : draft.baseBalance;
@@ -377,7 +393,8 @@ export const buildSnapshot = (
       if (!draft.beyondClientLastRecorded && finalBalance !== undefined) {
         clientState[draft.id].balance = finalBalance;
         clientState[draft.id].coreBalance = coreFinal ?? 0;
-        clientState[draft.id].isolatedBalance = (isolatedFinal ?? 0) + (manualProfit ?? 0);
+        clientState[draft.id].isolatedBalance =
+          (isolatedFinal ?? 0) + draft.isolatedProfitAdjustment + (manualProfit ?? 0);
       }
     });
 
