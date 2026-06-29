@@ -75,6 +75,12 @@ const getContactFullName = (input?: Partial<ContactInfo>) => {
   return `${contact.name} ${contact.surname}`.trim();
 };
 
+const splitFullName = (value?: string) => {
+  const parts = (value ?? '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { name: '', surname: '' };
+  return { name: parts[0], surname: parts.slice(1).join(' ') };
+};
+
 const getClientDisplayName = (clientId: string, contacts: Record<string, ContactInfo>) => {
   const fullName = getContactFullName(contacts[clientId]);
   return fullName || CLIENTS.find((client) => client.id === clientId)?.name || clientId;
@@ -3512,15 +3518,37 @@ export default function App() {
   }, [isPrimaryAdmin, ownerLoginEvents.length]);
 
   useEffect(() => {
+    if (!ownerAccessProfiles.length) return;
+    setContacts((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      ownerAccessProfiles.forEach((profile) => {
+        if (!profile.clientId) return;
+        const parsed = splitFullName(profile.displayName);
+        if (!parsed.name && !parsed.surname) return;
+
+        const current = normalizeContact(next[profile.clientId]);
+        if (current.name || current.surname) return;
+
+        next[profile.clientId] = { ...current, ...parsed };
+        changed = true;
+      });
+
+      return changed ? next : prev;
+    });
+  }, [ownerAccessProfiles]);
+
+  useEffect(() => {
     if (!isPrimaryAdmin) return;
     if (!usePortfolioStore.getState().initialized) return;
     const timer = window.setTimeout(() => {
-      void syncClientOverviews(usePortfolioStore.getState().snapshot, CLIENTS, usePortfolioStore.getState().monthlyHistoryByClient).catch((error) => {
+      void syncClientOverviews(usePortfolioStore.getState().snapshot, CLIENTS, usePortfolioStore.getState().monthlyHistoryByClient, contacts).catch((error) => {
         console.error('No se pudo resincronizar el portal cliente', error);
       });
     }, 1200);
     return () => window.clearTimeout(timer);
-  }, [isPrimaryAdmin, snapshot, monthlyHistoryByClient]);
+  }, [isPrimaryAdmin, snapshot, monthlyHistoryByClient, contacts]);
 
   const handleRevokeClientAccess = async (profile: AccessProfileRecord) => {
     const confirmed = window.confirm(`Eliminar la asignacion del usuario ${profile.loginId || profile.uid}?`);

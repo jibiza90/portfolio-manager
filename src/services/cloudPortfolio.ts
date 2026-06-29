@@ -1,9 +1,10 @@
 import { MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
 import { db, firebase, firebaseConfig, functions } from './firebaseApp';
-import { buildClientReportData, toClientReportPayload } from '../utils/clientReport';
+import { buildClientReportData, toClientReportPayload, type ClientContactInfo } from '../utils/clientReport';
 
 const DOC_PATH = 'portfolio/state';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
+const CONTACTS_STORAGE_KEY = 'portfolio-contacts';
 
 const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {}, monthlyHistoryByClient: {} };
 
@@ -13,17 +14,42 @@ const sanitizePersistedState = (data?: Partial<PersistedState> | null): Persiste
   monthlyHistoryByClient: data?.monthlyHistoryByClient ?? {}
 });
 
+const readLocalContacts = (): Record<string, ClientContactInfo> => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(CONTACTS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, ClientContactInfo>;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const contactFullName = (contact?: ClientContactInfo) =>
+  `${contact?.name ?? ''} ${contact?.surname ?? ''}`.trim();
+
 const buildClientOverview = (
   snapshot: PortfolioSnapshot,
   clientId: string,
   clientName: string,
-  monthlyHistory: Record<string, MonthlyHistoryEntry>
+  monthlyHistory: Record<string, MonthlyHistoryEntry>,
+  contact?: ClientContactInfo
 ) => {
-  const report = buildClientReportData(clientId, 'all', {}, snapshot, { [clientId]: monthlyHistory }, clientName);
+  const localContact = contact ?? readLocalContacts()[clientId];
+  const displayName = contactFullName(localContact) || clientName;
+  const report = buildClientReportData(
+    clientId,
+    'all',
+    localContact ? { [clientId]: localContact } : {},
+    snapshot,
+    { [clientId]: monthlyHistory },
+    displayName
+  );
 
   return {
     clientId,
-    clientName: report?.name ?? clientName,
+    clientName: report?.name ?? displayName,
     report: report ? toClientReportPayload(report) : null,
     updatedAt: Date.now()
   };
@@ -48,12 +74,13 @@ export const savePortfolioState = async (state: PersistedState) => {
 export const syncClientOverviews = async (
   snapshot: PortfolioSnapshot,
   clients: Array<{ id: string; name: string }>,
-  monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>
+  monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>,
+  contacts: Record<string, ClientContactInfo> = readLocalContacts()
 ) => {
   const batch = db.batch();
   clients.forEach((client) => {
     const docRef = db.collection(CLIENT_OVERVIEW_COLLECTION).doc(client.id);
-    batch.set(docRef, buildClientOverview(snapshot, client.id, client.name, monthlyHistoryByClient[client.id] ?? {}));
+    batch.set(docRef, buildClientOverview(snapshot, client.id, client.name, monthlyHistoryByClient[client.id] ?? {}, contacts[client.id]));
   });
   await batch.commit();
 };
