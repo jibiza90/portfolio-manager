@@ -15,6 +15,11 @@ const normalizeReturnPct = (value?: number) =>
   value === undefined || Number.isNaN(value) ? undefined : Math.abs(value) > 1 ? value / 100 : value;
 const MONTHLY_HISTORY_TOLERANCE = 0.5;
 const hasMeaningfulAmount = (value?: number) => value !== undefined && Math.abs(value) > MONTHLY_HISTORY_TOLERANCE;
+const maxIso = (...dates: Array<string | undefined>) => {
+  const validDates = dates.filter((value): value is string => Boolean(value));
+  if (validDates.length === 0) return undefined;
+  return validDates.sort((a, b) => (a > b ? 1 : -1))[validDates.length - 1];
+};
 
 const getIncrementReturnAdjustment = (
   records: Record<string, Record<string, Movement>>,
@@ -171,7 +176,12 @@ export const buildSnapshot = (
     const { increments, decrements, manualProfits, net } = sumMovements(movementsByClient, day.iso);
     const clientDrafts = CLIENTS.map(({ id }) => {
       const demo = isDemoClient(id);
-      const clientLastTrackedDay = demo ? lastTrackedDayByClient[id] : lastTrackedDay;
+      const clientOwnLastTrackedDay = lastTrackedDayByClient[id];
+      const clientLastTrackedDay = demo
+        ? clientOwnLastTrackedDay
+          ? maxIso(clientOwnLastTrackedDay, lastPortfolioHistoricalDay)
+          : clientOwnLastTrackedDay
+        : lastTrackedDay;
       const beyondClientLastRecorded = clientLastTrackedDay !== undefined && day.iso > clientLastTrackedDay;
       const movement = movementsByClient[id]?.[day.iso];
       const increment = movement?.increment;
@@ -193,7 +203,16 @@ export const buildSnapshot = (
       const manualProfit = movement?.manualProfit ?? (
         manualProfitPct !== undefined && actualBase !== undefined ? actualBase * manualProfitPct : undefined
       );
-      const monthlyHistory = historicalByClientAndDay[id]?.[day.iso];
+      const monthKey = day.iso.slice(0, 7);
+      // Demo clients use the real monthly return curve, but never feed back into portfolio totals.
+      const inheritedDemoReturn =
+        demo && day.iso === monthEndIso(monthKey)
+          ? portfolioReturnByMonth[monthKey]
+          : undefined;
+      const monthlyHistory =
+        inheritedDemoReturn !== undefined
+          ? { returnPct: inheritedDemoReturn }
+          : historicalByClientAndDay[id]?.[day.iso];
       const hasCarryBalance = actualBase !== undefined && Math.abs(actualBase) > MONTHLY_HISTORY_TOLERANCE;
       const isBootstrapMonth = actualBase === undefined || !hasCarryBalance;
 

@@ -4,9 +4,12 @@ export interface ClientProfile {
 }
 
 const STORAGE_KEY = 'portfolio-clients';
-export const DEMO_CLIENT_ID = 'client-demo';
+export const DEMO_CLIENT_ID = 'client-001';
+const LEGACY_DEMO_CLIENT_ID = 'client-demo';
 
-export const isDemoClient = (clientId: string) => clientId === DEMO_CLIENT_ID;
+// Cliente 001 funciona como demo visible, pero queda fuera de todos los totales reales.
+export const isDemoClient = (clientId: string) =>
+  clientId === DEMO_CLIENT_ID || clientId === LEGACY_DEMO_CLIENT_ID;
 
 const numberedClients = Array.from({ length: 100 }, (_, index) => {
   const padded = String(index + 1).padStart(3, '0');
@@ -18,15 +21,15 @@ const numberedClients = Array.from({ length: 100 }, (_, index) => {
 
 const defaultClients: ClientProfile[] = [
   ...numberedClients,
-  { id: DEMO_CLIENT_ID, name: 'Cliente Demo' }
+  { id: LEGACY_DEMO_CLIENT_ID, name: 'Cliente Demo' }
 ];
 
 const mergeWithDefaultClients = (clients: ClientProfile[]) => {
   const merged = new Map<string, ClientProfile>();
   defaultClients.forEach((client) => merged.set(client.id, client));
   clients.forEach((client) => merged.set(client.id, client));
-  const ordered = Array.from(merged.values()).filter((client) => !isDemoClient(client.id));
-  const demoClient = merged.get(DEMO_CLIENT_ID);
+  const ordered = Array.from(merged.values()).filter((client) => client.id !== LEGACY_DEMO_CLIENT_ID);
+  const demoClient = merged.get(LEGACY_DEMO_CLIENT_ID);
   return demoClient ? [...ordered, demoClient] : ordered;
 };
 

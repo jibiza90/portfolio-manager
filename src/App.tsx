@@ -116,8 +116,9 @@ const getConsensusMonthlyReturn = (
   monthlyHistoryByClient: Record<string, Record<string, { returnPct?: number }>>,
   month: string
 ) => {
-  const returns = Object.values(monthlyHistoryByClient)
-    .map((months) => normalizeMonthlyReturnPct(months[month]?.returnPct))
+  const returns = Object.entries(monthlyHistoryByClient)
+    .filter(([clientId]) => !isDemoClient(clientId))
+    .map(([, months]) => normalizeMonthlyReturnPct(months[month]?.returnPct))
     .filter((value): value is number => value !== undefined);
 
   return getDominantMonthlyReturn(returns);
