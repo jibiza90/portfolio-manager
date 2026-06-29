@@ -70,6 +70,16 @@ const normalizeContact = (input?: Partial<ContactInfo>): ContactInfo => ({
   ...(input ?? {})
 });
 
+const getContactFullName = (input?: Partial<ContactInfo>) => {
+  const contact = normalizeContact(input);
+  return `${contact.name} ${contact.surname}`.trim();
+};
+
+const getClientDisplayName = (clientId: string, contacts: Record<string, ContactInfo>) => {
+  const fullName = getContactFullName(contacts[clientId]);
+  return fullName || CLIENTS.find((client) => client.id === clientId)?.name || clientId;
+};
+
 const parseReportTokenFromLocation = (): string | null => {
   const searchToken = new URLSearchParams(window.location.search).get('report');
   if (isValidReportToken(searchToken)) return searchToken;
@@ -348,8 +358,7 @@ function StatsView({ contacts }: { contacts: Record<string, ContactInfo> }) {
 
       const balance = last?.finalBalance ?? last?.baseBalance ?? 0;
       const cumulative = last?.cumulativeProfit ?? 0;
-      const ct = contacts[c.id];
-      const fullName = `${ct?.name ?? ''} ${ct?.surname ?? ''}`.trim();
+      const fullName = getContactFullName(contacts[c.id]);
 
       return {
         id: c.id,
@@ -1508,10 +1517,7 @@ function monthLabel(isoMonth: string): string {
 }
 
 function formatClientDisplayName(clientId: string, contacts: Record<string, ContactInfo>) {
-  const client = CLIENTS.find((item) => item.id === clientId);
-  const contact = normalizeContact(contacts[clientId]);
-  const fullName = `${contact.name} ${contact.surname}`.trim();
-  return fullName ? `${client?.name ?? clientId} - ${fullName}` : client?.name ?? clientId;
+  return getClientDisplayName(clientId, contacts);
 }
 
 function hasClientMetadata(contact: ContactInfo) {
@@ -1900,11 +1906,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
         <div className="grid-header">
           <div>
             <div className="eyebrow">Cliente</div>
-            <h2>{(() => {
-              const client = CLIENTS.find(c => c.id === clientId);
-              const ct = contacts[clientId];
-              return ct && (ct.name || ct.surname) ? `${client?.name} - ${ct.name} ${ct.surname}`.trim() : client?.name || 'Cliente';
-            })()}</h2>
+            <h2>{getClientDisplayName(clientId, contacts)}</h2>
             <p className="grid-copy">Movimientos diarios y rentabilidad</p>
           </div>
           <div className="panel-actions">
@@ -2197,7 +2199,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
         <div className="client-analytics-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowMonthlyHistory(false); }}>
           <div className="client-analytics-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Histórico mensual · {CLIENTS.find((c) => c.id === clientId)?.name || 'Cliente'}</h3>
+              <h3>Histórico mensual · {getClientDisplayName(clientId, contacts)}</h3>
               <button onClick={() => setShowMonthlyHistory(false)}>×</button>
             </div>
 
@@ -2261,7 +2263,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
         <div className="client-analytics-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAnalytics(false); }}>
           <div className="client-analytics-modal" ref={analyticsScrollRef} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Análisis de {CLIENTS.find((c) => c.id === clientId)?.name || 'Cliente'}</h3>
+              <h3>Análisis de {getClientDisplayName(clientId, contacts)}</h3>
               <button onClick={() => setShowAnalytics(false)}>×</button>
             </div>
 
@@ -2960,9 +2962,8 @@ function LoginAccessView({
     () =>
       accessProfiles
         .map((profile) => {
-          const contact = profile.clientId ? contacts[profile.clientId] : undefined;
           const clientLabel = profile.clientId
-            ? `${CLIENTS.find((client) => client.id === profile.clientId)?.name ?? profile.clientId}${contact && (contact.name || contact.surname) ? ` - ${contact.name} ${contact.surname}` : ''}`
+            ? getClientDisplayName(profile.clientId, contacts)
             : profile.uid;
           return {
             ...profile,
@@ -3642,8 +3643,7 @@ export default function App() {
                   <option value="">Elige un cliente…</option>
                   <option value={GENERAL_OPTION}>General (todos)</option>
                   {CLIENTS.map((c) => {
-                    const ct = contacts[c.id];
-                    const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
+                    const label = getClientDisplayName(c.id, contacts);
                     return (
                       <option key={c.id} value={c.id}>{label}</option>
                     );
@@ -3871,7 +3871,7 @@ function InfoClientes({
   const contact = normalizeContact(contacts[selectedId]);
   const displayName = isGeneralView
     ? 'Vista general de clientes'
-    : `${currentClient?.name || 'Cliente'}${contact.name || contact.surname ? ` - ${contact.name} ${contact.surname}` : ''}`.trim();
+    : getClientDisplayName(selectedId, contacts);
   const guaranteeInitial = guarantees[selectedId] ?? 0;
   const guaranteeActual = Math.max(0, guaranteeInitial - stats.capitalRetirado);
   const firstIncrementDate = useMemo(
@@ -3900,10 +3900,10 @@ function InfoClientes({
       const ct = normalizeContact(contacts[c.id]);
       const amount = parseNumberEs(ct.waitlistAmount) ?? 0;
       if (amount <= 0) return null;
-      const namePart = `${ct.name} ${ct.surname}`.trim();
+      const namePart = getContactFullName(ct);
       return {
         id: c.id,
-        name: namePart ? `${c.name} - ${namePart}` : c.name,
+        name: namePart || c.name,
         amount,
         note: ct.waitlistNote
       };
@@ -3929,12 +3929,12 @@ function InfoClientes({
   const topGuarantees = useMemo(
     () => getPortfolioClients().map((c) => {
       const ct = normalizeContact(contacts[c.id]);
-      const namePart = `${ct.name} ${ct.surname}`.trim();
+      const namePart = getContactFullName(ct);
       const rows = snapshot.clientRowsById[c.id] ?? [];
       const withdrawn = rows.reduce((acc, r) => acc + (r.decrement ?? 0), 0);
       return {
         id: c.id,
-        name: namePart ? `${c.name} - ${namePart}` : c.name,
+        name: namePart || c.name,
         value: Math.max(0, (guarantees[c.id] ?? 0) - withdrawn)
       };
     }).sort((a, b) => b.value - a.value).slice(0, 12),
@@ -4179,9 +4179,7 @@ function InfoClientes({
             <span className="info-id">Vista</span>
           </button>
           {filteredClients.map((c) => {
-            const ct = contacts[c.id];
-            const namePart = `${ct?.name ?? ''} ${ct?.surname ?? ''}`.trim();
-            const label = namePart ? `${c.name} - ${namePart}` : c.name;
+            const label = getClientDisplayName(c.id, contacts);
             return (
               <button
                 key={c.id}
@@ -4658,9 +4656,7 @@ function SeguimientoView({
   const sortedTasks = [...tasks].sort((a, b) => (a.dueDate > b.dueDate ? 1 : -1));
   const dueToday = sortedTasks.filter((t) => !t.done && t.dueDate === today).length;
   const overdue = sortedTasks.filter((t) => !t.done && t.dueDate < today).length;
-  const selectedClient = CLIENTS.find((c) => c.id === selectedId);
-  const ct = contacts[selectedId];
-  const label = ct && (ct.name || ct.surname) ? `${selectedClient?.name ?? selectedId} - ${ct.name} ${ct.surname}`.trim() : (selectedClient?.name ?? selectedId);
+  const label = getClientDisplayName(selectedId, contacts);
 
   const addTask = () => {
     const trimmed = title.trim();
@@ -4711,8 +4707,7 @@ function SeguimientoView({
               <span>Cliente</span>
               <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
                 {CLIENTS.map((c) => {
-                  const ctc = contacts[c.id];
-                  const lbl = ctc && (ctc.name || ctc.surname) ? `${c.name} - ${ctc.name} ${ctc.surname}`.trim() : c.name;
+                  const lbl = getClientDisplayName(c.id, contacts);
                   return <option key={c.id} value={c.id}>{lbl}</option>;
                 })}
               </select>
@@ -4852,8 +4847,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
 
       const comisionPendiente = retiros.reduce((s, r) => s + (r.estado ? 0 : r.comision), 0);
 
-      const ct = contacts[c.id];
-      const displayName = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
+      const displayName = getClientDisplayName(c.id, contacts);
 
       return {
         id: c.id,

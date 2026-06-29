@@ -196,7 +196,7 @@ export function buildClientReportData(
 
   return {
     id: clientId,
-    code: client?.name ?? clientId,
+    code: displayName,
     name: displayName,
     contact,
     incrementos,

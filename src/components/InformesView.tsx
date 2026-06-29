@@ -8,6 +8,12 @@ import { buildClientReportData, type ClientContactInfo } from '../utils/clientRe
 
 type ContactInfo = ClientContactInfo & { name: string; surname: string; email: string; phone: string };
 
+const getClientDisplayName = (clientId: string, contacts: Record<string, ContactInfo>) => {
+  const contact = contacts[clientId];
+  const fullName = `${contact?.name ?? ''} ${contact?.surname ?? ''}`.trim();
+  return fullName || CLIENTS.find((client) => client.id === clientId)?.name || clientId;
+};
+
 export function InformesView({ contacts }: { contacts: Record<string, ContactInfo> }) {
   const { snapshot, finalByDay, monthlyHistoryByClient } = usePortfolioStore();
   const latestYearWithData = useMemo(() => {
@@ -129,7 +135,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
     doc.setTextColor(60, 60, 60);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Código: ${clientData.code}`, margin, y);
+    doc.text(`Cliente: ${clientData.name}`, margin, y);
     y += 7;
     doc.text(`Nombre: ${clientData.name}`, margin, y);
     y += 7;
@@ -521,7 +527,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
     const token = await saveReportLink({
       clientId: clientData.id,
       clientName: clientData.name,
-      clientCode: clientData.code,
+      clientCode: clientData.name,
       incrementos: clientData.incrementos ?? 0,
       decrementos: clientData.decrementos ?? 0,
       saldo: clientData.saldo ?? 0,
@@ -622,8 +628,7 @@ Su gestor de inversiones`
               >
                 <option value="">Selecciona un cliente...</option>
                 {CLIENTS.map((c) => {
-                  const ct = contacts[c.id];
-                  const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
+                  const label = getClientDisplayName(c.id, contacts);
                   return <option key={c.id} value={c.id}>{label}</option>;
                 })}
               </select>
@@ -687,7 +692,7 @@ Su gestor de inversiones`
                 {CLIENTS.map((c) => {
                   const ct = contacts[c.id];
                   const hasEmail = ct?.email;
-                  const label = ct && (ct.name || ct.surname) ? `${c.name} - ${ct.name} ${ct.surname}`.trim() : c.name;
+                  const label = getClientDisplayName(c.id, contacts);
                   const isSelected = selectedClients.includes(c.id);
                   return (
                     <label key={c.id} className={`multi-select-item ${isSelected ? 'selected' : ''} ${!hasEmail ? 'no-email' : ''}`}>
@@ -728,7 +733,7 @@ Su gestor de inversiones`
                         const token = await saveReportLink({
                           clientId: clientDataForEmail.id,
                           clientName: clientDataForEmail.name,
-                          clientCode: clientDataForEmail.code,
+                          clientCode: clientDataForEmail.name,
                           incrementos: clientDataForEmail.incrementos ?? 0,
                           decrementos: clientDataForEmail.decrementos ?? 0,
                           saldo: clientDataForEmail.saldo ?? 0,
@@ -774,7 +779,7 @@ Su gestor de inversiones`
                         const reportUrl = buildReportUrl(baseUrl, token);
                         const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
                         const to = encodeURIComponent(clientDataForEmail.contact.email);
-                        const subject = encodeURIComponent(`Informe de Inversion - ${clientDataForEmail.code} - ${fecha}`);
+                        const subject = encodeURIComponent(`Informe de Inversion - ${clientDataForEmail.name} - ${fecha}`);
                         const body = encodeURIComponent(
 `Estimado/a ${clientDataForEmail.contact.name || 'cliente'},
 
@@ -869,7 +874,7 @@ Su gestor de inversiones`
                   <h2>Investment Report</h2>
                   <p className="report-pro-date">{new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 </div>
-                <div className="report-pro-client-tag">{clientData.code}</div>
+                <div className="report-pro-client-tag">{clientData.name}</div>
               </header>
 
               <section className="report-pro-client">
