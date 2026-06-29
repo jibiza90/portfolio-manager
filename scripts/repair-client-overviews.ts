@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { CLIENTS } from '../src/constants/clients';
+import { auth, db } from '../src/services/firebaseApp';
 import { buildSnapshot } from '../src/utils/snapshot';
 import { buildClientReportData, toClientReportPayload, type ClientContactInfo } from '../src/utils/clientReport';
 import type { PersistedState } from '../src/types';
@@ -55,6 +56,9 @@ const toFirestoreValue = (value: any): FirestoreValue => {
 };
 
 const readAccessToken = async () => {
+  const envToken = process.env.FIRESTORE_ACCESS_TOKEN?.trim();
+  if (envToken) return envToken;
+
   const raw = await fs.readFile(FIREBASE_TOOLS_CONFIG, 'utf8');
   const parsed = JSON.parse(raw) as { tokens?: { access_token?: string } };
   const token = parsed.tokens?.access_token;
@@ -131,7 +135,73 @@ const replaceOverviewDoc = async (token: string, clientId: string, payload: Reco
   });
 };
 
+const loadContactsFromClientSdk = async (): Promise<Record<string, ClientContactInfo>> => {
+  const snapshot = await db.collection('access_profiles').where('role', '==', 'client').get();
+  const contacts: Record<string, ClientContactInfo> = {};
+  snapshot.docs.forEach((doc) => {
+    const data = doc.data() as {
+      clientId?: string;
+      displayName?: string;
+      email?: string;
+      active?: boolean;
+    };
+    if (!data.clientId || data.active === false) return;
+    contacts[data.clientId] = {
+      name: data.displayName ?? '',
+      surname: '',
+      email: data.email ?? ''
+    };
+  });
+  return contacts;
+};
+
+const repairWithClientAuth = async (email: string, password: string) => {
+  await auth.signInWithEmailAndPassword(email, password);
+  const stateDoc = await db.doc('portfolio/state').get();
+  const data = (stateDoc.data() ?? {}) as Partial<PersistedState>;
+  const state: PersistedState = {
+    finalByDay: data.finalByDay ?? {},
+    movementsByClient: data.movementsByClient ?? {},
+    monthlyHistoryByClient: data.monthlyHistoryByClient ?? {}
+  };
+  const contacts = await loadContactsFromClientSdk();
+  const snapshot = buildSnapshot(state.finalByDay, state.movementsByClient, state.monthlyHistoryByClient);
+  const updatedAt = Date.now();
+  const batch = db.batch();
+
+  CLIENTS.forEach((client) => {
+    const reportData = buildClientReportData(
+      client.id,
+      'all',
+      contacts,
+      snapshot,
+      state.monthlyHistoryByClient,
+      client.name
+    );
+    if (!reportData) return;
+    const report = toClientReportPayload(reportData);
+    report.clientCode = reportData.name;
+    batch.set(db.collection('portfolio_client_overviews').doc(client.id), {
+      clientId: client.id,
+      clientName: reportData.name,
+      report,
+      updatedAt
+    });
+  });
+
+  await batch.commit();
+  await auth.signOut();
+  console.log(`Repaired ${CLIENTS.length} client overviews via Firebase Auth.`);
+};
+
 const run = async () => {
+  const adminEmail = process.env.PORTFOLIO_ADMIN_EMAIL?.trim();
+  const adminPassword = process.env.PORTFOLIO_ADMIN_PASSWORD?.trim();
+  if (adminEmail && adminPassword) {
+    await repairWithClientAuth(adminEmail, adminPassword);
+    return;
+  }
+
   const token = await readAccessToken();
   const state = await loadPersistedState(token);
   const contacts = await loadContacts(token);

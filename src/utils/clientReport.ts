@@ -272,7 +272,7 @@ export function toClientReportPayload(data: ClientReportData): ClientReportPaylo
       type: item.type,
       amount: item.amount ?? 0,
       balance: item.balance ?? 0,
-      returnPct: item.returnPct
+      ...(item.returnPct !== undefined ? { returnPct: item.returnPct } : {})
     })),
     contributionBreakdowns: data.contributionBreakdowns.map((item) => ({
       month: item.monthLabel,
