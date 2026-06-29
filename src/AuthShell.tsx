@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import App from './App';
 import { ReportView } from './components/ReportView';
-import { CLIENTS } from './constants/clients';
+import { CLIENTS, DEMO_CLIENT_ID } from './constants/clients';
 import {
   buildClientAuthEmail,
   fetchAccessProfile,
@@ -163,7 +163,8 @@ const formatShortDate = (iso: string) => {
   return `${day}.${month}.${year}`;
 };
 const deriveContributionBreakdowns = (
-  report: Pick<ReportData, 'monthlyStats' | 'movements'>
+  report: Pick<ReportData, 'monthlyStats' | 'movements'>,
+  startMonth = CONTRIBUTION_BREAKDOWN_START_MONTH
 ): NonNullable<ReportData['contributionBreakdowns']> => {
   const monthly = [...(report.monthlyStats ?? [])]
     .filter((item) => item.hasData)
@@ -176,7 +177,7 @@ const deriveContributionBreakdowns = (
       const contributionRows = movements.filter(
         (movement) => movement.type === 'increment' && movement.iso.slice(0, 7) === month.monthKey
       );
-      if (month.monthKey < CONTRIBUTION_BREAKDOWN_START_MONTH || contributionRows.length === 0) return null;
+      if (month.monthKey < startMonth || contributionRows.length === 0) return null;
 
       const initialCapital = Math.max(0, monthly[index - 1]?.endBalance ?? 0);
       const initialReturnPct = (month.profitPct ?? 0) / 100;
@@ -204,9 +205,10 @@ const deriveContributionBreakdowns = (
     .filter((item): item is NonNullable<ReportData['contributionBreakdowns']>[number] => item !== null);
 };
 const filterVisibleContributionBreakdowns = (
-  breakdowns?: ReportData['contributionBreakdowns']
+  breakdowns?: ReportData['contributionBreakdowns'],
+  startMonth = CONTRIBUTION_BREAKDOWN_START_MONTH
 ): NonNullable<ReportData['contributionBreakdowns']> =>
-  (breakdowns ?? []).filter((item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH);
+  (breakdowns ?? []).filter((item) => reportMonthToKey(item.month) >= startMonth);
 const buildFallbackReportFromOverview = (
   overview: ClientOverview,
   fallbackClientName: string
@@ -262,10 +264,13 @@ const buildFallbackReportFromOverview = (
       hasData: item.hasData
     })),
     movements,
-    contributionBreakdowns: deriveContributionBreakdowns({
-      monthlyStats: monthly,
-      movements
-    }),
+    contributionBreakdowns: deriveContributionBreakdowns(
+      {
+        monthlyStats: monthly,
+        movements
+      },
+      overview.clientId === DEMO_CLIENT_ID ? '0000-00' : CONTRIBUTION_BREAKDOWN_START_MONTH
+    ),
     createdAt: overview.updatedAt,
     expiresAt: overview.updatedAt
   };
@@ -983,8 +988,14 @@ const ClientPortal = ({
               clientCode: loginId ?? clientId,
               contributionBreakdowns:
                 report.contributionBreakdowns && report.contributionBreakdowns.length > 0
-                  ? filterVisibleContributionBreakdowns(report.contributionBreakdowns)
-                  : deriveContributionBreakdowns(report),
+                  ? filterVisibleContributionBreakdowns(
+                      report.contributionBreakdowns,
+                      clientId === DEMO_CLIENT_ID ? '0000-00' : CONTRIBUTION_BREAKDOWN_START_MONTH
+                    )
+                  : deriveContributionBreakdowns(
+                      report,
+                      clientId === DEMO_CLIENT_ID ? '0000-00' : CONTRIBUTION_BREAKDOWN_START_MONTH
+                    ),
               createdAt: overview.updatedAt,
               expiresAt: overview.updatedAt
             }

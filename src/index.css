@@ -1730,6 +1730,68 @@ input[type='number'] {
   font-weight: 600;
 }
 
+.report-pro-month-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-pro-expand-button {
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(15, 109, 122, 0.28);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f6d7a;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(15, 109, 122, 0.10);
+}
+
+.report-pro-expand-button:hover {
+  background: rgba(15, 109, 122, 0.08);
+}
+
+.report-pro-expanded-row,
+.report-pro-expanded-row:hover {
+  background: rgba(15, 109, 122, 0.055) !important;
+}
+
+.report-pro-inline-breakdown {
+  border: 1px solid rgba(15, 109, 122, 0.14);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+
+.report-pro-inline-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #1f2937;
+}
+
+.report-pro-inline-title span {
+  color: #5f5a52;
+  font-size: 13px;
+}
+
+.report-pro-inline-breakdown table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.report-pro-inline-breakdown td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(15, 109, 122, 0.08);
+}
+
+.report-pro-inline-breakdown tr:last-child td {
+  border-bottom: 0;
+}
+
 .preview-footer {
   padding: 24px 40px;
   background: linear-gradient(135deg, #0f6d7a, #0a5a66);

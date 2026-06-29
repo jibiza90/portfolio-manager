@@ -1,4 +1,4 @@
-import { CLIENTS } from '../constants/clients';
+import { CLIENTS, DEMO_CLIENT_ID } from '../constants/clients';
 import { PortfolioSnapshot, MonthlyHistoryEntry } from '../types';
 import { calculateAllMonthsTWR } from './twr';
 import { buildMonthlyStatsForMonths, buildMonthlyStatsForYear, normalizeMonthlyReturnPct } from './monthlyHistory';
@@ -143,11 +143,12 @@ export function buildClientReportData(
     rowsByMonth.set(monthKey, [...(rowsByMonth.get(monthKey) ?? []), row]);
   });
 
+  const contributionBreakdownStartMonth = clientId === DEMO_CLIENT_ID ? '0000-00' : CONTRIBUTION_BREAKDOWN_START_MONTH;
   const contributionBreakdowns: ClientReportData['contributionBreakdowns'] = monthlyStats
     .map((monthStat) => {
       const monthRows = rowsByMonth.get(monthStat.monthKey) ?? [];
       const contributionRows = monthRows.filter((row) => (row.increment ?? 0) > 0);
-      if (!monthStat.hasData || monthStat.monthKey < CONTRIBUTION_BREAKDOWN_START_MONTH || contributionRows.length === 0) return null;
+      if (!monthStat.hasData || monthStat.monthKey < contributionBreakdownStartMonth || contributionRows.length === 0) return null;
 
       const firstRow = monthRows[0];
       const initialCapital = Math.max(

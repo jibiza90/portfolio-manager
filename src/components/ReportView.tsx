@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { getReportByToken, isValidReportToken, ReportData } from '../services/reportLinks';
+import { DEMO_CLIENT_ID } from '../constants/clients';
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 
@@ -152,6 +153,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const [expired, setExpired] = useState(false);
   const [hoveredPatrimonyPoint, setHoveredPatrimonyPoint] = useState<PatrimonyTooltipState | null>(null);
   const [infoTooltip, setInfoTooltip] = useState<InfoTooltipState>({ visible: false });
+  const [expandedContributionMonths, setExpandedContributionMonths] = useState<Record<string, boolean>>({});
   const reportRef = useRef<HTMLDivElement>(null);
   const twrExplanation = 'mide la rentabilidad de la inversion sin contar aportaciones ni retiradas.';
   const totalReturnExplanation = 'compara el beneficio total frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
@@ -184,6 +186,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     };
     loadReport();
   }, [reportData, token]);
+
+  useEffect(() => {
+    setExpandedContributionMonths({});
+  }, [report?.clientId]);
 
   const handleDownload = async () => {
     if (!report) return;
@@ -608,6 +614,14 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const contributionBreakdowns = (report.contributionBreakdowns ?? []).filter(
     (item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH
   );
+  const isDemoReport = report.clientId === DEMO_CLIENT_ID;
+  const tableContributionBreakdowns = (report.contributionBreakdowns ?? []).filter(
+    (item) => isDemoReport && item.contributions.length > 0
+  );
+  const tableContributionByMonth = new Map(
+    tableContributionBreakdowns.map((item) => [reportMonthToKey(item.month), item])
+  );
+  const visibleContributionBreakdowns = isDemoReport ? [] : contributionBreakdowns;
   const hasNegativeMonth = monthlyWithData.some((m) => m.profitPct < 0);
   const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(m.profitPct)));
   const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.hasData && p.balance !== undefined && (p.balance ?? 0) !== 0);
@@ -713,14 +727,14 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
         </section>
 
-        {contributionBreakdowns.length > 0 && (
+        {visibleContributionBreakdowns.length > 0 && (
           <section className="report-pro-panel">
             <div className="report-pro-panel-head">
               <h4>Detalle de meses con aportaciones</h4>
               <p>Separamos el capital inicial del mes y cada aportación para que veas qué ha generado cada parte.</p>
             </div>
             <div className="report-pro-breakdown-list">
-              {contributionBreakdowns.map((breakdown) => (
+              {visibleContributionBreakdowns.map((breakdown) => (
                 <div className="report-pro-breakdown-card" key={breakdown.month}>
                   <div className="report-pro-breakdown-title">
                     <strong>{breakdown.month}</strong>
@@ -934,18 +948,84 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                 </tr>
               </thead>
               <tbody>
-                {monthlyWithData.map((m) => (
-                  <tr key={m.month}>
-                    <td>{getMonthEndLabel(m.month)}</td>
-                    <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                      {formatCurrency(m.profit ?? 0)}
-                    </td>
-                    <td className={`text-right ${(m.profitPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                      {`${(m.profitPct ?? 0).toFixed(2)}%`}
-                    </td>
-                    <td className="text-right">{formatCurrency(m.endBalance ?? 0)}</td>
-                  </tr>
-                ))}
+                {monthlyWithData.map((m) => {
+                  const monthKey = reportMonthToKey(m.month);
+                  const breakdown = tableContributionByMonth.get(monthKey);
+                  const expanded = !!expandedContributionMonths[monthKey];
+
+                  return (
+                    <React.Fragment key={m.month}>
+                      <tr>
+                        <td>
+                          <span className="report-pro-month-cell">
+                            {breakdown ? (
+                              <button
+                                type="button"
+                                className="report-pro-expand-button"
+                                aria-expanded={expanded}
+                                aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de aportaciones ${m.month}`}
+                                onClick={() =>
+                                  setExpandedContributionMonths((prev) => ({
+                                    ...prev,
+                                    [monthKey]: !prev[monthKey]
+                                  }))
+                                }
+                              >
+                                {expanded ? '-' : '+'}
+                              </button>
+                            ) : null}
+                            <span>{getMonthEndLabel(m.month)}</span>
+                          </span>
+                        </td>
+                        <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                          {formatCurrency(m.profit ?? 0)}
+                        </td>
+                        <td className={`text-right ${(m.profitPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                          {`${(m.profitPct ?? 0).toFixed(2)}%`}
+                        </td>
+                        <td className="text-right">{formatCurrency(m.endBalance ?? 0)}</td>
+                      </tr>
+                      {breakdown && expanded ? (
+                        <tr className="report-pro-expanded-row">
+                          <td colSpan={4}>
+                            <div className="report-pro-inline-breakdown">
+                              <div className="report-pro-inline-title">
+                                <strong>Detalle {m.month}</strong>
+                                <span>Total explicado: {formatCurrency(breakdown.totalProfit)}</span>
+                              </div>
+                              <table>
+                                <tbody>
+                                  <tr>
+                                    <td>Capital inicial</td>
+                                    <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
+                                    <td className={`text-right ${breakdown.initialReturnPct >= 0 ? 'positive' : 'negative'}`}>
+                                      {(breakdown.initialReturnPct * 100).toFixed(2)}%
+                                    </td>
+                                    <td className={`text-right ${breakdown.initialProfit >= 0 ? 'positive' : 'negative'}`}>
+                                      {formatCurrency(breakdown.initialProfit)}
+                                    </td>
+                                  </tr>
+                                  {breakdown.contributions.map((contribution) => (
+                                    <tr key={`${monthKey}-${contribution.iso}-${contribution.amount}`}>
+                                      <td>Aportacion {getShortDateLabel(contribution.iso)}</td>
+                                      <td className="text-right">{formatCurrency(contribution.amount)}</td>
+                                      <td className={`text-right ${contribution.returnPct >= 0 ? 'positive' : 'negative'}`}>
+                                        {(contribution.returnPct * 100).toFixed(2)}%
+                                      </td>
+                                      <td className={`text-right ${contribution.profit >= 0 ? 'positive' : 'negative'}`}>
+                                        {formatCurrency(contribution.profit)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
