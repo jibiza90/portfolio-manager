@@ -57,6 +57,7 @@ interface ClientOverview {
     iso: string;
     label: string;
     increment: number | null;
+    incrementReturnPct?: number | null;
     decrement: number | null;
     baseBalance: number | null;
     finalBalance: number | null;
@@ -180,18 +181,26 @@ const deriveContributionBreakdowns = (
       if (month.monthKey < startMonth || contributionRows.length === 0) return null;
 
       const initialCapital = Math.max(0, monthly[index - 1]?.endBalance ?? 0);
-      const initialReturnPct = (month.profitPct ?? 0) / 100;
+      const totalMonthProfit = month.profit ?? 0;
+      const fallbackReturnPct = (month.profitPct ?? 0) / 100;
+      const explicitContributionProfit = contributionRows.reduce((sum, item) => (
+        item.returnPct === undefined ? sum : sum + (item.amount ?? 0) * item.returnPct
+      ), 0);
+      const fallbackContributionCapital = contributionRows.reduce((sum, item) => (
+        item.returnPct === undefined ? sum + (item.amount ?? 0) : sum
+      ), 0);
+      const residualCapital = initialCapital + fallbackContributionCapital;
+      const residualProfit = totalMonthProfit - explicitContributionProfit;
+      const residualReturnPct = residualCapital !== 0 ? residualProfit / residualCapital : fallbackReturnPct;
+      const initialReturnPct = residualReturnPct;
       const initialProfit = initialCapital * initialReturnPct;
-      const contributionProfit = (month.profit ?? 0) - initialProfit;
-      const totalContribution = contributionRows.reduce((sum, item) => sum + (item.amount ?? 0), 0);
-      const impliedContributionReturn = totalContribution !== 0 ? contributionProfit / totalContribution : 0;
       const contributions = contributionRows.map((item) => ({
         iso: item.iso,
         amount: item.amount ?? 0,
-        returnPct: impliedContributionReturn,
-        profit: (item.amount ?? 0) * impliedContributionReturn
+        returnPct: item.returnPct ?? residualReturnPct,
+        profit: (item.amount ?? 0) * (item.returnPct ?? residualReturnPct)
       }));
-      const totalProfit = initialProfit + contributions.reduce((sum, item) => sum + item.profit, 0);
+      const totalProfit = totalMonthProfit;
 
       return {
         month: month.month,
@@ -242,7 +251,8 @@ const buildFallbackReportFromOverview = (
       iso: row.iso,
       type: (row.increment ?? 0) > 0 ? 'increment' : 'decrement',
       amount: (row.increment ?? 0) > 0 ? row.increment ?? 0 : row.decrement ?? 0,
-      balance: row.finalBalance ?? 0
+      balance: row.finalBalance ?? 0,
+      returnPct: (row.increment ?? 0) > 0 ? row.incrementReturnPct ?? undefined : undefined
     }));
 
   return {
@@ -987,14 +997,16 @@ const ClientPortal = ({
               clientName: loginId ?? clientId,
               clientCode: loginId ?? clientId,
               contributionBreakdowns:
-                report.contributionBreakdowns && report.contributionBreakdowns.length > 0
+                clientId === DEMO_CLIENT_ID
+                  ? deriveContributionBreakdowns(report, '0000-00')
+                  : report.contributionBreakdowns && report.contributionBreakdowns.length > 0
                   ? filterVisibleContributionBreakdowns(
                       report.contributionBreakdowns,
-                      clientId === DEMO_CLIENT_ID ? '0000-00' : CONTRIBUTION_BREAKDOWN_START_MONTH
+                      CONTRIBUTION_BREAKDOWN_START_MONTH
                     )
                   : deriveContributionBreakdowns(
                       report,
-                      clientId === DEMO_CLIENT_ID ? '0000-00' : CONTRIBUTION_BREAKDOWN_START_MONTH
+                      CONTRIBUTION_BREAKDOWN_START_MONTH
                     ),
               createdAt: overview.updatedAt,
               expiresAt: overview.updatedAt
@@ -1140,7 +1152,8 @@ const ClientPortal = ({
           iso: row.iso,
           increment: row.type === 'increment' ? row.amount : 0,
           decrement: row.type === 'decrement' ? row.amount : 0,
-          finalBalance: row.balance
+          finalBalance: row.balance,
+          incrementReturnPct: row.type === 'increment' ? row.returnPct : undefined
         }))
         .sort((a, b) => (a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0));
     }

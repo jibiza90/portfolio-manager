@@ -29,6 +29,7 @@ export interface ReportData {
     type: string;
     amount: number;
     balance: number;
+    returnPct?: number;
   }>;
   contributionBreakdowns?: Array<{
     month: string;

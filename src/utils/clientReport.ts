@@ -24,7 +24,7 @@ export interface ClientReportData {
   beneficioTotal: number;
   rentabilidad: number;
   monthlyStats: ReturnType<typeof buildMonthlyStatsForMonths>['monthlyStats'];
-  movements: Array<{ iso: string; type: 'increment' | 'decrement'; amount: number; balance: number }>;
+  movements: Array<{ iso: string; type: 'increment' | 'decrement'; amount: number; balance: number; returnPct?: number }>;
   contributionBreakdowns: Array<{
     month: string;
     monthLabel: string;
@@ -70,6 +70,7 @@ export interface ClientReportPayload {
     type: 'increment' | 'decrement';
     amount: number;
     balance: number;
+    returnPct?: number;
   }>;
   contributionBreakdowns: Array<{
     month: string;
@@ -130,7 +131,13 @@ export function buildClientReportData(
   const movements: ClientReportData['movements'] = [];
   [...periodRows].sort((a, b) => a.iso.localeCompare(b.iso)).forEach((row) => {
     if (row.increment && row.increment > 0) {
-      movements.push({ iso: row.iso, type: 'increment', amount: row.increment, balance: row.finalBalance || 0 });
+      movements.push({
+        iso: row.iso,
+        type: 'increment',
+        amount: row.increment,
+        balance: row.finalBalance || 0,
+        returnPct: normalizeMonthlyReturnPct(row.incrementReturnPct)
+      });
     }
     if (row.decrement && row.decrement > 0) {
       movements.push({ iso: row.iso, type: 'decrement', amount: row.decrement, balance: row.finalBalance || 0 });
@@ -155,11 +162,23 @@ export function buildClientReportData(
         0,
         (firstRow?.baseBalance ?? 0) - (firstRow?.increment ?? 0) + (firstRow?.decrement ?? 0)
       );
-      const initialReturnPct = (monthStat.profitPct ?? 0) / 100;
+      const totalMonthProfit = monthStat.profit ?? 0;
+      const fallbackReturnPct = (monthStat.profitPct ?? 0) / 100;
+      const explicitContributionProfit = contributionRows.reduce((sum, row) => {
+        const returnPct = normalizeMonthlyReturnPct(row.incrementReturnPct);
+        return returnPct === undefined ? sum : sum + (row.increment ?? 0) * returnPct;
+      }, 0);
+      const fallbackContributionCapital = contributionRows.reduce((sum, row) => (
+        normalizeMonthlyReturnPct(row.incrementReturnPct) === undefined ? sum + (row.increment ?? 0) : sum
+      ), 0);
+      const residualCapital = initialCapital + fallbackContributionCapital;
+      const residualProfit = totalMonthProfit - explicitContributionProfit;
+      const residualReturnPct = residualCapital !== 0 ? residualProfit / residualCapital : fallbackReturnPct;
+      const initialReturnPct = residualReturnPct;
       const initialProfit = initialCapital * initialReturnPct;
       const contributions = contributionRows.map((row) => {
         const amount = row.increment ?? 0;
-        const returnPct = normalizeMonthlyReturnPct(row.incrementReturnPct) ?? initialReturnPct;
+        const returnPct = normalizeMonthlyReturnPct(row.incrementReturnPct) ?? residualReturnPct;
         return {
           iso: row.iso,
           amount,
@@ -167,7 +186,7 @@ export function buildClientReportData(
           profit: amount * returnPct
         };
       });
-      const totalProfit = initialProfit + contributions.reduce((sum, item) => sum + item.profit, 0);
+      const totalProfit = totalMonthProfit;
 
       return {
         month: monthStat.monthKey,
@@ -252,7 +271,8 @@ export function toClientReportPayload(data: ClientReportData): ClientReportPaylo
       iso: item.iso,
       type: item.type,
       amount: item.amount ?? 0,
-      balance: item.balance ?? 0
+      balance: item.balance ?? 0,
+      returnPct: item.returnPct
     })),
     contributionBreakdowns: data.contributionBreakdowns.map((item) => ({
       month: item.monthLabel,
