@@ -154,6 +154,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const [hoveredPatrimonyPoint, setHoveredPatrimonyPoint] = useState<PatrimonyTooltipState | null>(null);
   const [infoTooltip, setInfoTooltip] = useState<InfoTooltipState>({ visible: false });
   const [expandedContributionMonths, setExpandedContributionMonths] = useState<Record<string, boolean>>({});
+  const [patrimonyStartMonth, setPatrimonyStartMonth] = useState('');
+  const [patrimonyEndMonth, setPatrimonyEndMonth] = useState('');
   const reportRef = useRef<HTMLDivElement>(null);
   const twrExplanation = 'mide la rentabilidad de la inversion sin contar aportaciones ni retiradas.';
   const totalReturnExplanation = 'compara el beneficio total frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
@@ -629,6 +631,21 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const hasNegativeMonth = monthlyWithData.some((m) => getDisplayedMonthReturnPct(m) < 0);
   const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(getDisplayedMonthReturnPct(m))));
   const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.hasData && p.balance !== undefined && (p.balance ?? 0) !== 0);
+  const patrimonyOptions = patrimonioWithData.map((p) => ({
+    key: reportMonthToKey(p.month),
+    label: p.month
+  }));
+  const selectedStart = patrimonyStartMonth || patrimonyOptions[0]?.key || '';
+  const selectedEnd = patrimonyEndMonth || patrimonyOptions[patrimonyOptions.length - 1]?.key || '';
+  const rangeStart = selectedStart <= selectedEnd ? selectedStart : selectedEnd;
+  const rangeEnd = selectedStart <= selectedEnd ? selectedEnd : selectedStart;
+  const patrimonioChartData = isDemoReport && rangeStart && rangeEnd
+    ? patrimonioWithData.filter((p) => {
+      const key = reportMonthToKey(p.month);
+      return key >= rangeStart && key <= rangeEnd;
+    })
+    : patrimonioWithData;
+  const effectivePatrimonioData = patrimonioChartData.length > 0 ? patrimonioChartData : patrimonioWithData;
   const chartW = 1000;
   const chartH = 360;
   const padL = 78;
@@ -638,14 +655,14 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const plotW = chartW - padL - padR;
   const plotH = chartH - padT - padB;
   const plotBottom = padT + plotH;
-  const patrValues = patrimonioWithData.map((p) => p.balance as number);
+  const patrValues = effectivePatrimonioData.map((p) => p.balance as number);
   const { min: minAxis, max: maxAxis, ticks: axisTickValues } = buildNiceAxis(patrValues);
   const axisSpan = Math.max(1, maxAxis - minAxis);
-  const patrPoints = patrimonioWithData.map((p, idx) => {
+  const patrPoints = effectivePatrimonioData.map((p, idx) => {
     const value = p.balance as number;
-    const x = patrimonioWithData.length <= 1
+    const x = effectivePatrimonioData.length <= 1
       ? padL + plotW / 2
-      : padL + (idx / (patrimonioWithData.length - 1)) * plotW;
+      : padL + (idx / (effectivePatrimonioData.length - 1)) * plotW;
     const y = padT + (1 - (value - minAxis) / axisSpan) * plotH;
     return { x, y, value, month: p.month };
   });
@@ -669,8 +686,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   }, []);
 
   return (
-    <div className="informes-container informes-pro-page fade-in">
-      <article className="informe-preview glass-card report-pro-sheet" ref={reportRef}>
+    <div className={`informes-container informes-pro-page fade-in ${isDemoReport ? 'report-pro-page-demo' : ''}`}>
+      <article className={`informe-preview glass-card report-pro-sheet ${isDemoReport ? 'report-pro-demo-sheet' : ''}`} ref={reportRef}>
         <header className="report-pro-header">
           <div>
             <p className="report-pro-kicker">Portfolio Manager</p>
@@ -734,29 +751,29 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
         {visibleContributionBreakdowns.length > 0 && (
           <section className="report-pro-panel">
             <div className="report-pro-panel-head">
-              <h4>Detalle de rentabilidad del mes</h4>
-              <p>Separación entre la posición inicial y las aportaciones realizadas durante el mes.</p>
+              <h4>Detalle de meses con aportaciones</h4>
+              <p>Separamos el capital inicial del mes y cada aportacion para que veas que ha generado cada parte.</p>
             </div>
             <div className="report-pro-breakdown-list">
               {visibleContributionBreakdowns.map((breakdown) => (
                 <div className="report-pro-breakdown-card" key={breakdown.month}>
                   <div className="report-pro-breakdown-title">
                     <strong>{breakdown.month}</strong>
-                    <span>Resultado total del mes: {formatCurrency(breakdown.totalProfit)}</span>
+                    <span>Beneficio explicado: {formatCurrency(breakdown.totalProfit)}</span>
                   </div>
                   <div className="table-scroll">
                     <table className="monthly-table report-pro-table">
                       <thead>
                         <tr>
                           <th>Concepto</th>
-                          <th className="text-right">Importe</th>
-                          <th className="text-right">Rentabilidad aplicada</th>
-                          <th className="text-right">Resultado generado</th>
+                          <th className="text-right">Capital</th>
+                          <th className="text-right">Rentabilidad</th>
+                          <th className="text-right">Beneficio</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td>Posición inicial del mes</td>
+                          <td>Capital inicial del mes</td>
                           <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
                           <td className={`text-right ${breakdown.initialReturnPct >= 0 ? 'positive' : 'negative'}`}>
                             {(breakdown.initialReturnPct * 100).toFixed(2)}%
@@ -767,7 +784,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                         </tr>
                         {breakdown.contributions.map((contribution) => (
                           <tr key={`${breakdown.month}-${contribution.iso}-${contribution.amount}`}>
-                            <td>Aportación incorporada el {getShortDateLabel(contribution.iso)}</td>
+                            <td>Aportacion {getShortDateLabel(contribution.iso)}</td>
                             <td className="text-right">{formatCurrency(contribution.amount)}</td>
                             <td className={`text-right ${contribution.returnPct >= 0 ? 'positive' : 'negative'}`}>
                               {(contribution.returnPct * 100).toFixed(2)}%
@@ -778,7 +795,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                           </tr>
                         ))}
                         <tr className="report-pro-breakdown-total">
-                          <td>Resultado total del mes</td>
+                          <td>Beneficio total del mes</td>
                           <td className="text-right">—</td>
                           <td className="text-right">—</td>
                           <td className={`text-right ${breakdown.totalProfit >= 0 ? 'positive' : 'negative'}`}>
@@ -860,6 +877,51 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
             <h4>Evolucion patrimonio</h4>
             <p>Linea de cierre mensual con importe en cada punto</p>
           </div>
+          {isDemoReport && patrimonyOptions.length > 1 ? (
+            <div className="report-pro-range-controls">
+              <label>
+                Desde
+                <select
+                  value={patrimonyStartMonth}
+                  onChange={(event) => {
+                    setPatrimonyStartMonth(event.target.value);
+                    setHoveredPatrimonyPoint(null);
+                  }}
+                >
+                  <option value="">Inicio</option>
+                  {patrimonyOptions.map((option) => (
+                    <option key={`from-${option.key}`} value={option.key}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Hasta
+                <select
+                  value={patrimonyEndMonth}
+                  onChange={(event) => {
+                    setPatrimonyEndMonth(event.target.value);
+                    setHoveredPatrimonyPoint(null);
+                  }}
+                >
+                  <option value="">Actual</option>
+                  {patrimonyOptions.map((option) => (
+                    <option key={`to-${option.key}`} value={option.key}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="report-pro-range-reset"
+                onClick={() => {
+                  setPatrimonyStartMonth('');
+                  setPatrimonyEndMonth('');
+                  setHoveredPatrimonyPoint(null);
+                }}
+              >
+                Ver todo
+              </button>
+            </div>
+          ) : null}
           <div className="report-pro-line-wrap">
             {hoveredPatrimonyPoint ? (
               <div
@@ -923,15 +985,15 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           </div>
           <div
             className="report-pro-month-row"
-            style={{ gridTemplateColumns: `repeat(${Math.max(1, patrimonioWithData.length)}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${Math.max(1, effectivePatrimonioData.length)}, minmax(0, 1fr))` }}
           >
-            {patrimonioWithData.map((p) => <span key={p.month}>{p.month}</span>)}
+            {effectivePatrimonioData.map((p) => <span key={p.month}>{p.month}</span>)}
           </div>
           <div
             className="report-pro-value-row"
-            style={{ gridTemplateColumns: `repeat(${Math.max(1, patrimonioWithData.length)}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${Math.max(1, effectivePatrimonioData.length)}, minmax(0, 1fr))` }}
           >
-            {patrimonioWithData.map((p) => (
+            {effectivePatrimonioData.map((p) => (
               <span key={`${p.month}-value`}>{formatCurrency(p.balance)}</span>
             ))}
           </div>
@@ -997,7 +1059,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                             <div className="report-pro-inline-breakdown">
                               <div className="report-pro-inline-title">
                                 <strong>Detalle de rentabilidad del mes - {m.month}</strong>
-                                <span>Separación entre la posición inicial y las aportaciones realizadas durante el mes.</span>
                               </div>
                               <table>
                                 <thead>
@@ -1010,7 +1071,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                                 </thead>
                                 <tbody>
                                   <tr>
-                                    <td>Posición inicial del mes</td>
+                                    <td>Posici&oacute;n inicial del mes</td>
                                     <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
                                     <td className={`text-right ${breakdown.initialReturnPct >= 0 ? 'positive' : 'negative'}`}>
                                       {(breakdown.initialReturnPct * 100).toFixed(2)}%
@@ -1021,7 +1082,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                                   </tr>
                                   {breakdown.contributions.map((contribution) => (
                                     <tr key={`${monthKey}-${contribution.iso}-${contribution.amount}`}>
-                                      <td>Aportación incorporada el {getShortDateLabel(contribution.iso)}</td>
+                                      <td>Aportaci&oacute;n incorporada el {getShortDateLabel(contribution.iso)}</td>
                                       <td className="text-right">{formatCurrency(contribution.amount)}</td>
                                       <td className={`text-right ${contribution.returnPct >= 0 ? 'positive' : 'negative'}`}>
                                         {(contribution.returnPct * 100).toFixed(2)}%
