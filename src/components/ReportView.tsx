@@ -961,7 +961,13 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                     <span>Beneficio explicado: {formatCurrency(breakdown.totalProfit)}</span>
                   </div>
                   <div className="table-scroll">
-                    <table className="monthly-table report-pro-table">
+                    <table className="monthly-table report-pro-table report-pro-breakdown-table">
+                      <colgroup>
+                        <col style={{ width: '42%' }} />
+                        <col style={{ width: '19%' }} />
+                        <col style={{ width: '19%' }} />
+                        <col style={{ width: '20%' }} />
+                      </colgroup>
                       <thead>
                         <tr>
                           <th>Concepto</th>
@@ -972,7 +978,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                       </thead>
                       <tbody>
                         <tr>
-                          <td>Capital inicial del mes</td>
+                          <td>Posici&oacute;n inicial del mes</td>
                           <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
                           <td className={`text-right ${breakdown.initialReturnPct >= 0 ? 'positive' : 'negative'}`}>
                             {(breakdown.initialReturnPct * 100).toFixed(2)}%
@@ -983,7 +989,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                         </tr>
                         {breakdown.contributions.map((contribution) => (
                           <tr key={`${breakdown.month}-${contribution.iso}-${contribution.amount}`}>
-                            <td>Aportacion {getShortDateLabel(contribution.iso)}</td>
+                            <td>Aportaci&oacute;n incorporada el {getShortDateLabel(contribution.iso)}</td>
                             <td className="text-right">{formatCurrency(contribution.amount)}</td>
                             <td className={`text-right ${contribution.returnPct >= 0 ? 'positive' : 'negative'}`}>
                               {(contribution.returnPct * 100).toFixed(2)}%
@@ -1062,7 +1068,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
             <p>Beneficio generado en cada cierre de mes</p>
           </div>
           <div className="table-scroll">
-            <table className="monthly-table report-pro-table">
+            <table className="monthly-table report-pro-table report-pro-benefits-table">
+              <colgroup>
+                <col style={{ width: '50%' }} />
+                <col style={{ width: '50%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Fecha</th>
