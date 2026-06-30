@@ -1151,14 +1151,23 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
             <p>Resultado, rentabilidad y saldo por mes</p>
           </div>
           <div className="table-scroll">
-            <table className="monthly-table report-pro-table">
+            <table className={`monthly-table report-pro-table ${isDemoReport ? 'report-pro-demo-monthly-table' : ''}`}>
+              {isDemoReport ? (
+                <colgroup>
+                  <col style={{ width: '28%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '20%' }} />
+                </colgroup>
+              ) : null}
               <thead>
                 <tr>
                   <th>Mes</th>
                   <th className="text-right">Beneficio</th>
                   <th className="text-right">Rentabilidad</th>
                   <th className="text-right">Saldo</th>
-                  {isDemoReport ? <th className="text-right">Vs mes anterior</th> : null}
+                  {isDemoReport ? <th className="text-right">Variacion saldo</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -1170,7 +1179,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                   const movementTag = isDemoReport ? monthlyMovementType(monthKey) : '';
                   const previous = getPreviousMonth(monthKey);
                   const balanceVariation = previous ? (m.endBalance ?? 0) - (previous.endBalance ?? 0) : null;
-                  const profitVariation = previous ? (m.profit ?? 0) - (previous.profit ?? 0) : null;
 
                   return (
                     <React.Fragment key={m.month}>
@@ -1206,16 +1214,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                         <td className="text-right">{formatCurrency(m.endBalance ?? 0)}</td>
                         {isDemoReport ? (
                           <td className="text-right">
-                            {balanceVariation === null || profitVariation === null ? (
-                              <span className="muted">—</span>
+                            {balanceVariation === null ? (
+                              <span className="muted">&mdash;</span>
                             ) : (
-                              <span className="report-pro-variation-stack">
-                                <span className={balanceVariation >= 0 ? 'positive' : 'negative'}>
-                                  Saldo {balanceVariation >= 0 ? '+' : ''}{formatCurrency(balanceVariation)}
-                                </span>
-                                <small className={profitVariation >= 0 ? 'positive' : 'negative'}>
-                                  Resultado {profitVariation >= 0 ? '+' : ''}{formatCurrency(profitVariation)}
-                                </small>
+                              <span className={balanceVariation >= 0 ? 'positive' : 'negative'}>
+                                {balanceVariation >= 0 ? '+' : ''}{formatCurrency(balanceVariation)}
                               </span>
                             )}
                           </td>
