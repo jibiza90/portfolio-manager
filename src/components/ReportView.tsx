@@ -621,9 +621,13 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const tableContributionByMonth = new Map(
     tableContributionBreakdowns.map((item) => [reportMonthToKey(item.month), item])
   );
+  const getDisplayedMonthReturnPct = (month: (typeof monthlyWithData)[number]) => {
+    const breakdown = tableContributionByMonth.get(reportMonthToKey(month.month));
+    return breakdown ? breakdown.initialReturnPct * 100 : month.profitPct;
+  };
   const visibleContributionBreakdowns = isDemoReport ? [] : contributionBreakdowns;
-  const hasNegativeMonth = monthlyWithData.some((m) => m.profitPct < 0);
-  const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(m.profitPct)));
+  const hasNegativeMonth = monthlyWithData.some((m) => getDisplayedMonthReturnPct(m) < 0);
+  const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(getDisplayedMonthReturnPct(m))));
   const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.hasData && p.balance !== undefined && (p.balance ?? 0) !== 0);
   const chartW = 1000;
   const chartH = 360;
@@ -801,17 +805,18 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           >
             {monthlyWithData.map((m) => {
               const maxBarHeight = hasNegativeMonth ? 46 : 92;
-              const height = Math.min(maxBarHeight, Math.max(4, (Math.abs(m.profitPct) / maxMonthPct) * maxBarHeight));
+              const displayedPct = getDisplayedMonthReturnPct(m);
+              const height = Math.min(maxBarHeight, Math.max(4, (Math.abs(displayedPct) / maxMonthPct) * maxBarHeight));
               return (
-                <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${m.profitPct.toFixed(2)}%`}>
-                  <span className={`report-pro-bar-value ${m.profitPct >= 0 ? 'positive' : 'negative'}`}>{m.profitPct.toFixed(2)}%</span>
+                <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${displayedPct.toFixed(2)}%`}>
+                  <span className={`report-pro-bar-value ${displayedPct >= 0 ? 'positive' : 'negative'}`}>{displayedPct.toFixed(2)}%</span>
                   <div className="report-pro-bar-track">
                     <div
-                      className={`report-pro-bar ${m.profitPct >= 0 ? 'positive' : 'negative'}`}
+                      className={`report-pro-bar ${displayedPct >= 0 ? 'positive' : 'negative'}`}
                       style={{
                         height: `${height}%`,
                         ...(hasNegativeMonth
-                          ? (m.profitPct >= 0 ? { bottom: '50%' } : { top: '50%' })
+                          ? (displayedPct >= 0 ? { bottom: '50%' } : { top: '50%' })
                           : { bottom: 0 })
                       }}
                     />
@@ -952,6 +957,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                   const monthKey = reportMonthToKey(m.month);
                   const breakdown = tableContributionByMonth.get(monthKey);
                   const expanded = !!expandedContributionMonths[monthKey];
+                  const displayedPct = getDisplayedMonthReturnPct(m);
 
                   return (
                     <React.Fragment key={m.month}>
@@ -980,8 +986,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                         <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
                           {formatCurrency(m.profit ?? 0)}
                         </td>
-                        <td className={`text-right ${(m.profitPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                          {`${(m.profitPct ?? 0).toFixed(2)}%`}
+                        <td className={`text-right ${displayedPct >= 0 ? 'positive' : 'negative'}`}>
+                          {`${displayedPct.toFixed(2)}%`}
                         </td>
                         <td className="text-right">{formatCurrency(m.endBalance ?? 0)}</td>
                       </tr>
