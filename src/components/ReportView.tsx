@@ -154,8 +154,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const [hoveredPatrimonyPoint, setHoveredPatrimonyPoint] = useState<PatrimonyTooltipState | null>(null);
   const [infoTooltip, setInfoTooltip] = useState<InfoTooltipState>({ visible: false });
   const [expandedContributionMonths, setExpandedContributionMonths] = useState<Record<string, boolean>>({});
-  const [patrimonyStartMonth, setPatrimonyStartMonth] = useState('');
-  const [patrimonyEndMonth, setPatrimonyEndMonth] = useState('');
+  const [periodPreset, setPeriodPreset] = useState('all');
+  const [periodStartMonth, setPeriodStartMonth] = useState('');
+  const [periodEndMonth, setPeriodEndMonth] = useState('');
+  const [chartView, setChartView] = useState<'return' | 'profit' | 'balance'>('return');
   const reportRef = useRef<HTMLDivElement>(null);
   const twrExplanation = 'mide la rentabilidad de la inversion sin contar aportaciones ni retiradas.';
   const totalReturnExplanation = 'compara el beneficio total frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
@@ -628,17 +630,58 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     return breakdown ? breakdown.initialReturnPct * 100 : month.profitPct;
   };
   const visibleContributionBreakdowns = isDemoReport ? [] : contributionBreakdowns;
-  const hasNegativeMonth = monthlyWithData.some((m) => getDisplayedMonthReturnPct(m) < 0);
-  const maxMonthPct = Math.max(1, ...monthlyWithData.map((m) => Math.abs(getDisplayedMonthReturnPct(m))));
-  const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.hasData && p.balance !== undefined && (p.balance ?? 0) !== 0);
-  const patrimonyOptions = patrimonioWithData.map((p) => ({
-    key: reportMonthToKey(p.month),
-    label: p.month
+  const periodOptions = monthlyWithData.map((m) => ({
+    key: reportMonthToKey(m.month),
+    label: m.month
   }));
-  const selectedStart = patrimonyStartMonth || patrimonyOptions[0]?.key || '';
-  const selectedEnd = patrimonyEndMonth || patrimonyOptions[patrimonyOptions.length - 1]?.key || '';
+  const firstPeriodKey = periodOptions[0]?.key ?? '';
+  const lastPeriodKey = periodOptions[periodOptions.length - 1]?.key ?? '';
+  const periodKeys = periodOptions.map((option) => option.key);
+  const presetRange = (() => {
+    if (periodPreset === '2025') return { start: '2025-01', end: '2025-12' };
+    if (periodPreset === '2026') return { start: '2026-01', end: '2026-12' };
+    if (periodPreset === 'last3') {
+      const start = periodKeys[Math.max(0, periodKeys.length - 3)] ?? firstPeriodKey;
+      return { start, end: lastPeriodKey };
+    }
+    if (periodPreset === 'last6') {
+      const start = periodKeys[Math.max(0, periodKeys.length - 6)] ?? firstPeriodKey;
+      return { start, end: lastPeriodKey };
+    }
+    if (periodPreset === 'custom') {
+      return {
+        start: periodStartMonth || firstPeriodKey,
+        end: periodEndMonth || lastPeriodKey
+      };
+    }
+    return { start: firstPeriodKey, end: lastPeriodKey };
+  })();
+  const selectedStart = presetRange.start || firstPeriodKey;
+  const selectedEnd = presetRange.end || lastPeriodKey;
   const rangeStart = selectedStart <= selectedEnd ? selectedStart : selectedEnd;
   const rangeEnd = selectedStart <= selectedEnd ? selectedEnd : selectedStart;
+  const filteredMonthlyWithData = isDemoReport && rangeStart && rangeEnd
+    ? monthlyWithData.filter((m) => {
+      const key = reportMonthToKey(m.month);
+      return key >= rangeStart && key <= rangeEnd;
+    })
+    : monthlyWithData;
+  const effectiveMonthlyWithData = filteredMonthlyWithData.length > 0 ? filteredMonthlyWithData : monthlyWithData;
+  const getChartValue = (month: (typeof monthlyWithData)[number]) => {
+    if (chartView === 'profit') return month.profit ?? 0;
+    if (chartView === 'balance') return month.endBalance ?? 0;
+    return getDisplayedMonthReturnPct(month);
+  };
+  const formatChartValue = (value: number) =>
+    chartView === 'return' ? `${value.toFixed(2)}%` : formatCurrency(value);
+  const chartTitle = chartView === 'profit'
+    ? 'Resultado mensual'
+    : chartView === 'balance'
+      ? 'Saldo de cierre mensual'
+      : 'Rentabilidad mensual';
+  const hasNegativeMonth = effectiveMonthlyWithData.some((m) => getChartValue(m) < 0);
+  const maxMonthPct = Math.max(1, ...effectiveMonthlyWithData.map((m) => Math.abs(getChartValue(m))));
+  const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.hasData && p.balance !== undefined && (p.balance ?? 0) !== 0);
   const patrimonioChartData = isDemoReport && rangeStart && rangeEnd
     ? patrimonioWithData.filter((p) => {
       const key = reportMonthToKey(p.month);
@@ -684,6 +727,59 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     });
     return acc;
   }, []);
+  const periodMovements = (report.movements ?? []).filter((movement) => {
+    const monthKey = movement.iso.slice(0, 7);
+    return !isDemoReport || (monthKey >= rangeStart && monthKey <= rangeEnd);
+  });
+  const visibleMovementCapitalSeries = isDemoReport
+    ? periodMovements.reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
+      const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
+      acc.push({
+        iso: mov.iso,
+        type: mov.type,
+        amount: mov.amount,
+        netCapital: previousNet + (mov.type === 'increment' ? mov.amount : -mov.amount)
+      });
+      return acc;
+    }, [])
+    : movementCapitalSeries;
+  const periodIncrements = periodMovements
+    .filter((movement) => movement.type === 'increment')
+    .reduce((sum, movement) => sum + (movement.amount ?? 0), 0);
+  const periodDecrements = periodMovements
+    .filter((movement) => movement.type === 'decrement')
+    .reduce((sum, movement) => sum + (movement.amount ?? 0), 0);
+  const periodProfit = effectiveMonthlyWithData.reduce((sum, month) => sum + (month.profit ?? 0), 0);
+  const firstMonth = effectiveMonthlyWithData[0];
+  const lastMonth = effectiveMonthlyWithData[effectiveMonthlyWithData.length - 1];
+  const firstMonthKey = firstMonth ? reportMonthToKey(firstMonth.month) : '';
+  const firstMonthMovements = (report.movements ?? []).filter((movement) => movement.iso.slice(0, 7) === firstMonthKey);
+  const firstMonthNetFlow = firstMonthMovements.reduce((sum, movement) => (
+    sum + (movement.type === 'increment' ? movement.amount : -movement.amount)
+  ), 0);
+  const previousMonth = firstMonth
+    ? [...monthlyWithData].reverse().find((month) => reportMonthToKey(month.month) < firstMonthKey)
+    : undefined;
+  const periodStartBalance = previousMonth?.endBalance ?? (
+    firstMonth ? (firstMonth.endBalance ?? 0) - (firstMonth.profit ?? 0) - firstMonthNetFlow : 0
+  );
+  const periodEndBalance = lastMonth?.endBalance ?? 0;
+  const periodReturnPct = effectiveMonthlyWithData.reduce(
+    (factor, month) => factor * (1 + getDisplayedMonthReturnPct(month) / 100),
+    1
+  ) - 1;
+  const accumulatedNetCapital = report.incrementos - report.decrementos;
+  const monthlyMovementType = (monthKey: string) => {
+    const movements = (report.movements ?? []).filter((movement) => movement.iso.slice(0, 7) === monthKey);
+    const hasIncrement = movements.some((movement) => movement.type === 'increment');
+    const hasDecrement = movements.some((movement) => movement.type === 'decrement');
+    if (hasIncrement && hasDecrement) return 'Movimientos';
+    if (hasIncrement) return 'Aportacion';
+    if (hasDecrement) return 'Retirada';
+    return '';
+  };
+  const getPreviousMonth = (monthKey: string) =>
+    [...monthlyWithData].reverse().find((month) => reportMonthToKey(month.month) < monthKey);
 
   return (
     <div className={`informes-container informes-pro-page fade-in ${isDemoReport ? 'report-pro-page-demo' : ''}`}>
@@ -747,6 +843,101 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           <p><strong>TWR:</strong> {twrExplanation}</p>
           <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
         </section>
+
+        {isDemoReport ? (
+          <section className="report-pro-demo-control-panel">
+            <div className="report-pro-panel-head">
+              <h4>Periodo del informe</h4>
+              <p>Selecciona el tramo que quieres analizar. Los graficos y tablas se actualizan juntos.</p>
+            </div>
+            <div className="report-pro-period-toolbar">
+              <label>
+                Periodo
+                <select
+                  value={periodPreset}
+                  onChange={(event) => {
+                    setPeriodPreset(event.target.value);
+                    setHoveredPatrimonyPoint(null);
+                  }}
+                >
+                  <option value="all">Todo</option>
+                  <option value="2025">Año 2025</option>
+                  <option value="2026">Año 2026</option>
+                  <option value="last3">Ultimos 3 meses</option>
+                  <option value="last6">Ultimos 6 meses</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+              </label>
+              {periodPreset === 'custom' ? (
+                <>
+                  <label>
+                    Desde
+                    <select
+                      value={periodStartMonth}
+                      onChange={(event) => {
+                        setPeriodStartMonth(event.target.value);
+                        setHoveredPatrimonyPoint(null);
+                      }}
+                    >
+                      <option value="">Inicio</option>
+                      {periodOptions.map((option) => (
+                        <option key={`from-${option.key}`} value={option.key}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Hasta
+                    <select
+                      value={periodEndMonth}
+                      onChange={(event) => {
+                        setPeriodEndMonth(event.target.value);
+                        setHoveredPatrimonyPoint(null);
+                      }}
+                    >
+                      <option value="">Actual</option>
+                      {periodOptions.map((option) => (
+                        <option key={`to-${option.key}`} value={option.key}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              ) : null}
+              <label>
+                Vista de graficos
+                <select value={chartView} onChange={(event) => setChartView(event.target.value as typeof chartView)}>
+                  <option value="return">Rentabilidad</option>
+                  <option value="profit">Resultado EUR</option>
+                  <option value="balance">Saldo</option>
+                </select>
+              </label>
+            </div>
+            <div className="report-pro-period-summary">
+              <div><span>Saldo inicial</span><strong>{formatCurrency(periodStartBalance)}</strong></div>
+              <div><span>Saldo final</span><strong>{formatCurrency(periodEndBalance)}</strong></div>
+              <div><span>Resultado generado</span><strong className={periodProfit >= 0 ? 'positive' : 'negative'}>{formatCurrency(periodProfit)}</strong></div>
+              <div><span>Rentabilidad periodo</span><strong className={periodReturnPct >= 0 ? 'positive' : 'negative'}>{(periodReturnPct * 100).toFixed(2)}%</strong></div>
+              <div><span>Aportaciones</span><strong>{formatCurrency(periodIncrements)}</strong></div>
+              <div><span>Retiradas</span><strong>{formatCurrency(periodDecrements)}</strong></div>
+              <div><span>Capital neto periodo</span><strong>{formatCurrency(periodIncrements - periodDecrements)}</strong></div>
+            </div>
+          </section>
+        ) : null}
+
+        {isDemoReport ? (
+          <section className="report-pro-capital-panel">
+            <div className="report-pro-panel-head">
+              <h4>Capital y resultado acumulado</h4>
+              <p>Separacion entre capital aportado, retiradas y resultado obtenido.</p>
+            </div>
+            <div className="report-pro-capital-grid">
+              <div><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
+              <div><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
+              <div><span>Capital neto invertido</span><strong>{formatCurrency(accumulatedNetCapital)}</strong></div>
+              <div><span>Resultado acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong></div>
+              <div><span>Saldo actual</span><strong>{formatCurrency(report.saldo)}</strong></div>
+            </div>
+          </section>
+        ) : null}
 
         {visibleContributionBreakdowns.length > 0 && (
           <section className="report-pro-panel">
@@ -813,27 +1004,27 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
 
         <section className="report-pro-panel report-pro-panel-xl">
           <div className="report-pro-panel-head">
-            <h4>Rendimiento mensual</h4>
-            <p>Comparativa de rentabilidad por mes</p>
+            <h4>{isDemoReport ? chartTitle : 'Rendimiento mensual'}</h4>
+            <p>{isDemoReport ? 'Comparativa mensual segun el periodo seleccionado' : 'Comparativa de rentabilidad por mes'}</p>
           </div>
           <div
             className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}
-            style={{ gridTemplateColumns: `repeat(${Math.max(1, monthlyWithData.length)}, minmax(0, 1fr))` }}
+            style={{ gridTemplateColumns: `repeat(${Math.max(1, effectiveMonthlyWithData.length)}, minmax(0, 1fr))` }}
           >
-            {monthlyWithData.map((m) => {
+            {effectiveMonthlyWithData.map((m) => {
               const maxBarHeight = hasNegativeMonth ? 46 : 92;
-              const displayedPct = getDisplayedMonthReturnPct(m);
-              const height = Math.min(maxBarHeight, Math.max(4, (Math.abs(displayedPct) / maxMonthPct) * maxBarHeight));
+              const chartValue = getChartValue(m);
+              const height = Math.min(maxBarHeight, Math.max(4, (Math.abs(chartValue) / maxMonthPct) * maxBarHeight));
               return (
-                <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${displayedPct.toFixed(2)}%`}>
-                  <span className={`report-pro-bar-value ${displayedPct >= 0 ? 'positive' : 'negative'}`}>{displayedPct.toFixed(2)}%</span>
+                <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${formatChartValue(chartValue)}`}>
+                  <span className={`report-pro-bar-value ${chartValue >= 0 ? 'positive' : 'negative'}`}>{formatChartValue(chartValue)}</span>
                   <div className="report-pro-bar-track">
                     <div
-                      className={`report-pro-bar ${displayedPct >= 0 ? 'positive' : 'negative'}`}
+                      className={`report-pro-bar ${chartValue >= 0 ? 'positive' : 'negative'}`}
                       style={{
                         height: `${height}%`,
                         ...(hasNegativeMonth
-                          ? (displayedPct >= 0 ? { bottom: '50%' } : { top: '50%' })
+                          ? (chartValue >= 0 ? { bottom: '50%' } : { top: '50%' })
                           : { bottom: 0 })
                       }}
                     />
@@ -859,7 +1050,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                 </tr>
               </thead>
               <tbody>
-                {monthlyWithData.map((m) => (
+                {effectiveMonthlyWithData.map((m) => (
                   <tr key={`${m.month}-benefit`}>
                     <td>{getMonthEndLabel(m.month)}</td>
                     <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
@@ -877,51 +1068,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
             <h4>Evolucion patrimonio</h4>
             <p>Linea de cierre mensual con importe en cada punto</p>
           </div>
-          {isDemoReport && patrimonyOptions.length > 1 ? (
-            <div className="report-pro-range-controls">
-              <label>
-                Desde
-                <select
-                  value={patrimonyStartMonth}
-                  onChange={(event) => {
-                    setPatrimonyStartMonth(event.target.value);
-                    setHoveredPatrimonyPoint(null);
-                  }}
-                >
-                  <option value="">Inicio</option>
-                  {patrimonyOptions.map((option) => (
-                    <option key={`from-${option.key}`} value={option.key}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Hasta
-                <select
-                  value={patrimonyEndMonth}
-                  onChange={(event) => {
-                    setPatrimonyEndMonth(event.target.value);
-                    setHoveredPatrimonyPoint(null);
-                  }}
-                >
-                  <option value="">Actual</option>
-                  {patrimonyOptions.map((option) => (
-                    <option key={`to-${option.key}`} value={option.key}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="report-pro-range-reset"
-                onClick={() => {
-                  setPatrimonyStartMonth('');
-                  setPatrimonyEndMonth('');
-                  setHoveredPatrimonyPoint(null);
-                }}
-              >
-                Ver todo
-              </button>
-            </div>
-          ) : null}
           <div className="report-pro-line-wrap">
             {hoveredPatrimonyPoint ? (
               <div
@@ -1012,14 +1158,19 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                   <th className="text-right">Beneficio</th>
                   <th className="text-right">Rentabilidad</th>
                   <th className="text-right">Saldo</th>
+                  {isDemoReport ? <th className="text-right">Vs mes anterior</th> : null}
                 </tr>
               </thead>
               <tbody>
-                {monthlyWithData.map((m) => {
+                {effectiveMonthlyWithData.map((m) => {
                   const monthKey = reportMonthToKey(m.month);
                   const breakdown = tableContributionByMonth.get(monthKey);
                   const expanded = !!expandedContributionMonths[monthKey];
                   const displayedPct = getDisplayedMonthReturnPct(m);
+                  const movementTag = isDemoReport ? monthlyMovementType(monthKey) : '';
+                  const previous = getPreviousMonth(monthKey);
+                  const balanceVariation = previous ? (m.endBalance ?? 0) - (previous.endBalance ?? 0) : null;
+                  const profitVariation = previous ? (m.profit ?? 0) - (previous.profit ?? 0) : null;
 
                   return (
                     <React.Fragment key={m.month}>
@@ -1043,6 +1194,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                               </button>
                             ) : null}
                             <span>{getMonthEndLabel(m.month)}</span>
+                            {movementTag ? <span className="report-pro-movement-pill">{movementTag}</span> : null}
                           </span>
                         </td>
                         <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
@@ -1052,10 +1204,26 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                           {`${displayedPct.toFixed(2)}%`}
                         </td>
                         <td className="text-right">{formatCurrency(m.endBalance ?? 0)}</td>
+                        {isDemoReport ? (
+                          <td className="text-right">
+                            {balanceVariation === null || profitVariation === null ? (
+                              <span className="muted">—</span>
+                            ) : (
+                              <span className="report-pro-variation-stack">
+                                <span className={balanceVariation >= 0 ? 'positive' : 'negative'}>
+                                  Saldo {balanceVariation >= 0 ? '+' : ''}{formatCurrency(balanceVariation)}
+                                </span>
+                                <small className={profitVariation >= 0 ? 'positive' : 'negative'}>
+                                  Resultado {profitVariation >= 0 ? '+' : ''}{formatCurrency(profitVariation)}
+                                </small>
+                              </span>
+                            )}
+                          </td>
+                        ) : null}
                       </tr>
                       {breakdown && expanded ? (
                         <tr className="report-pro-expanded-row">
-                          <td colSpan={4}>
+                          <td colSpan={isDemoReport ? 5 : 4}>
                             <div className="report-pro-inline-breakdown">
                               <div className="report-pro-inline-title">
                                 <strong>Detalle de rentabilidad del mes - {m.month}</strong>
@@ -1114,7 +1282,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           </div>
         </section>
 
-        {(report.movements ?? []).length > 0 && (
+        {visibleMovementCapitalSeries.length > 0 && (
           <section className="report-pro-panel">
             <div className="report-pro-panel-head">
               <h4>Historial de movimientos</h4>
@@ -1131,7 +1299,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                   </tr>
                 </thead>
                 <tbody>
-                  {movementCapitalSeries.map((mov, i) => {
+                  {visibleMovementCapitalSeries.map((mov, i) => {
                     const [yy, mm, dd] = mov.iso.split('-');
                     const isIncrement = mov.type === 'increment';
                     return (
