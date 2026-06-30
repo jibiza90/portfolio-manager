@@ -847,8 +847,9 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
         {isDemoReport ? (
           <section className="report-pro-demo-control-panel">
             <div className="report-pro-panel-head">
+              <span className="report-pro-global-filter-badge">Filtro global</span>
               <h4>Periodo del informe</h4>
-              <p>Selecciona el tramo que quieres analizar. Los graficos y tablas se actualizan juntos.</p>
+              <p>Este selector controla todo el informe: KPIs, graficos, tablas, beneficios y movimientos.</p>
             </div>
             <div className="report-pro-period-toolbar">
               <label>
