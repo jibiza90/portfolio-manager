@@ -1737,6 +1737,14 @@ input[type='number'] {
   gap: 8px;
 }
 
+.report-pro-expand-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-width: 28px;
+}
+
 .report-pro-expand-button {
   width: 24px;
   height: 24px;
@@ -3024,6 +3032,13 @@ input[type='number'] {
   min-width: 980px;
 }
 
+.report-pro-demo-monthly-table .report-pro-month-cell {
+  display: grid;
+  grid-template-columns: 28px minmax(92px, max-content) minmax(0, 1fr);
+  min-width: 0;
+  width: 100%;
+}
+
 .report-pro-demo-monthly-table th,
 .report-pro-demo-monthly-table td {
   vertical-align: middle;
@@ -3038,9 +3053,13 @@ input[type='number'] {
 }
 
 .report-pro-demo-monthly-table td {
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
   padding-left: 14px;
   padding-right: 14px;
+}
+
+.report-pro-demo-monthly-table th:first-child {
+  padding-left: 50px;
 }
 
 .report-pro-demo-monthly-table th.text-right,

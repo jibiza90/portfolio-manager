@@ -1174,10 +1174,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
             <table className={`monthly-table report-pro-table ${isDemoReport ? 'report-pro-demo-monthly-table' : ''}`}>
               {isDemoReport ? (
                 <colgroup>
-                  <col style={{ width: '28%' }} />
+                  <col style={{ width: '25%' }} />
                   <col style={{ width: '18%' }} />
-                  <col style={{ width: '16%' }} />
                   <col style={{ width: '18%' }} />
+                  <col style={{ width: '19%' }} />
                   <col style={{ width: '20%' }} />
                 </colgroup>
               ) : null}
@@ -1187,7 +1187,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                   <th className="text-right">Beneficio</th>
                   <th className="text-right">Rentabilidad</th>
                   <th className="text-right">Saldo</th>
-                  {isDemoReport ? <th className="text-right">Variacion saldo</th> : null}
+                  {isDemoReport ? <th className="text-right">Variaci&oacute;n saldo</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -1205,7 +1205,26 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                       <tr>
                         <td>
                           <span className="report-pro-month-cell">
-                            {breakdown ? (
+                            {isDemoReport ? (
+                              <span className="report-pro-expand-slot">
+                                {breakdown ? (
+                                  <button
+                                    type="button"
+                                    className="report-pro-expand-button"
+                                    aria-expanded={expanded}
+                                    aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de aportaciones ${m.month}`}
+                                    onClick={() =>
+                                      setExpandedContributionMonths((prev) => ({
+                                        ...prev,
+                                        [monthKey]: !prev[monthKey]
+                                      }))
+                                    }
+                                  >
+                                    {expanded ? '-' : '+'}
+                                  </button>
+                                ) : null}
+                              </span>
+                            ) : breakdown ? (
                               <button
                                 type="button"
                                 className="report-pro-expand-button"
