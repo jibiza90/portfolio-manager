@@ -2414,6 +2414,7 @@ input[type='number'] {
 }
 
 .report-pro-demo-sheet .report-pro-kpi {
+  grid-template-rows: minmax(34px, auto) auto;
   padding: 16px;
   border-radius: 16px;
 }
@@ -2602,6 +2603,9 @@ input[type='number'] {
 }
 
 .report-pro-kpi {
+  display: grid;
+  grid-template-rows: minmax(30px, auto) auto;
+  align-content: start;
   background: #ffffff;
   border: 1px solid rgba(30, 64, 99, 0.14);
   border-radius: 12px;
@@ -2609,8 +2613,10 @@ input[type='number'] {
 }
 
 .report-pro-kpi span {
-  display: block;
+  display: flex;
+  align-items: flex-start;
   font-size: 11px;
+  line-height: 1.25;
   color: #5f6d86;
   text-transform: uppercase;
   letter-spacing: 0.55px;
@@ -2620,6 +2626,8 @@ input[type='number'] {
 .report-pro-kpi strong {
   font-size: 18px;
   color: #0f172a;
+  align-self: start;
+  white-space: nowrap;
 }
 
 .report-pro-note {
