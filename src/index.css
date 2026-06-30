@@ -2917,6 +2917,32 @@ input[type='number'] {
   font-weight: 800;
 }
 
+.report-pro-chart-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.report-pro-chart-toolbar label {
+  display: grid;
+  gap: 6px;
+  color: #4b5f7d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+}
+
+.report-pro-chart-toolbar select {
+  min-width: 190px;
+  border: 1px solid rgba(30, 64, 99, 0.18);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: #102845;
+  font-weight: 800;
+}
+
 .report-pro-period-summary,
 .report-pro-capital-grid {
   display: grid;
@@ -2931,11 +2957,44 @@ input[type='number'] {
 
 .report-pro-period-summary > div,
 .report-pro-capital-grid > div {
+  position: relative;
   min-width: 0;
   border: 1px solid rgba(30, 64, 99, 0.12);
   border-radius: 14px;
   padding: 14px 15px;
   background: linear-gradient(180deg, #fbfdff, #f2f6fb);
+}
+
+.report-pro-info-card {
+  cursor: help;
+}
+
+.report-pro-info-card::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(9, 23, 38, 0.94);
+  color: #f8fbff;
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  box-shadow: 0 12px 24px rgba(9, 23, 38, 0.22);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.report-pro-info-card:hover::after {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .report-pro-period-summary span,
@@ -2962,20 +3021,36 @@ input[type='number'] {
 
 .report-pro-demo-monthly-table {
   table-layout: fixed;
+  min-width: 980px;
 }
 
 .report-pro-demo-monthly-table th,
 .report-pro-demo-monthly-table td {
   vertical-align: middle;
+  box-sizing: border-box;
 }
 
 .report-pro-demo-monthly-table th {
   white-space: normal;
   line-height: 1.2;
+  padding-left: 14px;
+  padding-right: 14px;
 }
 
 .report-pro-demo-monthly-table td {
   overflow-wrap: anywhere;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.report-pro-demo-monthly-table th.text-right,
+.report-pro-demo-monthly-table td.text-right {
+  text-align: right;
+}
+
+.report-pro-demo-monthly-table td.text-right {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .report-pro-movement-pill {

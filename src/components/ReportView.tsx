@@ -902,23 +902,31 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                   </label>
                 </>
               ) : null}
-              <label>
-                Vista de graficos
-                <select value={chartView} onChange={(event) => setChartView(event.target.value as typeof chartView)}>
-                  <option value="return">Rentabilidad</option>
-                  <option value="profit">Resultado EUR</option>
-                  <option value="balance">Saldo</option>
-                </select>
-              </label>
             </div>
             <div className="report-pro-period-summary">
-              <div><span>Saldo inicial</span><strong>{formatCurrency(periodStartBalance)}</strong></div>
-              <div><span>Saldo final</span><strong>{formatCurrency(periodEndBalance)}</strong></div>
-              <div><span>Resultado generado</span><strong className={periodProfit >= 0 ? 'positive' : 'negative'}>{formatCurrency(periodProfit)}</strong></div>
-              <div><span>Rentabilidad periodo</span><strong className={periodReturnPct >= 0 ? 'positive' : 'negative'}>{(periodReturnPct * 100).toFixed(2)}%</strong></div>
-              <div><span>Aportaciones</span><strong>{formatCurrency(periodIncrements)}</strong></div>
-              <div><span>Retiradas</span><strong>{formatCurrency(periodDecrements)}</strong></div>
-              <div><span>Capital neto periodo</span><strong>{formatCurrency(periodIncrements - periodDecrements)}</strong></div>
+              {Math.abs(periodStartBalance) > 0.01 ? (
+                <div className="report-pro-info-card" data-tooltip="Valor de la cartera al inicio del periodo seleccionado.">
+                  <span>Saldo inicial</span><strong>{formatCurrency(periodStartBalance)}</strong>
+                </div>
+              ) : null}
+              <div className="report-pro-info-card" data-tooltip="Valor de la cartera al final del periodo seleccionado.">
+                <span>Saldo final</span><strong>{formatCurrency(periodEndBalance)}</strong>
+              </div>
+              <div className="report-pro-info-card" data-tooltip="Beneficio o perdida generada dentro del periodo seleccionado.">
+                <span>Resultado generado</span><strong className={periodProfit >= 0 ? 'positive' : 'negative'}>{formatCurrency(periodProfit)}</strong>
+              </div>
+              <div className="report-pro-info-card" data-tooltip="Rentabilidad acumulada del periodo, sin mezclarla con aportaciones o retiradas.">
+                <span>Rentabilidad periodo</span><strong className={periodReturnPct >= 0 ? 'positive' : 'negative'}>{(periodReturnPct * 100).toFixed(2)}%</strong>
+              </div>
+              <div className="report-pro-info-card" data-tooltip="Dinero ingresado por el cliente dentro del periodo seleccionado.">
+                <span>Aportaciones</span><strong>{formatCurrency(periodIncrements)}</strong>
+              </div>
+              <div className="report-pro-info-card" data-tooltip="Dinero retirado por el cliente dentro del periodo seleccionado.">
+                <span>Retiradas</span><strong>{formatCurrency(periodDecrements)}</strong>
+              </div>
+              <div className="report-pro-info-card" data-tooltip="Aportaciones menos retiradas dentro del periodo seleccionado.">
+                <span>Capital neto periodo</span><strong>{formatCurrency(periodIncrements - periodDecrements)}</strong>
+              </div>
             </div>
           </section>
         ) : null}
@@ -930,11 +938,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
               <p>Separacion entre capital aportado, retiradas y resultado obtenido.</p>
             </div>
             <div className="report-pro-capital-grid">
-              <div><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
-              <div><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-              <div><span>Capital neto invertido</span><strong>{formatCurrency(accumulatedNetCapital)}</strong></div>
-              <div><span>Resultado acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong></div>
-              <div><span>Saldo actual</span><strong>{formatCurrency(report.saldo)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Total de dinero ingresado historicamente por el cliente."><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Total de dinero retirado historicamente por el cliente."><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Capital aportado menos capital retirado."><span>Capital neto invertido</span><strong>{formatCurrency(accumulatedNetCapital)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Ganancia acumulada desde el inicio de la relacion."><span>Resultado acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Valor actual de la cartera del cliente."><span>Saldo actual</span><strong>{formatCurrency(report.saldo)}</strong></div>
             </div>
           </section>
         ) : null}
@@ -1007,6 +1015,18 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
             <h4>{isDemoReport ? chartTitle : 'Rendimiento mensual'}</h4>
             <p>{isDemoReport ? 'Comparativa mensual segun el periodo seleccionado' : 'Comparativa de rentabilidad por mes'}</p>
           </div>
+          {isDemoReport ? (
+            <div className="report-pro-chart-toolbar">
+              <label>
+                Vista de graficos
+                <select value={chartView} onChange={(event) => setChartView(event.target.value as typeof chartView)}>
+                  <option value="return">Rentabilidad</option>
+                  <option value="profit">Resultado EUR</option>
+                  <option value="balance">Saldo</option>
+                </select>
+              </label>
+            </div>
+          ) : null}
           <div
             className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}
             style={{ gridTemplateColumns: `repeat(${Math.max(1, effectiveMonthlyWithData.length)}, minmax(0, 1fr))` }}
