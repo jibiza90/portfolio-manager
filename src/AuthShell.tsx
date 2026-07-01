@@ -653,7 +653,7 @@ const LoginCard = ({
           border-radius: 15px;
           background: #ffffff;
           color: #1f1d1b;
-          padding: 13px 44px 13px 13px;
+          padding: 13px 92px 13px 13px;
           font-size: 14px;
           outline: none;
           transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
@@ -668,7 +668,7 @@ const LoginCard = ({
           right: 8px;
           top: 50%;
           transform: translateY(-50%);
-          width: 31px;
+          min-width: 74px;
           height: 31px;
           border-radius: 10px;
           border: 1px solid rgba(36, 43, 54, 0.14);
@@ -677,6 +677,55 @@ const LoginCard = ({
           cursor: pointer;
           font-size: 12px;
           font-weight: 700;
+          padding: 0 10px;
+        }
+        .pmLoginOptions {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+        .pmRemember {
+          display: inline-flex;
+          align-items: center;
+          gap: 9px;
+          font-size: 13px;
+          color: #5b6874;
+          cursor: pointer;
+          user-select: none;
+        }
+        .pmRemember input {
+          position: absolute;
+          opacity: 0;
+          pointer-events: none;
+        }
+        .pmCheckBox {
+          width: 19px;
+          height: 19px;
+          border-radius: 6px;
+          border: 1.5px solid rgba(36, 43, 54, 0.24);
+          background: #ffffff;
+          display: inline-grid;
+          place-items: center;
+          color: #ffffff;
+          font-size: 13px;
+          font-weight: 900;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+        }
+        .pmRemember input:checked + .pmCheckBox {
+          border-color: #0f6d7a;
+          background: #0f6d7a;
+        }
+        .pmForgetBtn {
+          border: 1px solid rgba(36, 43, 54, 0.14);
+          background: #fff;
+          color: #5b6874;
+          border-radius: 10px;
+          padding: 7px 10px;
+          font-size: 12px;
+          font-weight: 700;
+          cursor: pointer;
         }
         .pmSubmit {
           margin-top: 14px;
@@ -734,6 +783,10 @@ const LoginCard = ({
         @media (max-width: 720px) {
           .pmPills {
             grid-template-columns: 1fr;
+          }
+          .pmLoginOptions {
+            align-items: flex-start;
+            flex-direction: column;
           }
         }
       `}</style>
@@ -838,32 +891,24 @@ const LoginCard = ({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#5b6874', cursor: 'pointer' }}>
+              <div className="pmLoginOptions">
+                <label className="pmRemember">
                   <input
                     type="checkbox"
                     checked={rememberIdentifier}
                     onChange={(event) => setRememberIdentifier(event.target.checked)}
                   />
-                  Recordar usuario
+                  <span className="pmCheckBox" aria-hidden="true">{rememberIdentifier ? '✓' : ''}</span>
+                  <span>Recordar usuario en este dispositivo</span>
                 </label>
                 <button
                   type="button"
+                  className="pmForgetBtn"
                   onClick={() => {
                     localStorage.removeItem(REMEMBERED_IDENTIFIER_KEY);
                     setRememberIdentifier(false);
                     setIdentifier('');
                     setPassword('');
-                  }}
-                  style={{
-                    border: '1px solid rgba(36, 43, 54, 0.14)',
-                    background: '#fff',
-                    color: '#5b6874',
-                    borderRadius: 10,
-                    padding: '7px 10px',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: 'pointer'
                   }}
                 >
                   Olvidar este dispositivo
@@ -1959,6 +2004,7 @@ const AuthShell = () => {
   const inactivityLogoutRef = useRef(false);
   const manualLogoutRef = useRef(false);
   const adminUidRef = useRef<string | null>(null);
+  const hadAuthenticatedUserRef = useRef(false);
 
   const clearInactivityTimer = () => {
     if (inactivityTimerRef.current !== null) {
@@ -2033,10 +2079,16 @@ const AuthShell = () => {
           markLoggedOut(null);
           return;
         }
+        if (!hadAuthenticatedUserRef.current) {
+          clearPendingLogoutTimer();
+          markLoggedOut(null);
+          return;
+        }
         scheduleGracefulLogout();
         return;
       }
 
+      hadAuthenticatedUserRef.current = true;
       clearPendingLogoutTimer();
       inactivityLogoutRef.current = false;
       setSession((prev) => (prev.role ? { ...prev, error: null } : { ...prev, loading: true, error: null }));
