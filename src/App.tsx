@@ -1551,6 +1551,8 @@ function BulkMonthlyReturnModal({
   months,
   missingClientIdsForMonth,
   monthlyReturnByClient,
+  overrideReturnTextByClient,
+  onOverrideReturnTextChange,
   latestCoverageGap,
   generalMonthFinal
 }: {
@@ -1571,6 +1573,8 @@ function BulkMonthlyReturnModal({
   months: string[];
   missingClientIdsForMonth: string[];
   monthlyReturnByClient: Record<string, number | undefined>;
+  overrideReturnTextByClient: Record<string, string>;
+  onOverrideReturnTextChange: (clientId: string, value: string) => void;
   latestCoverageGap?: { month: string; missingClientIds: string[] };
   generalMonthFinal?: number;
 }) {
@@ -1653,10 +1657,11 @@ function BulkMonthlyReturnModal({
           </div>
 
           <div className="data-table compact" style={{ marginTop: 16, maxHeight: 360, overflow: 'auto' }}>
-            <div className="table-header" style={{ gridTemplateColumns: '88px 1fr 120px 120px' }}>
+            <div className="table-header" style={{ gridTemplateColumns: '88px 1fr 120px 130px 120px' }}>
               <div>Tick</div>
               <div>Cliente</div>
-              <div>Rentabilidad</div>
+              <div>Actual</div>
+              <div>Excepcion %</div>
               <div>Estado</div>
             </div>
             {clientIds.map((clientId) => {
@@ -1664,12 +1669,13 @@ function BulkMonthlyReturnModal({
               const checked = selectedClientIds.includes(clientId);
               const isMissing = missingClientIdsForMonth.includes(clientId);
               const currentReturn = monthlyReturnByClient[clientId];
+              const overrideText = overrideReturnTextByClient[clientId] ?? '';
               return (
                 <label
                   key={clientId}
                   className="table-row"
                   style={{
-                    gridTemplateColumns: '88px 1fr 120px 120px',
+                    gridTemplateColumns: '88px 1fr 120px 130px 120px',
                     alignItems: 'center',
                     cursor: 'pointer',
                     padding: '10px 0',
@@ -1708,6 +1714,13 @@ function BulkMonthlyReturnModal({
                   <span style={{ fontWeight: 700, color: currentReturn === undefined ? '#94a3b8' : '#0f172a' }}>
                     {currentReturn === undefined ? '-' : `${(currentReturn * 100).toFixed(2)}%`}
                   </span>
+                  <input
+                    value={overrideText}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) => onOverrideReturnTextChange(clientId, event.target.value)}
+                    placeholder="General"
+                    style={{ width: 104, padding: '8px 10px', borderRadius: 10 }}
+                  />
                   <span className={clsx('badge-soft')} style={isMissing ? { background: 'rgba(249,115,22,0.12)', color: '#c2410c' } : undefined}>
                     {isMissing ? 'Pendiente' : 'Rellenado'}
                   </span>
@@ -3254,6 +3267,7 @@ export default function App() {
   const [bulkMonthlyMonth, setBulkMonthlyMonth] = useState(`${getYearFromIso(derivedFocusDate)}-01`);
   const [bulkMonthlyReturnText, setBulkMonthlyReturnText] = useState('');
   const [bulkMonthlyClientIds, setBulkMonthlyClientIds] = useState<string[]>([]);
+  const [bulkMonthlyOverrideTextByClient, setBulkMonthlyOverrideTextByClient] = useState<Record<string, string>>({});
   const [followUpByClient, setFollowUpByClient] = useState<Record<string, FollowUpTask[]>>(() => {
     const raw = localStorage.getItem('portfolio-followup-by-client');
     if (!raw) return {};
@@ -3480,6 +3494,7 @@ export default function App() {
   const changeBulkMonthlyMonth = (month: string) => {
     setBulkMonthlyMonth(month);
     setBulkMonthlyReturnText(getBulkMonthlyReturnText(month));
+    setBulkMonthlyOverrideTextByClient({});
   };
 
   useEffect(() => {
@@ -3494,6 +3509,7 @@ export default function App() {
     setBulkMonthlyMonth(defaultMonth);
     setBulkMonthlyReturnText(getBulkMonthlyReturnText(defaultMonth));
     setBulkMonthlyClientIds(defaultSelection);
+    setBulkMonthlyOverrideTextByClient({});
     setShowBulkMonthlyReturn(true);
   };
 
@@ -3503,24 +3519,43 @@ export default function App() {
     );
   };
 
+  const changeBulkMonthlyOverride = (clientId: string, value: string) => {
+    setBulkMonthlyOverrideTextByClient((prev) => {
+      if (value.trim() === '') {
+        const next = { ...prev };
+        delete next[clientId];
+        return next;
+      }
+      return { ...prev, [clientId]: value };
+    });
+  };
+
   const applyBulkMonthlyReturn = () => {
-    const parsedReturn = parseNumberEs(bulkMonthlyReturnText);
-    if (parsedReturn === undefined) {
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Introduce una rentabilidad valida.' }));
-      return;
-    }
     if (bulkMonthlyClientIds.length === 0) {
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Selecciona al menos un cliente.' }));
       return;
     }
 
-    const normalizedReturn = parsedReturn / 100;
+    const generalReturn = parseNumberEs(bulkMonthlyReturnText);
+    const valuesByClient: Record<string, number> = {};
+    for (const clientId of bulkMonthlyClientIds) {
+      const rawOverride = bulkMonthlyOverrideTextByClient[clientId]?.trim();
+      const parsedOverride = rawOverride ? parseNumberEs(rawOverride) : undefined;
+      const selectedReturn = parsedOverride ?? generalReturn;
+      if (selectedReturn === undefined) {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: `Falta rentabilidad para ${formatClientDisplayName(clientId, contacts)}.` }));
+        return;
+      }
+      valuesByClient[clientId] = selectedReturn / 100;
+    }
+
     bulkMonthlyClientIds.forEach((clientId) => {
       setClientMonthlyHistory(clientId, bulkMonthlyMonth, 'finalBalance', undefined);
-      setClientMonthlyHistory(clientId, bulkMonthlyMonth, 'returnPct', normalizedReturn);
+      setClientMonthlyHistory(clientId, bulkMonthlyMonth, 'returnPct', valuesByClient[clientId]);
     });
 
     setShowBulkMonthlyReturn(false);
+    setBulkMonthlyOverrideTextByClient({});
     window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Rentabilidad mensual aplicada.' }));
   };
 
@@ -3894,6 +3929,8 @@ export default function App() {
         months={allHistoryMonths}
         missingClientIdsForMonth={missingClientIdsForBulkMonth}
         monthlyReturnByClient={bulkMonthlyReturnByClient}
+        overrideReturnTextByClient={bulkMonthlyOverrideTextByClient}
+        onOverrideReturnTextChange={changeBulkMonthlyOverride}
         latestCoverageGap={latestMonthlyCoverageGap}
         generalMonthFinal={bulkMonthGeneralFinal}
       />

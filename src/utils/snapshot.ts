@@ -301,10 +301,6 @@ export const buildSnapshot = (
       beyondLastRecorded
         ? undefined
         : (previousFinal ?? 0) + net + syntheticFlowTotal;
-    if (firstInitial === undefined && generalInitial !== undefined && generalInitial !== 0) {
-      firstInitial = generalInitial;
-    }
-
     const recordedFinal = beyondLastRecorded ? undefined : finalByDay[day.iso];
     const lockedCoreFinalTotal = portfolioDrafts.reduce((sum, draft) => sum + (draft.lockedCoreFinal ?? 0), 0);
     const lockedClientCount = portfolioDrafts.filter((draft) => draft.lockedCoreFinal !== undefined).length;
@@ -417,18 +413,39 @@ export const buildSnapshot = (
       }
     });
 
-    const effectiveFinal =
-      beyondLastRecorded
-        ? undefined
-        : globalCoreFinalTarget !== undefined
-          ? globalCoreFinalTarget + (manualProfits ?? 0)
-          : undefined;
-    const profit =
-      effectiveFinal !== undefined && generalInitial !== undefined && !Number.isNaN(effectiveFinal)
-        ? effectiveFinal - generalInitial
+    const portfolioDayRows = getPortfolioClients()
+      .map(({ id }) => clientRowsById[id][clientRowsById[id].length - 1])
+      .filter((row): row is ClientDayRow => Boolean(row) && row.finalBalance !== undefined);
+    const hasPortfolioDayRows = portfolioDayRows.length > 0;
+    const actualInitialTotal = hasPortfolioDayRows
+      ? portfolioDayRows.reduce((sum, row) => sum + (row.baseBalance ?? 0), 0)
+      : undefined;
+    const actualFinalTotal = hasPortfolioDayRows
+      ? portfolioDayRows.reduce((sum, row) => sum + (row.finalBalance ?? 0), 0)
+      : undefined;
+    const actualProfitTotal = hasPortfolioDayRows
+      ? portfolioDayRows.reduce((sum, row) => sum + (row.profit ?? ((row.finalBalance ?? 0) - (row.baseBalance ?? 0))), 0)
+      : undefined;
+
+    if (actualFinalTotal !== undefined) {
+      portfolioDayRows.forEach((row) => {
+        row.sharePct = actualFinalTotal > 0 ? (row.finalBalance ?? 0) / actualFinalTotal : undefined;
+        row.shareAmount = row.finalBalance;
+      });
+    }
+
+    const effectiveFinal = beyondLastRecorded ? undefined : actualFinalTotal;
+    const profit = beyondLastRecorded ? undefined : actualProfitTotal;
+    const monthKey = day.iso.slice(0, 7);
+    const monthEndReturn = day.iso === monthEndIso(monthKey) ? portfolioReturnByMonth[monthKey] : undefined;
+    const calculatedProfitPct =
+      profit !== undefined && actualInitialTotal !== undefined && actualInitialTotal !== 0
+        ? profit / actualInitialTotal
         : undefined;
-    const profitPct =
-      profit !== undefined && generalInitial !== undefined && generalInitial !== 0 ? profit / generalInitial : undefined;
+    const profitPct = monthEndReturn ?? calculatedProfitPct;
+    if (firstInitial === undefined && actualInitialTotal !== undefined && actualInitialTotal !== 0) {
+      firstInitial = actualInitialTotal;
+    }
     if (profit !== undefined) {
       cumulativeProfit += profit;
     }
@@ -438,7 +455,7 @@ export const buildSnapshot = (
       increments: beyondLastRecorded ? undefined : increments,
       decrements: beyondLastRecorded ? undefined : decrements,
       manualProfits: beyondLastRecorded ? undefined : manualProfits,
-      initial: beyondLastRecorded ? undefined : generalInitial,
+      initial: beyondLastRecorded ? undefined : actualInitialTotal,
       final: beyondLastRecorded ? undefined : effectiveFinal,
       profit: beyondLastRecorded ? undefined : profit,
       profitPct: beyondLastRecorded ? undefined : profitPct,
@@ -448,12 +465,13 @@ export const buildSnapshot = (
     dailyRows.push(row);
     dayIndex[day.iso] = row;
 
-    if (!beyondLastRecorded && effectiveFinal !== undefined && !Number.isNaN(effectiveFinal)) {
-      previousFinal = effectiveFinal;
+    if (!beyondLastRecorded && globalCoreFinalTarget !== undefined && !Number.isNaN(globalCoreFinalTarget)) {
+      previousFinal = globalCoreFinalTarget;
     }
   });
 
-  const assets = previousFinal;
+  const lastActualRow = [...dailyRows].reverse().find((row) => row.final !== undefined);
+  const assets = lastActualRow?.final ?? previousFinal;
   const ytdProfit = cumulativeProfit;
   const ytdReturnPct =
     ytdProfit !== undefined && firstInitial ? ytdProfit / firstInitial : undefined;
