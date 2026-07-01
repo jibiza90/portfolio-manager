@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
 import { addClientProfile, CLIENTS, isDemoClient, removeClientProfile } from './constants/clients';
 import { GENERAL_OPTION } from './constants/generalOption';
-import { usePortfolioStore } from './store/portfolio';
+import { usePortfolioStore, waitForPendingPortfolioSave } from './store/portfolio';
 import { formatCurrency, formatPercent, formatNumberEs, parseNumberEs } from './utils/format';
 import { END_YEAR, getYearFromIso, START_YEAR } from './utils/dates';
 import { useFocusDate } from './hooks/useFocusDate';
@@ -28,6 +28,7 @@ import {
   type AccessProfileRecord
 } from './services/cloudPortfolio';
 import { auth, db } from './services/firebaseApp';
+import { createAndDownloadAdminBackup } from './services/adminBackup';
 import { subscribeLoginEvents, type LoginEvent } from './services/loginTracker';
 import { isValidReportToken } from './services/reportLinks';
 import { editAdminSupportMessage, markThreadSeenByAdmin, sendSupportMessage, subscribeSupportMessages, subscribeSupportThreads, type SupportMessage, type SupportThread } from './services/supportInbox';
@@ -39,6 +40,7 @@ const STATS_VIEW = 'STATS_VIEW';
 const SEGUIMIENTO_VIEW = 'SEGUIMIENTO_VIEW';
 const MENSAJES_VIEW = 'MENSAJES_VIEW';
 const ACCESOS_VIEW = 'ACCESOS_VIEW';
+const BACKUP_VIEW = 'BACKUP_VIEW';
 const getPortfolioClients = () => CLIENTS.filter((client) => !isDemoClient(client.id));
 type ContactInfo = {
   name: string;
@@ -3109,6 +3111,63 @@ function LoginAccessView({
   );
 }
 
+function AdminBackupView({
+  busy,
+  error,
+  success,
+  onDownload
+}: {
+  busy: boolean;
+  error: string | null;
+  success: string | null;
+  onDownload: () => void;
+}) {
+  return (
+    <div className="glass-card fade-in" style={{ display: 'grid', gap: 14 }}>
+      <section style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+        <header style={{ padding: '14px 16px', borderBottom: '1px solid #ebe6dd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <h3 style={{ margin: 0 }}>Backup completo</h3>
+            <p className="muted" style={{ margin: '6px 0 0 0' }}>
+              Descarga un archivo JSON con todos los datos necesarios para una futura restauracion.
+            </p>
+          </div>
+          <span className="badge-soft">Solo lectura</span>
+        </header>
+        <div style={{ padding: 16, display: 'grid', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+            <div style={{ border: '1px solid #ebe6dd', borderRadius: 12, padding: 12, background: '#fbfaf7' }}>
+              <strong>Incluye datos financieros</strong>
+              <p className="muted" style={{ margin: '6px 0 0 0' }}>General, clientes, movimientos, rentabilidades e historicos mensuales.</p>
+            </div>
+            <div style={{ border: '1px solid #ebe6dd', borderRadius: 12, padding: 12, background: '#fbfaf7' }}>
+              <strong>Incluye perfiles</strong>
+              <p className="muted" style={{ margin: '6px 0 0 0' }}>Usuarios, loginId, cliente asociado, rol y estado activo/inactivo.</p>
+            </div>
+            <div style={{ border: '1px solid #ebe6dd', borderRadius: 12, padding: 12, background: '#fbfaf7' }}>
+              <strong>No borra nada</strong>
+              <p className="muted" style={{ margin: '6px 0 0 0' }}>Este boton solo lee datos y descarga un archivo. No escribe ni reemplaza informacion.</p>
+            </div>
+          </div>
+          <div style={{ border: '1px solid #d7d2c8', borderRadius: 12, padding: 14, background: '#f8fbff' }}>
+            <p style={{ margin: 0, color: '#1f2937' }}>
+              Importante: no incluye contrasenas reales en claro porque Firebase no permite leerlas. Si algun dia restauramos,
+              los datos volveran y las contrasenas se regeneraran o se restauraran desde Firebase Auth.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button type="button" className="info-add-btn" onClick={onDownload} disabled={busy}>
+              {busy ? 'Preparando backup...' : 'Descargar backup completo'}
+            </button>
+            {success ? <span className="positive" style={{ fontWeight: 700 }}>{success}</span> : null}
+            {error ? <span style={{ color: '#b42318', fontWeight: 700 }}>{error}</span> : null}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function App() {
   // Check for report token in URL
   const [reportToken, setReportToken] = useState<string | null>(() => parseReportTokenFromLocation());
@@ -3206,6 +3265,40 @@ export default function App() {
   const [ownerLoginEvents, setOwnerLoginEvents] = useState<LoginEvent[]>([]);
   const [ownerLoginError, setOwnerLoginError] = useState<string | null>(null);
   const [ownerAccessProfiles, setOwnerAccessProfiles] = useState<AccessProfileRecord[]>([]);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
+
+  const handleDownloadAdminBackup = async () => {
+    if (!isPrimaryAdmin || backupBusy) return;
+    setBackupBusy(true);
+    setBackupError(null);
+    setBackupSuccess(null);
+    try {
+      await waitForPendingPortfolioSave();
+      const state = usePortfolioStore.getState();
+      const result = await createAndDownloadAdminBackup({
+        contacts,
+        guarantees,
+        comisionesCobradas,
+        comisionEstado,
+        followUpByClient,
+        portfolioState: {
+          finalByDay: state.finalByDay,
+          movementsByClient: state.movementsByClient,
+          monthlyHistoryByClient: state.monthlyHistoryByClient
+        }
+      });
+      setBackupSuccess(`Backup descargado: ${result.filename}`);
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Backup completo descargado.' }));
+    } catch (error) {
+      console.error('No se pudo descargar el backup', error);
+      setBackupError('No se pudo descargar el backup. No se ha modificado ningun dato.');
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
   const handleAddClient = (name?: string) => {
     const created = addClientProfile(name);
     setContacts((prev) => {
@@ -3478,7 +3571,7 @@ export default function App() {
   const isPrimaryAdmin = currentUserEmail === 'jibiza90@gmail.com';
 
   useEffect(() => {
-    if (!isPrimaryAdmin && activeView === ACCESOS_VIEW) {
+    if (!isPrimaryAdmin && (activeView === ACCESOS_VIEW || activeView === BACKUP_VIEW)) {
       setActiveView(GENERAL_OPTION);
     }
   }, [activeView, isPrimaryAdmin]);
@@ -3634,12 +3727,20 @@ export default function App() {
           Seguimiento
         </button>
         {isPrimaryAdmin ? (
-          <button
-            className={clsx('side-link', activeView === ACCESOS_VIEW && 'active')}
-            onClick={() => { setActiveView(ACCESOS_VIEW); setMenuOpen(false); }}
-          >
-            Accesos
-          </button>
+          <>
+            <button
+              className={clsx('side-link', activeView === ACCESOS_VIEW && 'active')}
+              onClick={() => { setActiveView(ACCESOS_VIEW); setMenuOpen(false); }}
+            >
+              Accesos
+            </button>
+            <button
+              className={clsx('side-link', activeView === BACKUP_VIEW && 'active')}
+              onClick={() => { setActiveView(BACKUP_VIEW); setMenuOpen(false); }}
+            >
+              Backup
+            </button>
+          </>
         ) : null}
         <button
           className={clsx('side-link', activeView === MENSAJES_VIEW && 'active')}
@@ -3729,6 +3830,13 @@ export default function App() {
           accessProfiles={ownerAccessProfiles}
           contacts={contacts}
           onRevokeAccess={handleRevokeClientAccess}
+        />
+      ) : activeView === BACKUP_VIEW && isPrimaryAdmin ? (
+        <AdminBackupView
+          busy={backupBusy}
+          error={backupError}
+          success={backupSuccess}
+          onDownload={handleDownloadAdminBackup}
         />
       ) : activeView === MENSAJES_VIEW ? (
         <AdminMessagesView contacts={contacts} />
