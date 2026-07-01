@@ -606,10 +606,9 @@ const LoginCard = ({
         }
         .pmCardTitle {
           margin: 0;
-          font-size: 12px;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          color: #6a737d;
+          font-size: clamp(24px, 2.3vw, 34px);
+          letter-spacing: -0.03em;
+          color: #111a27;
           font-weight: 800;
         }
         .pmStatus {
@@ -913,10 +912,6 @@ const LoginCard = ({
                 >
                   Olvidar este dispositivo
                 </button>
-              </div>
-
-              <div style={{ marginBottom: 14, fontSize: 12, color: '#6a7178' }}>
-                La contrasena la puede guardar tu navegador si quieres.
               </div>
 
               <button className="pmSubmit" type="submit" disabled={busy || !identifier.trim() || !password}>
