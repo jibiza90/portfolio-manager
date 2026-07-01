@@ -1550,6 +1550,7 @@ function BulkMonthlyReturnModal({
   contacts,
   months,
   missingClientIdsForMonth,
+  monthlyReturnByClient,
   latestCoverageGap,
   generalMonthFinal
 }: {
@@ -1569,6 +1570,7 @@ function BulkMonthlyReturnModal({
   contacts: Record<string, ContactInfo>;
   months: string[];
   missingClientIdsForMonth: string[];
+  monthlyReturnByClient: Record<string, number | undefined>;
   latestCoverageGap?: { month: string; missingClientIds: string[] };
   generalMonthFinal?: number;
 }) {
@@ -1651,21 +1653,23 @@ function BulkMonthlyReturnModal({
           </div>
 
           <div className="data-table compact" style={{ marginTop: 16, maxHeight: 360, overflow: 'auto' }}>
-            <div className="table-header" style={{ gridTemplateColumns: '88px 1fr 120px' }}>
+            <div className="table-header" style={{ gridTemplateColumns: '88px 1fr 120px 120px' }}>
               <div>Tick</div>
               <div>Cliente</div>
+              <div>Rentabilidad</div>
               <div>Estado</div>
             </div>
             {clientIds.map((clientId) => {
               const label = formatClientDisplayName(clientId, contacts);
               const checked = selectedClientIds.includes(clientId);
               const isMissing = missingClientIdsForMonth.includes(clientId);
+              const currentReturn = monthlyReturnByClient[clientId];
               return (
                 <label
                   key={clientId}
                   className="table-row"
                   style={{
-                    gridTemplateColumns: '88px 1fr 120px',
+                    gridTemplateColumns: '88px 1fr 120px 120px',
                     alignItems: 'center',
                     cursor: 'pointer',
                     padding: '10px 0',
@@ -1701,6 +1705,9 @@ function BulkMonthlyReturnModal({
                     />
                   </span>
                   <span>{label}</span>
+                  <span style={{ fontWeight: 700, color: currentReturn === undefined ? '#94a3b8' : '#0f172a' }}>
+                    {currentReturn === undefined ? '-' : `${(currentReturn * 100).toFixed(2)}%`}
+                  </span>
                   <span className={clsx('badge-soft')} style={isMissing ? { background: 'rgba(249,115,22,0.12)', color: '#c2410c' } : undefined}>
                     {isMissing ? 'Pendiente' : 'Rellenado'}
                   </span>
@@ -3454,6 +3461,26 @@ export default function App() {
 
   const bulkMonthEndIso = useMemo(() => dayjs(`${bulkMonthlyMonth}-01`).endOf('month').format('YYYY-MM-DD'), [bulkMonthlyMonth]);
   const bulkMonthGeneralFinal = finalByDay[bulkMonthEndIso];
+  const bulkMonthlyReturnByClient = useMemo(
+    () =>
+      relevantClientIds.reduce<Record<string, number | undefined>>((acc, clientId) => {
+        const value = monthlyHistoryByClient[clientId]?.[bulkMonthlyMonth]?.returnPct;
+        acc[clientId] = value;
+        return acc;
+      }, {}),
+    [bulkMonthlyMonth, monthlyHistoryByClient, relevantClientIds]
+  );
+  const getBulkMonthlyReturnText = (month: string) => {
+    const values = relevantClientIds
+      .map((clientId) => monthlyHistoryByClient[clientId]?.[month]?.returnPct)
+      .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+    const dominant = getDominantMonthlyReturn(values);
+    return dominant === undefined ? '-' : formatNumberEs(dominant * 100);
+  };
+  const changeBulkMonthlyMonth = (month: string) => {
+    setBulkMonthlyMonth(month);
+    setBulkMonthlyReturnText(getBulkMonthlyReturnText(month));
+  };
 
   useEffect(() => {
     setBulkMonthlyMonth((prev) => (allHistoryMonths.includes(prev) ? prev : `${generalActiveYear}-01`));
@@ -3465,7 +3492,7 @@ export default function App() {
       ? latestMonthlyCoverageGap.missingClientIds
       : relevantClientIds;
     setBulkMonthlyMonth(defaultMonth);
-    setBulkMonthlyReturnText('');
+    setBulkMonthlyReturnText(getBulkMonthlyReturnText(defaultMonth));
     setBulkMonthlyClientIds(defaultSelection);
     setShowBulkMonthlyReturn(true);
   };
@@ -3853,7 +3880,7 @@ export default function App() {
         open={activeView === GENERAL_OPTION && showBulkMonthlyReturn}
         onClose={() => setShowBulkMonthlyReturn(false)}
         month={bulkMonthlyMonth}
-        onMonthChange={setBulkMonthlyMonth}
+        onMonthChange={changeBulkMonthlyMonth}
         returnText={bulkMonthlyReturnText}
         onReturnTextChange={setBulkMonthlyReturnText}
         selectedClientIds={bulkMonthlyClientIds}
@@ -3866,6 +3893,7 @@ export default function App() {
         clientIds={relevantClientIds}
         months={allHistoryMonths}
         missingClientIdsForMonth={missingClientIdsForBulkMonth}
+        monthlyReturnByClient={bulkMonthlyReturnByClient}
         latestCoverageGap={latestMonthlyCoverageGap}
         generalMonthFinal={bulkMonthGeneralFinal}
       />
