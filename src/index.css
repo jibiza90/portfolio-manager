@@ -3454,6 +3454,21 @@ input[type='number'] {
   font-size: 15px;
 }
 
+.report-pro-x-tick-expanded {
+  stroke: rgba(15, 95, 138, 0.22);
+  stroke-width: 2;
+}
+
+.report-pro-x-label-expanded {
+  fill: #0f3f62;
+  font-size: 24px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
 .report-pro-line-expanded {
   stroke-width: 4.2;
 }

@@ -775,7 +775,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     left: 118,
     right: 60,
     top: 42,
-    bottom: 34
+    bottom: 74
   });
   const movementCapitalSeries = (report.movements ?? []).reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
     const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
@@ -870,6 +870,20 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                 </text>
               </g>
             ))}
+            {expanded ? geometry.points.map((pt, idx) => (
+              <g key={`${pt.month}-${idx}-axis`}>
+                <line
+                  className="report-pro-x-tick-expanded"
+                  x1={pt.x}
+                  y1={geometry.plotBottom + 8}
+                  x2={pt.x}
+                  y2={geometry.plotBottom + 18}
+                />
+                <text className="report-pro-x-label-expanded" x={pt.x} y={geometry.plotBottom + 44} textAnchor="middle">
+                  {pt.month}
+                </text>
+              </g>
+            )) : null}
             {geometry.areaPath && <path d={geometry.areaPath} className="report-pro-area" fill={`url(#${expanded ? 'patrimonyAreaExpanded' : 'patrimonyAreaShared'})`} />}
             {geometry.points.length > 1 && <polyline className={`report-pro-line ${expanded ? 'report-pro-line-expanded' : ''}`} points={geometry.linePoints} />}
             {geometry.points.map((pt, idx) => (
