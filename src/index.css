@@ -3439,8 +3439,23 @@ input[type='number'] {
 
 .report-pro-month-row-expanded {
   flex: 0 0 auto;
-  margin-top: 4px;
-  font-size: 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  gap: 8px;
+  border: 1px solid rgba(15, 95, 138, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 24px rgba(15, 47, 77, 0.07);
+}
+
+.report-pro-month-row-expanded span {
+  padding: 7px 8px;
+  border-radius: 999px;
+  background: rgba(14, 165, 233, 0.09);
+  color: #0f3f62;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .report-pro-value-row-expanded {
