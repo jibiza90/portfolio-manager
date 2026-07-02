@@ -3230,20 +3230,19 @@ input[type='number'] {
 }
 
 .report-pro-patrimony-section.is-expanded {
-  position: fixed;
-  inset: 18px;
-  z-index: 1000;
+  position: relative;
+  z-index: 20;
   display: flex;
   flex-direction: column;
-  margin: 0 !important;
-  padding: 24px !important;
-  overflow: auto;
+  margin: 18px 0 !important;
+  padding: 28px !important;
+  overflow: visible;
   border-radius: 28px;
   border: 1px solid rgba(180, 218, 245, 0.28);
   background:
     radial-gradient(1000px 360px at 100% -10%, rgba(14, 165, 233, 0.18), transparent 58%),
     linear-gradient(180deg, #f8fcff, #eef6fc);
-  box-shadow: 0 0 0 9999px rgba(5, 16, 28, 0.76), 0 34px 90px rgba(0, 0, 0, 0.34);
+  box-shadow: 0 34px 90px rgba(7, 27, 43, 0.22);
 }
 
 .report-pro-patrimony-section.is-expanded:hover {
@@ -3257,6 +3256,7 @@ input[type='number'] {
 
 .report-pro-patrimony-section.is-expanded .report-pro-line-wrap {
   flex: 1;
+  min-height: min(72vh, 780px);
 }
 
 .report-pro-chart-modal {
@@ -3364,7 +3364,7 @@ input[type='number'] {
 }
 
 .report-pro-line-wrap-expanded {
-  min-height: 64vh;
+  min-height: min(72vh, 780px);
   padding: 10px 8px 0;
   border: 1px solid rgba(15, 95, 138, 0.12);
   border-radius: 22px;
@@ -3372,7 +3372,7 @@ input[type='number'] {
 }
 
 .report-pro-line-chart-expanded {
-  height: min(64vh, 680px);
+  height: min(72vh, 780px);
 }
 
 .report-pro-line-tooltip-expanded {

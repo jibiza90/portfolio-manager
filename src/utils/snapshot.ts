@@ -248,7 +248,7 @@ export const buildSnapshot = (
             : portfolioReturn ?? normalizedReturn
           : normalizedReturn;
         isolatedReturnPct = normalizedReturn;
-        if (monthlyHistory.finalBalance !== undefined && normalizedReturn !== undefined && normalizedReturn > -1) {
+        if (monthlyHistory.finalBalance !== undefined && normalizedReturn !== undefined && normalizedReturn > -1 && !useClientReturnForCustomFlows) {
           const derivedBase = monthlyHistory.finalBalance / (1 + normalizedReturn);
           const derivedDiff = derivedBase - (actualBase ?? 0);
           const derivedBaseMatchesCarry = Math.abs(derivedDiff) <= MONTHLY_HISTORY_TOLERANCE;
@@ -266,7 +266,7 @@ export const buildSnapshot = (
             }
           }
           lockedCoreFinal = monthlyHistory.finalBalance;
-        } else if (monthlyHistory.finalBalance !== undefined) {
+        } else if (monthlyHistory.finalBalance !== undefined && !useClientReturnForCustomFlows) {
           if (isBootstrapMonth) {
             baseBalance = monthlyHistory.finalBalance;
             allocatableBase = monthlyHistory.finalBalance;
@@ -395,9 +395,11 @@ export const buildSnapshot = (
           ? finalBalance - baseBalance
           : undefined;
       const clientProfitPct =
-        clientProfit !== undefined && baseBalance !== undefined && baseBalance !== 0
-          ? clientProfit / baseBalance
-          : draft.lockedReturnPct;
+        draft.lockedReturnPct !== undefined
+          ? draft.lockedReturnPct
+          : clientProfit !== undefined && baseBalance !== undefined && baseBalance !== 0
+            ? clientProfit / baseBalance
+            : undefined;
       const cumulativeClientProfit =
         !draft.beyondClientLastRecorded && finalBalance !== undefined
           ? finalBalance - clientState[draft.id].netInvested

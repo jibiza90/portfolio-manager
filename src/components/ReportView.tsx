@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { getReportByToken, isValidReportToken, ReportData } from '../services/reportLinks';
-import { DEMO_CLIENT_ID } from '../constants/clients';
+import { isDemoClient } from '../constants/clients';
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 
@@ -200,8 +200,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
 
   useEffect(() => {
     if (!isPatrimonyExpanded) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsPatrimonyExpanded(false);
@@ -210,7 +208,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => {
-      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', closeOnEscape);
     };
   }, [isPatrimonyExpanded]);
@@ -638,7 +635,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const contributionBreakdowns = (report.contributionBreakdowns ?? []).filter(
     (item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH
   );
-  const isDemoReport = report.clientId === DEMO_CLIENT_ID;
+  const isDemoReport = isDemoClient(report.clientId);
   const tableContributionBreakdowns = (report.contributionBreakdowns ?? []).filter(
     (item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH && item.contributions.length > 0
   );

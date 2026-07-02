@@ -128,6 +128,10 @@ export function buildMonthlyStatsForMonths(
     const normalizedHistoryReturn = normalizeMonthlyReturnPct(historyEntry?.returnPct);
     const monthlyTwr = twrByMonth.get(monthKey);
     const hasManualReturnAdjustment = Math.abs(derivedEntry?.manualReturnAdjustment ?? 0) > 0.0000001;
+    const hasCustomFlowReturn =
+      monthKey >= '2026-04' &&
+      normalizedHistoryReturn !== undefined &&
+      derivedEntry?.hasIncrementReturnOverride === true;
 
     let profit = derivedEntry?.profit ?? 0;
     let baseStart = derivedEntry?.baseStart;
@@ -142,7 +146,7 @@ export function buildMonthlyStatsForMonths(
       baseStart = Math.max(1, finalEnd - profit);
     }
 
-    if (historyEntry?.finalBalance !== undefined && !hasManualReturnAdjustment) {
+    if (historyEntry?.finalBalance !== undefined && !hasManualReturnAdjustment && !hasCustomFlowReturn) {
       finalEnd = historyEntry.finalBalance;
     }
 
@@ -151,6 +155,10 @@ export function buildMonthlyStatsForMonths(
       if (hasManualReturnAdjustment && derivedEntry) {
         // El % manual se suma al TWR visible del cliente, pero el saldo/profit
         // se conserva derivado de la ficha para no afectar al general.
+      } else if (hasCustomFlowReturn) {
+        // Desde abril 2026, si una aportacion tiene rentabilidad propia, el saldo
+        // se conserva derivado de la ficha: posicion inicial x rentabilidad mensual
+        // + aportacion x rentabilidad propia.
       } else if (historyEntry?.finalBalance !== undefined && normalizedHistoryReturn > -1) {
         finalEnd = historyEntry.finalBalance;
         baseStart = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
