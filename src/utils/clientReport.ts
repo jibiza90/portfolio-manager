@@ -174,8 +174,8 @@ export function buildClientReportData(
       const residualCapital = initialCapital + fallbackContributionCapital;
       const residualProfit = totalMonthProfit - explicitContributionProfit;
       const residualReturnPct = residualCapital !== 0 ? residualProfit / residualCapital : fallbackReturnPct;
-      const initialReturnPct = residualReturnPct;
-      const initialProfit = initialCapital * initialReturnPct;
+      const initialReturnPct = fallbackReturnPct;
+      const initialProfit = residualProfit - fallbackContributionCapital * residualReturnPct;
       const contributions = contributionRows.map((row) => {
         const amount = row.increment ?? 0;
         const returnPct = normalizeMonthlyReturnPct(row.incrementReturnPct) ?? residualReturnPct;
