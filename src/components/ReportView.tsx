@@ -937,7 +937,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     );
   };
 
-  const expandedPatrimonyOverlay = isDemoReport && isPatrimonyExpanded && typeof document !== 'undefined'
+  const expandedPatrimonyOverlay = isPatrimonyExpanded && typeof document !== 'undefined'
     ? createPortal(
       <div className="report-pro-chart-overlay" role="dialog" aria-modal="true" aria-label="Grafico de evolucion de patrimonio ampliado">
         <section className="report-pro-panel report-pro-panel-xl report-pro-patrimony-section is-expanded">
@@ -1328,20 +1328,18 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
               <h4>Evolucion patrimonio</h4>
               <p>Linea de cierre mensual con importe en cada punto</p>
             </div>
-            {isDemoReport ? (
-              <button
-                type="button"
-                className="report-pro-expand-chart-button"
-                onClick={() => {
-                  setExpandedStartMonth(rangeStart);
-                  setExpandedEndMonth(rangeEnd);
-                  setHoveredPatrimonyPoint(null);
-                  setIsPatrimonyExpanded(true);
-                }}
-              >
-                Ampliar grafico
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="report-pro-expand-chart-button"
+              onClick={() => {
+                setExpandedStartMonth(rangeStart);
+                setExpandedEndMonth(rangeEnd);
+                setHoveredPatrimonyPoint(null);
+                setIsPatrimonyExpanded(true);
+              }}
+            >
+              Ampliar grafico
+            </button>
           </div>
           {renderPatrimonyChart(false)}
         </section>
