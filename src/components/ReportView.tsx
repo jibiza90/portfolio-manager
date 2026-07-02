@@ -200,6 +200,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
 
   useEffect(() => {
     if (!isPatrimonyExpanded) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsPatrimonyExpanded(false);
@@ -208,6 +210,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => {
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', closeOnEscape);
     };
   }, [isPatrimonyExpanded]);

@@ -3230,19 +3230,20 @@ input[type='number'] {
 }
 
 .report-pro-patrimony-section.is-expanded {
-  position: relative;
-  z-index: 20;
+  position: fixed;
+  inset: 10px;
+  z-index: 5000;
   display: flex;
   flex-direction: column;
-  margin: 18px 0 !important;
-  padding: 28px !important;
-  overflow: visible;
+  margin: 0 !important;
+  padding: clamp(18px, 2.2vw, 34px) !important;
+  overflow: auto;
   border-radius: 28px;
   border: 1px solid rgba(180, 218, 245, 0.28);
   background:
     radial-gradient(1000px 360px at 100% -10%, rgba(14, 165, 233, 0.18), transparent 58%),
     linear-gradient(180deg, #f8fcff, #eef6fc);
-  box-shadow: 0 34px 90px rgba(7, 27, 43, 0.22);
+  box-shadow: 0 0 0 9999px rgba(5, 16, 28, 0.72), 0 34px 90px rgba(0, 0, 0, 0.34);
 }
 
 .report-pro-patrimony-section.is-expanded:hover {
@@ -3256,7 +3257,7 @@ input[type='number'] {
 
 .report-pro-patrimony-section.is-expanded .report-pro-line-wrap {
   flex: 1;
-  min-height: min(72vh, 780px);
+  min-height: min(78vh, 860px);
 }
 
 .report-pro-chart-modal {
@@ -3364,7 +3365,7 @@ input[type='number'] {
 }
 
 .report-pro-line-wrap-expanded {
-  min-height: min(72vh, 780px);
+  min-height: min(78vh, 860px);
   padding: 10px 8px 0;
   border: 1px solid rgba(15, 95, 138, 0.12);
   border-radius: 22px;
@@ -3372,7 +3373,7 @@ input[type='number'] {
 }
 
 .report-pro-line-chart-expanded {
-  height: min(72vh, 780px);
+  height: min(78vh, 860px);
 }
 
 .report-pro-line-tooltip-expanded {
