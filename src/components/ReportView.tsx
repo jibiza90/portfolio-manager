@@ -1013,11 +1013,12 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                 const breakdownMonthKey = reportMonthToKey(breakdown.month);
                 const visibleInitialPct = getVisibleMonthReturnPct(breakdownMonthKey, breakdown.initialReturnPct * 100);
                 const visibleInitialProfit = breakdown.initialCapital * (visibleInitialPct / 100);
+                const explainedTotalProfit = visibleInitialProfit + breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0);
                 return (
                 <div className="report-pro-breakdown-card" key={breakdown.month}>
                   <div className="report-pro-breakdown-title">
                     <strong>{breakdown.month}</strong>
-                    <span>Beneficio explicado: {formatCurrency(breakdown.totalProfit)}</span>
+                    <span>Resultado explicado: {formatCurrency(explainedTotalProfit)}</span>
                   </div>
                   <div className="table-scroll">
                     <table className="monthly-table report-pro-table report-pro-breakdown-table">
@@ -1059,11 +1060,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                           </tr>
                         ))}
                         <tr className="report-pro-breakdown-total">
-                          <td>Beneficio total del mes</td>
+                          <td>Resultado explicado</td>
                           <td className="text-right">—</td>
                           <td className="text-right">—</td>
-                          <td className={`text-right ${breakdown.totalProfit >= 0 ? 'positive' : 'negative'}`}>
-                            {formatCurrency(breakdown.totalProfit)}
+                          <td className={`text-right ${explainedTotalProfit >= 0 ? 'positive' : 'negative'}`}>
+                            {formatCurrency(explainedTotalProfit)}
                           </td>
                         </tr>
                       </tbody>
@@ -1331,6 +1332,9 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                   const visibleInitialProfit = breakdown
                     ? breakdown.initialCapital * (visibleInitialPct / 100)
                     : 0;
+                  const explainedTotalProfit = breakdown
+                    ? visibleInitialProfit + breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0)
+                    : m.profit ?? 0;
 
                   return (
                     <React.Fragment key={m.month}>
@@ -1407,11 +1411,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                                     </tr>
                                   ))}
                                   <tr className="report-pro-breakdown-total">
-                                    <td>Resultado total del mes</td>
+                                    <td>Resultado explicado</td>
                                     <td className="text-right">—</td>
                                     <td className="text-right">—</td>
-                                    <td className={`text-right ${breakdown.totalProfit >= 0 ? 'positive' : 'negative'}`}>
-                                      {formatCurrency(breakdown.totalProfit)}
+                                    <td className={`text-right ${explainedTotalProfit >= 0 ? 'positive' : 'negative'}`}>
+                                      {formatCurrency(explainedTotalProfit)}
                                     </td>
                                   </tr>
                                 </tbody>

@@ -1651,10 +1651,11 @@ const ClientPortal = ({
         contributionBreakdowns.forEach((breakdown) => {
           const visibleInitialReturn = getVisibleContributionReturn(breakdown.month, breakdown.initialReturnPct);
           const visibleInitialProfit = breakdown.initialCapital * visibleInitialReturn;
+          const explainedTotalProfit = visibleInitialProfit + breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0);
           cursorY = ensureRoom(cursorY, estimateTableHeight(breakdown.contributions.length + 2, 18) + 36);
           doc.setFontSize(10);
           doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
-          doc.text(`${breakdown.month} · beneficio explicado: ${formatEuro(breakdown.totalProfit)}`, marginX, cursorY);
+          doc.text(`${breakdown.month} · resultado explicado: ${formatEuro(explainedTotalProfit)}`, marginX, cursorY);
 
           autoTable(doc, {
             startY: cursorY + space.xs,
@@ -1676,10 +1677,10 @@ const ClientPortal = ({
                 { content: formatEuro(contribution.profit), styles: { halign: 'right' } }
               ]),
               [
-                { content: 'Beneficio total del mes', styles: { fontStyle: 'bold' } },
+                { content: 'Resultado explicado', styles: { fontStyle: 'bold' } },
                 { content: '-', styles: { halign: 'right' } },
                 { content: '-', styles: { halign: 'right' } },
-                { content: formatEuro(breakdown.totalProfit), styles: { halign: 'right', fontStyle: 'bold' } }
+                { content: formatEuro(explainedTotalProfit), styles: { halign: 'right', fontStyle: 'bold' } }
               ]
             ] as any,
             theme: 'grid',
