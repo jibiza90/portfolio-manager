@@ -40,6 +40,17 @@ const getIncrementReturnAdjustment = (
     return adjustment + movement.increment * (customReturnPct - monthlyReturnPct);
   }, 0);
 
+const hasIncrementReturnOverride = (
+  records: Record<string, Record<string, Movement>>,
+  clientId: string,
+  monthKey: string
+) =>
+  Object.entries(records[clientId] ?? {}).some(([iso, movement]) => (
+    iso.slice(0, 7) === monthKey &&
+    (movement.increment ?? 0) > 0 &&
+    normalizeReturnPct(movement.incrementReturnPct) !== undefined
+  ));
+
 const getPortfolioClients = () => CLIENTS.filter(({ id }) => !isDemoClient(id));
 
 const sumMovements = (records: Record<string, Record<string, Movement>>, iso: string) => {
@@ -225,9 +236,16 @@ export const buildSnapshot = (
 
       if (!beyondClientLastRecorded && monthlyHistory) {
         const normalizedReturn = normalizeReturnPct(monthlyHistory.returnPct);
-        const portfolioReturn = portfolioReturnByMonth[day.iso.slice(0, 7)];
+        const monthKey = day.iso.slice(0, 7);
+        const portfolioReturn = portfolioReturnByMonth[monthKey];
+        const useClientReturnForCustomFlows =
+          monthKey >= '2026-04' &&
+          normalizedReturn !== undefined &&
+          hasIncrementReturnOverride(movementsByClient, id, monthKey);
         const coreReturn = monthlyHistory.finalBalance === undefined
-          ? portfolioReturn ?? normalizedReturn
+          ? useClientReturnForCustomFlows
+            ? normalizedReturn
+            : portfolioReturn ?? normalizedReturn
           : normalizedReturn;
         isolatedReturnPct = normalizedReturn;
         if (monthlyHistory.finalBalance !== undefined && normalizedReturn !== undefined && normalizedReturn > -1) {
