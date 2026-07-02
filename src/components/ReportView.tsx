@@ -620,7 +620,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   );
   const isDemoReport = report.clientId === DEMO_CLIENT_ID;
   const tableContributionBreakdowns = (report.contributionBreakdowns ?? []).filter(
-    (item) => isDemoReport && item.contributions.length > 0
+    (item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH && item.contributions.length > 0
   );
   const tableContributionByMonth = new Map(
     tableContributionBreakdowns.map((item) => [reportMonthToKey(item.month), item])
@@ -629,7 +629,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     const breakdown = tableContributionByMonth.get(reportMonthToKey(month.month));
     return breakdown ? breakdown.initialReturnPct * 100 : month.profitPct;
   };
-  const visibleContributionBreakdowns = isDemoReport ? [] : contributionBreakdowns;
+  const visibleContributionBreakdowns: typeof contributionBreakdowns = [];
   const periodOptions = monthlyWithData.map((m) => ({
     key: reportMonthToKey(m.month),
     label: m.month
@@ -660,7 +660,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const selectedEnd = presetRange.end || lastPeriodKey;
   const rangeStart = selectedStart <= selectedEnd ? selectedStart : selectedEnd;
   const rangeEnd = selectedStart <= selectedEnd ? selectedEnd : selectedStart;
-  const filteredMonthlyWithData = isDemoReport && rangeStart && rangeEnd
+  const filteredMonthlyWithData = rangeStart && rangeEnd
     ? monthlyWithData.filter((m) => {
       const key = reportMonthToKey(m.month);
       return key >= rangeStart && key <= rangeEnd;
@@ -682,7 +682,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const hasNegativeMonth = effectiveMonthlyWithData.some((m) => getChartValue(m) < 0);
   const maxMonthPct = Math.max(1, ...effectiveMonthlyWithData.map((m) => Math.abs(getChartValue(m))));
   const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.hasData && p.balance !== undefined && (p.balance ?? 0) !== 0);
-  const patrimonioChartData = isDemoReport && rangeStart && rangeEnd
+  const patrimonioChartData = rangeStart && rangeEnd
     ? patrimonioWithData.filter((p) => {
       const key = reportMonthToKey(p.month);
       return key >= rangeStart && key <= rangeEnd;
@@ -729,20 +729,18 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   }, []);
   const periodMovements = (report.movements ?? []).filter((movement) => {
     const monthKey = movement.iso.slice(0, 7);
-    return !isDemoReport || (monthKey >= rangeStart && monthKey <= rangeEnd);
+    return !rangeStart || !rangeEnd || (monthKey >= rangeStart && monthKey <= rangeEnd);
   });
-  const visibleMovementCapitalSeries = isDemoReport
-    ? periodMovements.reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
-      const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
-      acc.push({
-        iso: mov.iso,
-        type: mov.type,
-        amount: mov.amount,
-        netCapital: previousNet + (mov.type === 'increment' ? mov.amount : -mov.amount)
-      });
-      return acc;
-    }, [])
-    : movementCapitalSeries;
+  const visibleMovementCapitalSeries = periodMovements.reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
+    const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
+    acc.push({
+      iso: mov.iso,
+      type: mov.type,
+      amount: mov.amount,
+      netCapital: previousNet + (mov.type === 'increment' ? mov.amount : -mov.amount)
+    });
+    return acc;
+  }, []);
   const periodIncrements = periodMovements
     .filter((movement) => movement.type === 'increment')
     .reduce((sum, movement) => sum + (movement.amount ?? 0), 0);
@@ -778,9 +776,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     if (hasDecrement) return 'Retirada';
     return '';
   };
-  const getPreviousMonth = (monthKey: string) =>
-    [...monthlyWithData].reverse().find((month) => reportMonthToKey(month.month) < monthKey);
-
   return (
     <div className={`informes-container informes-pro-page fade-in ${isDemoReport ? 'report-pro-page-demo' : ''}`}>
       <article className={`informe-preview glass-card report-pro-sheet ${isDemoReport ? 'report-pro-demo-sheet' : ''}`} ref={reportRef}>
@@ -844,12 +839,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
         </section>
 
-        {isDemoReport ? (
-          <section className="report-pro-demo-control-panel">
+        <section className="report-pro-demo-control-panel">
             <div className="report-pro-panel-head">
               <span className="report-pro-global-filter-badge">Filtro global</span>
               <h4>Periodo del informe</h4>
-              <p>Este selector controla todo el informe: KPIs, graficos, tablas, beneficios y movimientos.</p>
+              <p>Este selector controla todo el informe: graficos, tablas, beneficios y movimientos.</p>
             </div>
             <div className="report-pro-period-toolbar">
               <label>
@@ -929,8 +923,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                 <span>Capital neto periodo</span><strong>{formatCurrency(periodIncrements - periodDecrements)}</strong>
               </div>
             </div>
-          </section>
-        ) : null}
+        </section>
 
         {isDemoReport ? (
           <section className="report-pro-capital-panel">
@@ -1019,21 +1012,19 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
 
         <section className="report-pro-panel report-pro-panel-xl">
           <div className="report-pro-panel-head">
-            <h4>{isDemoReport ? chartTitle : 'Rendimiento mensual'}</h4>
-            <p>{isDemoReport ? 'Comparativa mensual segun el periodo seleccionado' : 'Comparativa de rentabilidad por mes'}</p>
+            <h4>{chartTitle}</h4>
+            <p>Comparativa mensual segun el periodo seleccionado</p>
           </div>
-          {isDemoReport ? (
-            <div className="report-pro-chart-toolbar">
-              <label>
-                Vista de graficos
-                <select value={chartView} onChange={(event) => setChartView(event.target.value as typeof chartView)}>
-                  <option value="return">Rentabilidad</option>
-                  <option value="profit">Resultado EUR</option>
-                  <option value="balance">Saldo</option>
-                </select>
-              </label>
-            </div>
-          ) : null}
+          <div className="report-pro-chart-toolbar">
+            <label>
+              Vista de graficos
+              <select value={chartView} onChange={(event) => setChartView(event.target.value as typeof chartView)}>
+                <option value="return">Rentabilidad</option>
+                <option value="profit">Resultado EUR</option>
+                <option value="balance">Saldo</option>
+              </select>
+            </label>
+          </div>
           <div
             className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}
             style={{ gridTemplateColumns: `repeat(${Math.max(1, effectiveMonthlyWithData.length)}, minmax(0, 1fr))` }}
@@ -1182,23 +1173,19 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
             <p>Resultado, rentabilidad y saldo por mes</p>
           </div>
           <div className="table-scroll">
-            <table className={`monthly-table report-pro-table ${isDemoReport ? 'report-pro-demo-monthly-table' : ''}`}>
-              {isDemoReport ? (
-                <colgroup>
-                  <col style={{ width: '25%' }} />
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '19%' }} />
-                  <col style={{ width: '20%' }} />
-                </colgroup>
-              ) : null}
+            <table className="monthly-table report-pro-table report-pro-demo-monthly-table">
+              <colgroup>
+                <col style={{ width: '34%' }} />
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '24%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Mes</th>
                   <th className="text-right">Beneficio</th>
                   <th className="text-right">Rentabilidad</th>
                   <th className="text-right">Saldo</th>
-                  {isDemoReport ? <th className="text-right">Variaci&oacute;n saldo</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -1207,50 +1194,31 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                   const breakdown = tableContributionByMonth.get(monthKey);
                   const expanded = !!expandedContributionMonths[monthKey];
                   const displayedPct = getDisplayedMonthReturnPct(m);
-                  const movementTag = isDemoReport ? monthlyMovementType(monthKey) : '';
-                  const previous = getPreviousMonth(monthKey);
-                  const balanceVariation = previous ? (m.endBalance ?? 0) - (previous.endBalance ?? 0) : null;
+                  const movementTag = monthlyMovementType(monthKey);
 
                   return (
                     <React.Fragment key={m.month}>
                       <tr>
                         <td>
                           <span className="report-pro-month-cell">
-                            {isDemoReport ? (
-                              <span className="report-pro-expand-slot">
-                                {breakdown ? (
-                                  <button
-                                    type="button"
-                                    className="report-pro-expand-button"
-                                    aria-expanded={expanded}
-                                    aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de aportaciones ${m.month}`}
-                                    onClick={() =>
-                                      setExpandedContributionMonths((prev) => ({
-                                        ...prev,
-                                        [monthKey]: !prev[monthKey]
-                                      }))
-                                    }
-                                  >
-                                    {expanded ? '-' : '+'}
-                                  </button>
-                                ) : null}
-                              </span>
-                            ) : breakdown ? (
-                              <button
-                                type="button"
-                                className="report-pro-expand-button"
-                                aria-expanded={expanded}
-                                aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de aportaciones ${m.month}`}
-                                onClick={() =>
-                                  setExpandedContributionMonths((prev) => ({
-                                    ...prev,
-                                    [monthKey]: !prev[monthKey]
-                                  }))
-                                }
-                              >
-                                {expanded ? '-' : '+'}
-                              </button>
-                            ) : null}
+                            <span className="report-pro-expand-slot">
+                              {breakdown ? (
+                                <button
+                                  type="button"
+                                  className="report-pro-expand-button"
+                                  aria-expanded={expanded}
+                                  aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de aportaciones ${m.month}`}
+                                  onClick={() =>
+                                    setExpandedContributionMonths((prev) => ({
+                                      ...prev,
+                                      [monthKey]: !prev[monthKey]
+                                    }))
+                                  }
+                                >
+                                  {expanded ? '-' : '+'}
+                                </button>
+                              ) : null}
+                            </span>
                             <span>{getMonthEndLabel(m.month)}</span>
                             {movementTag ? <span className="report-pro-movement-pill">{movementTag}</span> : null}
                           </span>
@@ -1262,21 +1230,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                           {`${displayedPct.toFixed(2)}%`}
                         </td>
                         <td className="text-right">{formatCurrency(m.endBalance ?? 0)}</td>
-                        {isDemoReport ? (
-                          <td className="text-right">
-                            {balanceVariation === null ? (
-                              <span className="muted">&mdash;</span>
-                            ) : (
-                              <span className={balanceVariation >= 0 ? 'positive' : 'negative'}>
-                                {balanceVariation >= 0 ? '+' : ''}{formatCurrency(balanceVariation)}
-                              </span>
-                            )}
-                          </td>
-                        ) : null}
                       </tr>
                       {breakdown && expanded ? (
                         <tr className="report-pro-expanded-row">
-                          <td colSpan={isDemoReport ? 5 : 4}>
+                          <td colSpan={4}>
                             <div className="report-pro-inline-breakdown">
                               <div className="report-pro-inline-title">
                                 <strong>Detalle de rentabilidad del mes - {m.month}</strong>
