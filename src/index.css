@@ -3260,6 +3260,26 @@ input[type='number'] {
   min-height: min(78vh, 860px);
 }
 
+.report-pro-chart-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  padding: 10px;
+  overflow: auto;
+  background:
+    radial-gradient(900px 420px at 80% 0%, rgba(14, 165, 233, 0.22), transparent 60%),
+    rgba(5, 16, 28, 0.76);
+  backdrop-filter: blur(8px);
+}
+
+.report-pro-chart-overlay .report-pro-patrimony-section.is-expanded {
+  position: relative;
+  inset: auto;
+  width: min(1800px, 100%);
+  min-height: calc(100vh - 20px);
+  margin: 0 auto !important;
+}
+
 .report-pro-chart-modal {
   position: fixed;
   inset: 0;

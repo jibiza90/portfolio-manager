@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { getReportByToken, isValidReportToken, ReportData } from '../services/reportLinks';
 import { isDemoClient } from '../constants/clients';
 import { formatCurrency } from '../utils/format';
@@ -776,8 +777,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     top: 34,
     bottom: 82
   });
-  const activePatrimonioData = isPatrimonyExpanded ? effectiveExpandedPatrimonioData : effectivePatrimonioData;
-  const activePatrimonyGeometry = isPatrimonyExpanded ? expandedPatrimonyGeometry : patrimonyGeometry;
   const movementCapitalSeries = (report.movements ?? []).reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
     const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
     acc.push({
@@ -837,8 +836,165 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     if (hasDecrement) return 'Retirada';
     return '';
   };
+
+  const renderPatrimonyChart = (expanded: boolean) => {
+    const chartData = expanded ? effectiveExpandedPatrimonioData : effectivePatrimonioData;
+    const geometry = expanded ? expandedPatrimonyGeometry : patrimonyGeometry;
+    return (
+      <>
+        <div className={`report-pro-line-wrap ${expanded ? 'report-pro-line-wrap-expanded' : ''}`}>
+          {hoveredPatrimonyPoint ? (
+            <div
+              className={`report-pro-line-tooltip ${expanded ? 'report-pro-line-tooltip-expanded' : ''}`}
+              style={{
+                left: `clamp(${expanded ? '118px' : '88px'}, ${(hoveredPatrimonyPoint.x / geometry.width) * 100}%, calc(100% - ${expanded ? '118px' : '88px'}))`,
+                top: `clamp(${expanded ? '82px' : '64px'}, ${(hoveredPatrimonyPoint.y / geometry.height) * 100}%, calc(100% - ${expanded ? '26px' : '20px'}))`
+              }}
+            >
+              <strong>{hoveredPatrimonyPoint.month}</strong>
+              <span>{formatCurrency(hoveredPatrimonyPoint.value)}</span>
+            </div>
+          ) : null}
+          <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" className={`report-pro-line-chart ${expanded ? 'report-pro-line-chart-expanded' : ''}`}>
+            <defs>
+              <linearGradient id={expanded ? 'patrimonyAreaExpanded' : 'patrimonyAreaShared'} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(14,165,233,0.30)" />
+                <stop offset="100%" stopColor="rgba(14,165,233,0.03)" />
+              </linearGradient>
+            </defs>
+            {geometry.yTicks.map((tick, idx) => (
+              <g key={`tick-${idx}`}>
+                <line className="report-pro-grid-line" x1={geometry.left} y1={tick.y} x2={geometry.width - geometry.right} y2={tick.y} />
+                <text className={`report-pro-y-label ${expanded ? 'report-pro-y-label-expanded' : ''}`} x={geometry.left - 10} y={tick.y + 4} textAnchor="end">
+                  {formatAxisCurrency(tick.value)}
+                </text>
+              </g>
+            ))}
+            {geometry.areaPath && <path d={geometry.areaPath} className="report-pro-area" fill={`url(#${expanded ? 'patrimonyAreaExpanded' : 'patrimonyAreaShared'})`} />}
+            {geometry.points.length > 1 && <polyline className={`report-pro-line ${expanded ? 'report-pro-line-expanded' : ''}`} points={geometry.linePoints} />}
+            {geometry.points.map((pt, idx) => (
+              <g key={`${pt.month}-${idx}`}>
+                <circle cx={pt.x} cy={pt.y} r={expanded ? '6.2' : '4.2'} className={`report-pro-dot ${expanded ? 'report-pro-dot-expanded' : ''}`} pointerEvents="none" />
+                <circle
+                  cx={pt.x}
+                  cy={pt.y}
+                  r={expanded ? '28' : '18'}
+                  className="report-pro-dot-hit"
+                  fill="transparent"
+                  pointerEvents="all"
+                  onMouseEnter={() => setHoveredPatrimonyPoint(pt)}
+                  onMouseMove={() => setHoveredPatrimonyPoint(pt)}
+                  onMouseLeave={() => setHoveredPatrimonyPoint(null)}
+                />
+              </g>
+            ))}
+            {geometry.points.map((pt, idx) => {
+              const label = formatCurrency(pt.value);
+              const approxWidth = expanded
+                ? Math.min(142, Math.max(76, label.length * 6.4))
+                : Math.min(104, Math.max(58, label.length * 5.3));
+              const labelX = Math.max(geometry.left + approxWidth / 2, Math.min(pt.x, geometry.width - geometry.right - approxWidth / 2));
+              const preferredY = pt.y + (idx % 2 === 0 ? (expanded ? -24 : -18) : (expanded ? 30 : 22));
+              const labelY = Math.max(geometry.top + (expanded ? 14 : 10), Math.min(preferredY, geometry.plotBottom - (expanded ? 14 : 10)));
+              return (
+                <g key={`${pt.month}-${idx}-label`} className={`report-pro-point-label ${expanded ? 'report-pro-point-label-expanded' : ''}`} pointerEvents="none">
+                  <rect x={labelX - approxWidth / 2} y={labelY - (expanded ? 17 : 13)} width={approxWidth} height={expanded ? '24' : '18'} rx={expanded ? '8' : '6'} />
+                  <text x={labelX} y={labelY} textAnchor="middle">{label}</text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+        <div
+          className={`report-pro-month-row ${expanded ? 'report-pro-month-row-expanded' : ''}`}
+          style={{ gridTemplateColumns: `repeat(${Math.max(1, chartData.length)}, minmax(0, 1fr))` }}
+        >
+          {chartData.map((p) => <span key={p.month}>{p.month}</span>)}
+        </div>
+        <div
+          className="report-pro-value-row"
+          style={{ gridTemplateColumns: `repeat(${Math.max(1, chartData.length)}, minmax(0, 1fr))` }}
+        >
+          {chartData.map((p) => (
+            <span key={`${p.month}-value`}>{formatCurrency(p.balance)}</span>
+          ))}
+        </div>
+      </>
+    );
+  };
+
+  const expandedPatrimonyOverlay = isDemoReport && isPatrimonyExpanded && typeof document !== 'undefined'
+    ? createPortal(
+      <div className="report-pro-chart-overlay" role="dialog" aria-modal="true" aria-label="Grafico de evolucion de patrimonio ampliado">
+        <section className="report-pro-panel report-pro-panel-xl report-pro-patrimony-section is-expanded">
+          <div className="report-pro-panel-head">
+            <div>
+              <h4>Evolucion patrimonio</h4>
+              <p>Linea de cierre mensual con importe en cada punto</p>
+            </div>
+            <button
+              type="button"
+              className="report-pro-expand-chart-button"
+              onClick={() => {
+                setIsPatrimonyExpanded(false);
+                setHoveredPatrimonyPoint(null);
+              }}
+            >
+              Cerrar ampliado
+            </button>
+          </div>
+          <div className="report-pro-expanded-period-toolbar">
+            <label>
+              Desde
+              <select
+                value={expandedStartMonth}
+                onChange={(event) => {
+                  setExpandedStartMonth(event.target.value);
+                  setHoveredPatrimonyPoint(null);
+                }}
+              >
+                {periodOptions.map((option) => (
+                  <option key={`expanded-from-${option.key}`} value={option.key}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Hasta
+              <select
+                value={expandedEndMonth}
+                onChange={(event) => {
+                  setExpandedEndMonth(event.target.value);
+                  setHoveredPatrimonyPoint(null);
+                }}
+              >
+                {periodOptions.map((option) => (
+                  <option key={`expanded-to-${option.key}`} value={option.key}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="report-pro-expanded-reset"
+              onClick={() => {
+                setExpandedStartMonth(firstPeriodKey);
+                setExpandedEndMonth(lastPeriodKey);
+                setHoveredPatrimonyPoint(null);
+              }}
+            >
+              Ver todo
+            </button>
+            <span>Pulsa ESC para salir</span>
+          </div>
+          {renderPatrimonyChart(true)}
+        </section>
+      </div>,
+      document.body
+    )
+    : null;
+
   return (
     <div className={`informes-container informes-pro-page fade-in ${isDemoReport ? 'report-pro-page-demo' : ''}`}>
+      {expandedPatrimonyOverlay}
       <article className={`informe-preview glass-card report-pro-sheet ${isDemoReport ? 'report-pro-demo-sheet' : ''}`} ref={reportRef}>
         <header className="report-pro-header">
           <div>
@@ -1152,7 +1308,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           </div>
         </section>
 
-        <section className={`report-pro-panel report-pro-panel-xl report-pro-patrimony-section ${isDemoReport && isPatrimonyExpanded ? 'is-expanded' : ''}`}>
+        <section className="report-pro-panel report-pro-panel-xl report-pro-patrimony-section">
           <div className="report-pro-panel-head">
             <div>
               <h4>Evolucion patrimonio</h4>
@@ -1163,139 +1319,17 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                 type="button"
                 className="report-pro-expand-chart-button"
                 onClick={() => {
-                  if (!isPatrimonyExpanded) {
-                    setExpandedStartMonth(rangeStart);
-                    setExpandedEndMonth(rangeEnd);
-                    setHoveredPatrimonyPoint(null);
-                  }
-                  setIsPatrimonyExpanded((value) => !value);
-                }}
-              >
-                {isPatrimonyExpanded ? 'Cerrar ampliado' : 'Ampliar grafico'}
-              </button>
-            ) : null}
-          </div>
-          {isDemoReport && isPatrimonyExpanded ? (
-            <div className="report-pro-expanded-period-toolbar">
-              <label>
-                Desde
-                <select
-                  value={expandedStartMonth}
-                  onChange={(event) => {
-                    setExpandedStartMonth(event.target.value);
-                    setHoveredPatrimonyPoint(null);
-                  }}
-                >
-                  {periodOptions.map((option) => (
-                    <option key={`expanded-from-${option.key}`} value={option.key}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Hasta
-                <select
-                  value={expandedEndMonth}
-                  onChange={(event) => {
-                    setExpandedEndMonth(event.target.value);
-                    setHoveredPatrimonyPoint(null);
-                  }}
-                >
-                  {periodOptions.map((option) => (
-                    <option key={`expanded-to-${option.key}`} value={option.key}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="report-pro-expanded-reset"
-                onClick={() => {
-                  setExpandedStartMonth(firstPeriodKey);
-                  setExpandedEndMonth(lastPeriodKey);
+                  setExpandedStartMonth(rangeStart);
+                  setExpandedEndMonth(rangeEnd);
                   setHoveredPatrimonyPoint(null);
+                  setIsPatrimonyExpanded(true);
                 }}
               >
-                Ver todo
+                Ampliar grafico
               </button>
-              <span>Pulsa ESC para salir</span>
-            </div>
-          ) : null}
-          <div className={`report-pro-line-wrap ${isPatrimonyExpanded ? 'report-pro-line-wrap-expanded' : ''}`}>
-            {hoveredPatrimonyPoint ? (
-              <div
-                className={`report-pro-line-tooltip ${isPatrimonyExpanded ? 'report-pro-line-tooltip-expanded' : ''}`}
-                style={{
-                  left: `clamp(${isPatrimonyExpanded ? '118px' : '88px'}, ${(hoveredPatrimonyPoint.x / activePatrimonyGeometry.width) * 100}%, calc(100% - ${isPatrimonyExpanded ? '118px' : '88px'}))`,
-                  top: `clamp(${isPatrimonyExpanded ? '82px' : '64px'}, ${(hoveredPatrimonyPoint.y / activePatrimonyGeometry.height) * 100}%, calc(100% - ${isPatrimonyExpanded ? '26px' : '20px'}))`
-                }}
-              >
-                <strong>{hoveredPatrimonyPoint.month}</strong>
-                <span>{formatCurrency(hoveredPatrimonyPoint.value)}</span>
-              </div>
             ) : null}
-            <svg viewBox={`0 0 ${activePatrimonyGeometry.width} ${activePatrimonyGeometry.height}`} preserveAspectRatio="none" className={`report-pro-line-chart ${isPatrimonyExpanded ? 'report-pro-line-chart-expanded' : ''}`}>
-              <defs>
-                <linearGradient id="patrimonyAreaShared" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgba(14,165,233,0.30)" />
-                  <stop offset="100%" stopColor="rgba(14,165,233,0.03)" />
-                </linearGradient>
-              </defs>
-              {activePatrimonyGeometry.yTicks.map((tick, idx) => (
-                <g key={`tick-${idx}`}>
-                  <line className="report-pro-grid-line" x1={activePatrimonyGeometry.left} y1={tick.y} x2={activePatrimonyGeometry.width - activePatrimonyGeometry.right} y2={tick.y} />
-                  <text className={`report-pro-y-label ${isPatrimonyExpanded ? 'report-pro-y-label-expanded' : ''}`} x={activePatrimonyGeometry.left - 10} y={tick.y + 4} textAnchor="end">
-                    {formatAxisCurrency(tick.value)}
-                  </text>
-                </g>
-              ))}
-              {activePatrimonyGeometry.areaPath && <path d={activePatrimonyGeometry.areaPath} className="report-pro-area" fill="url(#patrimonyAreaShared)" />}
-              {activePatrimonyGeometry.points.length > 1 && <polyline className={`report-pro-line ${isPatrimonyExpanded ? 'report-pro-line-expanded' : ''}`} points={activePatrimonyGeometry.linePoints} />}
-              {activePatrimonyGeometry.points.map((pt, idx) => (
-                <g key={`${pt.month}-${idx}`}>
-                  <circle cx={pt.x} cy={pt.y} r={isPatrimonyExpanded ? '6.2' : '4.2'} className={`report-pro-dot ${isPatrimonyExpanded ? 'report-pro-dot-expanded' : ''}`} pointerEvents="none" />
-                  <circle
-                    cx={pt.x}
-                    cy={pt.y}
-                    r={isPatrimonyExpanded ? '28' : '18'}
-                    className="report-pro-dot-hit"
-                    fill="transparent"
-                    pointerEvents="all"
-                    onMouseEnter={() => setHoveredPatrimonyPoint(pt)}
-                    onMouseMove={() => setHoveredPatrimonyPoint(pt)}
-                    onMouseLeave={() => setHoveredPatrimonyPoint(null)}
-                  />
-                </g>
-              ))}
-              {activePatrimonyGeometry.points.map((pt, idx) => {
-                const label = formatCurrency(pt.value);
-                const approxWidth = isPatrimonyExpanded
-                  ? Math.min(142, Math.max(76, label.length * 6.4))
-                  : Math.min(104, Math.max(58, label.length * 5.3));
-                const labelX = Math.max(activePatrimonyGeometry.left + approxWidth / 2, Math.min(pt.x, activePatrimonyGeometry.width - activePatrimonyGeometry.right - approxWidth / 2));
-                const preferredY = pt.y + (idx % 2 === 0 ? (isPatrimonyExpanded ? -24 : -18) : (isPatrimonyExpanded ? 30 : 22));
-                const labelY = Math.max(activePatrimonyGeometry.top + (isPatrimonyExpanded ? 14 : 10), Math.min(preferredY, activePatrimonyGeometry.plotBottom - (isPatrimonyExpanded ? 14 : 10)));
-                return (
-                  <g key={`${pt.month}-${idx}-label`} className={`report-pro-point-label ${isPatrimonyExpanded ? 'report-pro-point-label-expanded' : ''}`} pointerEvents="none">
-                    <rect x={labelX - approxWidth / 2} y={labelY - (isPatrimonyExpanded ? 17 : 13)} width={approxWidth} height={isPatrimonyExpanded ? '24' : '18'} rx={isPatrimonyExpanded ? '8' : '6'} />
-                    <text x={labelX} y={labelY} textAnchor="middle">{label}</text>
-                  </g>
-                );
-              })}
-            </svg>
           </div>
-          <div
-            className={`report-pro-month-row ${isPatrimonyExpanded ? 'report-pro-month-row-expanded' : ''}`}
-            style={{ gridTemplateColumns: `repeat(${Math.max(1, activePatrimonioData.length)}, minmax(0, 1fr))` }}
-          >
-            {activePatrimonioData.map((p) => <span key={p.month}>{p.month}</span>)}
-          </div>
-          <div
-            className="report-pro-value-row"
-            style={{ gridTemplateColumns: `repeat(${Math.max(1, activePatrimonioData.length)}, minmax(0, 1fr))` }}
-          >
-            {activePatrimonioData.map((p) => (
-              <span key={`${p.month}-value`}>{formatCurrency(p.balance)}</span>
-            ))}
-          </div>
+          {renderPatrimonyChart(false)}
         </section>
 
         <section className="report-pro-panel">
