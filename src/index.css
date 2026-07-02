@@ -3399,8 +3399,8 @@ input[type='number'] {
 .report-pro-line-wrap-expanded {
   flex: 1 1 auto;
   min-height: 0;
-  height: clamp(560px, calc(100vh - 180px), 900px);
-  padding: 14px 18px 2px;
+  height: clamp(560px, calc(100vh - 158px), 920px);
+  padding: 10px 18px 0;
   border: 1px solid rgba(15, 95, 138, 0.12);
   border-radius: 22px;
   background: linear-gradient(180deg, #ffffff, #f6fbff);
@@ -3443,7 +3443,7 @@ input[type='number'] {
 
 .report-pro-month-row-expanded {
   flex: 0 0 auto;
-  margin-top: 10px;
+  margin-top: 4px;
   font-size: 12px;
 }
 

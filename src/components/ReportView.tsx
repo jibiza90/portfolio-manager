@@ -774,8 +774,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const expandedPatrimonyGeometry = buildPatrimonyGeometry(effectiveExpandedPatrimonioData, expandedChartW, expandedChartH, {
     left: 118,
     right: 60,
-    top: 58,
-    bottom: 94
+    top: 42,
+    bottom: 34
   });
   const movementCapitalSeries = (report.movements ?? []).reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
     const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
