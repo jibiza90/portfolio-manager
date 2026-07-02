@@ -1650,6 +1650,7 @@ const ClientPortal = ({
 
         contributionBreakdowns.forEach((breakdown) => {
           const visibleInitialReturn = getVisibleContributionReturn(breakdown.month, breakdown.initialReturnPct);
+          const visibleInitialProfit = breakdown.initialCapital * visibleInitialReturn;
           cursorY = ensureRoom(cursorY, estimateTableHeight(breakdown.contributions.length + 2, 18) + 36);
           doc.setFontSize(10);
           doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
@@ -1666,7 +1667,7 @@ const ClientPortal = ({
                 'Capital inicial del mes',
                 { content: formatEuro(breakdown.initialCapital), styles: { halign: 'right' } },
                 { content: formatPct(visibleInitialReturn), styles: { halign: 'right' } },
-                { content: formatEuro(breakdown.initialProfit), styles: { halign: 'right' } }
+                { content: formatEuro(visibleInitialProfit), styles: { halign: 'right' } }
               ],
               ...breakdown.contributions.map((contribution) => [
                 `Aportacion ${formatShortDate(contribution.iso)}`,

@@ -3229,6 +3229,36 @@ input[type='number'] {
   transform: translateY(-1px);
 }
 
+.report-pro-patrimony-section.is-expanded {
+  position: fixed;
+  inset: 18px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  margin: 0 !important;
+  padding: 24px !important;
+  overflow: auto;
+  border-radius: 28px;
+  border: 1px solid rgba(180, 218, 245, 0.28);
+  background:
+    radial-gradient(1000px 360px at 100% -10%, rgba(14, 165, 233, 0.18), transparent 58%),
+    linear-gradient(180deg, #f8fcff, #eef6fc);
+  box-shadow: 0 0 0 9999px rgba(5, 16, 28, 0.76), 0 34px 90px rgba(0, 0, 0, 0.34);
+}
+
+.report-pro-patrimony-section.is-expanded:hover {
+  transform: none;
+}
+
+.report-pro-patrimony-section.is-expanded .report-pro-panel-head h4 {
+  font-size: clamp(24px, 2.4vw, 38px);
+  letter-spacing: -0.04em;
+}
+
+.report-pro-patrimony-section.is-expanded .report-pro-line-wrap {
+  flex: 1;
+}
+
 .report-pro-chart-modal {
   position: fixed;
   inset: 0;
