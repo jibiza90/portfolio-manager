@@ -1632,10 +1632,24 @@ const ClientPortal = ({
 
       cursorY = lastTableY() + space.l;
       if (contributionBreakdowns.length > 0) {
+        const latestVisibleMonthKey = latestTwrMonth?.month ? reportMonthToKey(latestTwrMonth.month) : '';
+        const latestVisibleReturn = report?.rentabilidadUltimoMes !== undefined
+          ? report.rentabilidadUltimoMes / 100
+          : overview?.latestReturnMonth?.retPct;
+        const getVisibleContributionReturn = (monthValue: string, fallback: number) => {
+          const monthKey = reportMonthToKey(monthValue);
+          if (monthKey === latestVisibleMonthKey && latestVisibleReturn !== undefined && Number.isFinite(latestVisibleReturn)) {
+            return latestVisibleReturn;
+          }
+          const monthlyRow = monthly.find((item) => reportMonthToKey(item.month) === monthKey);
+          return monthlyRow?.retPct ?? fallback;
+        };
+
         cursorY = ensureRoom(cursorY, 120);
         cursorY = drawSectionTitle('Detalle de meses con aportaciones', cursorY);
 
         contributionBreakdowns.forEach((breakdown) => {
+          const visibleInitialReturn = getVisibleContributionReturn(breakdown.month, breakdown.initialReturnPct);
           cursorY = ensureRoom(cursorY, estimateTableHeight(breakdown.contributions.length + 2, 18) + 36);
           doc.setFontSize(10);
           doc.setTextColor(brand.ink[0], brand.ink[1], brand.ink[2]);
@@ -1651,7 +1665,7 @@ const ClientPortal = ({
               [
                 'Capital inicial del mes',
                 { content: formatEuro(breakdown.initialCapital), styles: { halign: 'right' } },
-                { content: formatPct(breakdown.initialReturnPct), styles: { halign: 'right' } },
+                { content: formatPct(visibleInitialReturn), styles: { halign: 'right' } },
                 { content: formatEuro(breakdown.initialProfit), styles: { halign: 'right' } }
               ],
               ...breakdown.contributions.map((contribution) => [

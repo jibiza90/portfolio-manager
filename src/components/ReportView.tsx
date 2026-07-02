@@ -646,9 +646,18 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const tableContributionByMonth = new Map(
     tableContributionBreakdowns.map((item) => [reportMonthToKey(item.month), item])
   );
+  const latestVisibleMonthKey = monthlyWithData.length > 0
+    ? reportMonthToKey(monthlyWithData[monthlyWithData.length - 1].month)
+    : '';
+  const getVisibleMonthReturnPct = (monthKey: string, fallbackPct: number) => {
+    if (monthKey === latestVisibleMonthKey && Number.isFinite(report.rentabilidadUltimoMes)) {
+      return report.rentabilidadUltimoMes;
+    }
+    const month = monthlyWithData.find((item) => reportMonthToKey(item.month) === monthKey);
+    return Number.isFinite(month?.profitPct) ? month?.profitPct ?? fallbackPct : fallbackPct;
+  };
   const getDisplayedMonthReturnPct = (month: (typeof monthlyWithData)[number]) => {
-    const breakdown = tableContributionByMonth.get(reportMonthToKey(month.month));
-    return breakdown ? breakdown.initialReturnPct * 100 : month.profitPct;
+    return getVisibleMonthReturnPct(reportMonthToKey(month.month), month.profitPct);
   };
   const visibleContributionBreakdowns: typeof contributionBreakdowns = [];
   const periodOptions = monthlyWithData.map((m) => ({
@@ -999,7 +1008,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
               <p>Separamos el capital inicial del mes y cada aportacion para que veas que ha generado cada parte.</p>
             </div>
             <div className="report-pro-breakdown-list">
-              {visibleContributionBreakdowns.map((breakdown) => (
+              {visibleContributionBreakdowns.map((breakdown) => {
+                const breakdownMonthKey = reportMonthToKey(breakdown.month);
+                const visibleInitialPct = getVisibleMonthReturnPct(breakdownMonthKey, breakdown.initialReturnPct * 100);
+                return (
                 <div className="report-pro-breakdown-card" key={breakdown.month}>
                   <div className="report-pro-breakdown-title">
                     <strong>{breakdown.month}</strong>
@@ -1025,8 +1037,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                         <tr>
                           <td>Posici&oacute;n inicial del mes</td>
                           <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
-                          <td className={`text-right ${breakdown.initialReturnPct >= 0 ? 'positive' : 'negative'}`}>
-                            {(breakdown.initialReturnPct * 100).toFixed(2)}%
+                          <td className={`text-right ${visibleInitialPct >= 0 ? 'positive' : 'negative'}`}>
+                            {visibleInitialPct.toFixed(2)}%
                           </td>
                           <td className={`text-right ${breakdown.initialProfit >= 0 ? 'positive' : 'negative'}`}>
                             {formatCurrency(breakdown.initialProfit)}
@@ -1056,7 +1068,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                     </table>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </section>
         )}
@@ -1262,6 +1275,9 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                   const expanded = !!expandedContributionMonths[monthKey];
                   const displayedPct = getDisplayedMonthReturnPct(m);
                   const movementTag = monthlyMovementType(monthKey);
+                  const visibleInitialPct = breakdown
+                    ? getVisibleMonthReturnPct(monthKey, breakdown.initialReturnPct * 100)
+                    : displayedPct;
 
                   return (
                     <React.Fragment key={m.month}>
@@ -1318,8 +1334,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
                                   <tr>
                                     <td>Posici&oacute;n inicial del mes</td>
                                     <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
-                                    <td className={`text-right ${breakdown.initialReturnPct >= 0 ? 'positive' : 'negative'}`}>
-                                      {(breakdown.initialReturnPct * 100).toFixed(2)}%
+                                    <td className={`text-right ${visibleInitialPct >= 0 ? 'positive' : 'negative'}`}>
+                                      {visibleInitialPct.toFixed(2)}%
                                     </td>
                                     <td className={`text-right ${breakdown.initialProfit >= 0 ? 'positive' : 'negative'}`}>
                                       {formatCurrency(breakdown.initialProfit)}
