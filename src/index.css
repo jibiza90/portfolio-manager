@@ -3406,10 +3406,6 @@ input[type='number'] {
   background: linear-gradient(180deg, #ffffff, #f6fbff);
 }
 
-.report-pro-line-chart-expanded {
-  height: 100%;
-}
-
 .report-pro-line-tooltip-expanded {
   min-width: 182px;
   padding: 13px 16px;
@@ -3454,6 +3450,11 @@ input[type='number'] {
 .report-pro-line-chart {
   width: 100%;
   height: 360px;
+}
+
+.report-pro-line-chart.report-pro-line-chart-expanded {
+  height: 100%;
+  min-height: 560px;
 }
 
 .report-pro-grid-line {
