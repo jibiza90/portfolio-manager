@@ -3236,7 +3236,7 @@ input[type='number'] {
   display: flex;
   flex-direction: column;
   margin: 0 !important;
-  padding: clamp(18px, 2.2vw, 34px) !important;
+  padding: clamp(14px, 1.6vw, 24px) !important;
   overflow: auto;
   border-radius: 28px;
   border: 1px solid rgba(180, 218, 245, 0.28);
@@ -3251,20 +3251,20 @@ input[type='number'] {
 }
 
 .report-pro-patrimony-section.is-expanded .report-pro-panel-head h4 {
-  font-size: clamp(24px, 2.4vw, 38px);
+  font-size: clamp(22px, 2vw, 32px);
   letter-spacing: -0.04em;
 }
 
 .report-pro-patrimony-section.is-expanded .report-pro-line-wrap {
   flex: 1;
-  min-height: min(72vh, 760px);
+  min-height: min(80vh, 860px);
 }
 
 .report-pro-chart-overlay {
   position: fixed;
   inset: 0;
   z-index: 5000;
-  padding: 14px;
+  padding: 8px;
   overflow: auto;
   background:
     radial-gradient(900px 420px at 80% 0%, rgba(14, 165, 233, 0.22), transparent 60%),
@@ -3276,7 +3276,7 @@ input[type='number'] {
   position: relative;
   inset: auto;
   width: min(1800px, 100%);
-  height: calc(100vh - 28px);
+  height: calc(100vh - 16px);
   min-height: 680px;
   margin: 0 auto !important;
   overflow: hidden;
@@ -3288,8 +3288,8 @@ input[type='number'] {
 
 .report-pro-chart-overlay .report-pro-expanded-period-toolbar {
   flex: 0 0 auto;
-  margin-bottom: 12px;
-  padding: 12px 14px;
+  margin-bottom: 8px;
+  padding: 9px 12px;
 }
 
 .report-pro-chart-modal {
@@ -3399,8 +3399,8 @@ input[type='number'] {
 .report-pro-line-wrap-expanded {
   flex: 1 1 auto;
   min-height: 0;
-  height: clamp(440px, calc(100vh - 250px), 760px);
-  padding: 16px 18px 4px;
+  height: clamp(560px, calc(100vh - 180px), 900px);
+  padding: 14px 18px 2px;
   border: 1px solid rgba(15, 95, 138, 0.12);
   border-radius: 22px;
   background: linear-gradient(180deg, #ffffff, #f6fbff);
