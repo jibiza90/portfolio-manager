@@ -769,13 +769,13 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     })
     : patrimonioWithData;
   const effectiveExpandedPatrimonioData = expandedPatrimonioData.length > 0 ? expandedPatrimonioData : patrimonioWithData;
-  const expandedChartW = 1400;
-  const expandedChartH = 620;
+  const expandedChartW = 1600;
+  const expandedChartH = 760;
   const expandedPatrimonyGeometry = buildPatrimonyGeometry(effectiveExpandedPatrimonioData, expandedChartW, expandedChartH, {
-    left: 110,
-    right: 50,
-    top: 34,
-    bottom: 82
+    left: 118,
+    right: 60,
+    top: 58,
+    bottom: 94
   });
   const movementCapitalSeries = (report.movements ?? []).reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
     const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
@@ -912,7 +912,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
           {chartData.map((p) => <span key={p.month}>{p.month}</span>)}
         </div>
         <div
-          className="report-pro-value-row"
+          className={`report-pro-value-row ${expanded ? 'report-pro-value-row-expanded' : ''}`}
           style={{ gridTemplateColumns: `repeat(${Math.max(1, chartData.length)}, minmax(0, 1fr))` }}
         >
           {chartData.map((p) => (

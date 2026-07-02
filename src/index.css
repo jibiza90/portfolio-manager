@@ -3257,14 +3257,14 @@ input[type='number'] {
 
 .report-pro-patrimony-section.is-expanded .report-pro-line-wrap {
   flex: 1;
-  min-height: min(78vh, 860px);
+  min-height: min(72vh, 760px);
 }
 
 .report-pro-chart-overlay {
   position: fixed;
   inset: 0;
   z-index: 5000;
-  padding: 10px;
+  padding: 14px;
   overflow: auto;
   background:
     radial-gradient(900px 420px at 80% 0%, rgba(14, 165, 233, 0.22), transparent 60%),
@@ -3276,8 +3276,20 @@ input[type='number'] {
   position: relative;
   inset: auto;
   width: min(1800px, 100%);
-  min-height: calc(100vh - 20px);
+  height: calc(100vh - 28px);
+  min-height: 680px;
   margin: 0 auto !important;
+  overflow: hidden;
+}
+
+.report-pro-chart-overlay .report-pro-panel-head {
+  flex: 0 0 auto;
+}
+
+.report-pro-chart-overlay .report-pro-expanded-period-toolbar {
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+  padding: 12px 14px;
 }
 
 .report-pro-chart-modal {
@@ -3385,15 +3397,17 @@ input[type='number'] {
 }
 
 .report-pro-line-wrap-expanded {
-  min-height: min(78vh, 860px);
-  padding: 10px 8px 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: clamp(440px, calc(100vh - 250px), 760px);
+  padding: 16px 18px 4px;
   border: 1px solid rgba(15, 95, 138, 0.12);
   border-radius: 22px;
   background: linear-gradient(180deg, #ffffff, #f6fbff);
 }
 
 .report-pro-line-chart-expanded {
-  height: min(78vh, 860px);
+  height: 100%;
 }
 
 .report-pro-line-tooltip-expanded {
@@ -3424,11 +3438,17 @@ input[type='number'] {
 }
 
 .report-pro-point-label-expanded text {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .report-pro-month-row-expanded {
-  margin-top: 14px;
+  flex: 0 0 auto;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.report-pro-value-row-expanded {
+  display: none;
 }
 
 .report-pro-line-chart {
