@@ -218,6 +218,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
 
   const handleDownload = async () => {
     if (!report) return;
+    if (isDemoClient(report.clientId)) {
+      await handleDownloadModernDemo();
+      return;
+    }
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF('p', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -836,6 +840,315 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
     if (hasDecrement) return 'Retirada';
     return '';
   };
+
+  async function handleDownloadModernDemo() {
+    const currentReport = report;
+    if (!currentReport) return;
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 34;
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin;
+
+    const colors = {
+      ink: [7, 27, 43] as const,
+      muted: [83, 102, 124] as const,
+      teal: [15, 109, 122] as const,
+      blue: [14, 165, 233] as const,
+      soft: [244, 249, 252] as const,
+      border: [213, 226, 235] as const,
+      green: [15, 109, 122] as const,
+      red: [220, 38, 38] as const,
+      white: [255, 255, 255] as const
+    };
+
+    const setText = (color: readonly [number, number, number]) => doc.setTextColor(color[0], color[1], color[2]);
+    const setFill = (color: readonly [number, number, number]) => doc.setFillColor(color[0], color[1], color[2]);
+    const setDraw = (color: readonly [number, number, number]) => doc.setDrawColor(color[0], color[1], color[2]);
+    const money = (value: number) => formatCurrency(Number.isFinite(value) ? value : 0);
+    const pct = (value: number) => `${(Number.isFinite(value) ? value : 0).toFixed(2)}%`;
+    const selectedMonthLabel = firstMonth && lastMonth
+      ? `${firstMonth.month} - ${lastMonth.month}`
+      : 'Todo el periodo';
+
+    const addPage = () => {
+      doc.addPage();
+      y = margin;
+    };
+
+    const ensure = (needed: number) => {
+      if (y + needed > pageHeight - margin) addPage();
+    };
+
+    const sectionTitle = (title: string, subtitle?: string) => {
+      ensure(38);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      setText(colors.ink);
+      doc.text(title, margin, y);
+      if (subtitle) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        setText(colors.muted);
+        doc.text(subtitle, margin, y + 15);
+        y += 26;
+      } else {
+        y += 18;
+      }
+    };
+
+    const card = (x: number, cy: number, w: number, h: number, label: string, value: string, positive?: boolean) => {
+      setFill(colors.white);
+      setDraw(colors.border);
+      doc.roundedRect(x, cy, w, h, 12, 12, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      setText(colors.muted);
+      doc.text(label.toUpperCase(), x + 14, cy + 18);
+      doc.setFontSize(17);
+      setText(positive === undefined ? colors.ink : positive ? colors.green : colors.red);
+      doc.text(value, x + 14, cy + 44);
+    };
+
+    const drawLineChart = (data: typeof effectivePatrimonioData, x: number, cy: number, w: number, h: number) => {
+      setFill(colors.soft);
+      setDraw(colors.border);
+      doc.roundedRect(x, cy, w, h, 12, 12, 'FD');
+      const values = data.map((item) => item.balance ?? 0).filter((value) => value > 0);
+      if (values.length === 0) return;
+      const minValue = Math.min(...values);
+      const maxValue = Math.max(...values);
+      const span = Math.max(1, maxValue - minValue);
+      const minAxis = Math.max(0, minValue - span * 0.08);
+      const maxAxis = maxValue + span * 0.08;
+      const axisSpan = Math.max(1, maxAxis - minAxis);
+      const left = x + 70;
+      const right = x + w - 22;
+      const top = cy + 22;
+      const bottom = cy + h - 46;
+      const plotW = right - left;
+      const plotH = bottom - top;
+      const chartPoints = data.map((item, idx) => {
+        const value = item.balance ?? 0;
+        return {
+          x: data.length <= 1 ? left + plotW / 2 : left + (idx / (data.length - 1)) * plotW,
+          y: top + (1 - (value - minAxis) / axisSpan) * plotH,
+          value,
+          label: item.month
+        };
+      });
+
+      setDraw([221, 231, 238]);
+      doc.setLineWidth(0.5);
+      for (let i = 0; i <= 4; i += 1) {
+        const gy = top + (i / 4) * plotH;
+        doc.line(left, gy, right, gy);
+        const tick = maxAxis - (i / 4) * axisSpan;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        setText(colors.muted);
+        doc.text(money(tick), x + 10, gy + 2);
+      }
+
+      setDraw(colors.teal);
+      doc.setLineWidth(2);
+      for (let i = 0; i < chartPoints.length - 1; i += 1) {
+        doc.line(chartPoints[i].x, chartPoints[i].y, chartPoints[i + 1].x, chartPoints[i + 1].y);
+      }
+      const labelStep = Math.max(1, Math.ceil(chartPoints.length / 10));
+      chartPoints.forEach((point, idx) => {
+        setFill(colors.ink);
+        doc.circle(point.x, point.y, 3, 'F');
+        if (idx % labelStep === 0 || idx === chartPoints.length - 1) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7);
+          setText(colors.ink);
+          doc.text(point.label, point.x, bottom + 20, { align: 'center' });
+        }
+      });
+    };
+
+    const drawReturnBars = (data: typeof effectiveMonthlyWithData, x: number, cy: number, w: number, h: number) => {
+      setFill(colors.soft);
+      setDraw(colors.border);
+      doc.roundedRect(x, cy, w, h, 12, 12, 'FD');
+      if (data.length === 0) return;
+      const left = x + 42;
+      const right = x + w - 16;
+      const top = cy + 20;
+      const bottom = cy + h - 34;
+      const plotW = right - left;
+      const plotH = bottom - top;
+      const maxAbs = Math.max(1, ...data.map((month) => Math.abs(getDisplayedMonthReturnPct(month))));
+      setDraw([221, 231, 238]);
+      doc.line(left, bottom, right, bottom);
+      const gap = 5;
+      const barW = Math.max(8, (plotW - gap * (data.length - 1)) / Math.max(1, data.length));
+      data.forEach((month, idx) => {
+        const value = getDisplayedMonthReturnPct(month);
+        const barH = Math.max(3, (Math.abs(value) / maxAbs) * (plotH - 8));
+        const bx = left + idx * (barW + gap);
+        const by = value >= 0 ? bottom - barH : bottom;
+        setFill(value >= 0 ? colors.teal : colors.red);
+        doc.roundedRect(bx, by, barW, barH, 3, 3, 'F');
+        if (data.length <= 10 || idx % Math.ceil(data.length / 10) === 0 || idx === data.length - 1) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7);
+          setText(colors.ink);
+          doc.text(month.month, bx + barW / 2, bottom + 15, { align: 'center' });
+        }
+      });
+    };
+
+    const tableRow = (columns: string[], widths: number[], rowY: number, opts: { header?: boolean; positiveIndex?: number; positiveValue?: number } = {}) => {
+      if (opts.header) {
+        setFill(colors.teal);
+        doc.roundedRect(margin, rowY - 13, contentWidth, 22, 5, 5, 'F');
+        setText(colors.white);
+        doc.setFont('helvetica', 'bold');
+      } else {
+        setText(colors.ink);
+        doc.setFont('helvetica', 'normal');
+      }
+      doc.setFontSize(opts.header ? 8 : 8.5);
+      let tx = margin + 10;
+      columns.forEach((column, idx) => {
+        if (!opts.header && opts.positiveIndex === idx && opts.positiveValue !== undefined) {
+          setText(opts.positiveValue >= 0 ? colors.green : colors.red);
+        } else {
+          setText(opts.header ? colors.white : colors.ink);
+        }
+        const align = idx === 0 ? 'left' : 'right';
+        doc.text(column, align === 'left' ? tx : tx + widths[idx] - 8, rowY, { align });
+        tx += widths[idx];
+      });
+    };
+
+    // Cover / header
+    setFill(colors.ink);
+    doc.roundedRect(margin, y, contentWidth, 88, 16, 16, 'F');
+    setFill(colors.blue);
+    doc.roundedRect(margin, y, 8, 88, 4, 4, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(23);
+    setText(colors.white);
+    doc.text('Investment Report', margin + 26, y + 34);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`${currentReport.clientCode} - ${selectedMonthLabel}`, margin + 28, y + 57);
+    doc.text(`Emitido: ${new Date().toLocaleDateString('es-ES')}`, pageWidth - margin - 145, y + 34);
+    y += 110;
+
+    const cardW = (contentWidth - 30) / 3;
+    card(margin, y, cardW, 68, 'Saldo final periodo', money(periodEndBalance), periodEndBalance >= 0);
+    card(margin + cardW + 15, y, cardW, 68, 'Resultado periodo', money(periodProfit), periodProfit >= 0);
+    card(margin + (cardW + 15) * 2, y, cardW, 68, 'Rentabilidad periodo', pct(periodReturnPct * 100), periodReturnPct >= 0);
+    y += 82;
+    card(margin, y, cardW, 62, 'Aportaciones periodo', money(periodIncrements), true);
+    card(margin + cardW + 15, y, cardW, 62, 'Retiradas periodo', money(periodDecrements), periodDecrements <= 0);
+    card(margin + (cardW + 15) * 2, y, cardW, 62, 'Capital neto periodo', money(periodIncrements - periodDecrements), periodIncrements - periodDecrements >= 0);
+    y += 86;
+
+    sectionTitle('Evolucion patrimonio', 'Saldo de cierre mensual del periodo seleccionado.');
+    drawLineChart(effectivePatrimonioData, margin, y, contentWidth, 190);
+    y += 216;
+
+    ensure(190);
+    sectionTitle('Rentabilidad mensual', 'TWR mensual segun los meses visibles en pantalla.');
+    drawReturnBars(effectiveMonthlyWithData, margin, y, contentWidth, 150);
+    y += 178;
+
+    sectionTitle('Tabla mensual', 'Resultado, rentabilidad y saldo por mes.');
+    const widths = [170, 170, 130, contentWidth - 470];
+    tableRow(['Fecha', 'Beneficio', 'Rentabilidad', 'Saldo'], widths, y, { header: true });
+    y += 24;
+    effectiveMonthlyWithData.forEach((month, idx) => {
+      ensure(22);
+      if (idx % 2 === 0) {
+        setFill([248, 251, 253]);
+        doc.rect(margin, y - 13, contentWidth, 20, 'F');
+      }
+      tableRow(
+        [getMonthEndLabel(month.month), money(month.profit ?? 0), pct(getDisplayedMonthReturnPct(month)), money(month.endBalance ?? 0)],
+        widths,
+        y,
+        { positiveIndex: 1, positiveValue: month.profit ?? 0 }
+      );
+      y += 20;
+    });
+
+    const selectedBreakdowns = tableContributionBreakdowns.filter((item) => {
+      const key = reportMonthToKey(item.month);
+      return key >= rangeStart && key <= rangeEnd;
+    });
+    if (selectedBreakdowns.length > 0) {
+      y += 12;
+      sectionTitle('Detalle de meses con aportaciones', 'Separacion entre posicion inicial y aportaciones dentro del periodo.');
+      selectedBreakdowns.forEach((breakdown) => {
+        ensure(74 + breakdown.contributions.length * 18);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        setText(colors.ink);
+        doc.text(breakdown.month, margin, y);
+        y += 18;
+        tableRow(['Concepto', 'Importe', 'Rentabilidad', 'Resultado'], widths, y, { header: true });
+        y += 22;
+        const visiblePct = getVisibleMonthReturnPct(reportMonthToKey(breakdown.month), breakdown.initialReturnPct * 100);
+        const initialProfit = breakdown.initialCapital * (visiblePct / 100);
+        tableRow(['Posicion inicial del mes', money(breakdown.initialCapital), pct(visiblePct), money(initialProfit)], widths, y, {
+          positiveIndex: 3,
+          positiveValue: initialProfit
+        });
+        y += 18;
+        breakdown.contributions.forEach((contribution) => {
+          tableRow(
+            [`Aportacion ${getShortDateLabel(contribution.iso)}`, money(contribution.amount), pct(contribution.returnPct * 100), money(contribution.profit)],
+            widths,
+            y,
+            { positiveIndex: 3, positiveValue: contribution.profit }
+          );
+          y += 18;
+        });
+        const total = initialProfit + breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0);
+        tableRow(['Resultado explicado', '-', '-', money(total)], widths, y, { positiveIndex: 3, positiveValue: total });
+        y += 24;
+      });
+    }
+
+    if (periodMovements.length > 0) {
+      ensure(95);
+      sectionTitle('Ingresos y retiradas', 'Movimientos registrados dentro del periodo seleccionado.');
+      const movementWidths = [150, 170, 170, contentWidth - 490];
+      tableRow(['Fecha', 'Ingreso', 'Retiro', 'Capital neto periodo'], movementWidths, y, { header: true });
+      y += 24;
+      let runningNet = 0;
+      periodMovements.forEach((movement, idx) => {
+        ensure(22);
+        runningNet += movement.type === 'increment' ? movement.amount : -movement.amount;
+        if (idx % 2 === 0) {
+          setFill([248, 251, 253]);
+          doc.rect(margin, y - 13, contentWidth, 20, 'F');
+        }
+        tableRow(
+          [
+            getShortDateLabel(movement.iso),
+            movement.type === 'increment' ? money(movement.amount) : '-',
+            movement.type === 'decrement' ? money(movement.amount) : '-',
+            money(runningNet)
+          ],
+          movementWidths,
+          y,
+          { positiveIndex: 3, positiveValue: runningNet }
+        );
+        y += 20;
+      });
+    }
+
+    const filename = `informe-demo-${currentReport.clientCode}-${rangeStart || 'todo'}-${rangeEnd || 'todo'}.pdf`;
+    doc.save(filename);
+  }
 
   const renderPatrimonyChart = (expanded: boolean) => {
     const chartData = expanded ? effectiveExpandedPatrimonioData : effectivePatrimonioData;
