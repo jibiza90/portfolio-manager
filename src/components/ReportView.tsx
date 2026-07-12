@@ -1247,16 +1247,19 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               </g>
             ))}
             {geometry.points.map((pt, idx) => {
+              const labelStep = Math.max(1, Math.ceil(geometry.points.length / 4));
+              const shouldShowLabel = expanded || idx === 0 || idx === geometry.points.length - 1 || idx % labelStep === 0;
+              if (!shouldShowLabel) return null;
               const label = formatCurrencyNoCents(pt.value);
               const approxWidth = expanded
-                ? Math.min(142, Math.max(76, label.length * 6.4))
-                : Math.min(104, Math.max(58, label.length * 5.3));
+                ? Math.min(154, Math.max(86, label.length * 7.1))
+                : Math.min(122, Math.max(68, label.length * 6.2));
               const labelX = Math.max(geometry.left + approxWidth / 2, Math.min(pt.x, geometry.width - geometry.right - approxWidth / 2));
               const preferredY = pt.y + (idx % 2 === 0 ? (expanded ? -24 : -18) : (expanded ? 30 : 22));
               const labelY = Math.max(geometry.top + (expanded ? 14 : 10), Math.min(preferredY, geometry.plotBottom - (expanded ? 14 : 10)));
               return (
                 <g key={`${pt.month}-${idx}-label`} className={`report-pro-point-label ${expanded ? 'report-pro-point-label-expanded' : ''}`} pointerEvents="none">
-                  <rect x={labelX - approxWidth / 2} y={labelY - (expanded ? 17 : 13)} width={approxWidth} height={expanded ? '24' : '18'} rx={expanded ? '8' : '6'} />
+                  <rect x={labelX - approxWidth / 2} y={labelY - (expanded ? 18 : 14)} width={approxWidth} height={expanded ? '26' : '20'} rx={expanded ? '9' : '7'} />
                   <text x={labelX} y={labelY} textAnchor="middle">{label}</text>
                 </g>
               );

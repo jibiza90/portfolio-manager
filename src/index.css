@@ -5646,3 +5646,34 @@ select {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* Final report readability refinements */
+.report-pro-point-label {
+  filter: drop-shadow(0 6px 10px rgba(15, 47, 77, 0.16));
+}
+
+.report-pro-point-label rect {
+  fill: #ffffff;
+  stroke: rgba(15, 95, 138, 0.34);
+  stroke-width: 1.15;
+}
+
+.report-pro-point-label text {
+  fill: #071b2b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.report-pro-point-label-expanded text {
+  font-size: 13px;
+}
+
+.report-pro-demo-monthly-table th:first-child {
+  padding-left: 50px;
+  text-align: left;
+}
+
+.report-pro-demo-monthly-table .report-pro-month-cell {
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  column-gap: 8px;
+}
