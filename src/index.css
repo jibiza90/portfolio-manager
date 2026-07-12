@@ -5677,3 +5677,16 @@ select {
   grid-template-columns: 28px minmax(0, 1fr) auto;
   column-gap: 8px;
 }
+
+/* Larger report section headings */
+.report-pro-demo-sheet .report-pro-panel-head h4,
+.report-pro-demo-sheet .report-pro-note-head strong {
+  font-size: 21px;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+}
+
+.report-pro-demo-sheet .report-pro-panel-head p {
+  font-size: 15px;
+  line-height: 1.35;
+}
