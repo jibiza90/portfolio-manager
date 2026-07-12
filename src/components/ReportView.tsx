@@ -755,7 +755,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     const plotH = height - pads.top - pads.bottom;
     const plotBottom = pads.top + plotH;
     const values = data.map((p) => p.balance as number);
-    const { min, max, ticks } = buildNiceAxis(values);
+    const axis = buildNiceAxis([0, ...values]);
+    const min = 0;
+    const max = axis.max;
+    const ticks = axis.ticks.includes(0) ? axis.ticks : [...axis.ticks, 0];
     const axisSpan = Math.max(1, max - min);
     const points = data.map((p, idx) => {
       const value = p.balance as number;
@@ -941,11 +944,9 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
       doc.roundedRect(x, cy, w, h, 12, 12, 'FD');
       const values = data.map((item) => item.balance ?? 0).filter((value) => value > 0);
       if (values.length === 0) return;
-      const minValue = Math.min(...values);
       const maxValue = Math.max(...values);
-      const span = Math.max(1, maxValue - minValue);
-      const minAxis = Math.max(0, minValue - span * 0.08);
-      const maxAxis = maxValue + span * 0.08;
+      const maxAxis = buildNiceAxis([0, maxValue]).max;
+      const minAxis = 0;
       const axisSpan = Math.max(1, maxAxis - minAxis);
       const left = x + 70;
       const right = x + w - 22;
