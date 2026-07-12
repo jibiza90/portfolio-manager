@@ -204,6 +204,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
   }, [report?.clientId]);
 
   useEffect(() => {
+    if (!report || !isDemoClient(report.clientId)) return;
+    setPeriodPreset('last12');
+  }, [report?.clientId]);
+
+  useEffect(() => {
     if (!isPatrimonyExpanded) return undefined;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -691,6 +696,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     }
     if (periodPreset === 'last6') {
       const start = periodKeys[Math.max(0, periodKeys.length - 6)] ?? firstPeriodKey;
+      return { start, end: lastPeriodKey };
+    }
+    if (periodPreset === 'last12') {
+      const start = periodKeys[Math.max(0, periodKeys.length - 12)] ?? firstPeriodKey;
       return { start, end: lastPeriodKey };
     }
     if (periodPreset === 'custom') {
@@ -1420,7 +1429,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                     setHoveredPatrimonyPoint(null);
                   }}
                 >
-                  <option value="all">Todo</option>
+                  <option value="last12">Ultimos 12 meses</option>
+                  <option value="all">Todo el historico</option>
                   <option value="2025">Año 2025</option>
                   <option value="2026">Año 2026</option>
                   <option value="last3">Ultimos 3 meses</option>
