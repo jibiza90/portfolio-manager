@@ -155,6 +155,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
   const [loading, setLoading] = useState(!reportData);
   const [expired, setExpired] = useState(false);
   const [hoveredPatrimonyPoint, setHoveredPatrimonyPoint] = useState<PatrimonyTooltipState | null>(null);
+  const [hoveredMonthlyBar, setHoveredMonthlyBar] = useState<{ month: string; value: number } | null>(null);
   const [infoTooltip, setInfoTooltip] = useState<InfoTooltipState>({ visible: false });
   const [expandedContributionMonths, setExpandedContributionMonths] = useState<Record<string, boolean>>({});
   const [periodPreset, setPeriodPreset] = useState('all');
@@ -717,6 +718,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     return getDisplayedMonthReturnPct(month);
   };
   const formatChartValue = (value: number) =>
+    chartView === 'return' ? `${value.toFixed(2)}%` : formatCurrencyNoCents(value);
+  const formatChartTooltipValue = (value: number) =>
     chartView === 'return' ? `${value.toFixed(2)}%` : formatCurrency(value);
   const chartTitle = chartView === 'profit'
     ? 'Resultado mensual'
@@ -1183,7 +1186,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               }}
             >
               <strong>{hoveredPatrimonyPoint.month}</strong>
-              <span>{formatCurrencyNoCents(hoveredPatrimonyPoint.value)}</span>
+              <span>{formatCurrency(hoveredPatrimonyPoint.value)}</span>
             </div>
           ) : null}
           <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" className={`report-pro-line-chart ${expanded ? 'report-pro-line-chart-expanded' : ''}`}>
@@ -1586,7 +1589,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           <div className="report-pro-chart-toolbar">
             <label>
               Vista de graficos
-              <select value={chartView} onChange={(event) => setChartView(event.target.value as typeof chartView)}>
+              <select value={chartView} onChange={(event) => { setChartView(event.target.value as typeof chartView); setHoveredMonthlyBar(null); }}>
                 <option value="return">Rentabilidad</option>
                 <option value="profit">Resultado EUR</option>
                 <option value="balance">Valor cartera</option>
@@ -1602,7 +1605,19 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               const chartValue = getChartValue(m);
               const height = Math.min(maxBarHeight, Math.max(4, (Math.abs(chartValue) / maxMonthPct) * maxBarHeight));
               return (
-                <div key={m.month} className="report-pro-bar-col" title={`${m.month}: ${formatChartValue(chartValue)}`}>
+                <div
+                  key={m.month}
+                  className="report-pro-bar-col"
+                  onMouseEnter={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
+                  onMouseMove={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
+                  onMouseLeave={() => setHoveredMonthlyBar(null)}
+                >
+                  {hoveredMonthlyBar?.month === m.month ? (
+                    <div className="report-pro-bar-tooltip">
+                      <strong>{m.month}</strong>
+                      <span>{formatChartTooltipValue(hoveredMonthlyBar.value)}</span>
+                    </div>
+                  ) : null}
                   <span className={`report-pro-bar-value ${chartValue >= 0 ? 'positive' : 'negative'}`}>{formatChartValue(chartValue)}</span>
                   <div className="report-pro-bar-track">
                     <div

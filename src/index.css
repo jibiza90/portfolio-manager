@@ -5578,3 +5578,71 @@ select {
   background: linear-gradient(90deg, #0ea5e9, #38bdf8);
   border-radius: 1px;
 }
+
+/* Cleaner report chart/table alignment */
+.report-pro-bar-col {
+  position: relative;
+}
+
+.report-pro-bar-tooltip {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  top: -10px;
+  transform: translate(-50%, -100%);
+  min-width: 132px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 95, 138, 0.22);
+  background: rgba(9, 23, 38, 0.96);
+  box-shadow: 0 14px 28px rgba(9, 23, 38, 0.24);
+  color: #f8fbff;
+  text-align: center;
+  pointer-events: none;
+}
+
+.report-pro-bar-tooltip strong,
+.report-pro-line-tooltip strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.1;
+  color: #f8fbff;
+}
+
+.report-pro-bar-tooltip span,
+.report-pro-line-tooltip span {
+  display: block;
+  margin-top: 3px;
+  font-size: 17px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #c8f1ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-pro-line-tooltip {
+  min-width: 152px;
+  padding: 10px 12px;
+}
+
+.report-pro-demo-monthly-table th:first-child {
+  padding-left: 14px;
+  text-align: left;
+}
+
+.report-pro-demo-monthly-table .report-pro-month-cell {
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  text-align: left;
+}
+
+.report-pro-table th,
+.report-pro-table td {
+  text-align: left;
+}
+
+.report-pro-table th.text-right,
+.report-pro-table td.text-right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
