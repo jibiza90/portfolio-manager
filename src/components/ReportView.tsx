@@ -877,6 +877,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     const setFill = (color: readonly [number, number, number]) => doc.setFillColor(color[0], color[1], color[2]);
     const setDraw = (color: readonly [number, number, number]) => doc.setDrawColor(color[0], color[1], color[2]);
     const money = (value: number) => formatCurrency(Number.isFinite(value) ? value : 0);
+    const money0 = (value: number) => `${Math.round(Number.isFinite(value) ? value : 0).toLocaleString('es-ES')} \u20ac`;
     const pct = (value: number) => `${(Number.isFinite(value) ? value : 0).toFixed(2)}%`;
     const selectedMonthLabel = firstMonth && lastMonth
       ? `${firstMonth.month} - ${lastMonth.month}`
@@ -891,8 +892,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
       if (y + needed > pageHeight - margin) addPage();
     };
 
-    const sectionTitle = (title: string, subtitle?: string) => {
-      ensure(38);
+    const sectionTitle = (title: string, subtitle?: string, keepWith = 0) => {
+      ensure((subtitle ? 44 : 28) + keepWith);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(15);
       setText(colors.ink);
@@ -901,10 +902,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         setText(colors.muted);
-        doc.text(subtitle, margin, y + 15);
-        y += 26;
+        doc.text(subtitle, margin, y + 16);
+        y += 36;
       } else {
-        y += 18;
+        y += 24;
       }
     };
 
@@ -958,7 +959,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7);
         setText(colors.muted);
-        doc.text(money(tick), x + 10, gy + 2);
+        doc.text(money0(tick), x + 10, gy + 2);
       }
 
       setDraw(colors.teal);
@@ -970,8 +971,12 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
       chartPoints.forEach((point, idx) => {
         setFill(colors.ink);
         doc.circle(point.x, point.y, 3, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.4);
+        setText(colors.ink);
+        const valueLabelY = idx % 2 === 0 ? point.y - 7 : point.y + 12;
+        doc.text(money0(point.value), point.x, valueLabelY, { align: 'center' });
         if (idx % labelStep === 0 || idx === chartPoints.length - 1) {
-          doc.setFont('helvetica', 'bold');
           doc.setFontSize(7);
           setText(colors.ink);
           doc.text(point.label, point.x, bottom + 20, { align: 'center' });
@@ -1002,6 +1007,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
         const by = value >= 0 ? bottom - barH : bottom;
         setFill(value >= 0 ? colors.teal : colors.red);
         doc.roundedRect(bx, by, barW, barH, 3, 3, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        setText(value >= 0 ? colors.green : colors.red);
+        const pctY = value >= 0 ? Math.max(top + 8, by - 5) : Math.min(bottom + 13, by + barH + 10);
+        doc.text(pct(value), bx + barW / 2, pctY, { align: 'center' });
         if (data.length <= 10 || idx % Math.ceil(data.length / 10) === 0 || idx === data.length - 1) {
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(7);
@@ -1060,16 +1070,15 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     card(margin + (cardW + 15) * 2, y, cardW, 62, 'Capital neto periodo', money(periodIncrements - periodDecrements), periodIncrements - periodDecrements >= 0);
     y += 86;
 
-    sectionTitle('Evolucion patrimonio', 'Saldo de cierre mensual del periodo seleccionado.');
+    sectionTitle('Evolucion patrimonio', 'Saldo de cierre mensual del periodo seleccionado.', 205);
     drawLineChart(effectivePatrimonioData, margin, y, contentWidth, 190);
     y += 216;
 
-    ensure(190);
-    sectionTitle('Rentabilidad mensual', 'TWR mensual segun los meses visibles en pantalla.');
+    sectionTitle('Rentabilidad mensual', 'TWR mensual segun los meses visibles en pantalla.', 165);
     drawReturnBars(effectiveMonthlyWithData, margin, y, contentWidth, 150);
     y += 178;
 
-    sectionTitle('Tabla mensual', 'Resultado, rentabilidad y saldo por mes.');
+    sectionTitle('Tabla mensual', 'Resultado, rentabilidad y saldo por mes.', 48);
     const widths = [170, 170, 130, contentWidth - 470];
     tableRow(['Fecha', 'Beneficio', 'Rentabilidad', 'Saldo'], widths, y, { header: true });
     y += 24;
@@ -1094,7 +1103,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     });
     if (selectedBreakdowns.length > 0) {
       y += 12;
-      sectionTitle('Detalle de meses con aportaciones', 'Separacion entre posicion inicial y aportaciones dentro del periodo.');
+      sectionTitle('Detalle de meses con aportaciones', 'Separacion entre posicion inicial y aportaciones dentro del periodo.', 80);
       selectedBreakdowns.forEach((breakdown) => {
         ensure(74 + breakdown.contributions.length * 18);
         doc.setFont('helvetica', 'bold');
@@ -1127,8 +1136,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     }
 
     if (periodMovements.length > 0) {
-      ensure(95);
-      sectionTitle('Ingresos y retiradas', 'Movimientos registrados dentro del periodo seleccionado.');
+      sectionTitle('Ingresos y retiradas', 'Movimientos registrados dentro del periodo seleccionado.', 54);
       const movementWidths = [150, 170, 170, contentWidth - 490];
       tableRow(['Fecha', 'Ingreso', 'Retiro', 'Capital neto periodo'], movementWidths, y, { header: true });
       y += 24;
