@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import App from './App';
 import { ReportView } from './components/ReportView';
-import { CLIENTS, DEMO_CLIENT_ID } from './constants/clients';
+import { CLIENTS, DEMO_CLIENT_ID, isDemoClient } from './constants/clients';
 import {
   buildClientAuthEmail,
   fetchAccessProfile,
@@ -944,6 +944,7 @@ const ClientPortal = ({
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [reportDownloadSignal, setReportDownloadSignal] = useState(0);
   const [kpiHint, setKpiHint] = useState<{ text: string; x: number; y: number } | null>(null);
   const [flowPopup, setFlowPopup] = useState<'inc' | 'dec' | 'profit' | null>(null);
   const [expandedBalanceChart, setExpandedBalanceChart] = useState(false);
@@ -1055,6 +1056,7 @@ const ClientPortal = ({
         : null,
     [clientId, loginId, overview, report]
   );
+  const shouldUseModernReportPdf = Boolean(clientReportData && isDemoClient(clientReportData.clientId));
 
   const sendClientSupportMessage = async () => {
     const cleanText = supportText.trim();
@@ -1875,9 +1877,13 @@ const ClientPortal = ({
           <button
             type="button"
             onClick={() => {
+              if (shouldUseModernReportPdf) {
+                setReportDownloadSignal((value) => value + 1);
+                return;
+              }
               void downloadClientPdf();
             }}
-            disabled={!overview || pdfBusy}
+            disabled={!overview || (!shouldUseModernReportPdf && pdfBusy)}
             style={{
               padding: '8px 12px',
               borderRadius: 10,
@@ -1886,10 +1892,10 @@ const ClientPortal = ({
               color: palette.text,
               fontWeight: 600,
               cursor: 'pointer',
-              opacity: !overview || pdfBusy ? 0.7 : 1
+              opacity: !overview || (!shouldUseModernReportPdf && pdfBusy) ? 0.7 : 1
             }}
           >
-            {pdfBusy ? 'Generando PDF...' : 'Descargar PDF'}
+            {!shouldUseModernReportPdf && pdfBusy ? 'Generando PDF...' : 'Descargar PDF'}
           </button>
           <button
             type="button"
@@ -1991,7 +1997,7 @@ const ClientPortal = ({
         </section>
       ) : null}
 
-      {clientReportData ? <ReportView reportData={clientReportData} /> : null}
+      {clientReportData ? <ReportView reportData={clientReportData} downloadSignal={reportDownloadSignal} /> : null}
     </main>
   );
 };

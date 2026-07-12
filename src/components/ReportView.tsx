@@ -8,6 +8,7 @@ import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 interface ReportViewProps {
   token?: string;
   reportData?: ReportData | null;
+  downloadSignal?: number;
 }
 
 interface PatrimonyTooltipState {
@@ -148,7 +149,7 @@ const getShortDateLabel = (iso: string) => {
   return `${day}.${month}.${year}`;
 };
 
-export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => {
+export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downloadSignal }) => {
   const [report, setReport] = useState<ReportData | null>(reportData ?? null);
   const [loading, setLoading] = useState(!reportData);
   const [expired, setExpired] = useState(false);
@@ -163,6 +164,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
   const reportRef = useRef<HTMLDivElement>(null);
+  const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
   const twrExplanation = 'mide la rentabilidad de la inversion sin contar aportaciones ni retiradas.';
   const totalReturnExplanation = 'compara el beneficio total frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
 
@@ -603,6 +605,13 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData }) => 
 
     doc.save(`Informe_${report.clientCode}_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
+
+  useEffect(() => {
+    if (downloadSignal === undefined) return;
+    if (downloadSignal === lastDownloadSignalRef.current) return;
+    lastDownloadSignalRef.current = downloadSignal;
+    void handleDownload();
+  }, [downloadSignal]);
 
   const handlePrint = () => {
     window.print();
