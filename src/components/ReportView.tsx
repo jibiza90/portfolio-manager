@@ -1247,9 +1247,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               </g>
             ))}
             {geometry.points.map((pt, idx) => {
-              const labelStep = Math.max(1, Math.ceil(geometry.points.length / 4));
-              const shouldShowLabel = expanded || idx === 0 || idx === geometry.points.length - 1 || idx % labelStep === 0;
-              if (!shouldShowLabel) return null;
               const label = formatCurrencyNoCents(pt.value);
               const approxWidth = expanded
                 ? Math.min(154, Math.max(86, label.length * 7.1))
