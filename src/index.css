@@ -5690,3 +5690,32 @@ select {
   font-size: 15px;
   line-height: 1.35;
 }
+
+/* Demo KPI hierarchy */
+.report-pro-demo-sheet .report-pro-executive-demo > .report-pro-info-card,
+.report-pro-demo-sheet .report-pro-kpis-demo > .report-pro-info-card {
+  position: relative;
+  cursor: help;
+}
+
+.report-pro-demo-sheet .report-pro-executive-demo p {
+  min-height: 34px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.report-pro-demo-sheet .report-pro-executive-demo strong {
+  font-size: clamp(28px, 2.3vw, 36px);
+}
+
+.report-pro-demo-sheet .report-pro-kpis-demo {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi span {
+  min-height: 30px;
+}
+
+.report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi strong {
+  font-size: 20px;
+}

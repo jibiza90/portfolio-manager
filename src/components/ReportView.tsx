@@ -132,6 +132,16 @@ const getMonthEndLabel = (monthLabel: string) => {
   });
 };
 
+const getLongMonthLabel = (monthLabel: string) => {
+  const parts = monthLabel.trim().split(/\s+/);
+  if (parts.length < 2) return monthLabel;
+  const monthIndex = monthIndexByLabel[parts[0].toLowerCase()];
+  const year = Number(parts[parts.length - 1]);
+  if (monthIndex === undefined || !Number.isFinite(year)) return monthLabel;
+  const date = new Date(year, monthIndex, 1);
+  return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+};
+
 const CONTRIBUTION_BREAKDOWN_START_MONTH = '2026-04';
 
 const reportMonthToKey = (monthValue: string) => {
@@ -856,6 +866,17 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     1
   ) - 1;
   const accumulatedNetCapital = report.incrementos - report.decrementos;
+  const firstMovementIso = (report.movements ?? [])
+    .map((movement) => movement.iso)
+    .filter(Boolean)
+    .sort()[0];
+  const firstRegisteredDateLabel = firstMovementIso
+    ? getShortDateLabel(firstMovementIso)
+    : monthlyWithData[0]
+      ? getMonthEndLabel(monthlyWithData[0].month)
+      : 'el inicio';
+  const latestMonth = monthlyWithData[monthlyWithData.length - 1];
+  const latestMonthLabel = latestMonth ? getLongMonthLabel(latestMonth.month) : 'ultimo mes';
   const monthlyMovementType = (monthKey: string) => {
     const movements = (report.movements ?? []).filter((movement) => movement.iso.slice(0, 7) === monthKey);
     const hasIncrement = movements.some((movement) => movement.type === 'increment');
@@ -1363,28 +1384,57 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           <div className="report-pro-client-tag">{report.clientCode}</div>
         </header>
 
-        <section className="report-pro-executive">
-          <div>
-            <p>Valor actual de cartera</p>
-            <strong>{formatCurrency(report.saldo)}</strong>
-          </div>
-          <div>
-            <p>Resultado acumulado</p>
-            <strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong>
-          </div>
-          <div>
-            <p>TWR</p>
-            <strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{((report.twrYtd ?? 0) * 100).toFixed(2)}%</strong>
-          </div>
-        </section>
+        {isDemoReport ? (
+          <>
+            <section className="report-pro-executive report-pro-executive-demo">
+              <div className="report-pro-info-card" data-tooltip="Saldo actual de tu cartera a fecha del informe.">
+                <p>Saldo actual</p>
+                <strong>{formatCurrency(report.saldo)}</strong>
+              </div>
+              <div className="report-pro-info-card" data-tooltip={`Rentabilidad TWR de ${latestMonthLabel}. Mide el rendimiento de la estrategia sin contar aportaciones ni retiradas.`}>
+                <p>{`Rentabilidad ${latestMonthLabel}`}</p>
+                <strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{report.rentabilidadUltimoMes.toFixed(2)}%</strong>
+              </div>
+              <div className="report-pro-info-card" data-tooltip={`Beneficio generado en euros durante ${latestMonthLabel}. Incluye el efecto real del capital invertido y de las aportaciones del mes.`}>
+                <p>{`Resultado ${latestMonthLabel}`}</p>
+                <strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioUltimoMes)}</strong>
+              </div>
+            </section>
 
-        <section className="report-pro-kpis">
-          <div className="report-pro-kpi"><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
-          <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-          <div className="report-pro-kpi"><span>Resultado ultimo mes</span><strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioUltimoMes)}</strong></div>
-          <div className="report-pro-kpi"><span>Rentabilidad ultimo mes</span><strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{report.rentabilidadUltimoMes.toFixed(2)}%</strong></div>
-          <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{report.rentabilidad.toFixed(2)}%</strong></div>
-        </section>
+            <section className="report-pro-kpis report-pro-kpis-demo">
+              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Beneficio total generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong></div>
+              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{((report.twrYtd ?? 0) * 100).toFixed(2)}%</strong></div>
+              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus aportaciones registradas desde ${firstRegisteredDateLabel}.`}><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
+              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus retiradas registradas desde ${firstRegisteredDateLabel}.`}><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
+              <div className="report-pro-kpi report-pro-info-card" data-tooltip="Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, si depende de aportaciones y retiradas."><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{report.rentabilidad.toFixed(2)}%</strong></div>
+            </section>
+          </>
+        ) : (
+          <>
+            <section className="report-pro-executive">
+              <div>
+                <p>Valor actual de cartera</p>
+                <strong>{formatCurrency(report.saldo)}</strong>
+              </div>
+              <div>
+                <p>Resultado acumulado</p>
+                <strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong>
+              </div>
+              <div>
+                <p>TWR</p>
+                <strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{((report.twrYtd ?? 0) * 100).toFixed(2)}%</strong>
+              </div>
+            </section>
+
+            <section className="report-pro-kpis">
+              <div className="report-pro-kpi"><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
+              <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
+              <div className="report-pro-kpi"><span>Resultado ultimo mes</span><strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioUltimoMes)}</strong></div>
+              <div className="report-pro-kpi"><span>Rentabilidad ultimo mes</span><strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{report.rentabilidadUltimoMes.toFixed(2)}%</strong></div>
+              <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{report.rentabilidad.toFixed(2)}%</strong></div>
+            </section>
+          </>
+        )}
 
         <section className="report-pro-note">
           <div className="report-pro-note-head">
