@@ -5719,3 +5719,51 @@ select {
 .report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi strong {
   font-size: 20px;
 }
+
+/* Make report selectors look clearly clickable */
+.report-pro-period-toolbar label,
+.report-pro-chart-toolbar label,
+.report-pro-expanded-period-toolbar label {
+  position: relative;
+  cursor: pointer;
+}
+
+.report-pro-period-toolbar label::after,
+.report-pro-chart-toolbar label::after,
+.report-pro-expanded-period-toolbar label::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  bottom: 15px;
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid #0f6d7a;
+  border-bottom: 2px solid #0f6d7a;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.report-pro-period-toolbar select,
+.report-pro-chart-toolbar select,
+.report-pro-expanded-period-toolbar select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 48px;
+  border: 2px solid rgba(15, 109, 122, 0.34);
+  background: linear-gradient(180deg, #ffffff 0%, #eefaff 100%);
+  box-shadow: 0 8px 18px rgba(15, 109, 122, 0.12), inset 0 -1px 0 rgba(15, 109, 122, 0.08);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.report-pro-period-toolbar select:hover,
+.report-pro-chart-toolbar select:hover,
+.report-pro-expanded-period-toolbar select:hover,
+.report-pro-period-toolbar select:focus,
+.report-pro-chart-toolbar select:focus,
+.report-pro-expanded-period-toolbar select:focus {
+  border-color: rgba(15, 109, 122, 0.72);
+  box-shadow: 0 10px 24px rgba(15, 109, 122, 0.18), 0 0 0 4px rgba(15, 109, 122, 0.10);
+  outline: none;
+  transform: translateY(-1px);
+}
