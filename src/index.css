@@ -5767,3 +5767,41 @@ select {
   outline: none;
   transform: translateY(-1px);
 }
+
+/* KPI readability tuning */
+.report-pro-demo-sheet .report-pro-executive-demo > .report-pro-info-card {
+  min-width: 0;
+  overflow: visible;
+  padding: 18px 22px;
+}
+
+.report-pro-demo-sheet .report-pro-executive-demo p,
+.report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi span {
+  color: #243b57;
+  font-weight: 900;
+}
+
+.report-pro-demo-sheet .report-pro-executive-demo p {
+  min-height: 30px;
+  margin-bottom: 8px;
+}
+
+.report-pro-demo-sheet .report-pro-executive-demo strong {
+  display: block;
+  max-width: 100%;
+  font-size: clamp(24px, 1.95vw, 30px);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi span {
+  color: #263b56;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+}
+
+.report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi strong {
+  font-size: 19px;
+}
