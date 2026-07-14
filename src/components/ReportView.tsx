@@ -1263,6 +1263,17 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               </g>
             )) : null}
             {geometry.areaPath && <path d={geometry.areaPath} className="report-pro-area" fill={`url(#${expanded ? 'patrimonyAreaExpanded' : 'patrimonyAreaShared'})`} />}
+            {geometry.points.map((pt, idx) => (
+              <line
+                key={`${pt.month}-${idx}-guide`}
+                className="report-pro-point-guide"
+                x1={pt.x}
+                y1={pt.y + (expanded ? 8 : 5)}
+                x2={pt.x}
+                y2={geometry.plotBottom}
+                pointerEvents="none"
+              />
+            ))}
             {geometry.points.length > 1 && <polyline className={`report-pro-line ${expanded ? 'report-pro-line-expanded' : ''}`} points={geometry.linePoints} />}
             {geometry.points.map((pt, idx) => (
               <g key={`${pt.month}-${idx}`}>
