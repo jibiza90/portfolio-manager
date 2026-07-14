@@ -5805,3 +5805,24 @@ select {
 .report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi strong {
   font-size: 19px;
 }
+
+/* Center demo KPI content consistently */
+.report-pro-demo-sheet .report-pro-executive-demo > .report-pro-info-card,
+.report-pro-demo-sheet .report-pro-kpis-demo > .report-pro-info-card {
+  text-align: center;
+  justify-items: center;
+  align-items: center;
+}
+
+.report-pro-demo-sheet .report-pro-executive-demo p,
+.report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi span {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+.report-pro-demo-sheet .report-pro-executive-demo strong,
+.report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi strong {
+  width: 100%;
+  text-align: center;
+}
