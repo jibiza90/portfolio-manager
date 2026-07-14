@@ -1307,7 +1307,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               );
             })}
           </svg>
-        </div>
           <div
             className={`report-pro-patrimony-legend ${expanded ? 'report-pro-patrimony-legend-expanded' : ''}`}
             style={{
@@ -1324,6 +1323,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               </div>
             ))}
           </div>
+        </div>
         </div>
       </div>
     );
