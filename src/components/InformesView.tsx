@@ -79,8 +79,8 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
 
   const monthlyChart = useMemo(() => clientData?.monthlyStats ?? [], [clientData]);
   const patrimonioChart = useMemo(() => clientData?.patrimonioEvolution ?? [], [clientData]);
-  const twrExplanation = 'mide el rendimiento de la estrategia aislando el efecto de aportes y retiradas.';
-  const totalReturnExplanation = 'compara el beneficio total frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
+  const twrExplanation = 'Mide la evolución de la cartera aislando el efecto de las aportaciones y retiradas de dinero. Permite conocer cómo se han comportado las inversiones durante un periodo determinado, independientemente de cuándo el cliente haya ingresado o retirado capital.';
+  const totalReturnExplanation = 'Mide el resultado acumulado de la inversión en relación con el capital neto aportado por el cliente. Por este motivo, puede variar cuando se realizan nuevas aportaciones o retiradas de dinero.';
 
   const generatePDF = async () => {
     if (!clientData) return;
@@ -217,23 +217,30 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
 
     y += Math.ceil(kpis.length / 3) * (kpiHeight + kpiGap) + 8;
 
-    checkNewPage(24);
+    const noteWidth = pageWidth - margin * 2 - 8;
+    const twrNoteLines = doc.splitTextToSize(`TWR (rentabilidad ponderada por el tiempo): ${twrExplanation}`, noteWidth);
+    const totalReturnLines = doc.splitTextToSize(`Rentabilidad total: ${totalReturnExplanation}`, noteWidth);
+    const noteHeight = 10 + twrNoteLines.length * 3.4 + totalReturnLines.length * 3.4 + 4;
+
+    checkNewPage(noteHeight + 2);
     doc.setFillColor(247, 250, 252);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 2, 2, 'F');
+    doc.roundedRect(margin, y, pageWidth - margin * 2, noteHeight, 2, 2, 'F');
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.25);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 2, 2, 'S');
+    doc.roundedRect(margin, y, pageWidth - margin * 2, noteHeight, 2, 2, 'S');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(15, 23, 42);
-    doc.text('Como leer estas metricas', margin + 4, y + 6);
+    doc.text('Cómo interpretar el TWR y la rentabilidad total', margin + 4, y + 6);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(71, 85, 105);
-    doc.text(doc.splitTextToSize(`TWR: ${twrExplanation}`, pageWidth - margin * 2 - 8), margin + 4, y + 11);
-    doc.text(doc.splitTextToSize(`Rentabilidad total: ${totalReturnExplanation}`, pageWidth - margin * 2 - 8), margin + 4, y + 17);
+    let noteY = y + 11;
+    doc.text(twrNoteLines, margin + 4, noteY);
+    noteY += twrNoteLines.length * 3.4 + 2;
+    doc.text(totalReturnLines, margin + 4, noteY);
 
-    y += 30;
+    y += noteHeight + 8;
 
     // Monthly performance with chart (% rentabilidad)
     const monthlyData = clientData.monthlyStats;
@@ -909,8 +916,8 @@ Su gestor de inversiones`
               </section>
 
               <section className="report-pro-note">
-                <strong>Como leer TWR y rentabilidad total</strong>
-                <p><strong>TWR:</strong> {twrExplanation}</p>
+                <strong>Cómo interpretar el TWR y la rentabilidad total</strong>
+                <p><strong>TWR (rentabilidad ponderada por el tiempo):</strong> {twrExplanation}</p>
                 <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
               </section>
 

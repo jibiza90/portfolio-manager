@@ -177,8 +177,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
   const reportRef = useRef<HTMLDivElement>(null);
   const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
-  const twrExplanation = 'mide la rentabilidad de la inversion sin contar aportaciones ni retiradas.';
-  const totalReturnExplanation = 'compara el resultado acumulado frente al capital neto aportado del cliente, por lo que cambia si entra o sale dinero.';
+  const twrExplanation = 'Mide la evolución de la cartera aislando el efecto de las aportaciones y retiradas de dinero. Permite conocer cómo se han comportado las inversiones durante un periodo determinado, independientemente de cuándo el cliente haya ingresado o retirado capital.';
+  const totalReturnExplanation = 'Mide el resultado acumulado de la inversión en relación con el capital neto aportado por el cliente. Por este motivo, puede variar cuando se realizan nuevas aportaciones o retiradas de dinero.';
 
   useEffect(() => {
     if (reportData) {
@@ -308,7 +308,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     y += 3;
 
     const noteWidth = pageWidth - margin * 2 - 8;
-    const twrNoteLines = doc.splitTextToSize(`TWR: ${twrExplanation}`, noteWidth);
+    const twrNoteLines = doc.splitTextToSize(`TWR (rentabilidad ponderada por el tiempo): ${twrExplanation}`, noteWidth);
     const totalReturnLines = doc.splitTextToSize(`Rentabilidad total: ${totalReturnExplanation}`, noteWidth);
     const noteHeight = 10 + twrNoteLines.length * 3.4 + totalReturnLines.length * 3.4 + 4;
 
@@ -321,7 +321,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(15, 23, 42);
-    doc.text('Como leer estas metricas', margin + 4, y + 6);
+    doc.text('Cómo interpretar el TWR y la rentabilidad total', margin + 4, y + 6);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(71, 85, 105);
@@ -1438,7 +1438,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
 
         <section className="report-pro-note">
           <div className="report-pro-note-head">
-            <strong>Como leer TWR y rentabilidad total</strong>
+            <strong>Cómo interpretar el TWR y la rentabilidad total</strong>
             <button
               type="button"
               className="report-pro-note-help"
@@ -1460,7 +1460,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               </div>
             ) : null}
           </div>
-          <p><strong>TWR:</strong> {twrExplanation}</p>
+          <p><strong>TWR (rentabilidad ponderada por el tiempo):</strong> {twrExplanation}</p>
           <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
         </section>
 
