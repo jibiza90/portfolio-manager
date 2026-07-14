@@ -1217,6 +1217,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     const chartData = expanded ? effectiveExpandedPatrimonioData : effectivePatrimonioData;
     const geometry = expanded ? expandedPatrimonyGeometry : patrimonyGeometry;
     const chartMinWidth = !expanded && chartData.length > 12 ? `${chartData.length * 92}px` : '100%';
+    const monthLabelStep = Math.max(1, Math.ceil(geometry.points.length / (expanded ? 24 : 12)));
+    const shouldShowMonthLabel = (idx: number) => geometry.points.length <= (expanded ? 24 : 12) || idx % monthLabelStep === 0 || idx === geometry.points.length - 1;
     return (
       <div className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${!expanded && chartData.length > 12 ? 'is-scrollable' : ''}`}>
         <div className="report-pro-patrimony-scroll-inner" style={{ minWidth: chartMinWidth }}>
@@ -1248,20 +1250,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                 </text>
               </g>
             ))}
-            {expanded ? geometry.points.map((pt, idx) => (
-              <g key={`${pt.month}-${idx}-axis`}>
-                <line
-                  className="report-pro-x-tick-expanded"
-                  x1={pt.x}
-                  y1={geometry.plotBottom + 8}
-                  x2={pt.x}
-                  y2={geometry.plotBottom + 18}
-                />
-                <text className="report-pro-x-label-expanded" x={pt.x} y={geometry.plotBottom + 44} textAnchor="middle">
-                  {pt.month}
-                </text>
-              </g>
-            )) : null}
             {geometry.areaPath && <path d={geometry.areaPath} className="report-pro-area" fill={`url(#${expanded ? 'patrimonyAreaExpanded' : 'patrimonyAreaShared'})`} />}
             {geometry.points.length > 1 && <polyline className={`report-pro-line ${expanded ? 'report-pro-line-expanded' : ''}`} points={geometry.linePoints} />}
             {geometry.points.map((pt, idx) => (
@@ -1280,21 +1268,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                 />
               </g>
             ))}
-            {geometry.points.map((pt, idx) => {
-              const label = formatCurrencyNoCents(pt.value);
-              const approxWidth = expanded
-                ? Math.min(154, Math.max(86, label.length * 7.1))
-                : Math.min(122, Math.max(68, label.length * 6.2));
-              const labelX = Math.max(geometry.left + approxWidth / 2, Math.min(pt.x, geometry.width - geometry.right - approxWidth / 2));
-              const preferredY = pt.y + (idx % 2 === 0 ? (expanded ? -24 : -18) : (expanded ? 30 : 22));
-              const labelY = Math.max(geometry.top + (expanded ? 14 : 10), Math.min(preferredY, geometry.plotBottom - (expanded ? 14 : 10)));
-              return (
-                <g key={`${pt.month}-${idx}-label`} className={`report-pro-point-label ${expanded ? 'report-pro-point-label-expanded' : ''}`} pointerEvents="none">
-                  <rect x={labelX - approxWidth / 2} y={labelY - (expanded ? 18 : 14)} width={approxWidth} height={expanded ? '26' : '20'} rx={expanded ? '9' : '7'} />
-                  <text x={labelX} y={labelY} textAnchor="middle">{label}</text>
-                </g>
-              );
-            })}
           </svg>
           <div
             className={`report-pro-month-row ${expanded ? 'report-pro-month-row-expanded' : ''}`}
@@ -1304,18 +1277,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               gridTemplateColumns: `repeat(${Math.max(1, geometry.points.length)}, minmax(0, 1fr))`
             }}
           >
-            {geometry.points.map((pt) => <span key={pt.month}>{pt.month}</span>)}
-          </div>
-          <div
-            className={`report-pro-value-row ${expanded ? 'report-pro-value-row-expanded' : ''}`}
-            style={{
-              marginLeft: `${(geometry.left / geometry.width) * 100}%`,
-              width: `${((geometry.width - geometry.left - geometry.right) / geometry.width) * 100}%`,
-              gridTemplateColumns: `repeat(${Math.max(1, geometry.points.length)}, minmax(0, 1fr))`
-            }}
-          >
-            {geometry.points.map((pt) => (
-              <span key={`${pt.month}-value`}>{formatCurrencyNoCents(pt.value)}</span>
+            {geometry.points.map((pt, idx) => (
+              <span key={pt.month}>{shouldShowMonthLabel(idx) ? pt.month : ''}</span>
             ))}
           </div>
         </div>

@@ -6117,3 +6117,47 @@ select {
 .report-pro-patrimony-tick {
   display: none;
 }
+
+
+/* Clean patrimony chart labels: months only, close to chart, values via hover */
+.report-pro-patrimony-scroll .report-pro-month-row {
+  margin-top: 3px;
+  min-height: 18px;
+  gap: 0;
+}
+
+.report-pro-patrimony-scroll .report-pro-month-row span {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 2px;
+  font-size: 10.5px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-pro-patrimony-scroll .report-pro-value-row,
+.report-pro-point-label,
+.report-pro-x-label-expanded,
+.report-pro-x-tick-expanded,
+.report-pro-point-guide,
+.report-pro-patrimony-legend,
+.report-pro-patrimony-tick {
+  display: none !important;
+}
+
+.report-pro-patrimony-scroll .report-pro-line-wrap {
+  padding-bottom: 4px;
+}
+
+.report-pro-chart-scroll:not(.is-scrollable) {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.report-pro-chart-scroll:not(.is-scrollable) .report-pro-bars {
+  width: 100%;
+  min-width: 0 !important;
+}
