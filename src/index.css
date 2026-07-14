@@ -5826,3 +5826,63 @@ select {
   width: 100%;
   text-align: center;
 }
+
+/* Keep KPI blocks centered and with breathing room */
+.report-pro-demo-sheet .report-pro-executive-demo,
+.report-pro-demo-sheet .report-pro-kpis-demo,
+.report-pro-demo-sheet .report-pro-period-summary,
+.report-pro-demo-sheet .report-pro-capital-grid {
+  align-items: stretch;
+}
+
+.report-pro-demo-sheet .report-pro-kpis-demo {
+  grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+}
+
+.report-pro-demo-sheet .report-pro-period-summary,
+.report-pro-demo-sheet .report-pro-capital-grid {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.report-pro-demo-sheet .report-pro-executive-demo > .report-pro-info-card,
+.report-pro-demo-sheet .report-pro-kpis-demo > .report-pro-info-card,
+.report-pro-demo-sheet .report-pro-period-summary > .report-pro-info-card,
+.report-pro-demo-sheet .report-pro-capital-grid > .report-pro-info-card {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 94px;
+  padding: 18px 22px;
+  text-align: center;
+}
+
+.report-pro-demo-sheet .report-pro-period-summary span,
+.report-pro-demo-sheet .report-pro-capital-grid span,
+.report-pro-demo-sheet .report-pro-period-summary strong,
+.report-pro-demo-sheet .report-pro-capital-grid strong {
+  width: 100%;
+  text-align: center;
+}
+
+.report-pro-demo-sheet .report-pro-period-summary strong,
+.report-pro-demo-sheet .report-pro-capital-grid strong,
+.report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi strong {
+  max-width: 100%;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 680px) {
+  .report-pro-demo-sheet .report-pro-executive-demo > .report-pro-info-card,
+  .report-pro-demo-sheet .report-pro-kpis-demo > .report-pro-info-card,
+  .report-pro-demo-sheet .report-pro-period-summary > .report-pro-info-card,
+  .report-pro-demo-sheet .report-pro-capital-grid > .report-pro-info-card {
+    padding: 16px 18px;
+  }
+
+  .report-pro-demo-sheet .report-pro-period-summary strong,
+  .report-pro-demo-sheet .report-pro-capital-grid strong,
+  .report-pro-demo-sheet .report-pro-kpis-demo .report-pro-kpi strong {
+    white-space: normal;
+  }
+}

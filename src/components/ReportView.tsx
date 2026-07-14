@@ -1464,11 +1464,27 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
         </section>
 
+        {isDemoReport ? (
+          <section className="report-pro-capital-panel">
+            <div className="report-pro-panel-head">
+              <h4>Capital y resultado acumulado</h4>
+              <p>Separacion entre capital aportado, retiradas y resultado obtenido.</p>
+            </div>
+            <div className="report-pro-capital-grid">
+              <div className="report-pro-info-card" data-tooltip="Total de dinero ingresado historicamente por el cliente."><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Total de dinero retirado historicamente por el cliente."><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Capital aportado menos capital retirado."><span>Capital neto aportado</span><strong>{formatCurrency(accumulatedNetCapital)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Ganancia acumulada desde el inicio de la relacion."><span>Resultado acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Valor actual de la cartera del cliente."><span>Valor actual de cartera</span><strong>{formatCurrency(report.saldo)}</strong></div>
+            </div>
+          </section>
+        ) : null}
+
         <section className="report-pro-demo-control-panel">
             <div className="report-pro-panel-head">
               <span className="report-pro-global-filter-badge">Filtro global</span>
-              <h4>Periodo del informe</h4>
-              <p>Este selector controla todo el informe: graficos, tablas, resultados y movimientos.</p>
+              <h4>Análisis por periodo</h4>
+              <p>Este filtro afecta solo a los gráficos, tablas, resultados y movimientos de abajo.</p>
             </div>
             <div className="report-pro-period-toolbar">
               <label>
@@ -1550,22 +1566,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               </div>
             </div>
         </section>
-
-        {isDemoReport ? (
-          <section className="report-pro-capital-panel">
-            <div className="report-pro-panel-head">
-              <h4>Capital y resultado acumulado</h4>
-              <p>Separacion entre capital aportado, retiradas y resultado obtenido.</p>
-            </div>
-            <div className="report-pro-capital-grid">
-              <div className="report-pro-info-card" data-tooltip="Total de dinero ingresado historicamente por el cliente."><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Total de dinero retirado historicamente por el cliente."><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Capital aportado menos capital retirado."><span>Capital neto aportado</span><strong>{formatCurrency(accumulatedNetCapital)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Ganancia acumulada desde el inicio de la relacion."><span>Resultado acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Valor actual de la cartera del cliente."><span>Valor actual de cartera</span><strong>{formatCurrency(report.saldo)}</strong></div>
-            </div>
-          </section>
-        ) : null}
 
         {visibleContributionBreakdowns.length > 0 && (
           <section className="report-pro-panel">
