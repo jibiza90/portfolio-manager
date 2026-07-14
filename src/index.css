@@ -6161,3 +6161,47 @@ select {
   width: 100%;
   min-width: 0 !important;
 }
+
+
+/* Final patrimony chart: alternating value labels on points and compact month axis */
+.report-pro-patrimony-scroll .report-pro-point-label {
+  display: inline !important;
+}
+
+.report-pro-patrimony-scroll .report-pro-point-label rect {
+  fill: #ffffff;
+  stroke: rgba(15, 95, 138, 0.34);
+  stroke-width: 1.15;
+}
+
+.report-pro-patrimony-scroll .report-pro-point-label text {
+  fill: #071b2b;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.report-pro-patrimony-scroll .report-pro-line-wrap {
+  padding-bottom: 0;
+}
+
+.report-pro-patrimony-scroll .report-pro-month-row {
+  margin-top: 0;
+  min-height: 18px;
+  gap: 2px;
+}
+
+.report-pro-patrimony-scroll .report-pro-month-row span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.report-pro-patrimony-scroll .report-pro-value-row,
+.report-pro-x-label-expanded,
+.report-pro-x-tick-expanded,
+.report-pro-point-guide,
+.report-pro-patrimony-legend,
+.report-pro-patrimony-tick {
+  display: none !important;
+}

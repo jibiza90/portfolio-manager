@@ -152,6 +152,17 @@ const getLongMonthLabel = (monthLabel: string) => {
   return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
 };
 
+const getCompactMonthLabel = (monthLabel: string) => {
+  const parts = monthLabel.trim().split(/\s+/);
+  if (parts.length < 2) return monthLabel;
+  const monthIndex = monthIndexByLabel[parts[0].toLowerCase()];
+  const year = Number(parts[parts.length - 1]);
+  if (monthIndex === undefined || !Number.isFinite(year)) return monthLabel;
+  const date = new Date(year, monthIndex, 1);
+  const month = date.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '');
+  return `${month.charAt(0).toUpperCase()}${month.slice(1)} ${String(year).slice(-2)}`;
+};
+
 const CONTRIBUTION_BREAKDOWN_START_MONTH = '2026-04';
 
 const reportMonthToKey = (monthValue: string) => {
@@ -1217,8 +1228,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     const chartData = expanded ? effectiveExpandedPatrimonioData : effectivePatrimonioData;
     const geometry = expanded ? expandedPatrimonyGeometry : patrimonyGeometry;
     const chartMinWidth = !expanded && chartData.length > 12 ? `${chartData.length * 92}px` : '100%';
-    const monthLabelStep = Math.max(1, Math.ceil(geometry.points.length / (expanded ? 24 : 12)));
-    const shouldShowMonthLabel = (idx: number) => geometry.points.length <= (expanded ? 24 : 12) || idx % monthLabelStep === 0 || idx === geometry.points.length - 1;
     return (
       <div className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${!expanded && chartData.length > 12 ? 'is-scrollable' : ''}`}>
         <div className="report-pro-patrimony-scroll-inner" style={{ minWidth: chartMinWidth }}>
@@ -1268,6 +1277,21 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                 />
               </g>
             ))}
+            {geometry.points.map((pt, idx) => {
+              const label = formatCurrencyNoCents(pt.value);
+              const approxWidth = expanded
+                ? Math.min(154, Math.max(86, label.length * 7.1))
+                : Math.min(122, Math.max(68, label.length * 6.2));
+              const labelX = Math.max(geometry.left + approxWidth / 2, Math.min(pt.x, geometry.width - geometry.right - approxWidth / 2));
+              const preferredY = pt.y + (idx % 2 === 0 ? (expanded ? -24 : -18) : (expanded ? 30 : 22));
+              const labelY = Math.max(geometry.top + (expanded ? 14 : 10), Math.min(preferredY, geometry.plotBottom - (expanded ? 14 : 10)));
+              return (
+                <g key={`${pt.month}-${idx}-label`} className={`report-pro-point-label ${expanded ? 'report-pro-point-label-expanded' : ''}`} pointerEvents="none">
+                  <rect x={labelX - approxWidth / 2} y={labelY - (expanded ? 18 : 14)} width={approxWidth} height={expanded ? '26' : '20'} rx={expanded ? '9' : '7'} />
+                  <text x={labelX} y={labelY} textAnchor="middle">{label}</text>
+                </g>
+              );
+            })}
           </svg>
           <div
             className={`report-pro-month-row ${expanded ? 'report-pro-month-row-expanded' : ''}`}
@@ -1277,8 +1301,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               gridTemplateColumns: `repeat(${Math.max(1, geometry.points.length)}, minmax(0, 1fr))`
             }}
           >
-            {geometry.points.map((pt, idx) => (
-              <span key={pt.month}>{shouldShowMonthLabel(idx) ? pt.month : ''}</span>
+            {geometry.points.map((pt) => (
+              <span key={pt.month}>{getCompactMonthLabel(pt.month)}</span>
             ))}
           </div>
         </div>
