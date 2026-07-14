@@ -6186,13 +6186,13 @@ select {
 
 .report-pro-patrimony-scroll .report-pro-month-row {
   margin-top: 0;
-  min-height: 18px;
+  min-height: 20px;
   gap: 2px;
 }
 
 .report-pro-patrimony-scroll .report-pro-month-row span {
-  font-size: 10px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 900;
   letter-spacing: -0.02em;
   white-space: nowrap;
 }

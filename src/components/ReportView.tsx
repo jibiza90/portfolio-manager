@@ -817,7 +817,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     left: 78,
     right: 24,
     top: 20,
-    bottom: 52
+    bottom: 18
   });
   const expandedSelectedStart = expandedStartMonth || rangeStart || firstPeriodKey;
   const expandedSelectedEnd = expandedEndMonth || rangeEnd || lastPeriodKey;
@@ -836,7 +836,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     left: 118,
     right: 60,
     top: 42,
-    bottom: 74
+    bottom: 28
   });
   const movementCapitalSeries = (report.movements ?? []).reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
     const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
