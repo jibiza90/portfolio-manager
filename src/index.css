@@ -7427,3 +7427,295 @@ select {
     font-size: 28px;
   }
 }
+
+/* Investment journey cinematic layer: video-like automatic explanation. */
+.investment-journey-cinema {
+  position: relative;
+  margin-top: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(49, 92, 245, 0.12);
+  border-radius: 30px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(49, 92, 245, 0.14), transparent 32%),
+    radial-gradient(circle at 78% 20%, rgba(14, 165, 233, 0.14), transparent 30%),
+    linear-gradient(135deg, #f8fbff, #eef6fb);
+}
+
+.investment-journey-cinema-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.investment-journey-cinema-head span {
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.investment-journey-cinema-head strong {
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.investment-journey-cinema-head em {
+  color: #315cf5;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.investment-journey-cinema .investment-journey-stage {
+  grid-template-columns: minmax(0, 1.42fr) minmax(330px, 0.58fr);
+  margin-top: 0;
+}
+
+.investment-journey-cinema .investment-journey-graph {
+  min-height: 680px;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.88), transparent 18%),
+    radial-gradient(circle at var(--spot-x, 50%) var(--spot-y, 50%), rgba(14, 165, 233, 0.20), transparent 20%),
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, #fbfdff, #eaf3fb);
+  background-size: auto, auto, 100% 72px, 76px 100%, auto;
+}
+
+.investment-journey-cinema .investment-journey-graph::before {
+  content: '';
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  bottom: 78px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(49, 92, 245, 0.12), transparent 68%);
+  transform: rotateX(62deg);
+  pointer-events: none;
+}
+
+.investment-journey-cinema .investment-journey-graph svg {
+  inset: 64px 38px 112px;
+  width: calc(100% - 76px);
+  height: calc(100% - 176px);
+  transform: rotateX(13deg) rotateY(-7deg) translateY(10px);
+}
+
+.investment-journey-cinema .investment-journey-path-base {
+  stroke-width: 4.2;
+}
+
+.investment-journey-cinema .investment-journey-path-active {
+  stroke-width: 6.2;
+  filter: drop-shadow(0 0 14px rgba(49, 92, 245, 0.26));
+  transition: stroke-dashoffset 1100ms cubic-bezier(.18,.85,.2,1);
+}
+
+.investment-journey-spotlight {
+  position: absolute;
+  z-index: 1;
+  width: 190px;
+  height: 190px;
+  border-radius: 999px;
+  translate: -50% -50%;
+  background: radial-gradient(circle, rgba(49, 92, 245, 0.18), rgba(14, 165, 233, 0.09) 42%, transparent 70%);
+  filter: blur(2px);
+  transition: left 1100ms cubic-bezier(.18,.85,.2,1), top 1100ms cubic-bezier(.18,.85,.2,1);
+  pointer-events: none;
+}
+
+.investment-journey-money-flow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.investment-journey-money-flow span {
+  position: absolute;
+  left: 14%;
+  bottom: 22%;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #38bdf8;
+  box-shadow: 0 0 22px rgba(14, 165, 233, 0.72);
+  animation: investmentJourneyFlow 3.1s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.investment-journey-money-flow span:nth-child(2) {
+  animation-delay: 220ms;
+  opacity: 0.74;
+}
+
+.investment-journey-money-flow span:nth-child(3) {
+  animation-delay: 440ms;
+  opacity: 0.52;
+}
+
+.investment-journey-cinema.is-green .investment-journey-money-flow span { background: #22c55e; box-shadow: 0 0 22px rgba(34, 197, 94, 0.62); }
+.investment-journey-cinema.is-red .investment-journey-money-flow span { background: #ef4444; box-shadow: 0 0 22px rgba(239, 68, 68, 0.56); }
+.investment-journey-cinema.is-current .investment-journey-money-flow span { background: #0ea5e9; }
+
+.investment-journey-big-caption {
+  position: absolute;
+  left: 34px;
+  right: 34px;
+  top: 26px;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 22px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 18px 38px rgba(30, 64, 99, 0.14);
+  animation: investmentJourneyCaption 620ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.investment-journey-big-caption span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.investment-journey-big-caption strong {
+  color: #0f172a;
+  font-size: clamp(20px, 2.6vw, 34px);
+  line-height: 1;
+  letter-spacing: -0.055em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.investment-journey-big-caption em {
+  font-style: normal;
+  font-size: clamp(18px, 2.2vw, 28px);
+  font-weight: 950;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+}
+
+.investment-journey-cinema .investment-journey-node {
+  width: 28px;
+  height: 28px;
+  transition: left 1100ms cubic-bezier(.18,.85,.2,1), top 1100ms cubic-bezier(.18,.85,.2,1), transform 220ms ease, filter 220ms ease;
+}
+
+.investment-journey-cinema .investment-journey-node.is-active {
+  transform: scale(1.62);
+}
+
+.investment-journey-cinema .investment-journey-panel {
+  min-height: 680px;
+  animation: investmentJourneyPanelIn 680ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.investment-journey-before-after {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+  gap: 12px;
+  min-height: 190px;
+  margin: 4px 0;
+}
+
+.investment-journey-before-after div {
+  position: relative;
+  display: grid;
+  align-content: end;
+  gap: 8px;
+  height: 190px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.investment-journey-before-after small {
+  position: relative;
+  z-index: 2;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.investment-journey-before-after b {
+  position: relative;
+  z-index: 2;
+  color: #0f172a;
+  font-size: 14px;
+  letter-spacing: -0.035em;
+}
+
+.investment-journey-before-after i {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: block;
+  border-radius: 18px 18px 0 0;
+  background: linear-gradient(180deg, rgba(49, 92, 245, 0.30), rgba(14, 165, 233, 0.12));
+  animation: investmentJourneyBarRise 850ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes investmentJourneyFlow {
+  0% { transform: translate(0, 0) scale(0.7); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(62vw, -34vh) scale(1.16); opacity: 0; }
+}
+
+@keyframes investmentJourneyCaption {
+  from { opacity: 0; transform: translateY(-12px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes investmentJourneyPanelIn {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes investmentJourneyBarRise {
+  from { transform: scaleY(0.08); transform-origin: bottom; }
+  to { transform: scaleY(1); transform-origin: bottom; }
+}
+
+@media (max-width: 1100px) {
+  .investment-journey-cinema .investment-journey-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .investment-journey-cinema .investment-journey-panel {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .investment-journey-cinema .investment-journey-graph {
+    min-height: 500px;
+  }
+
+  .investment-journey-big-caption {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

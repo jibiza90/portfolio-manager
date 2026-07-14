@@ -204,7 +204,7 @@ const eventTone = (type: JourneyEventType) => {
 
 export const InvestmentJourneySection: React.FC<InvestmentJourneySectionProps> = ({ report }) => {
   const [period, setPeriod] = useState<JourneyPeriod>('12m');
-  const [playback, setPlayback] = useState<JourneyPlayback>('idle');
+  const [playback, setPlayback] = useState<JourneyPlayback>('playing');
   const [activeIndex, setActiveIndex] = useState(0);
 
   const events = useMemo(() => buildJourneyEvents(report, period), [report, period]);
@@ -212,10 +212,27 @@ export const InvestmentJourneySection: React.FC<InvestmentJourneySectionProps> =
   const activeEvent = events[Math.min(activeIndex, Math.max(0, events.length - 1))];
   const progress = events.length <= 1 ? 100 : (Math.min(activeIndex, events.length - 1) / (events.length - 1)) * 100;
   const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+  const activeTone = eventTone(activeEvent?.type ?? 'current');
+  const valueScaleMax = Math.max(...events.map((event) => Math.max(event.valueBefore, event.valueAfter, 0)), 1);
+  const beforeHeight = activeEvent ? `${Math.max(8, Math.min(100, (Math.max(activeEvent.valueBefore, 0) / valueScaleMax) * 100))}%` : '8%';
+  const afterHeight = activeEvent ? `${Math.max(8, Math.min(100, (Math.max(activeEvent.valueAfter, 0) / valueScaleMax) * 100))}%` : '8%';
+  const storySentence = activeEvent
+    ? activeEvent.type === 'deposit'
+      ? `En esta fecha entra capital nuevo: no es beneficio, es una aportacion que aumenta la posicion.`
+      : activeEvent.type === 'withdrawal'
+        ? `Aqui sale capital de la cartera. La retirada se separa del rendimiento de la inversion.`
+        : activeEvent.type === 'profit'
+          ? `La cartera genera resultado positivo y el valor sube por rendimiento.`
+          : activeEvent.type === 'loss'
+            ? `Este tramo recoge una bajada de valor: se distingue de una retirada de dinero.`
+            : activeEvent.type === 'initial'
+              ? `Este es el punto de partida del recorrido financiero.`
+              : `Este es el valor actual despues de movimientos y resultados acumulados.`
+    : '';
 
   useEffect(() => {
     setActiveIndex(0);
-    setPlayback('idle');
+    setPlayback('playing');
   }, [period, events.length]);
 
   useEffect(() => {
@@ -229,7 +246,7 @@ export const InvestmentJourneySection: React.FC<InvestmentJourneySectionProps> =
         }
         return current + 1;
       });
-    }, 1800);
+    }, 3200);
     return () => window.clearInterval(timer);
   }, [playback, events.length]);
 
@@ -285,47 +302,78 @@ export const InvestmentJourneySection: React.FC<InvestmentJourneySectionProps> =
         <div><span>Beneficio neto</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{signedCurrency(report.beneficioTotal)}</strong></div>
       </div>
 
-      <div className="investment-journey-stage">
-        <div className="investment-journey-graph" role="img" aria-label="Recorrido temporal del valor de cartera">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="journeyPathGradient" x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0%" stopColor="#315cf5" />
-                <stop offset="58%" stopColor="#22c55e" />
-                <stop offset="100%" stopColor="#0ea5e9" />
-              </linearGradient>
-            </defs>
-            <path className="investment-journey-grid-line" d="M 5 82 L 95 82" />
-            <path className="investment-journey-path-base" d={path} />
-            <path className="investment-journey-path-active" d={path} style={{ strokeDasharray: '100 100', strokeDashoffset: 100 - progress }} />
-          </svg>
-          {points.map((point, index) => (
-            <button
-              key={point.id}
-              type="button"
-              className={`investment-journey-node ${eventTone(point.type)} ${index === activeIndex ? 'is-active' : ''}`}
-              style={{ left: `${point.x}%`, top: `${point.y}%` }}
-              onClick={() => goTo(index)}
-              aria-label={`${point.title}, ${formatDate(point.iso)}`}
-            >
-              <span />
-            </button>
-          ))}
-          <div className="investment-journey-progress" style={{ '--journey-progress': `${progress}%` } as React.CSSProperties} />
+      <div className={`investment-journey-cinema ${activeTone}`}>
+        <div className="investment-journey-cinema-head">
+          <span>Historia automatica</span>
+          <strong>{playback === 'playing' ? 'Reproduciendo la evolucion' : playback === 'completed' ? 'Recorrido completado' : 'Recorrido en pausa'}</strong>
+          <em>{Math.round(progress)}%</em>
         </div>
 
-        <aside className={`investment-journey-panel ${eventTone(activeEvent.type)}`} aria-live="polite">
-          <span>Evento {activeIndex + 1} de {events.length}</span>
-          <h5>{activeEvent.title}</h5>
-          <time>{formatDate(activeEvent.iso)}</time>
-          <strong className={activeEvent.amount >= 0 ? 'positive' : 'negative'}>{signedCurrency(activeEvent.amount)}</strong>
-          <p>{activeEvent.description}</p>
-          <dl>
-            <div><dt>Valor anterior</dt><dd>{formatCurrency(activeEvent.valueBefore)}</dd></div>
-            <div><dt>Valor posterior</dt><dd>{formatCurrency(activeEvent.valueAfter)}</dd></div>
-            <div><dt>Variacion</dt><dd>{signedPct(activeEvent.pctChange)}</dd></div>
-          </dl>
-        </aside>
+        <div className="investment-journey-stage">
+          <div className="investment-journey-graph" role="img" aria-label="Recorrido temporal del valor de cartera">
+            <div className="investment-journey-spotlight" style={{ left: `${points[activeIndex]?.x ?? 50}%`, top: `${points[activeIndex]?.y ?? 50}%` }} />
+            <div className="investment-journey-money-flow" key={`${activeEvent.id}-flow`}>
+              <span />
+              <span />
+              <span />
+            </div>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="journeyPathGradient" x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0%" stopColor="#315cf5" />
+                  <stop offset="58%" stopColor="#22c55e" />
+                  <stop offset="100%" stopColor="#0ea5e9" />
+                </linearGradient>
+              </defs>
+              <path className="investment-journey-grid-line" d="M 5 82 L 95 82" />
+              <path className="investment-journey-path-base" d={path} />
+              <path className="investment-journey-path-active" d={path} style={{ strokeDasharray: '100 100', strokeDashoffset: 100 - progress }} />
+            </svg>
+            {points.map((point, index) => (
+              <button
+                key={point.id}
+                type="button"
+                className={`investment-journey-node ${eventTone(point.type)} ${index === activeIndex ? 'is-active' : ''}`}
+                style={{ left: `${point.x}%`, top: `${point.y}%` }}
+                onClick={() => goTo(index)}
+                aria-label={`${point.title}, ${formatDate(point.iso)}`}
+              >
+                <span />
+              </button>
+            ))}
+            <div className="investment-journey-big-caption" key={`${activeEvent.id}-caption`}>
+              <span>{formatDate(activeEvent.iso)}</span>
+              <strong>{activeEvent.title}</strong>
+              <em className={activeEvent.amount >= 0 ? 'positive' : 'negative'}>{signedCurrency(activeEvent.amount)}</em>
+            </div>
+            <div className="investment-journey-progress" style={{ '--journey-progress': `${progress}%` } as React.CSSProperties} />
+          </div>
+
+          <aside className={`investment-journey-panel ${activeTone}`} aria-live="polite" key={activeEvent.id}>
+            <span>Evento {activeIndex + 1} de {events.length}</span>
+            <h5>{activeEvent.title}</h5>
+            <time>{formatDate(activeEvent.iso)}</time>
+            <strong className={activeEvent.amount >= 0 ? 'positive' : 'negative'}>{signedCurrency(activeEvent.amount)}</strong>
+            <p>{storySentence}</p>
+            <div className="investment-journey-before-after">
+              <div>
+                <small>Antes</small>
+                <b>{formatCurrency(activeEvent.valueBefore)}</b>
+                <i style={{ height: beforeHeight }} />
+              </div>
+              <div>
+                <small>Despues</small>
+                <b>{formatCurrency(activeEvent.valueAfter)}</b>
+                <i style={{ height: afterHeight }} />
+              </div>
+            </div>
+            <dl>
+              <div><dt>Valor anterior</dt><dd>{formatCurrency(activeEvent.valueBefore)}</dd></div>
+              <div><dt>Valor posterior</dt><dd>{formatCurrency(activeEvent.valueAfter)}</dd></div>
+              <div><dt>Variacion</dt><dd>{signedPct(activeEvent.pctChange)}</dd></div>
+            </dl>
+          </aside>
+        </div>
       </div>
 
       <div className="investment-journey-controls">
