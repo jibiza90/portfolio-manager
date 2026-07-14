@@ -1,9 +1,9 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ReportData } from '../services/reportLinks';
 import { formatCurrency } from '../utils/format';
 
 type JourneyPeriod = '1m' | '3m' | '6m' | '12m' | 'all';
-type JourneyPlayback = 'idle' | 'playing' | 'paused' | 'completed';
+type PlaybackState = 'playing' | 'paused' | 'completed';
 type JourneyEventType = 'initial' | 'deposit' | 'withdrawal' | 'profit' | 'loss' | 'current';
 
 interface JourneyEvent {
@@ -11,7 +11,6 @@ interface JourneyEvent {
   type: JourneyEventType;
   iso: string;
   title: string;
-  description: string;
   amount: number;
   valueBefore: number;
   valueAfter: number;
@@ -38,7 +37,7 @@ const shortDateFormatter = new Intl.DateTimeFormat('es-ES', {
   year: '2-digit'
 });
 
-const monthDateFormatter = new Intl.DateTimeFormat('es-ES', {
+const longMonthFormatter = new Intl.DateTimeFormat('es-ES', {
   month: 'long',
   year: 'numeric'
 });
@@ -53,28 +52,36 @@ const signedPct = (value: number) => {
   return `${value > 0 ? '+' : '-'}${pctFormatter.format(Math.abs(value))} %`;
 };
 
-const parseMonthKey = (month: string) => {
-  const parts = month.trim().split(/\s+/);
+const monthMap: Record<string, number> = {
+  ene: 1, enero: 1,
+  feb: 2, febrero: 2,
+  mar: 3, marzo: 3,
+  abr: 4, abril: 4,
+  may: 5, mayo: 5,
+  jun: 6, junio: 6,
+  jul: 7, julio: 7,
+  ago: 8, agosto: 8,
+  sep: 9, sept: 9, septiembre: 9,
+  oct: 10, octubre: 10,
+  nov: 11, noviembre: 11,
+  dic: 12, diciembre: 12
+};
+
+const monthKey = (month: string) => {
   if (/^\d{4}-\d{2}$/.test(month)) return month;
+  const parts = month.trim().split(/\s+/);
   if (parts.length < 2) return '';
-  const months: Record<string, number> = {
-    ene: 1, enero: 1, feb: 2, febrero: 2, mar: 3, marzo: 3, abr: 4, abril: 4,
-    may: 5, mayo: 5, jun: 6, junio: 6, jul: 7, julio: 7, ago: 8, agosto: 8,
-    sep: 9, sept: 9, septiembre: 9, oct: 10, octubre: 10, nov: 11, noviembre: 11,
-    dic: 12, diciembre: 12
-  };
-  const monthIndex = months[parts[0].toLowerCase().replace('.', '')];
+  const index = monthMap[parts[0].toLowerCase().replace('.', '')];
   const year = Number(parts[parts.length - 1]);
-  if (!monthIndex || !Number.isFinite(year)) return '';
-  return `${year}-${String(monthIndex).padStart(2, '0')}`;
+  if (!index || !Number.isFinite(year)) return '';
+  return `${year}-${String(index).padStart(2, '0')}`;
 };
 
 const monthEndIso = (month: string) => {
-  const key = parseMonthKey(month);
+  const key = monthKey(month);
   if (!key) return month;
-  const [year, monthPart] = key.split('-').map(Number);
-  const end = new Date(year, monthPart, 0);
-  return end.toISOString().slice(0, 10);
+  const [year, monthValue] = key.split('-').map(Number);
+  return new Date(year, monthValue, 0).toISOString().slice(0, 10);
 };
 
 const formatDate = (iso: string) => {
@@ -82,95 +89,109 @@ const formatDate = (iso: string) => {
   return Number.isNaN(date.getTime()) ? iso : shortDateFormatter.format(date).replace('.', '');
 };
 
-const formatMonth = (iso: string) => {
+const formatLongMonth = (iso: string) => {
   const date = new Date(`${iso}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? iso : monthDateFormatter.format(date);
+  return Number.isNaN(date.getTime()) ? iso : longMonthFormatter.format(date);
 };
 
-const getPeriodStartKey = (period: JourneyPeriod, report: ReportData) => {
+const eventLabel = (type: JourneyEventType) => {
+  if (type === 'initial') return 'Inicio';
+  if (type === 'deposit') return 'Aportacion';
+  if (type === 'withdrawal') return 'Retirada';
+  if (type === 'profit') return 'Beneficio';
+  if (type === 'loss') return 'Perdida';
+  return 'Valor actual';
+};
+
+const eventTone = (type: JourneyEventType) => {
+  if (type === 'profit') return 'positive';
+  if (type === 'loss' || type === 'withdrawal') return 'negative';
+  if (type === 'current') return 'current';
+  return 'capital';
+};
+
+const getPeriodStart = (period: JourneyPeriod, report: ReportData) => {
   if (period === 'all') return '';
-  const months = report.monthlyStats.filter((month) => month.hasData).map((month) => parseMonthKey(month.month)).filter(Boolean).sort();
+  const months = report.monthlyStats
+    .filter((month) => month.hasData)
+    .map((month) => monthKey(month.month))
+    .filter(Boolean)
+    .sort();
   if (!months.length) return '';
-  const count = period === '1m' ? 1 : period === '3m' ? 3 : period === '6m' ? 6 : 12;
-  return months[Math.max(0, months.length - count)];
+  const size = period === '1m' ? 1 : period === '3m' ? 3 : period === '6m' ? 6 : 12;
+  return months[Math.max(0, months.length - size)];
 };
 
 const buildJourneyEvents = (report: ReportData, period: JourneyPeriod): JourneyEvent[] => {
-  const periodStart = getPeriodStartKey(period, report);
-  const inPeriod = (iso: string) => !periodStart || iso.slice(0, 7) >= periodStart;
+  const start = getPeriodStart(period, report);
+  const inPeriod = (isoOrMonth: string) => !start || isoOrMonth.slice(0, 7) >= start;
   const events: JourneyEvent[] = [];
+  const movements = [...(report.movements ?? [])].sort((a, b) => a.iso.localeCompare(b.iso));
+  const firstMovement = movements[0];
 
-  const sortedMovements = [...(report.movements ?? [])].sort((a, b) => a.iso.localeCompare(b.iso));
-  const firstMovement = sortedMovements[0];
   if (firstMovement && inPeriod(firstMovement.iso)) {
-    const initialAfter = firstMovement.type === 'increment' ? firstMovement.amount : Math.max(0, firstMovement.balance);
+    const firstAmount = firstMovement.type === 'increment' ? firstMovement.amount : Math.max(0, firstMovement.balance);
     events.push({
       id: `initial-${firstMovement.iso}`,
       type: 'initial',
       iso: firstMovement.iso,
       title: 'Punto de partida',
-      description: `La cartera empieza con una primera posicion de ${formatCurrency(initialAfter)}.`,
-      amount: initialAfter,
+      amount: firstAmount,
       valueBefore: 0,
-      valueAfter: initialAfter,
+      valueAfter: firstAmount,
       pctChange: 0
     });
   }
 
-  sortedMovements.forEach((movement, index) => {
+  movements.forEach((movement, index) => {
     if (!inPeriod(movement.iso)) return;
     if (index === 0 && movement.type === 'increment') return;
-    const amount = movement.type === 'increment' ? movement.amount : -movement.amount;
-    const valueAfter = movement.balance || 0;
-    const valueBefore = movement.type === 'increment' ? valueAfter - movement.amount : valueAfter + movement.amount;
-    const pctChange = valueBefore ? (amount / valueBefore) * 100 : 0;
     const isDeposit = movement.type === 'increment';
+    const valueAfter = movement.balance || 0;
+    const valueBefore = isDeposit ? valueAfter - movement.amount : valueAfter + movement.amount;
+    const amount = isDeposit ? movement.amount : -movement.amount;
     events.push({
       id: `movement-${movement.iso}-${index}`,
       type: isDeposit ? 'deposit' : 'withdrawal',
       iso: movement.iso,
-      title: isDeposit ? 'Aportacion incorporada' : 'Retirada registrada',
-      description: isDeposit
-        ? `Se incorpora capital nuevo a la cartera sin confundirlo con beneficio.`
-        : `Sale capital de la cartera y se separa del resultado de inversion.`,
+      title: isDeposit ? 'Nueva aportacion' : 'Retirada de capital',
       amount,
       valueBefore,
       valueAfter,
-      pctChange
+      pctChange: valueBefore ? (amount / valueBefore) * 100 : 0
     });
   });
 
   report.monthlyStats
-    .filter((month) => month.hasData && inPeriod(parseMonthKey(month.month)))
+    .filter((month) => month.hasData)
     .forEach((month) => {
+      const key = monthKey(month.month);
+      if (!key || !inPeriod(key)) return;
       const profit = month.profit ?? 0;
       if (Math.abs(profit) < 0.01) return;
       const valueAfter = month.endBalance ?? 0;
-      const valueBefore = valueAfter - profit;
       events.push({
         id: `month-${month.month}`,
         type: profit >= 0 ? 'profit' : 'loss',
         iso: monthEndIso(month.month),
-        title: profit >= 0 ? 'Beneficio mensual' : 'Perdida mensual',
-        description: `Resultado generado durante ${formatMonth(monthEndIso(month.month))}.`,
+        title: profit >= 0 ? 'Resultado positivo del mes' : 'Resultado negativo del mes',
         amount: profit,
-        valueBefore,
+        valueBefore: valueAfter - profit,
         valueAfter,
         pctChange: month.profitPct ?? 0
       });
     });
 
-  const dataMonths = report.monthlyStats.filter((month) => month.hasData);
-  const latest = dataMonths[dataMonths.length - 1];
-  if (latest && inPeriod(parseMonthKey(latest.month))) {
+  const monthsWithData = report.monthlyStats.filter((month) => month.hasData);
+  const latest = monthsWithData[monthsWithData.length - 1];
+  if (latest && inPeriod(monthKey(latest.month))) {
     events.push({
       id: 'current-value',
       type: 'current',
       iso: monthEndIso(latest.month),
-      title: 'Valor actual de cartera',
-      description: 'Resumen final del recorrido seleccionado.',
+      title: 'Valor actual de la cartera',
       amount: report.saldo,
-      valueBefore: report.saldo - report.beneficioUltimoMes,
+      valueBefore: Math.max(0, report.saldo - report.beneficioUltimoMes),
       valueAfter: report.saldo,
       pctChange: report.rentabilidadUltimoMes
     });
@@ -178,57 +199,67 @@ const buildJourneyEvents = (report: ReportData, period: JourneyPeriod): JourneyE
 
   return events
     .sort((a, b) => a.iso.localeCompare(b.iso) || a.id.localeCompare(b.id))
-    .filter((event, index, list) => index === 0 || event.id !== list[index - 1].id)
-    .slice(-24);
+    .slice(-22);
 };
 
 const buildPoints = (events: JourneyEvent[]): JourneyPoint[] => {
   if (!events.length) return [];
   const values = events.map((event) => event.valueAfter);
-  const min = Math.min(...values, 0);
-  const max = Math.max(...values, 1);
+  const min = Math.min(0, ...values);
+  const max = Math.max(1, ...values);
   const span = Math.max(1, max - min);
+
   return events.map((event, index) => ({
     ...event,
-    x: events.length <= 1 ? 50 : 6 + (index / (events.length - 1)) * 88,
-    y: 82 - ((event.valueAfter - min) / span) * 64
+    x: events.length <= 1 ? 50 : 7 + (index / (events.length - 1)) * 86,
+    y: 78 - ((event.valueAfter - min) / span) * 58
   }));
 };
 
-const eventTone = (type: JourneyEventType) => {
-  if (type === 'deposit' || type === 'initial') return 'is-blue';
-  if (type === 'profit') return 'is-green';
-  if (type === 'loss' || type === 'withdrawal') return 'is-red';
-  return 'is-current';
+const smoothPath = (points: JourneyPoint[]) => {
+  if (!points.length) return '';
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+  return points.reduce((path, point, index) => {
+    if (index === 0) return `M ${point.x} ${point.y}`;
+    const previous = points[index - 1];
+    const controlX = (previous.x + point.x) / 2;
+    return `${path} C ${controlX} ${previous.y}, ${controlX} ${point.y}, ${point.x} ${point.y}`;
+  }, '');
+};
+
+const areaPath = (points: JourneyPoint[]) => {
+  if (!points.length) return '';
+  const line = smoothPath(points);
+  const first = points[0];
+  const last = points[points.length - 1];
+  return `${line} L ${last.x} 86 L ${first.x} 86 Z`;
+};
+
+const narrativeText = (event: JourneyEvent) => {
+  if (event.type === 'initial') return 'Aqui empieza la historia: este fue el primer capital que entro en la cartera.';
+  if (event.type === 'deposit') return 'Este dinero no es beneficio: es capital nuevo que se incorpora para aumentar la posicion.';
+  if (event.type === 'withdrawal') return 'Esta salida reduce el capital invertido, pero se separa del rendimiento de la cartera.';
+  if (event.type === 'profit') return 'Este tramo muestra beneficio real generado por la inversion durante el periodo.';
+  if (event.type === 'loss') return 'Este tramo muestra una bajada de valor de mercado, distinta de una retirada.';
+  return 'Despues de movimientos y resultados, este es el valor actual de la cartera.';
 };
 
 export const InvestmentJourneySection: React.FC<InvestmentJourneySectionProps> = ({ report }) => {
   const [period, setPeriod] = useState<JourneyPeriod>('12m');
-  const [playback, setPlayback] = useState<JourneyPlayback>('playing');
+  const [playback, setPlayback] = useState<PlaybackState>('playing');
   const [activeIndex, setActiveIndex] = useState(0);
 
   const events = useMemo(() => buildJourneyEvents(report, period), [report, period]);
   const points = useMemo(() => buildPoints(events), [events]);
   const activeEvent = events[Math.min(activeIndex, Math.max(0, events.length - 1))];
+  const activePoint = points[Math.min(activeIndex, Math.max(0, points.length - 1))];
+  const path = useMemo(() => smoothPath(points), [points]);
+  const area = useMemo(() => areaPath(points), [points]);
   const progress = events.length <= 1 ? 100 : (Math.min(activeIndex, events.length - 1) / (events.length - 1)) * 100;
-  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
-  const activeTone = eventTone(activeEvent?.type ?? 'current');
-  const valueScaleMax = Math.max(...events.map((event) => Math.max(event.valueBefore, event.valueAfter, 0)), 1);
-  const beforeHeight = activeEvent ? `${Math.max(8, Math.min(100, (Math.max(activeEvent.valueBefore, 0) / valueScaleMax) * 100))}%` : '8%';
-  const afterHeight = activeEvent ? `${Math.max(8, Math.min(100, (Math.max(activeEvent.valueAfter, 0) / valueScaleMax) * 100))}%` : '8%';
-  const storySentence = activeEvent
-    ? activeEvent.type === 'deposit'
-      ? `En esta fecha entra capital nuevo: no es beneficio, es una aportacion que aumenta la posicion.`
-      : activeEvent.type === 'withdrawal'
-        ? `Aqui sale capital de la cartera. La retirada se separa del rendimiento de la inversion.`
-        : activeEvent.type === 'profit'
-          ? `La cartera genera resultado positivo y el valor sube por rendimiento.`
-          : activeEvent.type === 'loss'
-            ? `Este tramo recoge una bajada de valor: se distingue de una retirada de dinero.`
-            : activeEvent.type === 'initial'
-              ? `Este es el punto de partida del recorrido financiero.`
-              : `Este es el valor actual despues de movimientos y resultados acumulados.`
-    : '';
+  const maxValue = Math.max(...events.map((event) => Math.max(event.valueBefore, event.valueAfter, 0)), 1);
+  const beforeHeight = activeEvent ? `${Math.max(8, Math.min(100, (Math.max(activeEvent.valueBefore, 0) / maxValue) * 100))}%` : '8%';
+  const afterHeight = activeEvent ? `${Math.max(8, Math.min(100, (Math.max(activeEvent.valueAfter, 0) / maxValue) * 100))}%` : '8%';
+  const tone = activeEvent ? eventTone(activeEvent.type) : 'current';
 
   useEffect(() => {
     setActiveIndex(0);
@@ -246,21 +277,21 @@ export const InvestmentJourneySection: React.FC<InvestmentJourneySectionProps> =
         }
         return current + 1;
       });
-    }, 3200);
+    }, 3600);
     return () => window.clearInterval(timer);
-  }, [playback, events.length]);
+  }, [events.length, playback]);
 
-  if (!events.length || !activeEvent) {
+  if (!activeEvent || !activePoint) {
     return (
-      <section className="investment-journey-section">
-        <div className="investment-journey-empty">Todavia no hay suficiente actividad para mostrar tu evolucion.</div>
+      <section className="investment-story">
+        <div className="investment-story-empty">Todavia no hay suficiente actividad para mostrar tu evolucion.</div>
       </section>
     );
   }
 
-  const goTo = (nextIndex: number) => {
+  const goTo = (index: number) => {
     setPlayback('paused');
-    setActiveIndex(Math.max(0, Math.min(events.length - 1, nextIndex)));
+    setActiveIndex(Math.max(0, Math.min(events.length - 1, index)));
   };
 
   const togglePlayback = () => {
@@ -273,14 +304,14 @@ export const InvestmentJourneySection: React.FC<InvestmentJourneySectionProps> =
   };
 
   return (
-    <section className="investment-journey-section" aria-label="Tu inversion paso a paso">
-      <div className="investment-journey-header">
+    <section className={`investment-story ${tone}`} aria-label="Tu inversion paso a paso">
+      <div className="investment-story-topbar">
         <div>
-          <span className="investment-journey-eyebrow">Evolucion financiera</span>
+          <span>Experiencia guiada</span>
           <h4>Tu inversion, paso a paso</h4>
-          <p>Recorre cada aportacion, retirada y resultado mensual para entender como se ha construido el valor actual.</p>
+          <p>Una explicacion automatica de como los movimientos y resultados han construido el valor actual.</p>
         </div>
-        <div className="investment-journey-actions">
+        <div className="investment-story-actions">
           <label>
             Periodo
             <select value={period} onChange={(event) => setPeriod(event.target.value as JourneyPeriod)}>
@@ -295,88 +326,82 @@ export const InvestmentJourneySection: React.FC<InvestmentJourneySectionProps> =
         </div>
       </div>
 
-      <div className="investment-journey-kpis">
-        <div><span>Valor actual</span><strong>{formatCurrency(report.saldo)}</strong></div>
-        <div><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
-        <div><span>Total retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-        <div><span>Beneficio neto</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{signedCurrency(report.beneficioTotal)}</strong></div>
-      </div>
-
-      <div className={`investment-journey-cinema ${activeTone}`}>
-        <div className="investment-journey-cinema-head">
-          <span>Historia automatica</span>
-          <strong>{playback === 'playing' ? 'Reproduciendo la evolucion' : playback === 'completed' ? 'Recorrido completado' : 'Recorrido en pausa'}</strong>
-          <em>{Math.round(progress)}%</em>
-        </div>
-
-        <div className="investment-journey-stage">
-          <div className="investment-journey-graph" role="img" aria-label="Recorrido temporal del valor de cartera">
-            <div className="investment-journey-spotlight" style={{ left: `${points[activeIndex]?.x ?? 50}%`, top: `${points[activeIndex]?.y ?? 50}%` }} />
-            <div className="investment-journey-money-flow" key={`${activeEvent.id}-flow`}>
-              <span />
-              <span />
-              <span />
-            </div>
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="journeyPathGradient" x1="0" x2="1" y1="0" y2="0">
-                  <stop offset="0%" stopColor="#315cf5" />
-                  <stop offset="58%" stopColor="#22c55e" />
-                  <stop offset="100%" stopColor="#0ea5e9" />
-                </linearGradient>
-              </defs>
-              <path className="investment-journey-grid-line" d="M 5 82 L 95 82" />
-              <path className="investment-journey-path-base" d={path} />
-              <path className="investment-journey-path-active" d={path} style={{ strokeDasharray: '100 100', strokeDashoffset: 100 - progress }} />
-            </svg>
-            {points.map((point, index) => (
-              <button
-                key={point.id}
-                type="button"
-                className={`investment-journey-node ${eventTone(point.type)} ${index === activeIndex ? 'is-active' : ''}`}
-                style={{ left: `${point.x}%`, top: `${point.y}%` }}
-                onClick={() => goTo(index)}
-                aria-label={`${point.title}, ${formatDate(point.iso)}`}
-              >
-                <span />
-              </button>
-            ))}
-            <div className="investment-journey-big-caption" key={`${activeEvent.id}-caption`}>
-              <span>{formatDate(activeEvent.iso)}</span>
-              <strong>{activeEvent.title}</strong>
-              <em className={activeEvent.amount >= 0 ? 'positive' : 'negative'}>{signedCurrency(activeEvent.amount)}</em>
-            </div>
-            <div className="investment-journey-progress" style={{ '--journey-progress': `${progress}%` } as React.CSSProperties} />
+      <div className="investment-story-layout">
+        <div className="investment-story-scene">
+          <div className="investment-story-status">
+            <span>{playback === 'playing' ? 'Reproduciendo' : playback === 'completed' ? 'Completado' : 'En pausa'}</span>
+            <strong>{Math.round(progress)}%</strong>
           </div>
 
-          <aside className={`investment-journey-panel ${activeTone}`} aria-live="polite" key={activeEvent.id}>
-            <span>Evento {activeIndex + 1} de {events.length}</span>
-            <h5>{activeEvent.title}</h5>
-            <time>{formatDate(activeEvent.iso)}</time>
-            <strong className={activeEvent.amount >= 0 ? 'positive' : 'negative'}>{signedCurrency(activeEvent.amount)}</strong>
-            <p>{storySentence}</p>
-            <div className="investment-journey-before-after">
-              <div>
-                <small>Antes</small>
-                <b>{formatCurrency(activeEvent.valueBefore)}</b>
-                <i style={{ height: beforeHeight }} />
-              </div>
-              <div>
-                <small>Despues</small>
-                <b>{formatCurrency(activeEvent.valueAfter)}</b>
-                <i style={{ height: afterHeight }} />
-              </div>
-            </div>
-            <dl>
-              <div><dt>Valor anterior</dt><dd>{formatCurrency(activeEvent.valueBefore)}</dd></div>
-              <div><dt>Valor posterior</dt><dd>{formatCurrency(activeEvent.valueAfter)}</dd></div>
-              <div><dt>Variacion</dt><dd>{signedPct(activeEvent.pctChange)}</dd></div>
-            </dl>
-          </aside>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="storyLineGradient" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0%" stopColor="#315cf5" />
+                <stop offset="58%" stopColor="#22c55e" />
+                <stop offset="100%" stopColor="#0ea5e9" />
+              </linearGradient>
+              <linearGradient id="storyAreaGradient" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="rgba(49, 92, 245, 0.22)" />
+                <stop offset="100%" stopColor="rgba(49, 92, 245, 0.02)" />
+              </linearGradient>
+              <clipPath id="storyProgressClip">
+                <rect x="0" y="0" width={progress} height="100" />
+              </clipPath>
+            </defs>
+            <path className="investment-story-grid-line" d="M 6 84 L 94 84" />
+            <path className="investment-story-area" d={area} />
+            <path className="investment-story-path muted" d={path} pathLength={100} />
+            <path className="investment-story-path active" d={path} pathLength={100} clipPath="url(#storyProgressClip)" />
+          </svg>
+
+          <div className="investment-story-focus" style={{ left: `${activePoint.x}%`, top: `${activePoint.y}%` }} />
+          <div className="investment-story-marker" style={{ left: `${activePoint.x}%`, top: `${activePoint.y}%` }}>
+            <span>{eventLabel(activeEvent.type)}</span>
+          </div>
+
+          {points.map((point, index) => (
+            <button
+              key={point.id}
+              type="button"
+              className={`investment-story-node ${eventTone(point.type)} ${index === activeIndex ? 'active' : ''}`}
+              style={{ left: `${point.x}%`, top: `${point.y}%` }}
+              onClick={() => goTo(index)}
+              aria-label={`${eventLabel(point.type)} ${formatDate(point.iso)}`}
+            />
+          ))}
+
+          <div className="investment-story-caption" key={activeEvent.id}>
+            <small>{formatDate(activeEvent.iso)} ? {formatLongMonth(activeEvent.iso)}</small>
+            <strong>{activeEvent.title}</strong>
+            <b className={activeEvent.amount >= 0 ? 'positive' : 'negative'}>{signedCurrency(activeEvent.amount)}</b>
+          </div>
         </div>
+
+        <aside className="investment-story-card" key={`${activeEvent.id}-card`} aria-live="polite">
+          <span>Capitulo {activeIndex + 1} de {events.length}</span>
+          <h5>{activeEvent.title}</h5>
+          <p>{narrativeText(activeEvent)}</p>
+          <div className="investment-story-amount"><b className={activeEvent.amount >= 0 ? 'positive' : 'negative'}>{signedCurrency(activeEvent.amount)}</b></div>
+          <div className="investment-story-before-after">
+            <div>
+              <small>Antes</small>
+              <strong>{formatCurrency(activeEvent.valueBefore)}</strong>
+              <i style={{ height: beforeHeight }} />
+            </div>
+            <div>
+              <small>Despues</small>
+              <strong>{formatCurrency(activeEvent.valueAfter)}</strong>
+              <i style={{ height: afterHeight }} />
+            </div>
+          </div>
+          <dl>
+            <div><dt>Variacion</dt><dd>{signedPct(activeEvent.pctChange)}</dd></div>
+            <div><dt>Tipo</dt><dd>{eventLabel(activeEvent.type)}</dd></div>
+          </dl>
+        </aside>
       </div>
 
-      <div className="investment-journey-controls">
+      <div className="investment-story-controls">
         <button type="button" onClick={() => goTo(activeIndex - 1)} disabled={activeIndex === 0}>Anterior</button>
         <input
           type="range"
@@ -384,36 +409,17 @@ export const InvestmentJourneySection: React.FC<InvestmentJourneySectionProps> =
           max={events.length - 1}
           value={activeIndex}
           onChange={(event) => goTo(Number(event.target.value))}
-          aria-label="Seleccionar evento del recorrido"
+          aria-label="Recorrer la historia de inversion"
         />
         <button type="button" onClick={() => goTo(activeIndex + 1)} disabled={activeIndex >= events.length - 1}>Siguiente</button>
-        <button type="button" onClick={() => { setActiveIndex(0); setPlayback('idle'); }}>Reiniciar</button>
+        <button type="button" onClick={() => { setActiveIndex(0); setPlayback('playing'); }}>Reiniciar</button>
       </div>
 
-      <div className="investment-journey-analytics">
-        <div className="investment-journey-legend">
-          <span><i className="is-blue" /> Aportaciones</span>
-          <span><i className="is-green" /> Beneficios</span>
-          <span><i className="is-red" /> Retiradas/perdidas</span>
-          <span><i className="is-current" /> Valor actual</span>
-        </div>
-        <div className="investment-journey-mini-table" role="region" aria-label="Eventos financieros del recorrido">
-          <table>
-            <thead>
-              <tr><th>Fecha</th><th>Evento</th><th>Importe</th><th>Valor posterior</th></tr>
-            </thead>
-            <tbody>
-              {events.map((event, index) => (
-                <tr key={event.id} className={index === activeIndex ? 'is-active' : ''}>
-                  <td>{formatDate(event.iso)}</td>
-                  <td>{event.title}</td>
-                  <td className={event.amount >= 0 ? 'positive' : 'negative'}>{signedCurrency(event.amount)}</td>
-                  <td>{formatCurrency(event.valueAfter)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="investment-story-summary">
+        <div><span>Valor actual</span><strong>{formatCurrency(report.saldo)}</strong></div>
+        <div><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
+        <div><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
+        <div><span>Beneficio neto</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{signedCurrency(report.beneficioTotal)}</strong></div>
       </div>
     </section>
   );
