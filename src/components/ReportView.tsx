@@ -31,6 +31,16 @@ const axisCurrencyFormatter = new Intl.NumberFormat('es-ES', {
 
 const formatAxisCurrency = (value: number) => axisCurrencyFormatter.format(value);
 const formatCurrencyNoCents = (value: number) => axisCurrencyFormatter.format(Number.isFinite(value) ? value : 0);
+const formatSignedCurrency = (value: number) => {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  if (Math.abs(safeValue) < 0.005) return formatCurrency(0);
+  return `${safeValue > 0 ? '+' : '-'}${formatCurrency(Math.abs(safeValue))}`;
+};
+const formatSignedPercent = (value: number) => {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  if (Math.abs(safeValue) < 0.005) return '0.00%';
+  return `${safeValue > 0 ? '+' : '-'}${Math.abs(safeValue).toFixed(2)}%`;
+};
 
 const getNiceStep = (rawStep: number) => {
   if (!Number.isFinite(rawStep) || rawStep <= 0) return 1;
@@ -287,11 +297,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
       { label: 'Capital Aportado', value: formatCurrency(report.incrementos) },
       { label: 'Capital Retirado', value: formatCurrency(report.decrementos) },
       { label: 'Valor Actual de Cartera', value: formatCurrency(report.saldo) },
-      { label: 'Resultado Acumulado', value: formatCurrency(report.beneficioTotal) },
-      { label: 'TWR', value: `${((report.twrYtd ?? 0) * 100).toFixed(2)}%` },
-      { label: 'Resultado Ultimo Mes', value: formatCurrency(report.beneficioUltimoMes) },
-      { label: 'Rentabilidad Ultimo Mes', value: `${report.rentabilidadUltimoMes.toFixed(2)}%` },
-      { label: 'Rentabilidad Total', value: `${report.rentabilidad.toFixed(2)}%` }
+      { label: 'Beneficio Acumulado', value: formatSignedCurrency(report.beneficioTotal) },
+      { label: 'TWR', value: `${formatSignedPercent((report.twrYtd ?? 0) * 100)}` },
+      { label: 'Resultado Ultimo Mes', value: formatSignedCurrency(report.beneficioUltimoMes) },
+      { label: 'Rentabilidad Ultimo Mes', value: `${formatSignedPercent(report.rentabilidadUltimoMes)}` },
+      { label: 'Rentabilidad Total', value: `${formatSignedPercent(report.rentabilidad)}` }
     ];
 
     doc.setFontSize(10);
@@ -1393,20 +1403,20 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               </div>
               <div className="report-pro-info-card" data-tooltip={`Rentabilidad TWR de ${latestMonthLabel}. Mide el rendimiento de la estrategia sin contar aportaciones ni retiradas.`}>
                 <p>{`Rentabilidad ${latestMonthLabel}`}</p>
-                <strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{report.rentabilidadUltimoMes.toFixed(2)}%</strong>
+                <strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidadUltimoMes)}</strong>
               </div>
               <div className="report-pro-info-card" data-tooltip={`Beneficio generado en euros durante ${latestMonthLabel}. Incluye el efecto real del capital invertido y de las aportaciones del mes.`}>
                 <p>{`Resultado ${latestMonthLabel}`}</p>
-                <strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioUltimoMes)}</strong>
+                <strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioUltimoMes)}</strong>
               </div>
             </section>
 
             <section className="report-pro-kpis report-pro-kpis-demo">
-              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Beneficio total generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong></div>
-              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{((report.twrYtd ?? 0) * 100).toFixed(2)}%</strong></div>
+              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Beneficio total generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
+              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
               <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus aportaciones registradas desde ${firstRegisteredDateLabel}.`}><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
               <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus retiradas registradas desde ${firstRegisteredDateLabel}.`}><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-              <div className="report-pro-kpi report-pro-info-card" data-tooltip="Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, si depende de aportaciones y retiradas."><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{report.rentabilidad.toFixed(2)}%</strong></div>
+              <div className="report-pro-kpi report-pro-info-card" data-tooltip="Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, si depende de aportaciones y retiradas."><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidad)}</strong></div>
             </section>
           </>
         ) : (
@@ -1418,20 +1428,20 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               </div>
               <div>
                 <p>Resultado acumulado</p>
-                <strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong>
+                <strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong>
               </div>
               <div>
                 <p>TWR</p>
-                <strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{((report.twrYtd ?? 0) * 100).toFixed(2)}%</strong>
+                <strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong>
               </div>
             </section>
 
             <section className="report-pro-kpis">
               <div className="report-pro-kpi"><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
               <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-              <div className="report-pro-kpi"><span>Resultado ultimo mes</span><strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioUltimoMes)}</strong></div>
-              <div className="report-pro-kpi"><span>Rentabilidad ultimo mes</span><strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{report.rentabilidadUltimoMes.toFixed(2)}%</strong></div>
-              <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{report.rentabilidad.toFixed(2)}%</strong></div>
+              <div className="report-pro-kpi"><span>Resultado ultimo mes</span><strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioUltimoMes)}</strong></div>
+              <div className="report-pro-kpi"><span>Rentabilidad ultimo mes</span><strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidadUltimoMes)}</strong></div>
+              <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidad)}</strong></div>
             </section>
           </>
         )}
@@ -1467,14 +1477,14 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
         {isDemoReport ? (
           <section className="report-pro-capital-panel">
             <div className="report-pro-panel-head">
-              <h4>Capital y resultado acumulado</h4>
-              <p>Separacion entre capital aportado, retiradas y resultado obtenido.</p>
+              <h4>Capital y beneficio acumulado</h4>
+              <p>Separacion entre capital aportado, retiradas y beneficio obtenido.</p>
             </div>
             <div className="report-pro-capital-grid">
               <div className="report-pro-info-card" data-tooltip="Total de dinero ingresado historicamente por el cliente."><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
               <div className="report-pro-info-card" data-tooltip="Total de dinero retirado historicamente por el cliente."><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
               <div className="report-pro-info-card" data-tooltip="Capital aportado menos capital retirado."><span>Capital neto aportado</span><strong>{formatCurrency(accumulatedNetCapital)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Ganancia acumulada desde el inicio de la relacion."><span>Resultado acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(report.beneficioTotal)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Beneficio total generado desde el inicio de la relacion."><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
               <div className="report-pro-info-card" data-tooltip="Valor actual de la cartera del cliente."><span>Valor actual de cartera</span><strong>{formatCurrency(report.saldo)}</strong></div>
             </div>
           </section>
@@ -1550,10 +1560,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                 <span>Valor final periodo</span><strong>{formatCurrency(periodEndBalance)}</strong>
               </div>
               <div className="report-pro-info-card" data-tooltip="Resultado generado dentro del periodo seleccionado.">
-                <span>Resultado generado</span><strong className={periodProfit >= 0 ? 'positive' : 'negative'}>{formatCurrency(periodProfit)}</strong>
+                <span>Resultado generado</span><strong className={periodProfit >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(periodProfit)}</strong>
               </div>
               <div className="report-pro-info-card" data-tooltip="Rentabilidad acumulada del periodo, sin mezclarla con aportaciones o retiradas.">
-                <span>Rentabilidad periodo</span><strong className={periodReturnPct >= 0 ? 'positive' : 'negative'}>{(periodReturnPct * 100).toFixed(2)}%</strong>
+                <span>Rentabilidad periodo</span><strong className={periodReturnPct >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(periodReturnPct * 100)}</strong>
               </div>
               <div className="report-pro-info-card" data-tooltip="Dinero ingresado por el cliente dentro del periodo seleccionado.">
                 <span>Aportaciones del periodo</span><strong>{formatCurrency(periodIncrements)}</strong>

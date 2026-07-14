@@ -5886,3 +5886,29 @@ select {
     white-space: normal;
   }
 }
+
+/* KPI layout: avoid 3-3-2 on the fixed KPI block */
+.report-pro-demo-sheet .report-pro-kpis-demo,
+.report-pro-demo-sheet .report-pro-capital-grid {
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+}
+
+.report-pro-demo-sheet .report-pro-kpis-demo > .report-pro-info-card,
+.report-pro-demo-sheet .report-pro-capital-grid > .report-pro-info-card {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+@media (max-width: 1100px) {
+  .report-pro-demo-sheet .report-pro-kpis-demo,
+  .report-pro-demo-sheet .report-pro-capital-grid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .report-pro-demo-sheet .report-pro-kpis-demo,
+  .report-pro-demo-sheet .report-pro-capital-grid {
+    grid-template-columns: 1fr;
+  }
+}
