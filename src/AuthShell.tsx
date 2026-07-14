@@ -1278,7 +1278,7 @@ const ClientPortal = ({
         doc.setFontSize(10);
         doc.text('Portfolio Manager', marginX + 34, 22);
         doc.setFontSize(18);
-        doc.text('Informe de cartera', marginX + 34, 46);
+        doc.text('Informe de inversion', marginX + 34, 46);
 
         doc.setFontSize(9);
         doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, pageWidth - marginX, 22, { align: 'right' });
@@ -1569,9 +1569,9 @@ const ClientPortal = ({
       const latestTwrLabel = latestTwrMonth ? `${formatMonthLabel(latestTwrMonth.month)}: ${formatPct(latestTwrMonth.twr)}` : '-';
       const kpis = [
         { label: 'Saldo actual', value: formatEuro(report?.saldo ?? overview.currentBalance ?? 0) },
-        { label: 'Beneficio total', value: formatEuro(report?.beneficioTotal ?? overview.cumulativeProfit ?? 0) },
-        { label: 'Incrementos totales', value: formatEuro(report?.incrementos ?? overview.totalIncrements ?? 0) },
-        { label: 'Decrementos totales', value: formatEuro(report?.decrementos ?? overview.totalDecrements ?? 0) },
+        { label: 'Beneficio acumulado', value: formatEuro(report?.beneficioTotal ?? overview.cumulativeProfit ?? 0) },
+        { label: 'Capital aportado', value: formatEuro(report?.incrementos ?? overview.totalIncrements ?? 0) },
+        { label: 'Capital retirado', value: formatEuro(report?.decrementos ?? overview.totalDecrements ?? 0) },
         { label: 'Beneficio ultimo mes', value: latestProfitLabel },
         { label: 'TWR ultimo mes', value: latestTwrLabel },
         { label: 'TWR acumulado anual (YTD)', value: formatPct(twrYtd) }
@@ -1597,7 +1597,7 @@ const ClientPortal = ({
         margin: tableMargin,
         didDrawPage,
         pageBreak: 'avoid',
-        head: [['Mes', 'Saldo fin de mes', 'Beneficio', 'TWR mensual', 'TWR acumulado']],
+        head: [['Mes', 'Saldo', 'Beneficio', 'TWR mensual', 'TWR acumulado']],
         body: monthly.map((item) => {
           const twr = item.retPct ?? twrMonthly.find((row) => row.month === item.month)?.twr ?? 0;
           const twrCumulative = twrCumulativeByMonth.get(item.month) ?? 0;

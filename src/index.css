@@ -5912,3 +5912,39 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+/* Horizontal overflow only when report charts have many months */
+.report-pro-chart-scroll,
+.report-pro-patrimony-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-bottom: 10px;
+  scrollbar-gutter: stable;
+}
+
+.report-pro-chart-scroll .report-pro-bars,
+.report-pro-patrimony-scroll-inner {
+  width: 100%;
+}
+
+.report-pro-chart-scroll::-webkit-scrollbar,
+.report-pro-patrimony-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.report-pro-chart-scroll::-webkit-scrollbar-track,
+.report-pro-patrimony-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.06);
+  border-radius: 999px;
+}
+
+.report-pro-chart-scroll::-webkit-scrollbar-thumb,
+.report-pro-patrimony-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #0f6d7a, #0ea5e9);
+  border-radius: 999px;
+}
+
+.report-pro-patrimony-scroll.is-expanded {
+  overflow-x: visible;
+}

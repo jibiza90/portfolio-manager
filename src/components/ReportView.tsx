@@ -296,10 +296,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     const kpis = [
       { label: 'Capital Aportado', value: formatCurrency(report.incrementos) },
       { label: 'Capital Retirado', value: formatCurrency(report.decrementos) },
-      { label: 'Valor Actual de Cartera', value: formatCurrency(report.saldo) },
+      { label: 'Saldo Actual', value: formatCurrency(report.saldo) },
       { label: 'Beneficio Acumulado', value: formatSignedCurrency(report.beneficioTotal) },
       { label: 'TWR', value: `${formatSignedPercent((report.twrYtd ?? 0) * 100)}` },
-      { label: 'Resultado Ultimo Mes', value: formatSignedCurrency(report.beneficioUltimoMes) },
+      { label: 'Beneficio Ultimo Mes', value: formatSignedCurrency(report.beneficioUltimoMes) },
       { label: 'Rentabilidad Ultimo Mes', value: `${formatSignedPercent(report.rentabilidadUltimoMes)}` },
       { label: 'Rentabilidad Total', value: `${formatSignedPercent(report.rentabilidad)}` }
     ];
@@ -568,7 +568,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
 
       doc.setFontSize(7);
       doc.setTextColor(15, 109, 122);
-      doc.text('Leyenda: linea azul = valor mensual de cartera', margin + 2, y + chartHeight + 4);
+      doc.text('Leyenda: linea azul = saldo mensual', margin + 2, y + chartHeight + 4);
 
       y += chartHeight + 10;
     }
@@ -751,10 +751,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
   const formatChartTooltipValue = (value: number) =>
     chartView === 'return' ? `${value.toFixed(2)}%` : formatCurrency(value);
   const chartTitle = chartView === 'profit'
-    ? 'Resultado mensual'
+    ? 'Beneficio mensual'
     : chartView === 'balance'
-      ? 'Valor mensual de cartera'
+      ? 'Saldo mensual'
       : 'Rentabilidad mensual';
+  const monthlyChartMinWidth = effectiveMonthlyWithData.length > 12 ? `${effectiveMonthlyWithData.length * 86}px` : '100%';
   const hasNegativeMonth = effectiveMonthlyWithData.some((m) => getChartValue(m) < 0);
   const maxMonthPct = Math.max(1, ...effectiveMonthlyWithData.map((m) => Math.abs(getChartValue(m))));
   const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.hasData && p.balance !== undefined && (p.balance ?? 0) !== 0);
@@ -1106,16 +1107,16 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     y += 110;
 
     const cardW = (contentWidth - 30) / 3;
-    card(margin, y, cardW, 68, 'Valor final periodo', money(periodEndBalance), periodEndBalance >= 0);
-    card(margin + cardW + 15, y, cardW, 68, 'Resultado del periodo', money(periodProfit), periodProfit >= 0);
+    card(margin, y, cardW, 68, 'Valor final del periodo', money(periodEndBalance), periodEndBalance >= 0);
+    card(margin + cardW + 15, y, cardW, 68, 'Beneficio del periodo', money(periodProfit), periodProfit >= 0);
     card(margin + (cardW + 15) * 2, y, cardW, 68, 'Rentabilidad periodo', pct(periodReturnPct * 100), periodReturnPct >= 0);
     y += 82;
-    card(margin, y, cardW, 62, 'Aportaciones del periodo', money(periodIncrements), true);
-    card(margin + cardW + 15, y, cardW, 62, 'Retiradas del periodo', money(periodDecrements), periodDecrements <= 0);
+    card(margin, y, cardW, 62, 'Capital aportado del periodo', money(periodIncrements), true);
+    card(margin + cardW + 15, y, cardW, 62, 'Capital retirado del periodo', money(periodDecrements), periodDecrements <= 0);
     card(margin + (cardW + 15) * 2, y, cardW, 62, 'Capital neto del periodo', money(periodIncrements - periodDecrements), periodIncrements - periodDecrements >= 0);
     y += 86;
 
-    sectionTitle('Evolucion patrimonio', 'Valor de cartera al cierre de cada mes del periodo seleccionado.', 205);
+    sectionTitle('Evolucion patrimonio', 'Saldo al cierre de cada mes del periodo seleccionado.', 205);
     drawLineChart(effectivePatrimonioData, margin, y, contentWidth, 190);
     y += 216;
 
@@ -1123,9 +1124,9 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     drawReturnBars(effectiveMonthlyWithData, margin, y, contentWidth, 150);
     y += 178;
 
-    sectionTitle('Tabla mensual', 'Resultado, rentabilidad y valor de cartera por mes.', 48);
+    sectionTitle('Tabla mensual', 'Beneficio, rentabilidad y saldo por mes.', 48);
     const widths = [170, 170, 130, contentWidth - 470];
-    tableRow(['Fecha', 'Resultado', 'Rentabilidad', 'Valor cartera'], widths, y, { header: true });
+    tableRow(['Fecha', 'Beneficio', 'Rentabilidad', 'Saldo'], widths, y, { header: true });
     y += 24;
     effectiveMonthlyWithData.forEach((month, idx) => {
       ensure(22);
@@ -1156,7 +1157,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
         setText(colors.ink);
         doc.text(breakdown.month, margin, y);
         y += 18;
-        tableRow(['Concepto', 'Importe', 'Rentabilidad', 'Resultado'], widths, y, { header: true });
+        tableRow(['Concepto', 'Importe', 'Rentabilidad', 'Beneficio'], widths, y, { header: true });
         y += 22;
         const visiblePct = getVisibleMonthReturnPct(reportMonthToKey(breakdown.month), breakdown.initialReturnPct * 100);
         const initialProfit = breakdown.initialCapital * (visiblePct / 100);
@@ -1175,13 +1176,13 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           y += 18;
         });
         const total = initialProfit + breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0);
-        tableRow(['Resultado explicado', '-', '-', money(total)], widths, y, { positiveIndex: 3, positiveValue: total });
+        tableRow(['Beneficio explicado', '-', '-', money(total)], widths, y, { positiveIndex: 3, positiveValue: total });
         y += 24;
       });
     }
 
     if (periodMovements.length > 0) {
-      sectionTitle('Aportaciones y retiradas', 'Aportaciones y retiradas registradas dentro del periodo seleccionado.', 54);
+      sectionTitle('Capital aportado y retirado', 'Capital aportado y capital retirado dentro del periodo seleccionado.', 54);
       const movementWidths = [150, 170, 170, contentWidth - 490];
       tableRow(['Fecha', 'Aportacion', 'Retirada', 'Capital neto del periodo'], movementWidths, y, { header: true });
       y += 24;
@@ -1215,9 +1216,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
   const renderPatrimonyChart = (expanded: boolean) => {
     const chartData = expanded ? effectiveExpandedPatrimonioData : effectivePatrimonioData;
     const geometry = expanded ? expandedPatrimonyGeometry : patrimonyGeometry;
+    const chartMinWidth = !expanded && chartData.length > 12 ? `${chartData.length * 92}px` : '100%';
     return (
-      <>
-        <div className={`report-pro-line-wrap ${expanded ? 'report-pro-line-wrap-expanded' : ''}`}>
+      <div className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''}`}>
+        <div className="report-pro-patrimony-scroll-inner" style={{ minWidth: chartMinWidth }}>
+          <div className={`report-pro-line-wrap ${expanded ? 'report-pro-line-wrap-expanded' : ''}`}>
           {hoveredPatrimonyPoint ? (
             <div
               className={`report-pro-line-tooltip ${expanded ? 'report-pro-line-tooltip-expanded' : ''}`}
@@ -1294,21 +1297,22 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
             })}
           </svg>
         </div>
-        <div
-          className={`report-pro-month-row ${expanded ? 'report-pro-month-row-expanded' : ''}`}
-          style={{ gridTemplateColumns: `repeat(${Math.max(1, chartData.length)}, minmax(0, 1fr))` }}
-        >
-          {chartData.map((p) => <span key={p.month}>{p.month}</span>)}
+          <div
+            className={`report-pro-month-row ${expanded ? 'report-pro-month-row-expanded' : ''}`}
+            style={{ gridTemplateColumns: `repeat(${Math.max(1, chartData.length)}, minmax(72px, 1fr))` }}
+          >
+            {chartData.map((p) => <span key={p.month}>{p.month}</span>)}
+          </div>
+          <div
+            className={`report-pro-value-row ${expanded ? 'report-pro-value-row-expanded' : ''}`}
+            style={{ gridTemplateColumns: `repeat(${Math.max(1, chartData.length)}, minmax(72px, 1fr))` }}
+          >
+            {chartData.map((p) => (
+              <span key={`${p.month}-value`}>{formatCurrencyNoCents(p.balance ?? 0)}</span>
+            ))}
+          </div>
         </div>
-        <div
-          className={`report-pro-value-row ${expanded ? 'report-pro-value-row-expanded' : ''}`}
-          style={{ gridTemplateColumns: `repeat(${Math.max(1, chartData.length)}, minmax(0, 1fr))` }}
-        >
-          {chartData.map((p) => (
-            <span key={`${p.month}-value`}>{formatCurrencyNoCents(p.balance ?? 0)}</span>
-          ))}
-        </div>
-      </>
+      </div>
     );
   };
 
@@ -1319,7 +1323,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           <div className="report-pro-panel-head">
             <div>
               <h4>Evolucion patrimonio</h4>
-              <p>Valor de cartera al cierre de cada mes</p>
+              <p>Saldo al cierre de cada mes</p>
             </div>
             <button
               type="button"
@@ -1406,13 +1410,13 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                 <strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidadUltimoMes)}</strong>
               </div>
               <div className="report-pro-info-card" data-tooltip={`Beneficio generado en euros durante ${latestMonthLabel}. Incluye el efecto real del capital invertido y de las aportaciones del mes.`}>
-                <p>{`Resultado ${latestMonthLabel}`}</p>
+                <p>{`Beneficio ${latestMonthLabel}`}</p>
                 <strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioUltimoMes)}</strong>
               </div>
             </section>
 
             <section className="report-pro-kpis report-pro-kpis-demo">
-              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Beneficio total generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
+              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Beneficio acumulado generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
               <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
               <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus aportaciones registradas desde ${firstRegisteredDateLabel}.`}><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
               <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus retiradas registradas desde ${firstRegisteredDateLabel}.`}><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
@@ -1423,11 +1427,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           <>
             <section className="report-pro-executive">
               <div>
-                <p>Valor actual de cartera</p>
+                <p>Saldo actual</p>
                 <strong>{formatCurrency(report.saldo)}</strong>
               </div>
               <div>
-                <p>Resultado acumulado</p>
+                <p>Beneficio acumulado</p>
                 <strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong>
               </div>
               <div>
@@ -1439,7 +1443,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
             <section className="report-pro-kpis">
               <div className="report-pro-kpi"><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
               <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-              <div className="report-pro-kpi"><span>Resultado ultimo mes</span><strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioUltimoMes)}</strong></div>
+              <div className="report-pro-kpi"><span>Beneficio ultimo mes</span><strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioUltimoMes)}</strong></div>
               <div className="report-pro-kpi"><span>Rentabilidad ultimo mes</span><strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidadUltimoMes)}</strong></div>
               <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidad)}</strong></div>
             </section>
@@ -1484,8 +1488,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               <div className="report-pro-info-card" data-tooltip="Total de dinero ingresado historicamente por el cliente."><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
               <div className="report-pro-info-card" data-tooltip="Total de dinero retirado historicamente por el cliente."><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
               <div className="report-pro-info-card" data-tooltip="Capital aportado menos capital retirado."><span>Capital neto aportado</span><strong>{formatCurrency(accumulatedNetCapital)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Beneficio total generado desde el inicio de la relacion."><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Valor actual de la cartera del cliente."><span>Valor actual de cartera</span><strong>{formatCurrency(report.saldo)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Beneficio acumulado generado desde el inicio de la relacion."><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
+              <div className="report-pro-info-card" data-tooltip="Saldo actual de la cartera del cliente."><span>Saldo actual</span><strong>{formatCurrency(report.saldo)}</strong></div>
             </div>
           </section>
         ) : null}
@@ -1557,19 +1561,19 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                 </div>
               ) : null}
               <div className="report-pro-info-card" data-tooltip="Valor de la cartera al final del periodo seleccionado.">
-                <span>Valor final periodo</span><strong>{formatCurrency(periodEndBalance)}</strong>
+                <span>Valor final del periodo</span><strong>{formatCurrency(periodEndBalance)}</strong>
               </div>
-              <div className="report-pro-info-card" data-tooltip="Resultado generado dentro del periodo seleccionado.">
-                <span>Resultado generado</span><strong className={periodProfit >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(periodProfit)}</strong>
+              <div className="report-pro-info-card" data-tooltip="Beneficio generado dentro del periodo seleccionado.">
+                <span>Beneficio del periodo</span><strong className={periodProfit >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(periodProfit)}</strong>
               </div>
               <div className="report-pro-info-card" data-tooltip="Rentabilidad acumulada del periodo, sin mezclarla con aportaciones o retiradas.">
                 <span>Rentabilidad periodo</span><strong className={periodReturnPct >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(periodReturnPct * 100)}</strong>
               </div>
               <div className="report-pro-info-card" data-tooltip="Dinero ingresado por el cliente dentro del periodo seleccionado.">
-                <span>Aportaciones del periodo</span><strong>{formatCurrency(periodIncrements)}</strong>
+                <span>Capital aportado del periodo</span><strong>{formatCurrency(periodIncrements)}</strong>
               </div>
               <div className="report-pro-info-card" data-tooltip="Dinero retirado por el cliente dentro del periodo seleccionado.">
-                <span>Retiradas del periodo</span><strong>{formatCurrency(periodDecrements)}</strong>
+                <span>Capital retirado del periodo</span><strong>{formatCurrency(periodDecrements)}</strong>
               </div>
               <div className="report-pro-info-card" data-tooltip="Capital aportado menos capital retirado dentro del periodo seleccionado.">
                 <span>Capital neto del periodo</span><strong>{formatCurrency(periodIncrements - periodDecrements)}</strong>
@@ -1593,7 +1597,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                 <div className="report-pro-breakdown-card" key={breakdown.month}>
                   <div className="report-pro-breakdown-title">
                     <strong>{breakdown.month}</strong>
-                    <span>Resultado explicado: {formatCurrency(explainedTotalProfit)}</span>
+                    <span>Beneficio explicado: {formatCurrency(explainedTotalProfit)}</span>
                   </div>
                   <div className="table-scroll">
                     <table className="monthly-table report-pro-table report-pro-breakdown-table">
@@ -1608,7 +1612,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                           <th>Concepto</th>
                           <th className="text-right">Capital</th>
                           <th className="text-right">Rentabilidad</th>
-                          <th className="text-right">Resultado</th>
+                          <th className="text-right">Beneficio</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1635,7 +1639,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                           </tr>
                         ))}
                         <tr className="report-pro-breakdown-total">
-                          <td>Resultado explicado</td>
+                          <td>Beneficio explicado</td>
                           <td className="text-right">—</td>
                           <td className="text-right">—</td>
                           <td className={`text-right ${explainedTotalProfit >= 0 ? 'positive' : 'negative'}`}>
@@ -1662,16 +1666,20 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               Vista de graficos
               <select value={chartView} onChange={(event) => { setChartView(event.target.value as typeof chartView); setHoveredMonthlyBar(null); }}>
                 <option value="return">Rentabilidad</option>
-                <option value="profit">Resultado EUR</option>
-                <option value="balance">Valor cartera</option>
+                <option value="profit">Beneficio EUR</option>
+                <option value="balance">Saldo</option>
               </select>
             </label>
           </div>
-          <div
-            className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}
-            style={{ gridTemplateColumns: `repeat(${Math.max(1, effectiveMonthlyWithData.length)}, minmax(0, 1fr))` }}
-          >
-            {effectiveMonthlyWithData.map((m) => {
+          <div className="report-pro-chart-scroll">
+            <div
+              className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}
+              style={{
+                gridTemplateColumns: `repeat(${Math.max(1, effectiveMonthlyWithData.length)}, minmax(76px, 1fr))`,
+                minWidth: monthlyChartMinWidth
+              }}
+            >
+              {effectiveMonthlyWithData.map((m) => {
               const maxBarHeight = hasNegativeMonth ? 46 : 92;
               const chartValue = getChartValue(m);
               const height = Math.min(maxBarHeight, Math.max(4, (Math.abs(chartValue) / maxMonthPct) * maxBarHeight));
@@ -1704,14 +1712,15 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                   <span className="report-pro-bar-label">{m.month}</span>
                 </div>
               );
-            })}
+              })}
+            </div>
           </div>
         </section>
 
         <section className="report-pro-panel">
           <div className="report-pro-panel-head">
-            <h4>Resultados mensuales</h4>
-            <p>Resultado generado en cada cierre de mes</p>
+            <h4>Beneficios mensuales</h4>
+            <p>Beneficio generado en cada cierre de mes</p>
           </div>
           <div className="table-scroll">
             <table className="monthly-table report-pro-table report-pro-benefits-table">
@@ -1722,7 +1731,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               <thead>
                 <tr>
                   <th>Fecha</th>
-                  <th className="text-right">Resultado</th>
+                  <th className="text-right">Beneficio</th>
                 </tr>
               </thead>
               <tbody>
@@ -1743,7 +1752,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           <div className="report-pro-panel-head">
             <div>
               <h4>Evolucion patrimonio</h4>
-              <p>Valor de cartera al cierre de cada mes</p>
+              <p>Saldo al cierre de cada mes</p>
             </div>
             <button
               type="button"
@@ -1764,7 +1773,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
         <section className="report-pro-panel">
           <div className="report-pro-panel-head">
             <h4>Tabla mensual</h4>
-            <p>Resultado, rentabilidad y valor de cartera por mes</p>
+            <p>Beneficio, rentabilidad y saldo por mes</p>
           </div>
           <div className="table-scroll">
             <table className="monthly-table report-pro-table report-pro-demo-monthly-table">
@@ -1777,9 +1786,9 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               <thead>
                 <tr>
                   <th>Mes</th>
-                  <th className="text-right">Resultado</th>
+                  <th className="text-right">Beneficio</th>
                   <th className="text-right">Rentabilidad</th>
-                  <th className="text-right">Valor cartera</th>
+                  <th className="text-right">Saldo</th>
                 </tr>
               </thead>
               <tbody>
@@ -1847,7 +1856,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                                     <th>Concepto</th>
                                     <th className="text-right">Importe</th>
                                     <th className="text-right">Rentabilidad aplicada</th>
-                                    <th className="text-right">Resultado generado</th>
+                                    <th className="text-right">Beneficio generado</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1874,7 +1883,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                                     </tr>
                                   ))}
                                   <tr className="report-pro-breakdown-total">
-                                    <td>Resultado explicado</td>
+                                    <td>Beneficio explicado</td>
                                     <td className="text-right">—</td>
                                     <td className="text-right">—</td>
                                     <td className={`text-right ${explainedTotalProfit >= 0 ? 'positive' : 'negative'}`}>
@@ -1898,7 +1907,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
         {visibleMovementCapitalSeries.length > 0 && (
           <section className="report-pro-panel">
             <div className="report-pro-panel-head">
-              <h4>Aportaciones y retiradas</h4>
+              <h4>Capital aportado y retirado</h4>
               <p>Detalle de aportaciones y retiradas</p>
             </div>
             <div className="table-scroll">

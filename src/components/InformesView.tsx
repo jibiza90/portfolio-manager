@@ -169,13 +169,13 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
     const kpiGap = 8;
 
     const kpis = [
-      { label: 'Capital Invertido', value: formatCurrency(clientData.incrementos), accent: false },
+      { label: 'Capital Aportado', value: formatCurrency(clientData.incrementos), accent: false },
       { label: 'Capital Retirado', value: formatCurrency(clientData.decrementos), accent: false },
       { label: 'Saldo Actual', value: formatCurrency(clientData.saldo), accent: true, positive: true },
-      { label: 'Beneficio Total', value: formatCurrency(clientData.beneficioTotal), accent: true, positive: clientData.beneficioTotal >= 0 },
+      { label: 'Beneficio Acumulado', value: formatCurrency(clientData.beneficioTotal), accent: true, positive: clientData.beneficioTotal >= 0 },
       { label: 'TWR', value: `${(clientData.twrYtd * 100).toFixed(2)}%`, accent: true, positive: clientData.twrYtd >= 0 },
       { label: 'Beneficio Último Mes', value: formatCurrency(clientData.beneficioUltimoMes), accent: true, positive: clientData.beneficioUltimoMes >= 0 },
-      { label: 'Rentab. Último Mes', value: `${clientData.rentabilidadUltimoMes.toFixed(2)}%`, accent: true, positive: clientData.rentabilidadUltimoMes >= 0 },
+      { label: 'Rentabilidad Ultimo Mes', value: `${clientData.rentabilidadUltimoMes.toFixed(2)}%`, accent: true, positive: clientData.rentabilidadUltimoMes >= 0 },
       { label: 'Rentabilidad Total', value: `${clientData.rentabilidad.toFixed(2)}%`, accent: true, positive: clientData.rentabilidad >= 0 }
     ];
 
@@ -591,10 +591,10 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
 Le envío su Informe de Inversión actualizado a fecha ${fecha}.
 
 📊 RESUMEN:
-• Capital invertido: ${formatCurrency(clientData.incrementos)}
+• Capital aportado: ${formatCurrency(clientData.incrementos)}
 • Capital retirado: ${formatCurrency(clientData.decrementos)}
 • Saldo actual: ${formatCurrency(clientData.saldo)}
-• Beneficio total: ${formatCurrency(clientData.beneficioTotal)}
+• Beneficio acumulado: ${formatCurrency(clientData.beneficioTotal)}
 • TWR: ${((clientData.twrYtd ?? 0) * 100).toFixed(2)}%
 • Rentabilidad total: ${clientData.rentabilidad.toFixed(2)}%
 
@@ -898,7 +898,7 @@ Su gestor de inversiones`
                   <strong>{formatCurrency(clientData.saldo)}</strong>
                 </div>
                 <div>
-                  <p>Beneficio total</p>
+                  <p>Beneficio acumulado</p>
                   <strong className={clientData.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatCurrency(clientData.beneficioTotal)}</strong>
                 </div>
                 <div>
@@ -908,10 +908,10 @@ Su gestor de inversiones`
               </section>
 
               <section className="report-pro-kpis">
-                <div className="report-pro-kpi"><span>Capital invertido</span><strong>{formatCurrency(clientData.incrementos)}</strong></div>
+                <div className="report-pro-kpi"><span>Capital aportado</span><strong>{formatCurrency(clientData.incrementos)}</strong></div>
                 <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(clientData.decrementos)}</strong></div>
                 <div className="report-pro-kpi"><span>Beneficio ultimo mes</span><strong className={clientData.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(clientData.beneficioUltimoMes)}</strong></div>
-                <div className="report-pro-kpi"><span>Rentab. ultimo mes</span><strong className={clientData.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{clientData.rentabilidadUltimoMes.toFixed(2)}%</strong></div>
+                <div className="report-pro-kpi"><span>Rentabilidad ultimo mes</span><strong className={clientData.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{clientData.rentabilidadUltimoMes.toFixed(2)}%</strong></div>
                 <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={clientData.rentabilidad >= 0 ? 'positive' : 'negative'}>{clientData.rentabilidad.toFixed(2)}%</strong></div>
               </section>
 
@@ -1038,7 +1038,7 @@ Su gestor de inversiones`
                 <section className="report-pro-panel">
                   <div className="report-pro-panel-head">
                     <h4>Historial de movimientos</h4>
-                    <p>Aportaciones y retiradas del periodo</p>
+                    <p>Capital aportado y retirado del periodo</p>
                   </div>
                   <div className="table-scroll">
                     <table className="movements-table report-pro-table">
