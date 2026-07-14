@@ -5985,3 +5985,79 @@ select {
 .report-pro-patrimony-scroll .report-pro-value-row {
   min-height: 30px;
 }
+
+/* Patrimony legend sits outside the plot and uses the same plot width as the points */
+.report-pro-patrimony-legend {
+  display: grid;
+  gap: 0;
+  margin-top: 8px;
+  min-height: 48px;
+}
+
+.report-pro-patrimony-legend-item {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  min-width: 0;
+}
+
+.report-pro-patrimony-tick {
+  width: 1px;
+  height: 12px;
+  margin-bottom: 4px;
+  background: linear-gradient(180deg, rgba(14, 116, 144, 0.45), rgba(14, 116, 144, 0.08));
+}
+
+.report-pro-patrimony-month {
+  max-width: 88px;
+  color: #4b5f79;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-pro-patrimony-value {
+  max-width: 96px;
+  margin-top: 5px;
+  padding: 3px 5px;
+  border: 1px solid rgba(15, 47, 77, 0.12);
+  border-radius: 6px;
+  background: rgba(15, 47, 77, 0.07);
+  color: #0f2f4d;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-pro-patrimony-legend-expanded {
+  min-height: 58px;
+  margin-top: 14px;
+}
+
+.report-pro-patrimony-legend-expanded .report-pro-patrimony-tick {
+  height: 16px;
+}
+
+.report-pro-patrimony-legend-expanded .report-pro-patrimony-month,
+.report-pro-patrimony-legend-expanded .report-pro-patrimony-value {
+  font-size: 13px;
+  max-width: 120px;
+}
+
+/* Keep compact monthly charts inside the card; scroll only when explicitly enabled. */
+.report-pro-chart-scroll:not(.is-scrollable) {
+  overflow-x: hidden;
+}
+
+.report-pro-chart-scroll:not(.is-scrollable) .report-pro-bars {
+  max-width: 100%;
+  box-sizing: border-box;
+}

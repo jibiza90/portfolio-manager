@@ -1297,14 +1297,20 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
             })}
           </svg>
         </div>
-          <div className={`report-pro-month-row ${expanded ? 'report-pro-month-row-expanded' : ''}`}>
+          <div
+            className={`report-pro-patrimony-legend ${expanded ? 'report-pro-patrimony-legend-expanded' : ''}`}
+            style={{
+              marginLeft: `${(geometry.left / geometry.width) * 100}%`,
+              width: `${((geometry.width - geometry.left - geometry.right) / geometry.width) * 100}%`,
+              gridTemplateColumns: `repeat(${Math.max(1, geometry.points.length)}, minmax(72px, 1fr))`
+            }}
+          >
             {geometry.points.map((pt) => (
-              <span key={pt.month} style={{ left: `${(pt.x / geometry.width) * 100}%` }}>{pt.month}</span>
-            ))}
-          </div>
-          <div className={`report-pro-value-row ${expanded ? 'report-pro-value-row-expanded' : ''}`}>
-            {geometry.points.map((pt) => (
-              <span key={`${pt.month}-value`} style={{ left: `${(pt.x / geometry.width) * 100}%` }}>{formatCurrencyNoCents(pt.value)}</span>
+              <div className="report-pro-patrimony-legend-item" key={pt.month}>
+                <span className="report-pro-patrimony-tick" aria-hidden="true" />
+                <span className="report-pro-patrimony-month">{pt.month}</span>
+                <span className="report-pro-patrimony-value">{formatCurrencyNoCents(pt.value)}</span>
+              </div>
             ))}
           </div>
         </div>
