@@ -5948,3 +5948,40 @@ select {
 .report-pro-patrimony-scroll.is-expanded {
   overflow-x: visible;
 }
+
+/* Only show chart scrolling when the period has many months */
+.report-pro-chart-scroll,
+.report-pro-patrimony-scroll {
+  overflow-x: visible;
+  padding-bottom: 0;
+  scrollbar-gutter: auto;
+}
+
+.report-pro-chart-scroll.is-scrollable,
+.report-pro-patrimony-scroll.is-scrollable {
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scrollbar-gutter: stable;
+}
+
+/* Align patrimony month/value labels exactly with the plotted points */
+.report-pro-patrimony-scroll .report-pro-month-row,
+.report-pro-patrimony-scroll .report-pro-value-row {
+  position: relative;
+  display: block;
+  min-height: 24px;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.report-pro-patrimony-scroll .report-pro-month-row span,
+.report-pro-patrimony-scroll .report-pro-value-row span {
+  position: absolute;
+  transform: translateX(-50%);
+  min-width: 64px;
+  max-width: 96px;
+}
+
+.report-pro-patrimony-scroll .report-pro-value-row {
+  min-height: 30px;
+}

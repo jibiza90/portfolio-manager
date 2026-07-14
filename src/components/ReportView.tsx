@@ -1218,7 +1218,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     const geometry = expanded ? expandedPatrimonyGeometry : patrimonyGeometry;
     const chartMinWidth = !expanded && chartData.length > 12 ? `${chartData.length * 92}px` : '100%';
     return (
-      <div className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''}`}>
+      <div className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${!expanded && chartData.length > 12 ? 'is-scrollable' : ''}`}>
         <div className="report-pro-patrimony-scroll-inner" style={{ minWidth: chartMinWidth }}>
           <div className={`report-pro-line-wrap ${expanded ? 'report-pro-line-wrap-expanded' : ''}`}>
           {hoveredPatrimonyPoint ? (
@@ -1297,18 +1297,14 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
             })}
           </svg>
         </div>
-          <div
-            className={`report-pro-month-row ${expanded ? 'report-pro-month-row-expanded' : ''}`}
-            style={{ gridTemplateColumns: `repeat(${Math.max(1, chartData.length)}, minmax(72px, 1fr))` }}
-          >
-            {chartData.map((p) => <span key={p.month}>{p.month}</span>)}
+          <div className={`report-pro-month-row ${expanded ? 'report-pro-month-row-expanded' : ''}`}>
+            {geometry.points.map((pt) => (
+              <span key={pt.month} style={{ left: `${(pt.x / geometry.width) * 100}%` }}>{pt.month}</span>
+            ))}
           </div>
-          <div
-            className={`report-pro-value-row ${expanded ? 'report-pro-value-row-expanded' : ''}`}
-            style={{ gridTemplateColumns: `repeat(${Math.max(1, chartData.length)}, minmax(72px, 1fr))` }}
-          >
-            {chartData.map((p) => (
-              <span key={`${p.month}-value`}>{formatCurrencyNoCents(p.balance ?? 0)}</span>
+          <div className={`report-pro-value-row ${expanded ? 'report-pro-value-row-expanded' : ''}`}>
+            {geometry.points.map((pt) => (
+              <span key={`${pt.month}-value`} style={{ left: `${(pt.x / geometry.width) * 100}%` }}>{formatCurrencyNoCents(pt.value)}</span>
             ))}
           </div>
         </div>
@@ -1671,7 +1667,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               </select>
             </label>
           </div>
-          <div className="report-pro-chart-scroll">
+          <div className={`report-pro-chart-scroll ${effectiveMonthlyWithData.length > 12 ? 'is-scrollable' : ''}`}>
             <div
               className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}
               style={{
