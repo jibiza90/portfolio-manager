@@ -1671,7 +1671,9 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
             <div
               className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}
               style={{
-                gridTemplateColumns: `repeat(${Math.max(1, effectiveMonthlyWithData.length)}, minmax(76px, 1fr))`,
+                gridTemplateColumns: effectiveMonthlyWithData.length > 12
+                  ? `repeat(${Math.max(1, effectiveMonthlyWithData.length)}, minmax(76px, 1fr))`
+                  : `repeat(${Math.max(1, effectiveMonthlyWithData.length)}, minmax(0, 1fr))`,
                 minWidth: monthlyChartMinWidth
               }}
             >
