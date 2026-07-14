@@ -899,11 +899,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
       : 'el inicio';
   const latestMonth = monthlyWithData[monthlyWithData.length - 1];
   const latestMonthLabel = latestMonth ? getLongMonthLabel(latestMonth.month) : 'ultimo mes';
-  const visualScaleMax = Math.max(report.saldo, report.incrementos, accumulatedNetCapital, Math.abs(report.beneficioTotal), 1);
-  const visualCapitalHeight = Math.max(18, Math.min(100, (Math.max(accumulatedNetCapital, 0) / visualScaleMax) * 100));
-  const visualBenefitHeight = Math.max(10, Math.min(100, (Math.abs(report.beneficioTotal) / visualScaleMax) * 100));
-  const visualCurrentHeight = Math.max(22, Math.min(100, (Math.max(report.saldo, 0) / visualScaleMax) * 100));
-  const visualProfitShare = report.saldo > 0 ? Math.max(0, Math.min(100, (Math.max(report.beneficioTotal, 0) / report.saldo) * 100)) : 0;
+  const waterfallValues = [report.incrementos, report.decrementos, report.beneficioTotal, report.saldo];
+  const waterfallScaleMax = Math.max(...waterfallValues.map((value) => Math.abs(value)), 1);
+  const waterfallHeight = (value: number, min = 16) => `${Math.max(min, Math.min(100, (Math.abs(value) / waterfallScaleMax) * 100))}%`;
+  const waterfallFormulaOk = Math.abs((report.incrementos - report.decrementos + report.beneficioTotal) - report.saldo) < 1;
   const monthlyMovementType = (monthKey: string) => {
     const movements = (report.movements ?? []).filter((movement) => movement.iso.slice(0, 7) === monthKey);
     const hasIncrement = movements.some((movement) => movement.type === 'increment');
@@ -1947,63 +1946,55 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
 
 
         {isDemoReport ? (
-          <section className="report-pro-vision-panel" aria-label="Resumen visual de cartera">
-            <div className="report-pro-vision-copy">
-              <span className="report-pro-vision-eyebrow">Resumen visual de cartera</span>
-              <h4>Composici&oacute;n de la cartera</h4>
-              <p>Capital, beneficio y valor actual en una sola vista.</p>
-              <div className="report-pro-vision-metrics">
-                <div>
-                  <span>Capital neto</span>
-                  <strong>{formatCurrency(accumulatedNetCapital)}</strong>
-                </div>
-                <div>
-                  <span>Beneficio acumulado</span>
-                  <strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong>
-                </div>
-                <div>
-                  <span>Valor actual</span>
-                  <strong>{formatCurrency(report.saldo)}</strong>
-                </div>
+          <section className="report-pro-waterfall-panel" aria-label="Composicion financiera de la cartera">
+            <div className="report-pro-panel-head report-pro-waterfall-head">
+              <div>
+                <span className="report-pro-waterfall-eyebrow">Resumen financiero</span>
+                <h4>Composici&oacute;n del valor actual</h4>
+                <p>Desglose claro de c&oacute;mo se forma el saldo actual: capital aportado, retiradas y beneficio acumulado.</p>
+              </div>
+              <div className={`report-pro-waterfall-check ${waterfallFormulaOk ? 'is-ok' : 'is-warning'}`}>
+                {waterfallFormulaOk ? 'Cuadra con el saldo actual' : 'Revisar diferencia de redondeo'}
               </div>
             </div>
-            <div
-              className="report-pro-vision-stage"
-              style={{
-                '--capital-height': `${visualCapitalHeight}%`,
-                '--benefit-height': `${visualBenefitHeight}%`,
-                '--current-height': `${visualCurrentHeight}%`,
-                '--profit-share': `${visualProfitShare}%`
-              } as React.CSSProperties}
-            >
-              <div className="report-pro-vision-grid" />
-              <div className="report-pro-vision-orbit report-pro-vision-orbit-one" />
-              <div className="report-pro-vision-orbit report-pro-vision-orbit-two" />
-              <div className="report-pro-vision-columns">
-                <div className="report-pro-vision-column capital">
-                  <span className="report-pro-vision-column-top">{formatCurrencyNoCents(accumulatedNetCapital)}</span>
-                  <div className="report-pro-vision-bar" />
-                  <small>Capital neto</small>
-                </div>
-                <div className="report-pro-vision-column benefit">
-                  <span className="report-pro-vision-column-top">{formatSignedCurrency(report.beneficioTotal)}</span>
-                  <div className="report-pro-vision-bar" />
-                  <small>Beneficio</small>
-                </div>
-                <div className="report-pro-vision-column current">
-                  <span className="report-pro-vision-column-top">{formatCurrencyNoCents(report.saldo)}</span>
-                  <div className="report-pro-vision-bar">
-                    <i />
-                  </div>
-                  <small>Valor actual</small>
-                </div>
+            <div className="report-pro-waterfall-visual">
+              <div className="report-pro-waterfall-axis" />
+              <div className="report-pro-waterfall-step is-capital" style={{ '--bar-height': waterfallHeight(report.incrementos) } as React.CSSProperties}>
+                <div className="report-pro-waterfall-value">{formatCurrency(report.incrementos)}</div>
+                <div className="report-pro-waterfall-bar"><span /></div>
+                <strong>Capital aportado</strong>
+                <small>Todo el dinero ingresado</small>
               </div>
-              <div className="report-pro-vision-path">
-                <span />
-                <span />
-                <span />
-                <span />
+              <div className="report-pro-waterfall-connector" />
+              <div className="report-pro-waterfall-step is-withdrawal" style={{ '--bar-height': waterfallHeight(report.decrementos, 10) } as React.CSSProperties}>
+                <div className="report-pro-waterfall-value negative">-{formatCurrency(report.decrementos)}</div>
+                <div className="report-pro-waterfall-bar"><span /></div>
+                <strong>Capital retirado</strong>
+                <small>Dinero que ya ha salido</small>
               </div>
+              <div className="report-pro-waterfall-connector" />
+              <div className="report-pro-waterfall-step is-profit" style={{ '--bar-height': waterfallHeight(report.beneficioTotal, 10) } as React.CSSProperties}>
+                <div className={`report-pro-waterfall-value ${report.beneficioTotal >= 0 ? 'positive' : 'negative'}`}>{formatSignedCurrency(report.beneficioTotal)}</div>
+                <div className="report-pro-waterfall-bar"><span /></div>
+                <strong>Beneficio acumulado</strong>
+                <small>Resultado generado</small>
+              </div>
+              <div className="report-pro-waterfall-connector is-final" />
+              <div className="report-pro-waterfall-step is-total" style={{ '--bar-height': waterfallHeight(report.saldo) } as React.CSSProperties}>
+                <div className="report-pro-waterfall-value total">{formatCurrency(report.saldo)}</div>
+                <div className="report-pro-waterfall-bar"><span /></div>
+                <strong>Saldo actual</strong>
+                <small>Valor final de cartera</small>
+              </div>
+            </div>
+            <div className="report-pro-waterfall-formula">
+              <span>{formatCurrency(report.incrementos)}</span>
+              <b>-</b>
+              <span>{formatCurrency(report.decrementos)}</span>
+              <b>+</b>
+              <span className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</span>
+              <b>=</b>
+              <span className="total">{formatCurrency(report.saldo)}</span>
             </div>
           </section>
         ) : null}

@@ -6713,3 +6713,245 @@ select {
     gap: 10px !important;
   }
 }
+
+/* Premium waterfall: isolated financial composition block. */
+.report-pro-waterfall-panel {
+  margin-top: 28px;
+  padding: clamp(22px, 3vw, 34px);
+  overflow: hidden;
+  border: 1px solid rgba(15, 95, 138, 0.14);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 82% 12%, rgba(14, 165, 233, 0.18), transparent 32%),
+    linear-gradient(180deg, #ffffff 0%, #f3f8fc 100%);
+  box-shadow: 0 24px 70px rgba(30, 64, 99, 0.14);
+}
+
+.report-pro-waterfall-head {
+  align-items: start;
+  gap: 18px;
+}
+
+.report-pro-waterfall-eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 8px;
+  border: 1px solid rgba(15, 109, 122, 0.18);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(15, 109, 122, 0.08);
+  color: #0f5f6f;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.report-pro-waterfall-check {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 9px 13px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.report-pro-waterfall-check.is-ok {
+  border: 1px solid rgba(34, 197, 94, 0.26);
+  background: rgba(34, 197, 94, 0.10);
+  color: #137a3f;
+}
+
+.report-pro-waterfall-check.is-warning {
+  border: 1px solid rgba(245, 158, 11, 0.30);
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+}
+
+.report-pro-waterfall-visual {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 44px minmax(120px, 1fr) 44px minmax(120px, 1fr) 44px minmax(120px, 1fr);
+  align-items: end;
+  gap: 0;
+  min-height: 360px;
+  margin-top: 22px;
+  padding: 28px 18px 16px;
+  border: 1px solid rgba(30, 64, 99, 0.10);
+  border-radius: 24px;
+  background:
+    linear-gradient(rgba(15, 95, 138, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 95, 138, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, #fbfdff, #eef6fb);
+  background-size: 100% 64px, 64px 100%, auto;
+}
+
+.report-pro-waterfall-axis {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 74px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(30, 64, 99, 0.26), transparent);
+}
+
+.report-pro-waterfall-step {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  align-items: end;
+  gap: 8px;
+  height: 300px;
+  min-width: 0;
+}
+
+.report-pro-waterfall-value {
+  max-width: 100%;
+  border: 1px solid rgba(30, 64, 99, 0.10);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #0d263d;
+  font-size: clamp(12px, 1.5vw, 17px);
+  font-weight: 950;
+  letter-spacing: -0.035em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(30, 64, 99, 0.10);
+}
+
+.report-pro-waterfall-value.positive { color: #15803d; }
+.report-pro-waterfall-value.negative { color: #b91c1c; }
+.report-pro-waterfall-value.total { color: #075985; }
+
+.report-pro-waterfall-bar {
+  position: relative;
+  display: flex;
+  align-items: end;
+  width: min(92px, 70%);
+  height: 190px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.report-pro-waterfall-bar span {
+  width: 100%;
+  height: var(--bar-height);
+  min-height: 18px;
+  border-radius: 16px 16px 10px 10px;
+  box-shadow: 0 18px 34px rgba(30, 64, 99, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transform-origin: bottom center;
+  animation: reportWaterfallGrow 850ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.report-pro-waterfall-step.is-capital .report-pro-waterfall-bar span {
+  background: linear-gradient(180deg, #38bdf8, #0f6d7a);
+}
+
+.report-pro-waterfall-step.is-withdrawal .report-pro-waterfall-bar span {
+  background: linear-gradient(180deg, #fb7185, #dc2626);
+}
+
+.report-pro-waterfall-step.is-profit .report-pro-waterfall-bar span {
+  background: linear-gradient(180deg, #86efac, #16a34a);
+}
+
+.report-pro-waterfall-step.is-total .report-pro-waterfall-bar span {
+  background: linear-gradient(180deg, #fde68a, #0ea5e9 44%, #075985);
+}
+
+.report-pro-waterfall-step strong {
+  color: #102845;
+  font-size: 13px;
+  font-weight: 950;
+  text-align: center;
+}
+
+.report-pro-waterfall-step small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.report-pro-waterfall-connector {
+  align-self: center;
+  height: 3px;
+  margin-top: 52px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(15, 109, 122, 0.12), rgba(15, 109, 122, 0.58), rgba(15, 109, 122, 0.12));
+}
+
+.report-pro-waterfall-connector::after {
+  content: '';
+  display: block;
+  width: 9px;
+  height: 9px;
+  margin: -3px 0 0 auto;
+  border-top: 2px solid rgba(15, 109, 122, 0.64);
+  border-right: 2px solid rgba(15, 109, 122, 0.64);
+  transform: rotate(45deg);
+}
+
+.report-pro-waterfall-connector.is-final {
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.14), rgba(14, 165, 233, 0.72), rgba(14, 165, 233, 0.14));
+}
+
+.report-pro-waterfall-formula {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+  border: 1px solid rgba(30, 64, 99, 0.10);
+  border-radius: 18px;
+  padding: 12px;
+  background: #ffffff;
+  color: #334155;
+  font-weight: 850;
+}
+
+.report-pro-waterfall-formula span {
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #f1f5f9;
+  color: #102845;
+}
+
+.report-pro-waterfall-formula .total {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+@keyframes reportWaterfallGrow {
+  from { transform: scaleY(0.08); opacity: 0.3; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@media (max-width: 820px) {
+  .report-pro-waterfall-head {
+    display: grid;
+  }
+
+  .report-pro-waterfall-check {
+    width: fit-content;
+  }
+
+  .report-pro-waterfall-visual {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    min-height: 0;
+  }
+
+  .report-pro-waterfall-step {
+    height: 230px;
+  }
+
+  .report-pro-waterfall-connector {
+    display: none;
+  }
+}
