@@ -899,6 +899,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
       : 'el inicio';
   const latestMonth = monthlyWithData[monthlyWithData.length - 1];
   const latestMonthLabel = latestMonth ? getLongMonthLabel(latestMonth.month) : 'ultimo mes';
+  const visualScaleMax = Math.max(report.saldo, report.incrementos, accumulatedNetCapital, Math.abs(report.beneficioTotal), 1);
+  const visualCapitalHeight = Math.max(18, Math.min(100, (Math.max(accumulatedNetCapital, 0) / visualScaleMax) * 100));
+  const visualBenefitHeight = Math.max(10, Math.min(100, (Math.abs(report.beneficioTotal) / visualScaleMax) * 100));
+  const visualCurrentHeight = Math.max(22, Math.min(100, (Math.max(report.saldo, 0) / visualScaleMax) * 100));
+  const visualProfitShare = report.saldo > 0 ? Math.max(0, Math.min(100, (Math.max(report.beneficioTotal, 0) / report.saldo) * 100)) : 0;
   const monthlyMovementType = (monthKey: string) => {
     const movements = (report.movements ?? []).filter((movement) => movement.iso.slice(0, 7) === monthKey);
     const hasIncrement = movements.some((movement) => movement.type === 'increment');
@@ -1939,6 +1944,72 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
             </div>
           </section>
         )}
+
+
+        {isDemoReport ? (
+          <section className="report-pro-vision-panel" aria-label="Resumen visual de cartera">
+            <div className="report-pro-vision-copy">
+              <span className="report-pro-vision-eyebrow">Resumen visual de cartera</span>
+              <h4>Composici&oacute;n y evoluci&oacute;n de la inversi&oacute;n</h4>
+              <p>
+                Una vista ejecutiva para ver de un vistazo cuanto capital se ha aportado,
+                que beneficio se ha generado y cual es el valor actual de la cartera.
+              </p>
+              <div className="report-pro-vision-metrics">
+                <div>
+                  <span>Capital neto</span>
+                  <strong>{formatCurrency(accumulatedNetCapital)}</strong>
+                </div>
+                <div>
+                  <span>Beneficio acumulado</span>
+                  <strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong>
+                </div>
+                <div>
+                  <span>Valor actual</span>
+                  <strong>{formatCurrency(report.saldo)}</strong>
+                </div>
+              </div>
+            </div>
+            <div
+              className="report-pro-vision-stage"
+              style={{
+                '--capital-height': `${visualCapitalHeight}%`,
+                '--benefit-height': `${visualBenefitHeight}%`,
+                '--current-height': `${visualCurrentHeight}%`,
+                '--profit-share': `${visualProfitShare}%`
+              } as React.CSSProperties}
+            >
+              <div className="report-pro-vision-grid" />
+              <div className="report-pro-vision-orbit report-pro-vision-orbit-one" />
+              <div className="report-pro-vision-orbit report-pro-vision-orbit-two" />
+              <div className="report-pro-vision-columns">
+                <div className="report-pro-vision-column capital">
+                  <span className="report-pro-vision-column-top">{formatCurrencyNoCents(accumulatedNetCapital)}</span>
+                  <div className="report-pro-vision-bar" />
+                  <small>Capital neto</small>
+                </div>
+                <div className="report-pro-vision-column benefit">
+                  <span className="report-pro-vision-column-top">{formatSignedCurrency(report.beneficioTotal)}</span>
+                  <div className="report-pro-vision-bar" />
+                  <small>Beneficio</small>
+                </div>
+                <div className="report-pro-vision-column current">
+                  <span className="report-pro-vision-column-top">{formatCurrencyNoCents(report.saldo)}</span>
+                  <div className="report-pro-vision-bar">
+                    <i />
+                  </div>
+                  <small>Valor actual</small>
+                </div>
+              </div>
+              <div className="report-pro-vision-path">
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
+          </section>
+        ) : null}
       </article>
     </div>
   );
