@@ -4,7 +4,6 @@ import { getReportByToken, isValidReportToken, ReportData } from '../services/re
 import { isDemoClient } from '../constants/clients';
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
-import { InvestmentJourneySection } from './InvestmentJourneySection';
 
 interface ReportViewProps {
   token?: string;
@@ -2000,8 +1999,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           </section>
         ) : null}
 
-
-        {isDemoReport ? <InvestmentJourneySection report={report} /> : null}
       </article>
     </div>
   );
