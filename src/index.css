@@ -6090,3 +6090,30 @@ select {
   padding-left: 3px;
   padding-right: 3px;
 }
+
+/* Restore patrimony labels to compact in-chart rows and keep them contained */
+.report-pro-patrimony-scroll .report-pro-month-row,
+.report-pro-patrimony-scroll .report-pro-value-row {
+  position: static;
+  display: grid;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.report-pro-patrimony-scroll .report-pro-month-row span,
+.report-pro-patrimony-scroll .report-pro-value-row span {
+  position: static;
+  transform: none;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.report-pro-patrimony-scroll .report-pro-value-row span {
+  box-sizing: border-box;
+}
+
+.report-pro-point-guide,
+.report-pro-patrimony-legend,
+.report-pro-patrimony-tick {
+  display: none;
+}

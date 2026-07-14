@@ -785,7 +785,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
       const value = p.balance as number;
       const x = data.length <= 1
         ? pads.left + plotW / 2
-        : pads.left + (idx / (data.length - 1)) * plotW;
+        : pads.left + ((idx + 0.5) / data.length) * plotW;
       const y = pads.top + (1 - (value - min) / axisSpan) * plotH;
       return { x, y, value, month: p.month };
     });
@@ -1263,17 +1263,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               </g>
             )) : null}
             {geometry.areaPath && <path d={geometry.areaPath} className="report-pro-area" fill={`url(#${expanded ? 'patrimonyAreaExpanded' : 'patrimonyAreaShared'})`} />}
-            {geometry.points.map((pt, idx) => (
-              <line
-                key={`${pt.month}-${idx}-guide`}
-                className="report-pro-point-guide"
-                x1={pt.x}
-                y1={pt.y + (expanded ? 8 : 5)}
-                x2={pt.x}
-                y2={geometry.plotBottom}
-                pointerEvents="none"
-              />
-            ))}
             {geometry.points.length > 1 && <polyline className={`report-pro-line ${expanded ? 'report-pro-line-expanded' : ''}`} points={geometry.linePoints} />}
             {geometry.points.map((pt, idx) => (
               <g key={`${pt.month}-${idx}`}>
@@ -1308,19 +1297,25 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
             })}
           </svg>
           <div
-            className={`report-pro-patrimony-legend ${expanded ? 'report-pro-patrimony-legend-expanded' : ''}`}
+            className={`report-pro-month-row ${expanded ? 'report-pro-month-row-expanded' : ''}`}
             style={{
               marginLeft: `${(geometry.left / geometry.width) * 100}%`,
               width: `${((geometry.width - geometry.left - geometry.right) / geometry.width) * 100}%`,
-              gridTemplateColumns: `repeat(${Math.max(1, geometry.points.length)}, minmax(72px, 1fr))`
+              gridTemplateColumns: `repeat(${Math.max(1, geometry.points.length)}, minmax(0, 1fr))`
+            }}
+          >
+            {geometry.points.map((pt) => <span key={pt.month}>{pt.month}</span>)}
+          </div>
+          <div
+            className={`report-pro-value-row ${expanded ? 'report-pro-value-row-expanded' : ''}`}
+            style={{
+              marginLeft: `${(geometry.left / geometry.width) * 100}%`,
+              width: `${((geometry.width - geometry.left - geometry.right) / geometry.width) * 100}%`,
+              gridTemplateColumns: `repeat(${Math.max(1, geometry.points.length)}, minmax(0, 1fr))`
             }}
           >
             {geometry.points.map((pt) => (
-              <div className="report-pro-patrimony-legend-item" key={pt.month}>
-                <span className="report-pro-patrimony-tick" aria-hidden="true" />
-                <span className="report-pro-patrimony-month">{pt.month}</span>
-                <span className="report-pro-patrimony-value">{formatCurrencyNoCents(pt.value)}</span>
-              </div>
+              <span key={`${pt.month}-value`}>{formatCurrencyNoCents(pt.value)}</span>
             ))}
           </div>
         </div>
