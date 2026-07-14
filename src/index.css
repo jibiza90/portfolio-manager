@@ -6955,3 +6955,138 @@ select {
     display: none;
   }
 }
+
+/* Smart executive summary: isolated, sober and removable. */
+.smart-summary-panel {
+  margin-top: 28px;
+  padding: clamp(22px, 3vw, 34px);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(14, 165, 233, 0.12), transparent 32%),
+    linear-gradient(180deg, #ffffff, #f6f9fc);
+  box-shadow: 0 24px 70px rgba(30, 64, 99, 0.12);
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.smart-summary-head {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.smart-summary-head span,
+.smart-summary-card span,
+.smart-summary-main-card span,
+.smart-summary-reading span {
+  color: #0f6d7a;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+
+.smart-summary-head h4 {
+  margin: 0;
+  color: #102845;
+  font-size: clamp(28px, 3.2vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.smart-summary-head p {
+  max-width: 760px;
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.smart-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.3fr) repeat(3, minmax(160px, 0.9fr));
+  gap: 12px;
+}
+
+.smart-summary-main-card,
+.smart-summary-card,
+.smart-summary-reading > div {
+  min-width: 0;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.smart-summary-main-card {
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.14), transparent 36%),
+    #ffffff;
+}
+
+.smart-summary-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 18px;
+}
+
+.smart-summary-main-card strong,
+.smart-summary-card strong {
+  overflow: hidden;
+  color: #102845;
+  font-size: clamp(22px, 2.4vw, 36px);
+  line-height: 1;
+  letter-spacing: -0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smart-summary-main-card p,
+.smart-summary-card p,
+.smart-summary-reading p {
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.smart-summary-card small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.smart-summary-reading {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.smart-summary-reading > div {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+
+@media (max-width: 1100px) {
+  .smart-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .smart-summary-main-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .smart-summary-grid,
+  .smart-summary-reading {
+    grid-template-columns: 1fr;
+  }
+}

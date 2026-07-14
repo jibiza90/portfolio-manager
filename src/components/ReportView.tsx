@@ -4,6 +4,7 @@ import { getReportByToken, isValidReportToken, ReportData } from '../services/re
 import { isDemoClient } from '../constants/clients';
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
+import { SmartExecutiveSummary } from './SmartExecutiveSummary';
 
 interface ReportViewProps {
   token?: string;
@@ -1998,6 +1999,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
             </div>
           </section>
         ) : null}
+
+        {isDemoReport ? <SmartExecutiveSummary report={report} /> : null}
 
       </article>
     </div>
