@@ -1950,11 +1950,8 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           <section className="report-pro-vision-panel" aria-label="Resumen visual de cartera">
             <div className="report-pro-vision-copy">
               <span className="report-pro-vision-eyebrow">Resumen visual de cartera</span>
-              <h4>Composici&oacute;n y evoluci&oacute;n de la inversi&oacute;n</h4>
-              <p>
-                Una vista ejecutiva para ver de un vistazo cuanto capital se ha aportado,
-                que beneficio se ha generado y cual es el valor actual de la cartera.
-              </p>
+              <h4>Composici&oacute;n de la cartera</h4>
+              <p>Capital, beneficio y valor actual en una sola vista.</p>
               <div className="report-pro-vision-metrics">
                 <div>
                   <span>Capital neto</span>
