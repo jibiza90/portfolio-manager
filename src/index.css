@@ -6955,3 +6955,10 @@ select {
     display: none;
   }
 }
+
+/* Top executive KPI labels: larger text only, keep numeric size unchanged */
+.report-pro-demo-sheet .report-pro-executive-demo p {
+  font-size: 15px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
