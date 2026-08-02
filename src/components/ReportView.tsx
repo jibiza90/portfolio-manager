@@ -1726,7 +1726,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           {hasVisibleMonthlyBreakdowns ? (
             <div className="report-pro-detail-hint">
               <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
-              <span>Los meses con aportaciones permiten ver c&oacute;mo se reparte la rentabilidad y el beneficio. Pulsa <strong>Ver detalle</strong>.</span>
+              <span>Los meses con aportaciones o retiradas desglosadas permiten ver c&oacute;mo se reparte la rentabilidad y el beneficio. Pulsa <strong>Ver detalle</strong>.</span>
             </div>
           ) : null}
           <div className="table-scroll">
@@ -1797,7 +1797,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           {hasVisibleMonthlyBreakdowns ? (
             <div className="report-pro-detail-hint">
               <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
-              <span>Los meses con aportaciones incluyen un desglose de cada parte. Pulsa <strong>Ver detalle</strong> para consultarlo.</span>
+              <span>Los meses con aportaciones o retiradas desglosadas incluyen el detalle de cada parte. Pulsa <strong>Ver detalle</strong> para consultarlo.</span>
             </div>
           ) : null}
           <div className="table-scroll">

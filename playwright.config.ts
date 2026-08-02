@@ -13,8 +13,10 @@ export default defineConfig({
   },
   projects: [
     { name: 'iphone-13', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
+    { name: 'iphone-13-landscape', use: { ...devices['iPhone 13 landscape'], browserName: 'chromium' } },
     { name: 'pixel-7', use: { ...devices['Pixel 7'] } },
-    { name: 'tablet', use: { ...devices['iPad Mini'], browserName: 'chromium' } }
+    { name: 'ipad-mini', use: { ...devices['iPad Mini'], browserName: 'chromium' } },
+    { name: 'android-tablet', use: { ...devices['Galaxy Tab S9'], browserName: 'chromium' } }
   ],
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 4173',
