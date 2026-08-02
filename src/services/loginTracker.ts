@@ -230,3 +230,9 @@ export const fetchReportDownloadEvents = async (): Promise<ReportDownloadEvent[]
     .get();
   return snapshot.docs.map(mapReportDownloadEvent);
 };
+
+export const deleteReportDownloadEvent = async (eventId: string) => {
+  const cleanEventId = eventId.trim();
+  if (!cleanEventId) throw new Error('Identificador de descarga no valido.');
+  await db.collection(REPORT_DOWNLOAD_EVENTS_COLLECTION).doc(cleanEventId).delete();
+};

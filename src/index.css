@@ -2557,7 +2557,7 @@ input[type='number'] {
 
 .admin-download-log table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1060px;
   border-collapse: collapse;
 }
 
@@ -2589,6 +2589,132 @@ input[type='number'] {
   padding: 14px 16px;
   color: #687779;
   font-size: 13px;
+}
+
+.admin-download-delete {
+  border: 1px solid #d8a7a0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #fff8f7;
+  color: #9b3328;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-download-delete:hover:not(:disabled),
+.admin-download-delete:focus-visible {
+  border-color: #b9473a;
+  background: #fff0ed;
+  outline: none;
+}
+
+.admin-download-delete:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.admin-access-assignments {
+  order: 999;
+}
+
+.admin-access-day-group {
+  overflow: hidden;
+  border: 1px solid #d7d2c8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-access-day-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  padding: 11px 13px;
+  background: #fff;
+  color: #27383b;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-access-day-toggle:hover,
+.admin-access-day-toggle:focus-visible,
+.admin-access-day-toggle[aria-expanded='true'] {
+  background: #f7f4ee;
+  outline: none;
+}
+
+.admin-access-day-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #e4f0f1;
+  color: #165f69;
+  font-size: 19px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.admin-access-day-label {
+  min-width: 0;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.admin-access-day-count {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #edf3f4;
+  color: #315b62;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-access-day-content {
+  overflow-x: auto;
+  border-top: 1px solid #ebe6dd;
+}
+
+.admin-access-day-content table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+}
+
+.admin-access-day-content th,
+.admin-access-day-content td {
+  padding: 9px 13px;
+  border-bottom: 1px solid #f1ece2;
+  text-align: left;
+  font-size: 13px;
+}
+
+.admin-access-day-content th {
+  background: #fbfaf7;
+  color: #5f5a52;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-access-day-content tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 620px) {
+  .admin-access-day-toggle {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .admin-access-day-count {
+    grid-column: 2;
+    width: fit-content;
+  }
 }
 
 @keyframes adminLoginNoticeIn {

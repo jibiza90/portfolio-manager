@@ -35,6 +35,7 @@ import {
 import { auth } from './services/firebaseApp';
 import { createAndDownloadAdminBackup } from './services/adminBackup';
 import {
+  deleteReportDownloadEvent,
   fetchLoginEvents,
   fetchOnlinePresence,
   fetchReportDownloadEvents,
@@ -2987,6 +2988,8 @@ function LoginAccessView({
   error,
   accessProfiles,
   contacts,
+  deletingDownloadId,
+  onDeleteDownload,
   onRevokeAccess,
   onRefresh,
   refreshing
@@ -2998,6 +3001,8 @@ function LoginAccessView({
   error: string | null;
   accessProfiles: AccessProfileRecord[];
   contacts: Record<string, ContactInfo>;
+  deletingDownloadId: string | null;
+  onDeleteDownload: (event: ReportDownloadEvent) => Promise<void>;
   onRevokeAccess: (profile: AccessProfileRecord) => Promise<void>;
   onRefresh: () => void;
   refreshing: boolean;
@@ -3029,6 +3034,7 @@ function LoginAccessView({
   }, [normalizedEvents]);
 
   const [selectedDay, setSelectedDay] = useState<string>('');
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 
   const visibleGroups = useMemo(
     () => (selectedDay ? groups.filter((group) => group.dayKey === selectedDay) : groups),
@@ -3124,6 +3130,7 @@ function LoginAccessView({
                   <th>Periodo</th>
                   <th>Archivo</th>
                   <th>Datos actualizados</th>
+                  <th>Accion</th>
                 </tr>
               </thead>
               <tbody>
@@ -3135,6 +3142,16 @@ function LoginAccessView({
                     <td>{event.periodStart === 'todo' && event.periodEnd === 'todo' ? 'Todo el histórico' : `${event.periodStart} — ${event.periodEnd}`}</td>
                     <td title={event.filename}>{event.filename}</td>
                     <td>{event.reportUpdatedAt > 0 ? new Date(event.reportUpdatedAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="admin-download-delete"
+                        disabled={deletingDownloadId === event.id}
+                        onClick={() => { void onDeleteDownload(event); }}
+                      >
+                        {deletingDownloadId === event.id ? 'Eliminando...' : 'Eliminar'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -3145,7 +3162,7 @@ function LoginAccessView({
         )}
       </section>
 
-      <section style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+      <section className="admin-access-assignments" style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
         <header style={{ padding: '12px 14px', borderBottom: '1px solid #ebe6dd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div>
             <h3 style={{ margin: 0 }}>Asignaciones activas</h3>
@@ -3226,7 +3243,11 @@ function LoginAccessView({
           id="access-day-filter"
           type="date"
           value={selectedDay}
-          onChange={(event) => setSelectedDay(event.target.value)}
+          onChange={(event) => {
+            const nextDay = event.target.value;
+            setSelectedDay(nextDay);
+            if (nextDay) setExpandedDays((prev) => ({ ...prev, [nextDay]: true }));
+          }}
           style={{ border: '1px solid #d7d2c8', borderRadius: 10, padding: '7px 10px', background: '#fff' }}
         />
         <button
@@ -3244,35 +3265,45 @@ function LoginAccessView({
         <p className="muted" style={{ margin: 0 }}>Aun no hay accesos registrados.</p>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
-          {visibleGroups.map((group) => (
-            <section key={group.dayKey} style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
-              <header style={{ padding: '10px 12px', borderBottom: '1px solid #ebe6dd', fontWeight: 700, textTransform: 'capitalize' }}>
-                {group.dayLabel} · {group.events.length} acceso(s)
-              </header>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: 'left', fontSize: 12, color: '#5f5a52', padding: '8px 12px', borderBottom: '1px solid #ebe6dd' }}>Hora</th>
-                      <th style={{ textAlign: 'left', fontSize: 12, color: '#5f5a52', padding: '8px 12px', borderBottom: '1px solid #ebe6dd' }}>Usuario</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.events.map((event) => (
-                      <tr key={event.id}>
-                        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f1ece2', fontSize: 13 }}>
-                          {new Date(event.loginAt).toLocaleTimeString('es-ES')}
-                        </td>
-                        <td style={{ padding: '8px 12px', borderBottom: '1px solid #f1ece2', fontSize: 13 }}>
-                          {event.email?.includes('@clients.portfolio-manager.local') ? event.email.split('@')[0] : event.email || '(sin dato)'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          ))}
+          {visibleGroups.map((group) => {
+            const expanded = !!expandedDays[group.dayKey];
+            const panelId = `access-day-${group.dayKey}`;
+            return (
+              <section key={group.dayKey} className="admin-access-day-group">
+                <button
+                  type="button"
+                  className="admin-access-day-toggle"
+                  aria-expanded={expanded}
+                  aria-controls={panelId}
+                  onClick={() => setExpandedDays((prev) => ({ ...prev, [group.dayKey]: !expanded }))}
+                >
+                  <span className="admin-access-day-icon" aria-hidden="true">{expanded ? '-' : '+'}</span>
+                  <span className="admin-access-day-label">{group.dayLabel}</span>
+                  <span className="admin-access-day-count">{group.events.length} acceso(s)</span>
+                </button>
+                {expanded ? (
+                  <div id={panelId} className="admin-access-day-content">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Hora</th>
+                          <th>Usuario</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.events.map((event) => (
+                          <tr key={event.id}>
+                            <td>{new Date(event.loginAt).toLocaleTimeString('es-ES')}</td>
+                            <td>{event.email?.includes('@clients.portfolio-manager.local') ? event.email.split('@')[0] : event.email || '(sin dato)'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
@@ -3447,6 +3478,7 @@ export default function App() {
   const [ownerOnlinePresence, setOwnerOnlinePresence] = useState<OnlinePresence[]>([]);
   const [ownerPresenceNow, setOwnerPresenceNow] = useState(() => Date.now());
   const [ownerReportDownloads, setOwnerReportDownloads] = useState<ReportDownloadEvent[]>([]);
+  const [ownerDeletingDownloadId, setOwnerDeletingDownloadId] = useState<string | null>(null);
   const [ownerLoginError, setOwnerLoginError] = useState<string | null>(null);
   const [ownerLoginRefreshBusy, setOwnerLoginRefreshBusy] = useState(false);
   const [ownerLoginNotice, setOwnerLoginNotice] = useState<{ key: string; user: string; loginAt: number } | null>(null);
@@ -4115,6 +4147,27 @@ export default function App() {
     }
   };
 
+  const handleDeleteReportDownload = async (event: ReportDownloadEvent) => {
+    if (!isPrimaryAdmin || ownerDeletingDownloadId) return;
+    const userLabel = event.loginId || event.email.split('@')[0] || 'Usuario';
+    const confirmed = window.confirm(
+      `Eliminar del registro la descarga de ${userLabel} del ${new Date(event.downloadedAt).toLocaleString('es-ES')}?`
+    );
+    if (!confirmed) return;
+
+    setOwnerDeletingDownloadId(event.id);
+    try {
+      await deleteReportDownloadEvent(event.id);
+      setOwnerReportDownloads((prev) => prev.filter((item) => item.id !== event.id));
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Descarga eliminada del registro' }));
+    } catch (error) {
+      console.error('No se pudo eliminar la descarga del registro', error);
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'No se pudo eliminar la descarga' }));
+    } finally {
+      setOwnerDeletingDownloadId(null);
+    }
+  };
+
   return (
     <div className="app-shell">
       {alertMessage && (
@@ -4333,9 +4386,11 @@ export default function App() {
           onlinePresence={ownerOnlinePresence}
           presenceNow={ownerPresenceNow}
           downloadEvents={ownerReportDownloads}
+          deletingDownloadId={ownerDeletingDownloadId}
           error={ownerLoginError}
           accessProfiles={ownerAccessProfiles}
           contacts={contacts}
+          onDeleteDownload={handleDeleteReportDownload}
           onRevokeAccess={handleRevokeClientAccess}
           onRefresh={() => { void handleRefreshOwnerLogins(); }}
           refreshing={ownerLoginRefreshBusy}
