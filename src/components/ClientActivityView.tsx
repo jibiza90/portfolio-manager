@@ -183,7 +183,7 @@ export function ClientActivityView({ clients, accessProfiles, downloadEvents }: 
         <div>
           <span className="eyebrow">Uso individual del portal</span>
           <h2>Actividad de clientes</h2>
-          <p>Consulta sesiones, dispositivos, seguridad y uso detallado autorizado por cada cliente.</p>
+          <p>Consulta sesiones, dispositivos, seguridad y uso detallado autorizado contractualmente.</p>
         </div>
         <div className="client-activity-controls">
           <label>
@@ -224,9 +224,9 @@ export function ClientActivityView({ clients, accessProfiles, downloadEvents }: 
               <small>{selectedProfile?.loginId ? `Usuario ${selectedProfile.loginId}` : 'Sin acceso activo asignado'}</small>
             </article>
             <article className="glass-card">
-              <span>Preferencia</span>
-              <strong>{consent?.choice === 'all' ? 'Analitica autorizada' : consent ? 'Solo necesaria' : 'Pendiente'}</strong>
-              <small>{consent ? `Actualizada ${formatDateTime(consent.updatedAt)}` : 'Se solicitara al acceder al portal'}</small>
+              <span>Analitica detallada</span>
+              <strong>{consent?.choice === 'all' ? 'Activa por contrato' : 'Pendiente de activacion'}</strong>
+              <small>{consent?.choice === 'all' ? `Registrada ${formatDateTime(consent.updatedAt)}` : 'Se activara en el proximo acceso al portal'}</small>
             </article>
             <article className="glass-card">
               <span>Estado actual</span>
@@ -248,8 +248,8 @@ export function ClientActivityView({ clients, accessProfiles, downloadEvents }: 
 
           {consent?.choice !== 'all' ? (
             <section className="client-activity-consent-note glass-card">
-              <strong>El detalle de navegacion no esta activo.</strong>
-              <span>Solo se registran datos necesarios de sesion y seguridad hasta que el cliente autorice la analitica.</span>
+              <strong>Activacion pendiente.</strong>
+              <span>La analitica contractual se activara automaticamente cuando este cliente vuelva a entrar.</span>
             </section>
           ) : null}
 
@@ -299,7 +299,7 @@ export function ClientActivityView({ clients, accessProfiles, downloadEvents }: 
                   </tbody>
                 </table>
               </div>
-              <p className="client-activity-footnote">La ubicacion solo aparece si existe un proveedor de geolocalizacion aproximada configurado y el cliente ha autorizado la analitica. No se guarda la direccion IP.</p>
+              <p className="client-activity-footnote">La ubicacion solo aparece si existe un proveedor de geolocalizacion aproximada configurado. No se guarda la direccion IP.</p>
             </article>
 
             <article className="glass-card client-activity-card">
