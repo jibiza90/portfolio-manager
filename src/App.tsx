@@ -3009,6 +3009,12 @@ function LoginAccessView({
   onRefresh: () => void;
   refreshing: boolean;
 }) {
+  const formatMadridDateTime = (timestamp: number, timeStyle: 'short' | 'medium' = 'medium') =>
+    new Date(timestamp).toLocaleString('es-ES', {
+      dateStyle: 'short',
+      timeStyle,
+      timeZone: 'Europe/Madrid'
+    });
   const dayKeyFromTs = (ts: number) => new Date(ts).toLocaleDateString('en-CA');
   const normalizedEvents = useMemo(() => {
     const unique = new Map<string, LoginEvent>();
@@ -3117,7 +3123,7 @@ function LoginAccessView({
         <header>
           <div>
             <h3>Descargas de informes</h3>
-            <p>Usuario, informe descargado, periodo y momento exacto de la descarga.</p>
+            <p>Usuario, informe, periodo y hora de descarga confirmada por el servidor.</p>
           </div>
           <span>{downloadEvents.length} descargas</span>
         </header>
@@ -3126,24 +3132,31 @@ function LoginAccessView({
             <table>
               <thead>
                 <tr>
-                  <th>Fecha y hora</th>
+                  <th>Descarga</th>
                   <th>Usuario</th>
                   <th>Informe</th>
                   <th>Periodo</th>
                   <th>Archivo</th>
-                  <th>Datos actualizados</th>
+                  <th>Datos publicados</th>
                   <th>Accion</th>
                 </tr>
               </thead>
               <tbody>
                 {downloadEvents.map((event) => (
                   <tr key={event.id}>
-                    <td>{new Date(event.downloadedAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' })}</td>
+                    <td>
+                      {event.downloadedAt > 0 ? formatMadridDateTime(event.downloadedAt) : 'Pendiente'}
+                      {!event.downloadedAtTrusted ? (
+                        <small className="admin-download-time-warning">Registro anterior: hora tomada del dispositivo y no verificada.</small>
+                      ) : null}
+                    </td>
                     <td><strong>{event.loginId || event.email.split('@')[0] || 'Usuario'}</strong></td>
                     <td>{event.reportLabel || event.reportClientId}</td>
                     <td>{event.periodStart === 'todo' && event.periodEnd === 'todo' ? 'Todo el histórico' : `${event.periodStart} — ${event.periodEnd}`}</td>
                     <td title={event.filename}>{event.filename}</td>
-                    <td>{event.reportUpdatedAt > 0 ? new Date(event.reportUpdatedAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
+                    <td title="Momento en que esta version de los datos se publico para el cliente">
+                      {event.reportUpdatedAt > 0 ? formatMadridDateTime(event.reportUpdatedAt, 'short') : '—'}
+                    </td>
                     <td>
                       <button
                         type="button"

@@ -29,6 +29,7 @@ export interface ReportDownloadEvent {
   filename: string;
   reportUpdatedAt: number;
   downloadedAt: number;
+  downloadedAtTrusted?: boolean;
 }
 
 const LOGIN_EVENTS_COLLECTION = 'auth_login_events';
@@ -168,6 +169,7 @@ const mapReportDownloadEvent = (
   doc: firebase.firestore.QueryDocumentSnapshot<firebase.firestore.DocumentData>
 ): ReportDownloadEvent => {
   const data = doc.data();
+  const downloadedAtIsServerTimestamp = data.downloadedAt instanceof firebase.firestore.Timestamp;
   return {
     id: doc.id,
     uid: String(data.uid ?? ''),
@@ -180,7 +182,10 @@ const mapReportDownloadEvent = (
     periodEnd: String(data.periodEnd ?? ''),
     filename: String(data.filename ?? ''),
     reportUpdatedAt: Number(data.reportUpdatedAt ?? 0),
-    downloadedAt: Number(data.downloadedAt ?? 0)
+    downloadedAt: downloadedAtIsServerTimestamp
+      ? data.downloadedAt.toMillis()
+      : Number(data.downloadedAt ?? 0),
+    downloadedAtTrusted: downloadedAtIsServerTimestamp
   };
 };
 
@@ -193,7 +198,7 @@ export const recordReportDownload = async ({
   periodEnd,
   filename,
   reportUpdatedAt
-}: Omit<ReportDownloadEvent, 'id' | 'uid' | 'email' | 'downloadedAt'>) => {
+}: Omit<ReportDownloadEvent, 'id' | 'uid' | 'email' | 'downloadedAt' | 'downloadedAtTrusted'>) => {
   const user = firebase.auth().currentUser;
   if (!user) return;
   await db.collection(REPORT_DOWNLOAD_EVENTS_COLLECTION).add({
@@ -207,7 +212,7 @@ export const recordReportDownload = async ({
     periodEnd,
     filename,
     reportUpdatedAt: Number.isFinite(reportUpdatedAt) ? reportUpdatedAt : 0,
-    downloadedAt: Date.now()
+    downloadedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
 };
 

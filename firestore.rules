@@ -146,8 +146,10 @@ service cloud.firestore {
         request.resource.data.periodEnd is string &&
         request.resource.data.filename is string &&
         request.resource.data.reportUpdatedAt is int &&
-        request.resource.data.downloadedAt is int &&
-        request.resource.data.downloadedAt > 0;
+        (
+          (request.resource.data.downloadedAt is int && request.resource.data.downloadedAt > 0) ||
+          request.resource.data.downloadedAt is timestamp
+        );
       allow update: if false;
       allow delete: if isAdmin();
     }
