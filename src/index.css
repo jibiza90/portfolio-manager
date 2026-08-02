@@ -7103,3 +7103,102 @@ select {
   line-height: 1.2;
   letter-spacing: 0.02em;
 }
+
+/* Discoverable monthly breakdown controls */
+.report-pro-detail-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 109, 122, 0.16);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(236, 254, 255, 0.92), rgba(240, 249, 255, 0.92));
+  color: #29445e;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.report-pro-detail-hint-icon,
+.report-pro-detail-button-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #0f6d7a;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.report-pro-detail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 4px 10px 4px 5px;
+  border: 1px solid rgba(15, 109, 122, 0.34);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff, #ecfeff);
+  color: #0a5966;
+  box-shadow: 0 5px 13px rgba(15, 109, 122, 0.12);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.report-pro-detail-button:hover,
+.report-pro-detail-button:focus-visible {
+  border-color: rgba(15, 109, 122, 0.72);
+  box-shadow: 0 8px 18px rgba(15, 109, 122, 0.18), 0 0 0 3px rgba(15, 109, 122, 0.10);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.report-pro-detail-button[aria-expanded='true'] {
+  background: #0f6d7a;
+  color: #ffffff;
+}
+
+.report-pro-detail-button[aria-expanded='true'] .report-pro-detail-button-icon {
+  color: #0f6d7a;
+  background: #ffffff;
+}
+
+.report-pro-demo-monthly-table th:first-child {
+  padding-left: 14px;
+}
+
+.report-pro-demo-monthly-table .report-pro-month-cell,
+.report-pro-benefit-month-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+  text-align: left;
+}
+
+.report-pro-demo-monthly-table .report-pro-movement-pill {
+  margin-left: 0;
+}
+
+@media (max-width: 620px) {
+  .report-pro-detail-hint {
+    align-items: flex-start;
+  }
+
+  .report-pro-detail-button {
+    gap: 5px;
+    padding-right: 8px;
+  }
+}

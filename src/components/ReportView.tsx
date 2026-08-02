@@ -556,6 +556,113 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (hasDecrement) return 'Retirada';
     return '';
   };
+  const hasVisibleMonthlyBreakdowns = effectiveMonthlyWithData.some((month) =>
+    tableContributionByMonth.has(reportMonthToKey(month.month))
+  );
+  const toggleMonthlyBreakdown = (monthKey: string) => {
+    setExpandedContributionMonths((prev) => ({
+      ...prev,
+      [monthKey]: !prev[monthKey]
+    }));
+  };
+  const renderMonthlyDetailButton = (monthKey: string, monthLabel: string) => {
+    const expanded = !!expandedContributionMonths[monthKey];
+    return (
+      <button
+        type="button"
+        className="report-pro-detail-button"
+        aria-expanded={expanded}
+        aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de ${monthLabel}`}
+        title={`${expanded ? 'Ocultar' : 'Ver'} el desglose de rentabilidad y beneficio`}
+        onClick={() => toggleMonthlyBreakdown(monthKey)}
+      >
+        <span className="report-pro-detail-button-icon" aria-hidden="true">{expanded ? '-' : '+'}</span>
+        <span>{expanded ? 'Ocultar detalle' : 'Ver detalle'}</span>
+      </button>
+    );
+  };
+  const renderMonthlyBreakdownRow = (
+    month: (typeof monthlyWithData)[number],
+    breakdown: NonNullable<ReportData['contributionBreakdowns']>[number],
+    colSpan: number
+  ) => {
+    const monthKey = reportMonthToKey(month.month);
+    if (!expandedContributionMonths[monthKey]) return null;
+
+    const visibleInitialPct = getVisibleMonthReturnPct(monthKey, breakdown.initialReturnPct * 100);
+    const visibleInitialProfit = breakdown.initialCapital * (visibleInitialPct / 100);
+    const withdrawals = breakdown.withdrawals ?? [];
+    const explainedTotalProfit =
+      visibleInitialProfit +
+      breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0) +
+      withdrawals.reduce((sum, withdrawal) => sum + withdrawal.profit, 0);
+
+    return (
+      <tr className="report-pro-expanded-row">
+        <td colSpan={colSpan}>
+          <div className="report-pro-inline-breakdown">
+            <div className="report-pro-inline-title">
+              <strong>Detalle de rentabilidad del mes - {month.month}</strong>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th className="text-right">Importe</th>
+                  <th className="text-right">Rentabilidad aplicada</th>
+                  <th className="text-right">Beneficio generado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{withdrawals.length > 0 ? 'Posición mantenida durante todo el mes' : 'Posición inicial del mes'}</td>
+                  <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
+                  <td className={`text-right ${visibleInitialPct >= 0 ? 'positive' : 'negative'}`}>
+                    {visibleInitialPct.toFixed(2)}%
+                  </td>
+                  <td className={`text-right ${visibleInitialProfit >= 0 ? 'positive' : 'negative'}`}>
+                    {formatCurrency(visibleInitialProfit)}
+                  </td>
+                </tr>
+                {breakdown.contributions.map((contribution) => (
+                  <tr key={`${monthKey}-${contribution.iso}-${contribution.amount}`}>
+                    <td>Aportaci&oacute;n incorporada el {getShortDateLabel(contribution.iso)}</td>
+                    <td className="text-right">{formatCurrency(contribution.amount)}</td>
+                    <td className={`text-right ${contribution.returnPct >= 0 ? 'positive' : 'negative'}`}>
+                      {(contribution.returnPct * 100).toFixed(2)}%
+                    </td>
+                    <td className={`text-right ${contribution.profit >= 0 ? 'positive' : 'negative'}`}>
+                      {formatCurrency(contribution.profit)}
+                    </td>
+                  </tr>
+                ))}
+                {withdrawals.map((withdrawal) => (
+                  <tr key={`${monthKey}-${withdrawal.iso}-${withdrawal.amount}-withdrawal`}>
+                    <td>Posici&oacute;n retirada el {getShortDateLabel(withdrawal.iso)}</td>
+                    <td className="text-right">{formatCurrency(withdrawal.amount)}</td>
+                    <td className={`text-right ${(withdrawal.returnPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                      {withdrawal.returnPct === undefined ? '—' : `${(withdrawal.returnPct * 100).toFixed(2)}%`}
+                    </td>
+                    <td className={`text-right ${withdrawal.profit >= 0 ? 'positive' : 'negative'}`}>
+                      {formatCurrency(withdrawal.profit)}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="report-pro-breakdown-total">
+                  <td>Beneficio explicado</td>
+                  <td className="text-right">—</td>
+                  <td className="text-right">—</td>
+                  <td className={`text-right ${explainedTotalProfit >= 0 ? 'positive' : 'negative'}`}>
+                    {formatCurrency(explainedTotalProfit)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </td>
+      </tr>
+    );
+  };
 
   async function handleDownloadModernReport() {
     const currentReport = report;
@@ -1370,6 +1477,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
             <h4>Beneficios mensuales</h4>
             <p>Beneficio generado en cada cierre de mes</p>
           </div>
+          {hasVisibleMonthlyBreakdowns ? (
+            <div className="report-pro-detail-hint">
+              <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
+              <span>Los meses con aportaciones permiten ver c&oacute;mo se reparte la rentabilidad y el beneficio. Pulsa <strong>Ver detalle</strong>.</span>
+            </div>
+          ) : null}
           <div className="table-scroll">
             <table className="monthly-table report-pro-table report-pro-benefits-table">
               <colgroup>
@@ -1383,14 +1496,26 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {effectiveMonthlyWithData.map((m) => (
-                  <tr key={`${m.month}-benefit`}>
-                    <td>{getMonthEndLabel(m.month)}</td>
-                    <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                      {formatCurrency(m.profit ?? 0)}
-                    </td>
-                  </tr>
-                ))}
+                {effectiveMonthlyWithData.map((m) => {
+                  const monthKey = reportMonthToKey(m.month);
+                  const breakdown = tableContributionByMonth.get(monthKey);
+                  return (
+                    <React.Fragment key={`${m.month}-benefit`}>
+                      <tr>
+                        <td>
+                          <span className="report-pro-benefit-month-cell">
+                            <span>{getMonthEndLabel(m.month)}</span>
+                            {breakdown ? renderMonthlyDetailButton(monthKey, m.month) : null}
+                          </span>
+                        </td>
+                        <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                          {formatCurrency(m.profit ?? 0)}
+                        </td>
+                      </tr>
+                      {breakdown ? renderMonthlyBreakdownRow(m, breakdown, 2) : null}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1423,6 +1548,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
             <h4>Tabla mensual</h4>
             <p>Beneficio, rentabilidad y saldo por mes</p>
           </div>
+          {hasVisibleMonthlyBreakdowns ? (
+            <div className="report-pro-detail-hint">
+              <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
+              <span>Los meses con aportaciones incluyen un desglose de cada parte. Pulsa <strong>Ver detalle</strong> para consultarlo.</span>
+            </div>
+          ) : null}
           <div className="table-scroll">
             <table className="monthly-table report-pro-table report-pro-demo-monthly-table">
               <colgroup>
@@ -1464,25 +1595,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
                       <tr>
                         <td>
                           <span className="report-pro-month-cell">
-                            <span className="report-pro-expand-slot">
-                              {breakdown ? (
-                                <button
-                                  type="button"
-                                  className="report-pro-expand-button"
-                                  aria-expanded={expanded}
-                                  aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de movimientos ${m.month}`}
-                                  onClick={() =>
-                                    setExpandedContributionMonths((prev) => ({
-                                      ...prev,
-                                      [monthKey]: !prev[monthKey]
-                                    }))
-                                  }
-                                >
-                                  {expanded ? '-' : '+'}
-                                </button>
-                              ) : null}
-                            </span>
                             <span>{getMonthEndLabel(m.month)}</span>
+                            {breakdown ? renderMonthlyDetailButton(monthKey, m.month) : null}
                             {movementTag ? <span className="report-pro-movement-pill">{movementTag}</span> : null}
                           </span>
                         </td>
