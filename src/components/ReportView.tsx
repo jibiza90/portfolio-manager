@@ -19,6 +19,13 @@ interface ReportViewProps {
     filename: string;
     reportUpdatedAt: number;
   }) => void;
+  analyticsEnabled?: boolean;
+  onAnalyticsEvent?: (event: {
+    type: string;
+    label: string;
+    durationMs?: number;
+    metadata?: Record<string, string | number | boolean>;
+  }) => void;
 }
 
 interface PatrimonyTooltipState {
@@ -196,7 +203,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
   reportData,
   downloadSignal,
   generalReferenceMonthly = [],
-  onDownloaded
+  onDownloaded,
+  analyticsEnabled = false,
+  onAnalyticsEvent
 }) => {
   const [report, setReport] = useState<ReportData | null>(reportData ?? null);
   const [loading, setLoading] = useState(!reportData);
@@ -214,7 +223,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
+  const chartVisibilityRef = useRef<HTMLDivElement>(null);
   const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
+  const activeSectionRef = useRef<{ label: string; startedAt: number } | null>(null);
   const twrExplanation = 'Mide la evolución de la cartera aislando el efecto de las aportaciones y retiradas de dinero. Permite conocer cómo se han comportado las inversiones durante un periodo determinado, independientemente de cuándo el cliente haya ingresado o retirado capital.';
   const totalReturnExplanation = 'Mide el resultado acumulado de la inversión en relación con el capital neto aportado por el cliente. Por este motivo, puede variar cuando se realizan nuevas aportaciones o retiradas de dinero.';
 
@@ -267,6 +278,118 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (!report) return;
     setPeriodPreset('last12');
   }, [report?.clientId]);
+
+  useEffect(() => {
+    if (!analyticsEnabled || !onAnalyticsEvent || !reportRef.current) return undefined;
+    const root = reportRef.current;
+    const sections = Array.from(root.querySelectorAll<HTMLElement>(
+      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel'
+    ));
+    const visibleRatios = new Map<HTMLElement, number>();
+
+    const getSectionLabel = (section: HTMLElement) => {
+      if (section.classList.contains('report-pro-executive')) return 'Resumen principal';
+      if (section.classList.contains('report-pro-kpis')) return 'Indicadores acumulados';
+      if (section.classList.contains('report-pro-note')) return 'Explicacion de rentabilidad';
+      if (section.classList.contains('report-pro-capital-panel')) return 'Capital y beneficio acumulado';
+      if (section.classList.contains('report-pro-demo-control-panel')) return 'Analisis por periodo';
+      if (section.classList.contains('report-pro-waterfall-panel')) return 'Resumen financiero';
+      return section.querySelector('h4, h3')?.textContent?.trim() || 'Seccion del informe';
+    };
+
+    const changeActiveSection = (nextLabel: string | null) => {
+      const previous = activeSectionRef.current;
+      if (previous && previous.label !== nextLabel) {
+        const durationMs = Date.now() - previous.startedAt;
+        if (durationMs >= 1000) {
+          onAnalyticsEvent({ type: 'section_duration', label: previous.label, durationMs });
+        }
+        activeSectionRef.current = null;
+      }
+      if (nextLabel && activeSectionRef.current?.label !== nextLabel) {
+        activeSectionRef.current = { label: nextLabel, startedAt: Date.now() };
+      }
+    };
+
+    const updateActiveFromVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        changeActiveSection(null);
+        return;
+      }
+      const best = [...visibleRatios.entries()].sort((a, b) => b[1] - a[1])[0];
+      changeActiveSection(best && best[1] >= 0.18 ? getSectionLabel(best[0]) : null);
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        visibleRatios.set(entry.target as HTMLElement, entry.isIntersecting ? entry.intersectionRatio : 0);
+      });
+      updateActiveFromVisibility();
+    }, { threshold: [0, 0.18, 0.35, 0.6] });
+
+    sections.forEach((section) => observer.observe(section));
+    document.addEventListener('visibilitychange', updateActiveFromVisibility);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', updateActiveFromVisibility);
+      changeActiveSection(null);
+    };
+  }, [analyticsEnabled, onAnalyticsEvent, report?.clientId]);
+
+  useEffect(() => {
+    if (!analyticsEnabled || !onAnalyticsEvent || !chartVisibilityRef.current) return undefined;
+    const chartElement = chartVisibilityRef.current;
+    let visible = false;
+    let startedAt: number | null = null;
+    let accumulatedMs = 0;
+    const updateTimer = () => {
+      const shouldRun = visible && document.visibilityState === 'visible';
+      if (shouldRun && startedAt === null) startedAt = Date.now();
+      if (!shouldRun && startedAt !== null) {
+        accumulatedMs += Date.now() - startedAt;
+        startedAt = null;
+      }
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting && entry.intersectionRatio >= 0.2;
+      updateTimer();
+    }, { threshold: [0, 0.2, 0.5] });
+    observer.observe(chartElement);
+    document.addEventListener('visibilitychange', updateTimer);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', updateTimer);
+      if (startedAt !== null) accumulatedMs += Date.now() - startedAt;
+      const durationMs = accumulatedMs;
+      if (durationMs >= 1000) {
+        onAnalyticsEvent({ type: 'chart_duration', label: chartView, durationMs });
+      }
+    };
+  }, [analyticsEnabled, chartView, onAnalyticsEvent]);
+
+  useEffect(() => {
+    if (!analyticsEnabled || !onAnalyticsEvent || !isPatrimonyExpanded) return undefined;
+    let startedAt: number | null = document.visibilityState === 'visible' ? Date.now() : null;
+    let accumulatedMs = 0;
+    const updateTimer = () => {
+      if (document.visibilityState === 'visible' && startedAt === null) startedAt = Date.now();
+      if (document.visibilityState !== 'visible' && startedAt !== null) {
+        accumulatedMs += Date.now() - startedAt;
+        startedAt = null;
+      }
+    };
+    onAnalyticsEvent({ type: 'chart_expand', label: 'Evolucion patrimonio' });
+    document.addEventListener('visibilitychange', updateTimer);
+    return () => {
+      document.removeEventListener('visibilitychange', updateTimer);
+      if (startedAt !== null) accumulatedMs += Date.now() - startedAt;
+      onAnalyticsEvent({
+        type: 'chart_expanded_duration',
+        label: 'Evolucion patrimonio',
+        durationMs: accumulatedMs
+      });
+    };
+  }, [analyticsEnabled, isPatrimonyExpanded, onAnalyticsEvent]);
 
   useEffect(() => {
     if (!isPatrimonyExpanded) return undefined;
@@ -650,6 +773,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const expansionKey = detailExpansionKey(source, monthKey);
     const willExpand = !expandedContributionMonths[expansionKey];
     setExpandedContributionMonths((prev) => ({ ...prev, [expansionKey]: willExpand }));
+    if (analyticsEnabled && onAnalyticsEvent) {
+      onAnalyticsEvent({
+        type: willExpand ? 'detail_expand' : 'detail_collapse',
+        label: monthKey,
+        metadata: { source }
+      });
+    }
     if (!willExpand) return;
 
     window.setTimeout(() => {
@@ -1359,6 +1489,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <select
                 value={expandedStartMonth}
                 onChange={(event) => {
+                  onAnalyticsEvent?.({
+                    type: 'expanded_period_change',
+                    label: 'Desde',
+                    metadata: { value: event.target.value }
+                  });
                   setExpandedStartMonth(event.target.value);
                   setHoveredPatrimonyPoint(null);
                 }}
@@ -1373,6 +1508,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <select
                 value={expandedEndMonth}
                 onChange={(event) => {
+                  onAnalyticsEvent?.({
+                    type: 'expanded_period_change',
+                    label: 'Hasta',
+                    metadata: { value: event.target.value }
+                  });
                   setExpandedEndMonth(event.target.value);
                   setHoveredPatrimonyPoint(null);
                 }}
@@ -1386,6 +1526,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               type="button"
               className="report-pro-expanded-reset"
               onClick={() => {
+                onAnalyticsEvent?.({ type: 'expanded_period_reset', label: 'Ver todo' });
                 setExpandedStartMonth(firstPeriodKey);
                 setExpandedEndMonth(lastPeriodKey);
                 setHoveredPatrimonyPoint(null);
@@ -1492,6 +1633,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 <select
                   value={periodPreset}
                   onChange={(event) => {
+                    onAnalyticsEvent?.({
+                      type: 'period_change',
+                      label: event.target.value,
+                      metadata: { previous: periodPreset }
+                    });
                     setPeriodPreset(event.target.value);
                     setHoveredPatrimonyPoint(null);
                   }}
@@ -1512,6 +1658,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     <select
                       value={periodStartMonth}
                       onChange={(event) => {
+                        onAnalyticsEvent?.({
+                          type: 'period_custom_change',
+                          label: 'Desde',
+                          metadata: { value: event.target.value }
+                        });
                         setPeriodStartMonth(event.target.value);
                         setHoveredPatrimonyPoint(null);
                       }}
@@ -1527,6 +1678,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     <select
                       value={periodEndMonth}
                       onChange={(event) => {
+                        onAnalyticsEvent?.({
+                          type: 'period_custom_change',
+                          label: 'Hasta',
+                          metadata: { value: event.target.value }
+                        });
                         setPeriodEndMonth(event.target.value);
                         setHoveredPatrimonyPoint(null);
                       }}
@@ -1665,7 +1821,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
           <div className="report-pro-chart-toolbar">
             <label>
               Vista de graficos
-              <select value={chartView} onChange={(event) => { setChartView(event.target.value as typeof chartView); setHoveredMonthlyBar(null); }}>
+              <select
+                value={chartView}
+                onChange={(event) => {
+                  const nextView = event.target.value as typeof chartView;
+                  onAnalyticsEvent?.({
+                    type: 'chart_change',
+                    label: nextView,
+                    metadata: { previous: chartView }
+                  });
+                  setChartView(nextView);
+                  setHoveredMonthlyBar(null);
+                }}
+              >
                 <option value="return">Rentabilidad</option>
                 <option value="profit">Beneficio EUR</option>
                 <option value="balance">Saldo</option>
@@ -1679,7 +1847,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span>Esta rentabilidad es la general de la estrategia. No se aplica a tu saldo, beneficio, rentabilidad ni TWR.</span>
             </div>
           ) : null}
-          <div className={`report-pro-chart-scroll ${chartMonthlyData.length > 12 ? 'is-scrollable' : ''}`}>
+          <div ref={chartVisibilityRef} className={`report-pro-chart-scroll ${chartMonthlyData.length > 12 ? 'is-scrollable' : ''}`}>
             <div
               className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''} ${chartView === 'general' ? 'is-general-reference' : ''}`}
               style={{
@@ -1792,6 +1960,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               type="button"
               className="report-pro-expand-chart-button"
               onClick={() => {
+                onAnalyticsEvent?.({ type: 'chart_expand_request', label: 'Evolucion patrimonio' });
                 setExpandedStartMonth(rangeStart);
                 setExpandedEndMonth(rangeEnd);
                 setHoveredPatrimonyPoint(null);

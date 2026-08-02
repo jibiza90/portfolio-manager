@@ -11,6 +11,7 @@ import { END_YEAR, getYearFromIso, START_YEAR } from './utils/dates';
 import { useFocusDate } from './hooks/useFocusDate';
 import { InformesView } from './components/InformesView';
 import { ReportView } from './components/ReportView';
+import { ClientActivityView } from './components/ClientActivityView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import {
   buildMonthlyStatsForMonths,
@@ -56,6 +57,7 @@ const STATS_VIEW = 'STATS_VIEW';
 const SEGUIMIENTO_VIEW = 'SEGUIMIENTO_VIEW';
 const MENSAJES_VIEW = 'MENSAJES_VIEW';
 const ACCESOS_VIEW = 'ACCESOS_VIEW';
+const ACTIVIDAD_VIEW = 'ACTIVIDAD_VIEW';
 const BACKUP_VIEW = 'BACKUP_VIEW';
 const CONTACTS_REVISION_STORAGE_KEY = 'portfolio-contacts-revision';
 const createLocalRevision = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
@@ -3933,7 +3935,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!isPrimaryAdmin && (activeView === ACCESOS_VIEW || activeView === BACKUP_VIEW)) {
+    if (!isPrimaryAdmin && (activeView === ACCESOS_VIEW || activeView === ACTIVIDAD_VIEW || activeView === BACKUP_VIEW)) {
       setActiveView(GENERAL_OPTION);
     }
   }, [activeView, isPrimaryAdmin]);
@@ -4245,6 +4247,12 @@ export default function App() {
               Accesos
             </button>
             <button
+              className={clsx('side-link', activeView === ACTIVIDAD_VIEW && 'active')}
+              onClick={() => { setActiveView(ACTIVIDAD_VIEW); setMenuOpen(false); }}
+            >
+              Actividad clientes
+            </button>
+            <button
               className={clsx('side-link', activeView === BACKUP_VIEW && 'active')}
               onClick={() => { setActiveView(BACKUP_VIEW); setMenuOpen(false); }}
             >
@@ -4394,6 +4402,12 @@ export default function App() {
           onRevokeAccess={handleRevokeClientAccess}
           onRefresh={() => { void handleRefreshOwnerLogins(); }}
           refreshing={ownerLoginRefreshBusy}
+        />
+      ) : activeView === ACTIVIDAD_VIEW && isPrimaryAdmin ? (
+        <ClientActivityView
+          clients={CLIENTS.map((client) => ({ id: client.id, label: getClientDisplayName(client.id, contacts) }))}
+          accessProfiles={ownerAccessProfiles}
+          downloadEvents={ownerReportDownloads}
         />
       ) : activeView === BACKUP_VIEW && isPrimaryAdmin ? (
         <AdminBackupView

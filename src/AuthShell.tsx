@@ -10,6 +10,15 @@ import {
 } from './services/cloudPortfolio';
 import { auth, db, firebase } from './services/firebaseApp';
 import { recordLoginEvent, recordReportDownload, startPresenceHeartbeat } from './services/loginTracker';
+import {
+  consumeLocalLoginFailures,
+  createClientActivityTracker,
+  fetchClientAnalyticsConsent,
+  recordLocalLoginFailure,
+  saveClientAnalyticsConsent,
+  type ClientActivityTracker,
+  type ClientAnalyticsChoice
+} from './services/clientAnalytics';
 import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, type SupportMessage } from './services/supportInbox';
 import { initializePortfolioStore, usePortfolioStore, waitForPendingPortfolioSave } from './store/portfolio';
 import type { ReportData } from './services/reportLinks';
@@ -1088,6 +1097,80 @@ const LoginCard = ({
   );
 };
 
+const ClientPrivacyPreferences = ({
+  currentChoice,
+  required,
+  busy,
+  error,
+  onSelect,
+  onClose
+}: {
+  currentChoice: ClientAnalyticsChoice | null;
+  required: boolean;
+  busy: boolean;
+  error: string | null;
+  onSelect: (choice: ClientAnalyticsChoice) => Promise<void>;
+  onClose: () => void;
+}) => (
+  <div className="client-privacy-backdrop" role="presentation">
+    <section className="client-privacy-dialog" role="dialog" aria-modal="true" aria-labelledby="client-privacy-title">
+      <div className="client-privacy-head">
+        <div>
+          <span>Preferencias de privacidad</span>
+          <h2 id="client-privacy-title">Privacidad y uso del portal</h2>
+        </div>
+        {!required ? (
+          <button type="button" className="client-privacy-close" onClick={onClose} aria-label="Cerrar preferencias">x</button>
+        ) : null}
+      </div>
+      <p>
+        Utilizamos funciones necesarias para autenticarte, proteger tu cuenta y registrar accesos y descargas.
+        Con tu autorizacion tambien podemos analizar como utilizas las secciones, graficos y filtros para mejorar el portal y la asistencia.
+      </p>
+      <div className="client-privacy-options">
+        <article>
+          <strong>Funciones necesarias</strong>
+          <span>Sesion, seguridad, dispositivo, accesos y descargas. Permanecen siempre activas.</span>
+        </article>
+        <article>
+          <strong>Analitica individual</strong>
+          <span>Secciones consultadas, cambios de grafico, periodos seleccionados y tiempo aproximado de uso.</span>
+        </article>
+      </div>
+      <details className="client-privacy-details">
+        <summary>Mas informacion</summary>
+        <p>
+          La actividad solo sera accesible para la administracion autorizada de JIGSA CAPITAL BROKERING - FZCO.
+          No se registran contrasenas, pulsaciones del teclado, GPS exacto ni actividad fuera del portal.
+        </p>
+        <p>
+          Responsable: JIGSA CAPITAL BROKERING - FZCO, Building A1, Dubai Digital Park, Dubai Silicon Oasis,
+          Dubai, United Arab Emirates.
+        </p>
+      </details>
+      {error ? <p className="client-privacy-error" role="alert">{error}</p> : null}
+      <div className="client-privacy-actions">
+        <button
+          type="button"
+          className={currentChoice === 'essential' ? 'is-selected' : ''}
+          disabled={busy}
+          onClick={() => { void onSelect('essential'); }}
+        >
+          Solo necesarias
+        </button>
+        <button
+          type="button"
+          className={`client-privacy-accept ${currentChoice === 'all' ? 'is-selected' : ''}`}
+          disabled={busy}
+          onClick={() => { void onSelect('all'); }}
+        >
+          {busy ? 'Guardando...' : 'Aceptar analitica'}
+        </button>
+      </div>
+    </section>
+  </div>
+);
+
 const ClientPortal = ({
   clientId,
   profileUid,
@@ -1117,6 +1200,112 @@ const ClientPortal = ({
   const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
   const [supportError, setSupportError] = useState<string | null>(null);
   const [clientUnreadCount, setClientUnreadCount] = useState(0);
+  const [analyticsChoice, setAnalyticsChoice] = useState<ClientAnalyticsChoice | null>(null);
+  const [analyticsConsentLoaded, setAnalyticsConsentLoaded] = useState(false);
+  const [privacyPreferencesOpen, setPrivacyPreferencesOpen] = useState(false);
+  const [privacySaveBusy, setPrivacySaveBusy] = useState(false);
+  const [privacyError, setPrivacyError] = useState<string | null>(null);
+  const activityTrackerRef = useRef<ClientActivityTracker | null>(null);
+  const analyticsChoiceRef = useRef<ClientAnalyticsChoice | null>(null);
+
+  const trackClientUsage = useCallback((event: {
+    type: string;
+    label: string;
+    durationMs?: number;
+    metadata?: Record<string, string | number | boolean>;
+  }) => {
+    void activityTrackerRef.current?.record({
+      category: 'usage',
+      ...event
+    }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!profileUid) return;
+    let cancelled = false;
+    setAnalyticsConsentLoaded(false);
+    void fetchClientAnalyticsConsent(profileUid)
+      .then((consent) => {
+        if (cancelled) return;
+        analyticsChoiceRef.current = consent?.choice ?? null;
+        setAnalyticsChoice(consent?.choice ?? null);
+        setPrivacyPreferencesOpen(!consent);
+        setAnalyticsConsentLoaded(true);
+      })
+      .catch((consentError) => {
+        console.error('No se pudieron cargar las preferencias de privacidad', consentError);
+        if (cancelled) return;
+        setPrivacyError('No se pudieron cargar tus preferencias. Intentalo de nuevo.');
+        setPrivacyPreferencesOpen(true);
+        setAnalyticsConsentLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profileUid]);
+
+  useEffect(() => {
+    if (!profileUid || !loginId || !analyticsConsentLoaded || activityTrackerRef.current) return undefined;
+    let cancelled = false;
+    const initialChoice = analyticsChoiceRef.current ?? 'essential';
+    void createClientActivityTracker({
+      uid: profileUid,
+      clientId,
+      loginId,
+      choice: initialChoice
+    }).then((tracker) => {
+      if (cancelled) {
+        void tracker.end('portal_unmounted');
+        return;
+      }
+      activityTrackerRef.current = tracker;
+      if (analyticsChoiceRef.current && analyticsChoiceRef.current !== initialChoice) {
+        void tracker.setChoice(analyticsChoiceRef.current);
+      }
+      void tracker.record({ category: 'security', type: 'login_success', label: 'Acceso correcto' });
+      const failures = consumeLocalLoginFailures(loginId);
+      if (failures) {
+        void tracker.record({
+          category: 'security',
+          type: 'failed_login_attempts',
+          label: `${failures.count} intento(s) fallido(s) antes del acceso`,
+          metadata: failures
+        });
+      }
+    }).catch((trackerError) => {
+      console.error('No se pudo iniciar el registro de actividad', trackerError);
+    });
+
+    return () => {
+      cancelled = true;
+      const tracker = activityTrackerRef.current;
+      activityTrackerRef.current = null;
+      if (tracker) void tracker.end('portal_unmounted');
+    };
+  }, [analyticsConsentLoaded, clientId, loginId, profileUid]);
+
+  const savePrivacyChoice = async (choice: ClientAnalyticsChoice) => {
+    if (!profileUid || privacySaveBusy) return;
+    setPrivacySaveBusy(true);
+    setPrivacyError(null);
+    try {
+      await saveClientAnalyticsConsent(profileUid, clientId, choice);
+      analyticsChoiceRef.current = choice;
+      setAnalyticsChoice(choice);
+      setPrivacyPreferencesOpen(false);
+      await activityTrackerRef.current?.setChoice(choice);
+      await activityTrackerRef.current?.record({
+        category: 'security',
+        type: 'privacy_choice',
+        label: choice === 'all' ? 'Analitica aceptada' : 'Solo funciones necesarias'
+      });
+    } catch (saveError) {
+      console.error('No se pudieron guardar las preferencias de privacidad', saveError);
+      setPrivacyError('No se pudieron guardar las preferencias. Intentalo de nuevo.');
+    } finally {
+      setPrivacySaveBusy(false);
+    }
+  };
 
   useEffect(() => {
     setLiveProfileDisplayName(displayName);
@@ -1234,6 +1423,7 @@ const ClientPortal = ({
         text: cleanText
       });
       setSupportText('');
+      trackClientUsage({ type: 'support_message', label: 'Mensaje enviado' });
     } catch (error) {
       console.error(error);
       setSupportError('No se pudo enviar tu mensaje.');
@@ -1398,6 +1588,11 @@ const ClientPortal = ({
     filename: string;
     reportUpdatedAt: number;
   }) => {
+    trackClientUsage({
+      type: 'report_download',
+      label: details.filename,
+      metadata: { periodStart: details.periodStart, periodEnd: details.periodEnd }
+    });
     void recordReportDownload({
       loginId: loginId ?? clientId,
       clientId,
@@ -1405,6 +1600,13 @@ const ClientPortal = ({
     }).catch((trackError) => {
       console.error('No se pudo registrar la descarga del informe', trackError);
     });
+  };
+
+  const logoutClientPortal = async () => {
+    const tracker = activityTrackerRef.current;
+    activityTrackerRef.current = null;
+    if (tracker) await tracker.end('manual_logout');
+    await onLogout();
   };
 
   const downloadClientPdf = async () => {
@@ -2038,7 +2240,12 @@ const ClientPortal = ({
           <button
             type="button"
             className="client-portal-action"
-            onClick={() => setSupportOpen((prev) => !prev)}
+            onClick={() => {
+              setSupportOpen((prev) => {
+                trackClientUsage({ type: prev ? 'support_close' : 'support_open', label: 'Mensajes' });
+                return !prev;
+              });
+            }}
             style={{
               padding: '8px 12px',
               borderRadius: 10,
@@ -2069,6 +2276,7 @@ const ClientPortal = ({
             type="button"
             className="client-portal-action"
             onClick={() => {
+              trackClientUsage({ type: 'report_download_request', label: 'Descargar PDF' });
               if (shouldUseModernReportPdf) {
                 setReportDownloadSignal((value) => value + 1);
                 return;
@@ -2093,7 +2301,7 @@ const ClientPortal = ({
             type="button"
             className="client-portal-action client-portal-logout"
             onClick={() => {
-              void onLogout();
+              void logoutClientPortal();
             }}
             style={{
               padding: '8px 12px',
@@ -2196,6 +2404,21 @@ const ClientPortal = ({
           downloadSignal={reportDownloadSignal}
           generalReferenceMonthly={overview?.generalReferenceMonthly}
           onDownloaded={trackClientPdfDownload}
+          analyticsEnabled={analyticsChoice === 'all'}
+          onAnalyticsEvent={trackClientUsage}
+        />
+      ) : null}
+      <footer className="client-portal-privacy-footer">
+        <button type="button" onClick={() => setPrivacyPreferencesOpen(true)}>Privacidad y preferencias</button>
+      </footer>
+      {privacyPreferencesOpen && analyticsConsentLoaded ? (
+        <ClientPrivacyPreferences
+          currentChoice={analyticsChoice}
+          required={!analyticsChoice}
+          busy={privacySaveBusy}
+          error={privacyError}
+          onSelect={savePrivacyChoice}
+          onClose={() => setPrivacyPreferencesOpen(false)}
         />
       ) : null}
     </main>
@@ -2546,10 +2769,10 @@ const AuthShell = () => {
   }, [session.loading]);
 
   const handleLogin = async (identifier: string, password: string) => {
+    const normalizedIdentifier = identifier.trim();
     try {
       setLoginBusy(true);
       setSession((prev) => ({ ...prev, error: null }));
-      const normalizedIdentifier = identifier.trim();
       const authEmail = normalizedIdentifier.includes('@')
         ? normalizeEmail(normalizedIdentifier)
         : buildClientAuthEmail(normalizedIdentifier);
@@ -2564,6 +2787,9 @@ const AuthShell = () => {
         message = 'No se pudo conectar con el servicio. Comprueba tu conexion e intentalo de nuevo.';
       }
       if (code === 'auth/too-many-requests') message = 'Demasiados intentos. Espera un momento e intentalo otra vez.';
+      if (code !== 'auth/network-request-failed' && code !== 'auth/internal-error') {
+        recordLocalLoginFailure(normalizedIdentifier, code);
+      }
       setSession((prev) => ({ ...prev, loading: false, error: message }));
     } finally {
       setLoginBusy(false);

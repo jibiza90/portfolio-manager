@@ -152,6 +152,144 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /client_privacy_consents/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn() &&
+        request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly([
+          'uid', 'clientId', 'choice', 'policyVersion', 'decidedAt', 'updatedAt'
+        ]) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.clientId is string &&
+        clientOwns(request.resource.data.clientId) &&
+        (request.resource.data.choice == 'essential' || request.resource.data.choice == 'all') &&
+        request.resource.data.policyVersion is string &&
+        request.resource.data.decidedAt is int &&
+        request.resource.data.updatedAt is int;
+      allow update: if signedIn() &&
+        request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly([
+          'uid', 'clientId', 'choice', 'policyVersion', 'decidedAt', 'updatedAt'
+        ]) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.clientId == resource.data.clientId &&
+        request.resource.data.decidedAt == resource.data.decidedAt &&
+        clientOwns(request.resource.data.clientId) &&
+        (request.resource.data.choice == 'essential' || request.resource.data.choice == 'all') &&
+        request.resource.data.policyVersion is string &&
+        request.resource.data.updatedAt is int;
+      allow delete: if isAdmin();
+    }
+
+    match /client_activity/{clientId} {
+      allow read, write: if false;
+
+      match /sessions/{sessionId} {
+        allow read: if isAdmin();
+        allow create: if clientOwns(clientId) &&
+          request.resource.data.keys().hasOnly([
+            'uid', 'clientId', 'loginId', 'deviceId', 'deviceType', 'browser',
+            'operatingSystem', 'screen', 'viewport', 'language', 'timezone',
+            'connectionType', 'country', 'city', 'isNewDevice', 'analyticsChoice',
+            'startedAt', 'lastSeenAt', 'endedAt', 'endReason'
+          ]) &&
+          request.resource.data.uid == request.auth.uid &&
+          request.resource.data.clientId == clientId &&
+          request.resource.data.loginId is string &&
+          request.resource.data.deviceId is string &&
+          request.resource.data.deviceType is string &&
+          request.resource.data.browser is string &&
+          request.resource.data.operatingSystem is string &&
+          request.resource.data.screen is string &&
+          request.resource.data.viewport is string &&
+          request.resource.data.language is string &&
+          request.resource.data.timezone is string &&
+          request.resource.data.connectionType is string &&
+          request.resource.data.country is string &&
+          request.resource.data.city is string &&
+          request.resource.data.isNewDevice is bool &&
+          (request.resource.data.analyticsChoice == 'essential' || request.resource.data.analyticsChoice == 'all') &&
+          request.resource.data.startedAt is int &&
+          request.resource.data.lastSeenAt is int &&
+          request.resource.data.endedAt == null &&
+          request.resource.data.endReason is string;
+        allow update: if clientOwns(clientId) &&
+          resource.data.uid == request.auth.uid &&
+          request.resource.data.uid == resource.data.uid &&
+          request.resource.data.clientId == resource.data.clientId &&
+          request.resource.data.startedAt == resource.data.startedAt &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'lastSeenAt', 'endedAt', 'endReason', 'analyticsChoice', 'country', 'city'
+          ]) &&
+          request.resource.data.lastSeenAt is int &&
+          (request.resource.data.endedAt == null || request.resource.data.endedAt is int) &&
+          request.resource.data.endReason is string &&
+          (request.resource.data.analyticsChoice == 'essential' || request.resource.data.analyticsChoice == 'all') &&
+          request.resource.data.country is string &&
+          request.resource.data.city is string;
+        allow delete: if isAdmin();
+      }
+
+      match /events/{eventId} {
+        allow read: if isAdmin();
+        allow create: if clientOwns(clientId) &&
+          request.resource.data.keys().hasOnly([
+            'uid', 'clientId', 'sessionId', 'category', 'type', 'label',
+            'occurredAt', 'durationMs', 'metadata'
+          ]) &&
+          request.resource.data.uid == request.auth.uid &&
+          request.resource.data.clientId == clientId &&
+          request.resource.data.sessionId is string &&
+          (request.resource.data.category == 'security' || request.resource.data.category == 'usage') &&
+          request.resource.data.type is string &&
+          request.resource.data.label is string &&
+          request.resource.data.occurredAt is int &&
+          request.resource.data.durationMs is int &&
+          request.resource.data.metadata is map &&
+          request.resource.data.metadata.keys().size() <= 16;
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+
+      match /devices/{deviceId} {
+        allow read: if isAdmin();
+        allow create: if clientOwns(clientId) &&
+          request.resource.data.keys().hasOnly([
+            'uid', 'clientId', 'deviceType', 'browser', 'operatingSystem',
+            'screen', 'language', 'timezone', 'firstSeenAt', 'lastSeenAt', 'loginCount'
+          ]) &&
+          request.resource.data.uid == request.auth.uid &&
+          request.resource.data.clientId == clientId &&
+          request.resource.data.deviceType is string &&
+          request.resource.data.browser is string &&
+          request.resource.data.operatingSystem is string &&
+          request.resource.data.screen is string &&
+          request.resource.data.language is string &&
+          request.resource.data.timezone is string &&
+          request.resource.data.firstSeenAt is int &&
+          request.resource.data.lastSeenAt is int &&
+          request.resource.data.loginCount is int;
+        allow update: if clientOwns(clientId) &&
+          resource.data.uid == request.auth.uid &&
+          request.resource.data.uid == resource.data.uid &&
+          request.resource.data.clientId == resource.data.clientId &&
+          request.resource.data.firstSeenAt == resource.data.firstSeenAt &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'deviceType', 'browser', 'operatingSystem', 'screen', 'language',
+            'timezone', 'lastSeenAt', 'loginCount'
+          ]) &&
+          request.resource.data.deviceType is string &&
+          request.resource.data.browser is string &&
+          request.resource.data.operatingSystem is string &&
+          request.resource.data.screen is string &&
+          request.resource.data.language is string &&
+          request.resource.data.timezone is string &&
+          request.resource.data.lastSeenAt is int &&
+          request.resource.data.loginCount is int;
+        allow delete: if isAdmin();
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
