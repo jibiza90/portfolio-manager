@@ -17,6 +17,7 @@ import type { ReportData } from './services/reportLinks';
 import type { ClientReportPayload } from './utils/clientReport';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
+const PRIMARY_ADMIN_EMAIL = 'jibiza90@gmail.com';
 const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_REFRESH_MS = 10 * 60 * 1000;
 const REMEMBERED_IDENTIFIER_KEY = 'portfolio-login-identifier';
@@ -2328,7 +2329,9 @@ const AuthShell = () => {
       inactivityTimerRef.current = window.setTimeout(triggerInactivityLogout, INACTIVITY_TIMEOUT_MS);
     };
 
-    if (!session.role) {
+    const inactivityExempt = session.role === 'admin'
+      && normalizeEmail(session.email ?? '') === PRIMARY_ADMIN_EMAIL;
+    if (!session.role || inactivityExempt) {
       clearInactivityTimer();
       return;
     }
@@ -2354,7 +2357,7 @@ const AuthShell = () => {
       });
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [session.role]);
+  }, [session.email, session.role]);
 
   useEffect(() => {
     if (!session.role) return;
