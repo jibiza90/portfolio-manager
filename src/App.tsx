@@ -20,14 +20,17 @@ import {
 } from './utils/monthlyHistory';
 import {
   fetchClientAccessProfile,
+  fetchClientPublicationState,
+  ensureClientPublicationBaseline,
   isValidLoginId,
   listClientAccessProfiles,
+  publishClientOverviews,
   provisionClientAccess,
   revokeClientAccess,
-  syncClientOverviews,
+  type ClientPublicationState,
   type AccessProfileRecord
 } from './services/cloudPortfolio';
-import { auth, db } from './services/firebaseApp';
+import { auth } from './services/firebaseApp';
 import { createAndDownloadAdminBackup } from './services/adminBackup';
 import { subscribeLoginEvents, type LoginEvent } from './services/loginTracker';
 import { isValidReportToken } from './services/reportLinks';
@@ -41,6 +44,8 @@ const SEGUIMIENTO_VIEW = 'SEGUIMIENTO_VIEW';
 const MENSAJES_VIEW = 'MENSAJES_VIEW';
 const ACCESOS_VIEW = 'ACCESOS_VIEW';
 const BACKUP_VIEW = 'BACKUP_VIEW';
+const CONTACTS_REVISION_STORAGE_KEY = 'portfolio-contacts-revision';
+const createLocalRevision = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 const getPortfolioClients = () => CLIENTS.filter((client) => !isDemoClient(client.id));
 type ContactInfo = {
   name: string;
@@ -3278,6 +3283,18 @@ export default function App() {
   const finalByDay = usePortfolioStore((s) => s.finalByDay);
   const movementsByClient = usePortfolioStore((s) => s.movementsByClient);
   const snapshot = usePortfolioStore((s) => s.snapshot);
+  const portfolioRevision = usePortfolioStore((s) => s.revision);
+  const portfolioInitialized = usePortfolioStore((s) => s.initialized);
+  const portfolioSaveStatus = usePortfolioStore((s) => s.saveStatus);
+  const portfolioLastSavedAt = usePortfolioStore((s) => s.lastSavedAt);
+  const [contactsRevision, setContactsRevision] = useState(() => {
+    const existing = localStorage.getItem(CONTACTS_REVISION_STORAGE_KEY);
+    if (existing) return existing;
+    const initial = createLocalRevision();
+    localStorage.setItem(CONTACTS_REVISION_STORAGE_KEY, initial);
+    return initial;
+  });
+  const contactsSerialRef = useRef(JSON.stringify(contacts));
   const [showBulkMonthlyReturn, setShowBulkMonthlyReturn] = useState(false);
   const [bulkMonthlyMonth, setBulkMonthlyMonth] = useState(`${getYearFromIso(derivedFocusDate)}-01`);
   const [bulkMonthlyReturnText, setBulkMonthlyReturnText] = useState('');
@@ -3304,6 +3321,10 @@ export default function App() {
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupError, setBackupError] = useState<string | null>(null);
   const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
+  const [publicationState, setPublicationState] = useState<ClientPublicationState | null>(null);
+  const [publicationLoading, setPublicationLoading] = useState(true);
+  const [publicationBusy, setPublicationBusy] = useState(false);
+  const [publicationError, setPublicationError] = useState<string | null>(null);
 
   const handleDownloadAdminBackup = async () => {
     if (!isPrimaryAdmin || backupBusy) return;
@@ -3576,7 +3597,13 @@ export default function App() {
 
   // Persist contacts changes
   useEffect(() => {
-    localStorage.setItem('portfolio-contacts', JSON.stringify(contacts));
+    const serialised = JSON.stringify(contacts);
+    localStorage.setItem('portfolio-contacts', serialised);
+    if (contactsSerialRef.current === serialised) return;
+    contactsSerialRef.current = serialised;
+    const nextRevision = createLocalRevision();
+    localStorage.setItem(CONTACTS_REVISION_STORAGE_KEY, nextRevision);
+    setContactsRevision(nextRevision);
   }, [contacts]);
 
   // Persist guarantees
@@ -3646,6 +3673,72 @@ export default function App() {
   }, []);
 
   const isPrimaryAdmin = currentUserEmail === 'jibiza90@gmail.com';
+  const publicationPending = publicationState
+    ? publicationState.revision !== portfolioRevision || publicationState.contactsRevision !== contactsRevision
+    : false;
+
+  useEffect(() => {
+    if (!isPrimaryAdmin || !portfolioInitialized) {
+      setPublicationLoading(true);
+      setPublicationState(null);
+      return;
+    }
+
+    let cancelled = false;
+    setPublicationLoading(true);
+    setPublicationError(null);
+    void (async () => {
+      try {
+        const existing = await fetchClientPublicationState();
+        const current = existing ?? await ensureClientPublicationBaseline(
+          usePortfolioStore.getState().revision,
+          contactsRevision
+        );
+        if (!cancelled) setPublicationState(current);
+      } catch (error) {
+        console.error('No se pudo cargar el estado de publicacion', error);
+        if (!cancelled) setPublicationError('No se pudo comprobar el estado de publicación.');
+      } finally {
+        if (!cancelled) setPublicationLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPrimaryAdmin, portfolioInitialized]);
+
+  const handlePublishClientUpdates = async () => {
+    if (!isPrimaryAdmin || publicationBusy || publicationLoading || !publicationPending) return;
+    const confirmed = window.confirm(
+      'Se publicarán para todos los clientes los datos que tienes guardados actualmente. ¿Quieres continuar?'
+    );
+    if (!confirmed) return;
+
+    setPublicationBusy(true);
+    setPublicationError(null);
+    try {
+      await waitForPendingPortfolioSave();
+      const state = usePortfolioStore.getState();
+      if (state.saveStatus === 'error') {
+        throw new Error('El autoguardado tiene un error pendiente.');
+      }
+      const published = await publishClientOverviews(
+        state.snapshot,
+        CLIENTS,
+        state.monthlyHistoryByClient,
+        contacts,
+        { revision: state.revision, contactsRevision }
+      );
+      setPublicationState(published);
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Actualización publicada para todos los clientes.' }));
+    } catch (error) {
+      console.error('No se pudieron publicar las actualizaciones', error);
+      setPublicationError('No se pudo publicar. Tus cambios siguen guardados y pendientes.');
+    } finally {
+      setPublicationBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!isPrimaryAdmin && (activeView === ACCESOS_VIEW || activeView === BACKUP_VIEW)) {
@@ -3709,17 +3802,6 @@ export default function App() {
       return changed ? next : prev;
     });
   }, [ownerAccessProfiles]);
-
-  useEffect(() => {
-    if (!isPrimaryAdmin) return;
-    if (!usePortfolioStore.getState().initialized) return;
-    const timer = window.setTimeout(() => {
-      void syncClientOverviews(usePortfolioStore.getState().snapshot, CLIENTS, usePortfolioStore.getState().monthlyHistoryByClient, contacts).catch((error) => {
-        console.error('No se pudo resincronizar el portal cliente', error);
-      });
-    }, 1200);
-    return () => window.clearTimeout(timer);
-  }, [isPrimaryAdmin, snapshot, monthlyHistoryByClient, contacts]);
 
   const handleRevokeClientAccess = async (profile: AccessProfileRecord) => {
     const confirmed = window.confirm(`Eliminar la asignacion del usuario ${profile.loginId || profile.uid}?`);
@@ -3863,6 +3945,53 @@ export default function App() {
         )}
       </div>
 
+      {isPrimaryAdmin && !reportToken ? (
+        <section className={`client-publication-control glass-card ${publicationPending ? 'has-pending' : 'is-published'}`}>
+          <div className="client-publication-copy">
+            <div className="client-publication-heading">
+              <span className="eyebrow">Publicación de clientes</span>
+              <AutosaveIndicator status={portfolioSaveStatus} />
+            </div>
+            <strong>
+              {publicationLoading
+                ? 'Comprobando estado...'
+                : publicationPending
+                  ? 'Cambios guardados pendientes de publicar'
+                  : 'Los clientes están actualizados'}
+            </strong>
+            <p>
+              El autoguardado permanece activo. Los clientes solo reciben los cambios cuando confirmas la publicación.
+            </p>
+            <div className="client-publication-meta">
+              <span>
+                Último guardado: {portfolioLastSavedAt ? new Date(portfolioLastSavedAt).toLocaleString('es-ES') : '—'}
+              </span>
+              <span>
+                Última publicación: {publicationState?.publishedAt ? new Date(publicationState.publishedAt).toLocaleString('es-ES') : '—'}
+              </span>
+            </div>
+            {publicationError ? <span className="client-publication-error">{publicationError}</span> : null}
+          </div>
+          <button
+            type="button"
+            className="client-publication-button"
+            onClick={() => { void handlePublishClientUpdates(); }}
+            disabled={
+              publicationLoading ||
+              publicationBusy ||
+              !publicationPending ||
+              portfolioSaveStatus === 'error'
+            }
+          >
+            {publicationBusy
+              ? 'Publicando...'
+              : publicationPending
+                ? 'Publicar actualización'
+                : 'Clientes actualizados'}
+          </button>
+        </section>
+      ) : null}
+
       {reportToken ? (
         <ReportView token={reportToken} />
       ) : activeView === GENERAL_OPTION ? (
@@ -3986,8 +4115,6 @@ function InfoClientes({
   const [accessBusy, setAccessBusy] = useState(false);
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
   const [clientAccessProfile, setClientAccessProfile] = useState<AccessProfileRecord | null>(null);
-  const nameSyncTimerRef = useRef<number | null>(null);
-  const lastSyncedDisplayNameRef = useRef('');
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -4080,7 +4207,6 @@ function InfoClientes({
     setAccessPassword('');
     setAccessMessage(null);
     setClientAccessProfile(null);
-    lastSyncedDisplayNameRef.current = '';
   }, [selectedId]);
 
   const currentClient = CLIENTS.find((c) => c.id === selectedId);
@@ -4183,60 +4309,6 @@ function InfoClientes({
   const updateField = (field: keyof ContactInfo, value: string) => {
     setContacts((prev) => ({ ...prev, [selectedId]: { ...contact, [field]: value } }));
   };
-
-  const syncClientIdentityToCloud = async (forcedName?: string) => {
-    if (!currentClient || isGeneralView) return;
-    const fallbackName = `${contact.name} ${contact.surname}`.trim() || currentClient.name;
-    const desiredName = (forcedName ?? fallbackName).trim();
-    if (!desiredName) return;
-
-    try {
-      // Keep the client-facing name in Firestore so the client portal sees it (read-only for clients).
-      await db
-        .collection('portfolio_client_overviews')
-        .doc(currentClient.id)
-        .set({ clientName: desiredName, updatedAt: Date.now() }, { merge: true });
-
-      // Keep access_profiles displayName aligned so the login session also reflects it.
-      const profiles = await db
-        .collection('access_profiles')
-        .where('clientId', '==', currentClient.id)
-        .get();
-
-      if (!profiles.empty) {
-        const batch = db.batch();
-        profiles.docs.forEach((docRef) => {
-          batch.set(docRef.ref, { displayName: desiredName, updatedAt: Date.now() }, { merge: true });
-        });
-        await batch.commit();
-      }
-      lastSyncedDisplayNameRef.current = desiredName;
-    } catch (error) {
-      console.error('No se pudo sincronizar el nombre del cliente', error);
-    }
-  };
-
-  useEffect(() => {
-    if (!currentClient || isGeneralView) return;
-    const desiredName = `${contact.name} ${contact.surname}`.trim() || currentClient.name;
-    if (!desiredName) return;
-    if (desiredName === lastSyncedDisplayNameRef.current) return;
-
-    if (nameSyncTimerRef.current !== null) {
-      window.clearTimeout(nameSyncTimerRef.current);
-    }
-    nameSyncTimerRef.current = window.setTimeout(() => {
-      nameSyncTimerRef.current = null;
-      void syncClientIdentityToCloud(desiredName);
-    }, 450);
-
-    return () => {
-      if (nameSyncTimerRef.current !== null) {
-        window.clearTimeout(nameSyncTimerRef.current);
-        nameSyncTimerRef.current = null;
-      }
-    };
-  }, [contact.name, contact.surname, currentClient, isGeneralView]);
 
   useEffect(() => {
     if (!currentClient || isGeneralView) return;
@@ -4505,7 +4577,6 @@ function InfoClientes({
                 autoComplete="name"
                 value={contact.name}
                 onChange={(e) => { updateField('name', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
-                onBlur={() => { void syncClientIdentityToCloud(); }}
               />
             </label>
             <label>
@@ -4516,7 +4587,6 @@ function InfoClientes({
                 autoComplete="family-name"
                 value={contact.surname}
                 onChange={(e) => { updateField('surname', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
-                onBlur={() => { void syncClientIdentityToCloud(); }}
               />
             </label>
             <label>

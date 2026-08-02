@@ -71,6 +71,7 @@ export const createAndDownloadAdminBackup = async (localData: AdminBackupLocalDa
 
   const [
     remotePortfolioDoc,
+    clientPublicationDoc,
     accessProfilesSnapshot,
     clientOverviewsSnapshot,
     reportLinksSnapshot,
@@ -79,6 +80,7 @@ export const createAndDownloadAdminBackup = async (localData: AdminBackupLocalDa
     supportThreadsSnapshot
   ] = await Promise.all([
     db.doc('portfolio/state').get(),
+    db.doc('portfolio/client-publication').get(),
     db.collection('access_profiles').get(),
     db.collection('portfolio_client_overviews').get(),
     db.collection('reportLinks').get(),
@@ -113,6 +115,7 @@ export const createAndDownloadAdminBackup = async (localData: AdminBackupLocalDa
     },
     firestore: {
       portfolioState: serialiseDoc(remotePortfolioDoc),
+      clientPublication: serialiseDoc(clientPublicationDoc),
       accessProfiles: serialiseSnapshot(accessProfilesSnapshot),
       clientOverviews: serialiseSnapshot(clientOverviewsSnapshot),
       reportLinks: serialiseSnapshot(reportLinksSnapshot),

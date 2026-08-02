@@ -1,8 +1,9 @@
 import { MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
-import { db, firebase, firebaseConfig, functions } from './firebaseApp';
+import { auth, db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { buildClientReportData, toClientReportPayload, type ClientContactInfo } from '../utils/clientReport';
 
 const DOC_PATH = 'portfolio/state';
+const PUBLICATION_DOC_PATH = 'portfolio/client-publication';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
 const CONTACTS_STORAGE_KEY = 'portfolio-contacts';
 
@@ -11,7 +12,9 @@ const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {}, 
 const sanitizePersistedState = (data?: Partial<PersistedState> | null): PersistedState => ({
   finalByDay: data?.finalByDay ?? {},
   movementsByClient: data?.movementsByClient ?? {},
-  monthlyHistoryByClient: data?.monthlyHistoryByClient ?? {}
+  monthlyHistoryByClient: data?.monthlyHistoryByClient ?? {},
+  revision: data?.revision,
+  updatedAt: data?.updatedAt
 });
 
 const readLocalContacts = (): Record<string, ClientContactInfo> => {
@@ -56,14 +59,9 @@ const buildClientOverview = (
 };
 
 export const fetchPortfolioState = async (): Promise<PersistedState> => {
-  try {
-    const doc = await db.doc(DOC_PATH).get();
-    if (!doc.exists) return emptyPersisted;
-    return sanitizePersistedState(doc.data() as Partial<PersistedState>);
-  } catch (error) {
-    console.error('Firestore fetch error', error);
-    return emptyPersisted;
-  }
+  const doc = await db.doc(DOC_PATH).get();
+  if (!doc.exists) return emptyPersisted;
+  return sanitizePersistedState(doc.data() as Partial<PersistedState>);
 };
 
 export const savePortfolioState = async (state: PersistedState) => {
@@ -71,18 +69,81 @@ export const savePortfolioState = async (state: PersistedState) => {
   await db.doc(DOC_PATH).set(state);
 };
 
-export const syncClientOverviews = async (
+export interface ClientPublicationState {
+  revision: string;
+  contactsRevision: string;
+  publishedAt: number;
+  publishedBy?: string;
+}
+
+export const fetchClientPublicationState = async (): Promise<ClientPublicationState | null> => {
+  const doc = await db.doc(PUBLICATION_DOC_PATH).get();
+  if (!doc.exists) return null;
+  const data = doc.data() as Partial<ClientPublicationState>;
+  if (!data.revision || !data.contactsRevision || !data.publishedAt) return null;
+  return {
+    revision: data.revision,
+    contactsRevision: data.contactsRevision,
+    publishedAt: data.publishedAt,
+    publishedBy: data.publishedBy
+  };
+};
+
+export const ensureClientPublicationBaseline = async (
+  revision: string,
+  contactsRevision: string
+): Promise<ClientPublicationState> => {
+  const docRef = db.doc(PUBLICATION_DOC_PATH);
+  return db.runTransaction(async (transaction) => {
+    const current = await transaction.get(docRef);
+    if (current.exists) {
+      const data = current.data() as Partial<ClientPublicationState>;
+      if (data.revision && data.contactsRevision && data.publishedAt) {
+        return data as ClientPublicationState;
+      }
+    }
+
+    const baseline: ClientPublicationState = {
+      revision,
+      contactsRevision,
+      publishedAt: Date.now(),
+      publishedBy: auth.currentUser?.uid ?? ''
+    };
+    transaction.set(docRef, baseline);
+    return baseline;
+  });
+};
+
+export const publishClientOverviews = async (
   snapshot: PortfolioSnapshot,
   clients: Array<{ id: string; name: string }>,
   monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>,
-  contacts: Record<string, ClientContactInfo> = readLocalContacts()
-) => {
+  contacts: Record<string, ClientContactInfo> = readLocalContacts(),
+  publication: { revision: string; contactsRevision: string }
+): Promise<ClientPublicationState> => {
+  const publishedAt = Date.now();
+  const publicationState: ClientPublicationState = {
+    ...publication,
+    publishedAt,
+    publishedBy: auth.currentUser?.uid ?? ''
+  };
+  const accessProfiles = await db.collection('access_profiles').where('role', '==', 'client').get();
   const batch = db.batch();
   clients.forEach((client) => {
     const docRef = db.collection(CLIENT_OVERVIEW_COLLECTION).doc(client.id);
     batch.set(docRef, buildClientOverview(snapshot, client.id, client.name, monthlyHistoryByClient[client.id] ?? {}, contacts[client.id]));
   });
+  accessProfiles.docs.forEach((profileDoc) => {
+    const data = profileDoc.data() as AccessProfile;
+    if (!data.clientId) return;
+    const client = clients.find((item) => item.id === data.clientId);
+    const displayName = contactFullName(contacts[data.clientId]) || client?.name;
+    if (!displayName) return;
+    batch.set(profileDoc.ref, { displayName, updatedAt: publishedAt }, { merge: true });
+  });
+  batch.set(db.doc(PUBLICATION_DOC_PATH), publicationState);
   await batch.commit();
+  return publicationState;
 };
 
 export interface AccessProfile {

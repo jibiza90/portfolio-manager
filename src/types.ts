@@ -67,4 +67,6 @@ export interface PersistedState {
   finalByDay: Record<string, number | undefined>;
   movementsByClient: Record<string, Record<string, Movement>>;
   monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>;
+  revision?: string;
+  updatedAt?: number;
 }

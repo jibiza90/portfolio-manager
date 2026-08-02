@@ -6,8 +6,7 @@ import {
   buildClientAuthEmail,
   fetchAccessProfile,
   loginIdFromAuthEmail,
-  subscribeClientOverview,
-  syncClientOverviews
+  subscribeClientOverview
 } from './services/cloudPortfolio';
 import { auth, db, firebase } from './services/firebaseApp';
 import { recordLoginEvent } from './services/loginTracker';
@@ -2157,10 +2156,6 @@ const AuthShell = () => {
             error: null
           });
           void initializePortfolioStore()
-            .then(() => {
-              const state = usePortfolioStore.getState();
-              return syncClientOverviews(state.snapshot, CLIENTS, state.monthlyHistoryByClient);
-            })
             .catch((initError) => {
               console.error('Admin store init failed', initError);
             });
