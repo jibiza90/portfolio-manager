@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import App from './App';
 import { ReportView } from './components/ReportView';
 import { CLIENTS, DEMO_CLIENT_ID, isDemoClient } from './constants/clients';
 import {
@@ -22,6 +21,7 @@ const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_REFRESH_MS = 10 * 60 * 1000;
 const REMEMBERED_IDENTIFIER_KEY = 'portfolio-login-identifier';
 const CONTRIBUTION_BREAKDOWN_START_MONTH = '2026-04';
+const AdminApp = React.lazy(() => import('./App'));
 
 type Role = 'admin' | 'client';
 
@@ -728,6 +728,11 @@ const LoginCard = ({
           border-color: #0f6d7a;
           background: #0f6d7a;
         }
+        .pmRemember input:focus-visible + .pmCheckBox {
+          outline: 3px solid rgba(14, 165, 233, 0.28);
+          outline-offset: 2px;
+          border-color: #0f6d7a;
+        }
         .pmForgetBtn {
           border: 1px solid rgba(36, 43, 54, 0.14);
           background: #fff;
@@ -987,6 +992,8 @@ const LoginCard = ({
             </div>
 
             <form
+              aria-busy={busy}
+              aria-describedby={error ? 'pmLoginError' : undefined}
               onSubmit={(event) => {
                 event.preventDefault();
                 const cleanIdentifier = identifier.trim();
@@ -1071,7 +1078,7 @@ const LoginCard = ({
                 ) : 'Iniciar sesion'}
               </button>
 
-              {error ? <div className="pmError">{error}</div> : null}
+              {error ? <div id="pmLoginError" className="pmError" role="alert" aria-live="assertive">{error}</div> : null}
               <p className="pmAccessHelp"><strong>Problemas para acceder?</strong> Contacta con tu gestor.</p>
             </form>
           </section>
@@ -2787,7 +2794,18 @@ const AuthShell = () => {
           Salir
         </button>
       </div>
-      <App />
+      <React.Suspense
+        fallback={(
+          <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: palette.text }}>
+            <div role="status" aria-live="polite" style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
+              <span className="admin-app-loading-spinner" aria-hidden="true" />
+              <strong>Cargando panel de administracion...</strong>
+            </div>
+          </main>
+        )}
+      >
+        <AdminApp />
+      </React.Suspense>
     </>
   );
 };

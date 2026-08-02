@@ -1273,6 +1273,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   fill="transparent"
                   pointerEvents="all"
                   tabIndex={0}
+                  role="img"
+                  aria-label={`${pt.month}: ${formatCurrency(pt.value)}`}
                   onMouseEnter={() => setHoveredPatrimonyPoint(pt)}
                   onMouseMove={() => setHoveredPatrimonyPoint(pt)}
                   onMouseLeave={() => setHoveredPatrimonyPoint(null)}
@@ -1681,6 +1683,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   key={m.month}
                   className="report-pro-bar-col"
                   tabIndex={0}
+                  role="img"
+                  aria-label={`${m.month}: ${formatChartTooltipValue(chartValue)}`}
                   onMouseEnter={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
                   onMouseMove={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
                   onMouseLeave={() => setHoveredMonthlyBar(null)}

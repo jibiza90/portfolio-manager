@@ -7948,3 +7948,84 @@ select {
     grid-column: auto;
   }
 }
+
+.admin-app-loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(15, 109, 122, 0.22);
+  border-top-color: #0f6d7a;
+  border-radius: 50%;
+  animation: adminAppSpin 0.75s linear infinite;
+}
+
+@keyframes adminAppSpin {
+  to { transform: rotate(360deg); }
+}
+
+.network-status-banner {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: min(440px, calc(100vw - 24px));
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 15px;
+  color: #ffffff;
+  transform: translateX(-50%);
+  box-shadow: 0 20px 46px rgba(7, 18, 31, 0.28);
+  animation: networkBannerIn 220ms ease-out both;
+}
+
+.network-status-banner.is-offline {
+  background: linear-gradient(135deg, #7f1d1d, #b42318);
+}
+
+.network-status-banner.is-recovered {
+  background: linear-gradient(135deg, #075985, #0f766e);
+}
+
+.network-status-dot {
+  flex: 0 0 auto;
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.14);
+}
+
+.network-status-banner > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.network-status-banner strong {
+  font-size: 14px;
+}
+
+.network-status-banner span:last-child {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+@keyframes networkBannerIn {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

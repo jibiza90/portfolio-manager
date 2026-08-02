@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
+    "test:responsive": "playwright test",
     "functions:install": "npm install --prefix functions",
     "deploy:functions": "npx firebase-tools deploy --only functions:setClientPassword",
     "deploy:rules": "npx firebase-tools deploy --only firestore:rules"
@@ -22,6 +23,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^25.1.0",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
