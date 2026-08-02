@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getReportByToken, isValidReportToken, ReportData } from '../services/reportLinks';
-import { isDemoClient } from '../constants/clients';
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 
@@ -235,7 +234,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
   }, [report?.clientId]);
 
   useEffect(() => {
-    if (!report || !isDemoClient(report.clientId)) return;
+    if (!report) return;
     setPeriodPreset('last12');
   }, [report?.clientId]);
 
@@ -258,390 +257,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
 
   const handleDownload = async () => {
     if (!report) return;
-    if (isDemoClient(report.clientId)) {
-      await handleDownloadModernDemo();
-      return;
-    }
-    const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    let y = 20;
-
-    const checkNewPage = (needed: number) => {
-      if (y + needed > pageHeight - 30) {
-        doc.addPage();
-        y = 20;
-        return true;
-      }
-      return false;
-    };
-
-    const formatDate = (iso: string) => {
-      const [yy, mm, dd] = iso.split('-');
-      return `${dd}.${mm}.${yy}`;
-    };
-
-    // Header
-    doc.setFillColor(15, 109, 122);
-    doc.rect(0, 0, pageWidth, 45, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INFORME DE INVERSIÓN', margin, 25);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(report.clientCode, margin, 35);
-    doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, pageWidth - margin - 50, 35);
-
-    y = 60;
-
-    // KPIs
-    doc.setTextColor(15, 109, 122);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('RESUMEN FINANCIERO', margin, y);
-    y += 12;
-
-    const kpis = [
-      { label: 'Capital Aportado', value: formatCurrency(report.incrementos) },
-      { label: 'Capital Retirado', value: formatCurrency(report.decrementos) },
-      { label: 'Saldo Actual', value: formatCurrency(report.saldo) },
-      { label: 'Beneficio Acumulado', value: formatSignedCurrency(report.beneficioTotal) },
-      { label: 'TWR', value: `${formatSignedPercent((report.twrYtd ?? 0) * 100)}` },
-      { label: 'Beneficio Ultimo Mes', value: formatSignedCurrency(report.beneficioUltimoMes) },
-      { label: 'Rentabilidad Ultimo Mes', value: `${formatSignedPercent(report.rentabilidadUltimoMes)}` },
-      { label: 'Rentabilidad Total', value: `${formatSignedPercent(report.rentabilidad)}` }
-    ];
-
-    doc.setFontSize(10);
-    kpis.forEach((kpi) => {
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 100, 100);
-      doc.text(kpi.label + ':', margin, y);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(15, 23, 42);
-      doc.text(kpi.value, margin + 50, y);
-      y += 7;
-    });
-
-    y += 3;
-
-    const noteWidth = pageWidth - margin * 2 - 8;
-    const twrNoteLines = doc.splitTextToSize(`TWR (rentabilidad ponderada por el tiempo): ${twrExplanation}`, noteWidth);
-    const totalReturnLines = doc.splitTextToSize(`Rentabilidad total: ${totalReturnExplanation}`, noteWidth);
-    const noteHeight = 10 + twrNoteLines.length * 3.4 + totalReturnLines.length * 3.4 + 4;
-
-    checkNewPage(noteHeight + 2);
-    doc.setFillColor(247, 250, 252);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, noteHeight, 2, 2, 'F');
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.25);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, noteHeight, 2, 2, 'S');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(15, 23, 42);
-    doc.text('Cómo interpretar el TWR y la rentabilidad total', margin + 4, y + 6);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
-    let noteY = y + 11;
-    doc.text(twrNoteLines, margin + 4, noteY);
-    noteY += twrNoteLines.length * 3.4 + 2;
-    doc.text(totalReturnLines, margin + 4, noteY);
-
-    y += noteHeight + 8;
-
-    const safeCurrency = (v: number) => formatCurrency(Number.isFinite(v) ? v : 0);
-    const safePercent = (v: number) => `${(Number.isFinite(v) ? v : 0).toFixed(2)}%`;
-
-    // Monthly performance with chart + table
-    if (report.monthlyStats.length > 0) {
-      checkNewPage(120);
-      doc.setTextColor(15, 109, 122);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('RENDIMIENTO MENSUAL', margin, y);
-      y += 10;
-
-      const monthlyData = report.monthlyStats.filter((m) => m.hasData && m.profit !== null && m.profitPct !== null && m.endBalance !== null);
-      if (monthlyData.length > 0) {
-        const bestMonth = monthlyData.reduce((best, cur) => ((cur.profitPct ?? 0) > (best.profitPct ?? 0) ? cur : best), monthlyData[0]);
-        const worstMonth = monthlyData.reduce((worst, cur) => ((cur.profitPct ?? 0) < (worst.profitPct ?? 0) ? cur : worst), monthlyData[0]);
-        const avgMonth = monthlyData.reduce((s, m) => s + (m.profitPct ?? 0), 0) / Math.max(1, monthlyData.length);
-
-        doc.setFontSize(8);
-        doc.setTextColor(15, 23, 42);
-        doc.text(`Mejor mes: ${bestMonth.month} (${safePercent(bestMonth.profitPct ?? 0)})`, margin, y);
-        doc.text(`Peor mes: ${worstMonth.month} (${safePercent(worstMonth.profitPct ?? 0)})`, margin + 66, y);
-        doc.text(`Promedio: ${safePercent(avgMonth)}`, margin + 132, y);
-        y += 6;
-
-        const chartWidth = pageWidth - margin * 2;
-        const chartHeight = 70;
-        const padLeft = 22;
-        const padRight = 8;
-        const padTop = 6;
-        const padBottom = 14;
-        const plotW = chartWidth - padLeft - padRight;
-        const plotH = chartHeight - padTop - padBottom;
-        const barGap = 2.5;
-        const barWidth = Math.max(2.8, plotW / Math.max(1, monthlyData.length) - barGap);
-        const maxPct = Math.max(...monthlyData.map((m) => Math.abs(m.profitPct ?? 0)), 1);
-        const hasNegative = monthlyData.some((m) => (m.profitPct ?? 0) < 0);
-        const plotTop = y + padTop;
-        const plotBottom = plotTop + plotH;
-        const baseY = hasNegative ? plotTop + plotH / 2 : plotBottom;
-
-        doc.setFillColor(247, 250, 253);
-        doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'F');
-        doc.setDrawColor(215, 223, 232);
-        doc.setLineWidth(0.25);
-        doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'S');
-
-        doc.setDrawColor(220, 226, 235);
-        doc.setLineWidth(0.3);
-        for (let t = 0; t <= 4; t++) {
-          const gy = plotTop + (t / 4) * plotH;
-          doc.line(margin + padLeft, gy, margin + chartWidth - padRight, gy);
-          const tickPct = maxPct - (t / 4) * (hasNegative ? maxPct * 2 : maxPct);
-          doc.setTextColor(120, 130, 145);
-          doc.setFontSize(6);
-          doc.text(`${tickPct.toFixed(1)}%`, margin + 1.5, gy + 1.8);
-        }
-        if (hasNegative) {
-          doc.setDrawColor(160, 175, 190);
-          doc.setLineWidth(0.35);
-          doc.line(margin + padLeft, baseY, margin + chartWidth - padRight, baseY);
-        }
-
-        const maxBarHeight = hasNegative ? plotH / 2 - 3 : plotH - 3;
-        monthlyData.forEach((m, i) => {
-          const pct = m.profitPct ?? 0;
-          const h = Math.min(maxBarHeight, Math.max(2, (Math.abs(pct) / maxPct) * maxBarHeight));
-          const x = margin + padLeft + 1 + i * (barWidth + barGap);
-          if (pct >= 0) {
-            doc.setFillColor(15, 109, 122);
-            doc.roundedRect(x, baseY - h, barWidth, h, 1, 1, 'F');
-            doc.setTextColor(15, 109, 122);
-            doc.setFontSize(6);
-            doc.text(safePercent(pct), x + barWidth / 2, Math.max(plotTop + 2, baseY - h - 1.4), { align: 'center' });
-          } else {
-            doc.setFillColor(220, 38, 38);
-            doc.roundedRect(x, baseY, barWidth, h, 1, 1, 'F');
-            doc.setTextColor(220, 38, 38);
-            doc.setFontSize(6);
-            doc.text(safePercent(pct), x + barWidth / 2, Math.min(plotBottom - 0.5, baseY + h + 2.2), { align: 'center' });
-          }
-
-          doc.setTextColor(90, 105, 125);
-          doc.setFontSize(6);
-          doc.text(m.month, x + barWidth / 2, plotBottom + 4.8, { align: 'center' });
-        });
-
-        doc.setFontSize(7);
-        doc.setTextColor(15, 109, 122);
-        doc.text('Leyenda: verde = rentabilidad positiva, rojo = rentabilidad negativa', margin + 2, y + chartHeight + 4);
-
-        y += chartHeight + 10;
-      }
-
-      doc.setFontSize(9);
-      doc.setFillColor(15, 109, 122);
-      doc.roundedRect(margin, y - 5, pageWidth - margin * 2, 8, 1, 1, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.text('MES', margin + 4, y);
-      doc.text('BENEFICIO', margin + 40, y);
-      doc.text('RENTAB.', margin + 80, y);
-      doc.text('SALDO', margin + 110, y);
-      y += 9;
-
-      doc.setFont('helvetica', 'normal');
-      report.monthlyStats.forEach((m, i) => {
-        if (!m.hasData || m.profit === null || m.profitPct === null || m.endBalance === null) return;
-        checkNewPage(8);
-        if (i % 2 === 0) {
-          doc.setFillColor(248, 250, 252);
-          doc.rect(margin, y - 5, pageWidth - margin * 2, 7, 'F');
-        }
-        doc.setTextColor(60, 60, 60);
-        doc.text(getMonthEndLabel(m.month), margin + 4, y);
-        if (m.profit >= 0) {
-          doc.setTextColor(15, 109, 122);
-        } else {
-          doc.setTextColor(220, 38, 38);
-        }
-        doc.text(formatCurrency(m.profit), margin + 40, y);
-        if (m.profitPct >= 0) {
-          doc.setTextColor(15, 109, 122);
-        } else {
-          doc.setTextColor(220, 38, 38);
-        }
-        doc.text(`${m.profitPct.toFixed(2)}%`, margin + 80, y);
-        doc.setTextColor(15, 23, 42);
-        doc.text(formatCurrency(m.endBalance), margin + 110, y);
-        y += 7;
-      });
-    }
-
-    // Patrimonio evolution chart
-    const evoData = report.patrimonioEvolution.filter((p) => p.balance !== undefined && p.hasData);
-    if (evoData.length > 0) {
-      y += 12;
-      checkNewPage(106);
-      doc.setTextColor(15, 109, 122);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('EVOLUCION DEL PATRIMONIO', margin, y);
-      y += 10;
-
-      const chartWidth = pageWidth - margin * 2;
-      const chartHeight = 76;
-      const values = evoData.map((d) => d.balance as number);
-      const minVal = Math.min(...values);
-      const maxVal = Math.max(...values);
-      const span = Math.max(1, maxVal - minVal);
-      const minAxis = Math.max(0, minVal - span * 0.08);
-      const maxAxis = maxVal + span * 0.08;
-      const axisSpan = Math.max(1, maxAxis - minAxis);
-
-      const firstVal = evoData[0].balance as number;
-      const lastVal = evoData[evoData.length - 1].balance as number;
-      const delta = lastVal - firstVal;
-      doc.setFontSize(8);
-      doc.setTextColor(15, 23, 42);
-      doc.text(`Min: ${safeCurrency(minVal)}`, margin, y);
-      doc.text(`Max: ${safeCurrency(maxVal)}`, margin + 62, y);
-      doc.text(`Ultimo: ${safeCurrency(lastVal)} (${delta >= 0 ? '+' : ''}${safeCurrency(delta)})`, margin + 118, y);
-      y += 6;
-
-      doc.setFillColor(247, 250, 253);
-      doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'F');
-      doc.setDrawColor(215, 223, 232);
-      doc.setLineWidth(0.25);
-      doc.roundedRect(margin, y, chartWidth, chartHeight, 2, 2, 'S');
-
-      const innerLeft = margin + 24;
-      const innerRight = margin + chartWidth - 6;
-      const innerTop = y + 6;
-      const innerBottom = y + chartHeight - 14;
-      const innerW = innerRight - innerLeft;
-      const innerH = innerBottom - innerTop;
-
-      // Grid lines + Y labels
-      doc.setDrawColor(220, 226, 235);
-      doc.setLineWidth(0.2);
-      for (let i = 0; i <= 4; i++) {
-        const gy = innerTop + (i / 4) * innerH;
-        doc.line(innerLeft, gy, innerRight, gy);
-        const tickValue = maxAxis - (i / 4) * axisSpan;
-        doc.setTextColor(120, 130, 145);
-        doc.setFontSize(6);
-        doc.text(safeCurrency(tickValue), margin + 1.5, gy + 1.8);
-      }
-
-      const points = evoData.map((d, i) => {
-        const x = evoData.length <= 1 ? innerLeft + innerW / 2 : innerLeft + (i / (evoData.length - 1)) * innerW;
-        const yPos = innerTop + (1 - (((d.balance as number) - minAxis) / axisSpan)) * innerH;
-        return { x, y: yPos, balance: d.balance as number, month: d.month };
-      });
-
-      // Area under line (simple polygon)
-      if (points.length > 1) {
-        doc.setFillColor(225, 242, 252);
-        for (let i = 0; i < points.length - 1; i++) {
-          const p1 = points[i];
-          const p2 = points[i + 1];
-          doc.triangle(p1.x, p1.y, p2.x, p2.y, p1.x, innerBottom, 'F');
-          doc.triangle(p2.x, p2.y, p1.x, innerBottom, p2.x, innerBottom, 'F');
-        }
-      }
-
-      // Line
-      doc.setDrawColor(15, 95, 138);
-      doc.setLineWidth(1.1);
-      for (let i = 0; i < points.length - 1; i++) {
-        doc.line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y);
-      }
-
-      // Points + labels (exact values)
-      points.forEach((pt, idx) => {
-        doc.setFillColor(11, 79, 115);
-        doc.circle(pt.x, pt.y, 1.3, 'F');
-        doc.setFontSize(5.4);
-        doc.setTextColor(71, 85, 105);
-        doc.text(pt.month, pt.x, innerBottom + 5.2, { align: 'center' });
-        const labelY = idx % 2 === 0 ? pt.y - 2.4 : pt.y + 3.8;
-        doc.setTextColor(20, 55, 80);
-        doc.text(safeCurrency(pt.balance), pt.x, labelY, { align: 'center' });
-      });
-
-      doc.setFontSize(7);
-      doc.setTextColor(15, 109, 122);
-      doc.text('Leyenda: linea azul = saldo mensual', margin + 2, y + chartHeight + 4);
-
-      y += chartHeight + 10;
-    }
-
-    // Movements table
-    const pdfMovements = (report.movements ?? []).filter((m) => m.amount !== null && m.amount !== undefined && m.amount > 0);
-    if (pdfMovements.length > 0) {
-      y += 10;
-      checkNewPage(20);
-      doc.setTextColor(15, 109, 122);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('HISTORIAL DE MOVIMIENTOS', margin, y);
-      y += 9;
-
-      doc.setFontSize(9);
-      doc.setFillColor(15, 109, 122);
-      doc.roundedRect(margin, y - 5, pageWidth - margin * 2, 8, 1, 1, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.text('FECHA', margin + 4, y);
-      doc.text('TIPO', margin + 42, y);
-      doc.text('IMPORTE', margin + 84, y);
-      doc.text('CAPITAL NETO', margin + 126, y);
-      y += 9;
-
-      doc.setFont('helvetica', 'normal');
-      movementCapitalSeries.forEach((mov, i) => {
-        checkNewPage(8);
-        if (i % 2 === 0) {
-          doc.setFillColor(248, 250, 252);
-          doc.rect(margin, y - 5, pageWidth - margin * 2, 7, 'F');
-        }
-
-        const isIncrement = mov.type === 'increment';
-        const moveLabel = isIncrement ? 'Aportacion' : 'Retirada';
-        const amountText = `${isIncrement ? '+' : '-'}${formatCurrency(mov.amount ?? 0)}`;
-
-        doc.setTextColor(60, 60, 60);
-        doc.text(formatDate(mov.iso), margin + 4, y);
-
-        if (isIncrement) doc.setTextColor(15, 109, 122);
-        else doc.setTextColor(220, 38, 38);
-        doc.text(moveLabel, margin + 42, y);
-        doc.text(amountText, margin + 84, y);
-
-        doc.setTextColor(15, 23, 42);
-        doc.text(formatCurrency(mov.netCapital), margin + 126, y);
-        y += 7;
-      });
-    }
-
-    // Footer
-    const totalPages = doc.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(120, 120, 120);
-      doc.text(`Página ${i} / ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
-      doc.text('Confidencial', margin, pageHeight - 10);
-    }
-
-    doc.save(`Informe_${report.clientCode}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    await handleDownloadModernReport();
   };
 
   useEffect(() => {
@@ -690,7 +306,6 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
   const contributionBreakdowns = (report.contributionBreakdowns ?? []).filter(
     (item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH
   );
-  const isDemoReport = isDemoClient(report.clientId);
   const tableContributionBreakdowns = (report.contributionBreakdowns ?? []).filter(
     (item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH && item.contributions.length > 0
   );
@@ -913,7 +528,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     return '';
   };
 
-  async function handleDownloadModernDemo() {
+  async function handleDownloadModernReport() {
     const currentReport = report;
     if (!currentReport) return;
     const { jsPDF } = await import('jspdf');
@@ -1224,7 +839,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
       });
     }
 
-    const filename = `informe-demo-${currentReport.clientCode}-${rangeStart || 'todo'}-${rangeEnd || 'todo'}.pdf`;
+    const filename = `informe-${currentReport.clientCode}-${rangeStart || 'todo'}-${rangeEnd || 'todo'}.pdf`;
     doc.save(filename);
   }
 
@@ -1385,9 +1000,9 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     : null;
 
   return (
-    <div className={`informes-container informes-pro-page fade-in ${isDemoReport ? 'report-pro-page-demo' : ''}`}>
+    <div className="informes-container informes-pro-page fade-in report-pro-page-demo">
       {expandedPatrimonyOverlay}
-      <article className={`informe-preview glass-card report-pro-sheet ${isDemoReport ? 'report-pro-demo-sheet' : ''}`} ref={reportRef}>
+      <article className="informe-preview glass-card report-pro-sheet report-pro-demo-sheet" ref={reportRef}>
         <header className="report-pro-header">
           <div>
             <p className="report-pro-kicker">Portfolio Manager</p>
@@ -1397,57 +1012,28 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           <div className="report-pro-client-tag">{report.clientCode}</div>
         </header>
 
-        {isDemoReport ? (
-          <>
-            <section className="report-pro-executive report-pro-executive-demo">
-              <div className="report-pro-info-card" data-tooltip="Saldo actual de tu cartera a fecha del informe.">
-                <p>Saldo actual</p>
-                <strong>{formatCurrency(report.saldo)}</strong>
-              </div>
-              <div className="report-pro-info-card" data-tooltip={`Rentabilidad TWR de ${latestMonthLabel}. Mide el rendimiento de la estrategia sin contar aportaciones ni retiradas.`}>
-                <p>{`Rentabilidad ${latestMonthLabel}`}</p>
-                <strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidadUltimoMes)}</strong>
-              </div>
-              <div className="report-pro-info-card" data-tooltip={`Beneficio generado en euros durante ${latestMonthLabel}. Incluye el efecto real del capital invertido y de las aportaciones del mes.`}>
-                <p>{`Beneficio ${latestMonthLabel}`}</p>
-                <strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioUltimoMes)}</strong>
-              </div>
-            </section>
+        <section className="report-pro-executive report-pro-executive-demo">
+          <div className="report-pro-info-card" data-tooltip="Saldo actual de tu cartera a fecha del informe.">
+            <p>Saldo actual</p>
+            <strong>{formatCurrency(report.saldo)}</strong>
+          </div>
+          <div className="report-pro-info-card" data-tooltip={`Rentabilidad TWR de ${latestMonthLabel}. Mide el rendimiento de la estrategia sin contar aportaciones ni retiradas.`}>
+            <p>{`Rentabilidad ${latestMonthLabel}`}</p>
+            <strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidadUltimoMes)}</strong>
+          </div>
+          <div className="report-pro-info-card" data-tooltip={`Beneficio generado en euros durante ${latestMonthLabel}. Incluye el efecto real del capital invertido y de las aportaciones del mes.`}>
+            <p>{`Beneficio ${latestMonthLabel}`}</p>
+            <strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioUltimoMes)}</strong>
+          </div>
+        </section>
 
-            <section className="report-pro-kpis report-pro-kpis-demo">
-              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Beneficio acumulado generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
-              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
-              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus aportaciones registradas desde ${firstRegisteredDateLabel}.`}><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
-              <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus retiradas registradas desde ${firstRegisteredDateLabel}.`}><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-              <div className="report-pro-kpi report-pro-info-card" data-tooltip="Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, si depende de aportaciones y retiradas."><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidad)}</strong></div>
-            </section>
-          </>
-        ) : (
-          <>
-            <section className="report-pro-executive">
-              <div>
-                <p>Saldo actual</p>
-                <strong>{formatCurrency(report.saldo)}</strong>
-              </div>
-              <div>
-                <p>Beneficio acumulado</p>
-                <strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong>
-              </div>
-              <div>
-                <p>TWR</p>
-                <strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong>
-              </div>
-            </section>
-
-            <section className="report-pro-kpis">
-              <div className="report-pro-kpi"><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
-              <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-              <div className="report-pro-kpi"><span>Beneficio ultimo mes</span><strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioUltimoMes)}</strong></div>
-              <div className="report-pro-kpi"><span>Rentabilidad ultimo mes</span><strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidadUltimoMes)}</strong></div>
-              <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidad)}</strong></div>
-            </section>
-          </>
-        )}
+        <section className="report-pro-kpis report-pro-kpis-demo">
+          <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Beneficio acumulado generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus aportaciones registradas desde ${firstRegisteredDateLabel}.`}><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus retiradas registradas desde ${firstRegisteredDateLabel}.`}><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" data-tooltip="Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, si depende de aportaciones y retiradas."><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidad)}</strong></div>
+        </section>
 
         <section className="report-pro-note">
           <div className="report-pro-note-head">
@@ -1477,8 +1063,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
         </section>
 
-        {isDemoReport ? (
-          <section className="report-pro-capital-panel">
+        <section className="report-pro-capital-panel">
             <div className="report-pro-panel-head">
               <h4>Capital y beneficio acumulado</h4>
               <p>Separacion entre capital aportado, retiradas y beneficio obtenido.</p>
@@ -1490,8 +1075,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               <div className="report-pro-info-card" data-tooltip="Beneficio acumulado generado desde el inicio de la relacion."><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
               <div className="report-pro-info-card" data-tooltip="Saldo actual de la cartera del cliente."><span>Saldo actual</span><strong>{formatCurrency(report.saldo)}</strong></div>
             </div>
-          </section>
-        ) : null}
+        </section>
 
         <section className="report-pro-demo-control-panel">
             <div className="report-pro-panel-head">
@@ -1945,8 +1529,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
         )}
 
 
-        {isDemoReport ? (
-          <section className="report-pro-waterfall-panel" aria-label="Composicion financiera de la cartera">
+        <section className="report-pro-waterfall-panel" aria-label="Composicion financiera de la cartera">
             <div className="report-pro-panel-head report-pro-waterfall-head">
               <div>
                 <span className="report-pro-waterfall-eyebrow">Resumen financiero</span>
@@ -1996,8 +1579,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
               <b>=</b>
               <span className="total">{formatCurrency(report.saldo)}</span>
             </div>
-          </section>
-        ) : null}
+        </section>
 
       </article>
     </div>
