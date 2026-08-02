@@ -239,7 +239,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
   useEffect(() => {
     setExpandedContributionMonths({});
-  }, [report?.clientId]);
+  }, [report?.clientId, report?.createdAt]);
 
   useEffect(() => () => {
     if (detailScrollAnimationRef.current !== null) {
@@ -566,50 +566,80 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const hasVisibleMonthlyBreakdowns = effectiveMonthlyWithData.some((month) =>
     tableContributionByMonth.has(reportMonthToKey(month.month))
   );
+  const detailExpansionKey = (source: 'benefits' | 'monthly', monthKey: string) => `${source}:${monthKey}`;
   const gentlyRevealDetail = (element: HTMLElement) => {
-    const margin = 20;
-    const rect = element.getBoundingClientRect();
-    const viewportBottom = window.innerHeight - margin;
-    const delta = rect.bottom > viewportBottom
-      ? rect.bottom - viewportBottom
-      : rect.top < margin
-        ? rect.top - margin
-        : 0;
-    if (Math.abs(delta) < 2) return;
-
     if (detailScrollAnimationRef.current !== null) {
       window.cancelAnimationFrame(detailScrollAnimationRef.current);
     }
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      window.scrollBy(0, delta);
+    detailScrollAnimationRef.current = null;
+
+    const animateScroll = (start: number, target: number, update: (value: number) => void) => {
+      if (Math.abs(target - start) < 2) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        update(target);
+        return;
+      }
+      const startedAt = performance.now();
+      const duration = 700;
+      const animate = (now: number) => {
+        const progress = Math.min(1, (now - startedAt) / duration);
+        const eased = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        update(start + (target - start) * eased);
+        if (progress < 1) {
+          detailScrollAnimationRef.current = window.requestAnimationFrame(animate);
+        } else {
+          detailScrollAnimationRef.current = null;
+        }
+      };
+      detailScrollAnimationRef.current = window.requestAnimationFrame(animate);
+    };
+
+    const scrollContainer = element.closest<HTMLElement>('.table-scroll');
+    if (scrollContainer && scrollContainer.scrollHeight > scrollContainer.clientHeight + 1) {
+      const margin = 12;
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const headerHeight = scrollContainer.querySelector('thead')?.getBoundingClientRect().height ?? 0;
+      const visibleTop = containerRect.top + headerHeight + margin;
+      const visibleBottom = containerRect.bottom - margin;
+      const detailRect = element.getBoundingClientRect();
+      const availableHeight = Math.max(0, visibleBottom - visibleTop);
+      const delta = detailRect.height > availableHeight
+        ? detailRect.top - visibleTop
+        : detailRect.bottom > visibleBottom
+          ? detailRect.bottom - visibleBottom
+          : detailRect.top < visibleTop
+            ? detailRect.top - visibleTop
+            : 0;
+      const maxScrollTop = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight);
+      const targetScrollTop = Math.max(0, Math.min(maxScrollTop, scrollContainer.scrollTop + delta));
+      animateScroll(scrollContainer.scrollTop, targetScrollTop, (value) => {
+        scrollContainer.scrollTop = value;
+      });
       return;
     }
 
-    const startY = window.scrollY;
-    const targetY = Math.max(0, startY + delta);
-    const startedAt = performance.now();
-    const duration = 650;
-    const animate = (now: number) => {
-      const progress = Math.min(1, (now - startedAt) / duration);
-      const eased = progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-      window.scrollTo(0, startY + (targetY - startY) * eased);
-      if (progress < 1) {
-        detailScrollAnimationRef.current = window.requestAnimationFrame(animate);
-      } else {
-        detailScrollAnimationRef.current = null;
-      }
-    };
-    detailScrollAnimationRef.current = window.requestAnimationFrame(animate);
+    const margin = 20;
+    const detailRect = element.getBoundingClientRect();
+    const viewportBottom = window.innerHeight - margin;
+    const delta = detailRect.bottom > viewportBottom
+      ? detailRect.bottom - viewportBottom
+      : detailRect.top < margin
+        ? detailRect.top - margin
+        : 0;
+    animateScroll(window.scrollY, Math.max(0, window.scrollY + delta), (value) => {
+      window.scrollTo(0, value);
+    });
   };
   const toggleMonthlyBreakdown = (monthKey: string, source: 'benefits' | 'monthly') => {
     if (detailScrollAnimationRef.current !== null) {
       window.cancelAnimationFrame(detailScrollAnimationRef.current);
       detailScrollAnimationRef.current = null;
     }
-    const willExpand = !expandedContributionMonths[monthKey];
-    setExpandedContributionMonths((prev) => ({ ...prev, [monthKey]: willExpand }));
+    const expansionKey = detailExpansionKey(source, monthKey);
+    const willExpand = !expandedContributionMonths[expansionKey];
+    setExpandedContributionMonths((prev) => ({ ...prev, [expansionKey]: willExpand }));
     if (!willExpand) return;
 
     window.setTimeout(() => {
@@ -622,7 +652,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     monthLabel: string,
     source: 'benefits' | 'monthly'
   ) => {
-    const expanded = !!expandedContributionMonths[monthKey];
+    const expanded = !!expandedContributionMonths[detailExpansionKey(source, monthKey)];
     return (
       <button
         type="button"
@@ -678,7 +708,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     source: 'benefits' | 'monthly'
   ) => {
     const monthKey = reportMonthToKey(month.month);
-    if (!expandedContributionMonths[monthKey]) return null;
+    if (!expandedContributionMonths[detailExpansionKey(source, monthKey)]) return null;
 
     const visibleInitialPct = getVisibleMonthReturnPct(monthKey, breakdown.initialReturnPct * 100);
     const visibleInitialProfit = breakdown.initialCapital * (visibleInitialPct / 100);
@@ -1693,7 +1723,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 {effectiveMonthlyWithData.map((m) => {
                   const monthKey = reportMonthToKey(m.month);
                   const breakdown = tableContributionByMonth.get(monthKey);
-                  const expanded = !!expandedContributionMonths[monthKey];
+                  const expanded = !!expandedContributionMonths[detailExpansionKey('monthly', monthKey)];
                   const displayedPct = getDisplayedMonthReturnPct(m);
                   const movementTag = monthlyMovementType(monthKey);
                   const visibleInitialPct = breakdown
