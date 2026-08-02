@@ -559,13 +559,22 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const hasVisibleMonthlyBreakdowns = effectiveMonthlyWithData.some((month) =>
     tableContributionByMonth.has(reportMonthToKey(month.month))
   );
-  const toggleMonthlyBreakdown = (monthKey: string) => {
-    setExpandedContributionMonths((prev) => ({
-      ...prev,
-      [monthKey]: !prev[monthKey]
-    }));
+  const toggleMonthlyBreakdown = (monthKey: string, source: 'benefits' | 'monthly') => {
+    const willExpand = !expandedContributionMonths[monthKey];
+    setExpandedContributionMonths((prev) => ({ ...prev, [monthKey]: willExpand }));
+    if (!willExpand) return;
+
+    window.setTimeout(() => {
+      document
+        .getElementById(`report-month-detail-${source}-${monthKey}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   };
-  const renderMonthlyDetailButton = (monthKey: string, monthLabel: string) => {
+  const renderMonthlyDetailButton = (
+    monthKey: string,
+    monthLabel: string,
+    source: 'benefits' | 'monthly'
+  ) => {
     const expanded = !!expandedContributionMonths[monthKey];
     return (
       <button
@@ -574,7 +583,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         aria-expanded={expanded}
         aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de ${monthLabel}`}
         title={`${expanded ? 'Ocultar' : 'Ver'} el desglose de rentabilidad y beneficio`}
-        onClick={() => toggleMonthlyBreakdown(monthKey)}
+        onClick={() => toggleMonthlyBreakdown(monthKey, source)}
       >
         <span className="report-pro-detail-button-icon" aria-hidden="true">{expanded ? '-' : '+'}</span>
         <span>{expanded ? 'Ocultar detalle' : 'Ver detalle'}</span>
@@ -584,7 +593,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const renderMonthlyBreakdownRow = (
     month: (typeof monthlyWithData)[number],
     breakdown: NonNullable<ReportData['contributionBreakdowns']>[number],
-    colSpan: number
+    colSpan: number,
+    source: 'benefits' | 'monthly'
   ) => {
     const monthKey = reportMonthToKey(month.month);
     if (!expandedContributionMonths[monthKey]) return null;
@@ -592,18 +602,32 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const visibleInitialPct = getVisibleMonthReturnPct(monthKey, breakdown.initialReturnPct * 100);
     const visibleInitialProfit = breakdown.initialCapital * (visibleInitialPct / 100);
     const withdrawals = breakdown.withdrawals ?? [];
+    const openingCapital = breakdown.openingCapital ?? breakdown.initialCapital;
+    const totalContributions = breakdown.contributions.reduce((sum, contribution) => sum + contribution.amount, 0);
+    const totalWithdrawals = withdrawals.reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
     const explainedTotalProfit =
       visibleInitialProfit +
       breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0) +
       withdrawals.reduce((sum, withdrawal) => sum + withdrawal.profit, 0);
 
     return (
-      <tr className="report-pro-expanded-row">
+      <tr id={`report-month-detail-${source}-${monthKey}`} className="report-pro-expanded-row">
         <td colSpan={colSpan}>
           <div className="report-pro-inline-breakdown">
             <div className="report-pro-inline-title">
               <strong>Detalle de rentabilidad del mes - {month.month}</strong>
             </div>
+            <div className="report-pro-flow-summary">
+              <div><span>Saldo al inicio del mes</span><strong>{formatCurrency(openingCapital)}</strong></div>
+              {totalContributions > 0 ? <div><span>Aportaciones del mes</span><strong>+{formatCurrency(totalContributions)}</strong></div> : null}
+              {totalWithdrawals > 0 ? <div><span>Capital retirado</span><strong>-{formatCurrency(totalWithdrawals)}</strong></div> : null}
+              <div className="is-final"><span>Saldo al cierre del mes</span><strong>{formatCurrency(month.endBalance ?? 0)}</strong></div>
+            </div>
+            {totalWithdrawals > 0 ? (
+              <p className="report-pro-flow-explanation">
+                El saldo inicial se divide entre el capital que permaneci&oacute; invertido hasta final de mes y el capital retirado. No falta dinero: la parte retirada aparece por separado con la rentabilidad generada hasta su fecha de salida.
+              </p>
+            ) : null}
             <table>
               <thead>
                 <tr>
@@ -615,7 +639,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               </thead>
               <tbody>
                 <tr>
-                  <td>{withdrawals.length > 0 ? 'Posición mantenida durante todo el mes' : 'Posición inicial del mes'}</td>
+                  <td>{withdrawals.length > 0 ? 'Capital mantenido hasta final de mes' : 'Posición inicial del mes'}</td>
                   <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
                   <td className={`text-right ${visibleInitialPct >= 0 ? 'positive' : 'negative'}`}>
                     {visibleInitialPct.toFixed(2)}%
@@ -638,7 +662,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 ))}
                 {withdrawals.map((withdrawal) => (
                   <tr key={`${monthKey}-${withdrawal.iso}-${withdrawal.amount}-withdrawal`}>
-                    <td>Posici&oacute;n retirada el {getShortDateLabel(withdrawal.iso)}</td>
+                    <td>Capital retirado el {getShortDateLabel(withdrawal.iso)}</td>
                     <td className="text-right">{formatCurrency(withdrawal.amount)}</td>
                     <td className={`text-right ${(withdrawal.returnPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
                       {withdrawal.returnPct === undefined ? '—' : `${(withdrawal.returnPct * 100).toFixed(2)}%`}
@@ -649,7 +673,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   </tr>
                 ))}
                 <tr className="report-pro-breakdown-total">
-                  <td>Beneficio explicado</td>
+                  <td>Beneficio total del mes</td>
                   <td className="text-right">—</td>
                   <td className="text-right">—</td>
                   <td className={`text-right ${explainedTotalProfit >= 0 ? 'positive' : 'negative'}`}>
@@ -658,6 +682,15 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 </tr>
               </tbody>
             </table>
+            <div className="report-pro-balance-formula">
+              <span>Comprobaci&oacute;n del saldo final</span>
+              <strong>
+                {formatCurrency(openingCapital)}
+                {totalContributions > 0 ? ` + ${formatCurrency(totalContributions)}` : ''}
+                {totalWithdrawals > 0 ? ` - ${formatCurrency(totalWithdrawals)}` : ''}
+                {` ${formatSignedCurrency(explainedTotalProfit)} = ${formatCurrency(month.endBalance ?? 0)}`}
+              </strong>
+            </div>
           </div>
         </td>
       </tr>
@@ -1505,14 +1538,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
                         <td>
                           <span className="report-pro-benefit-month-cell">
                             <span>{getMonthEndLabel(m.month)}</span>
-                            {breakdown ? renderMonthlyDetailButton(monthKey, m.month) : null}
+                            {breakdown ? renderMonthlyDetailButton(monthKey, m.month, 'benefits') : null}
                           </span>
                         </td>
                         <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
                           {formatCurrency(m.profit ?? 0)}
                         </td>
                       </tr>
-                      {breakdown ? renderMonthlyBreakdownRow(m, breakdown, 2) : null}
+                      {breakdown ? renderMonthlyBreakdownRow(m, breakdown, 2, 'benefits') : null}
                     </React.Fragment>
                   );
                 })}
@@ -1584,6 +1617,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     ? breakdown.initialCapital * (visibleInitialPct / 100)
                     : 0;
                   const withdrawals = breakdown?.withdrawals ?? [];
+                  const openingCapital = breakdown?.openingCapital ?? breakdown?.initialCapital ?? 0;
+                  const totalContributions = breakdown?.contributions.reduce(
+                    (sum, contribution) => sum + contribution.amount,
+                    0
+                  ) ?? 0;
+                  const totalWithdrawals = withdrawals.reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
                   const explainedTotalProfit = breakdown
                     ? visibleInitialProfit +
                       breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0) +
@@ -1596,7 +1635,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                         <td>
                           <span className="report-pro-month-cell">
                             <span>{getMonthEndLabel(m.month)}</span>
-                            {breakdown ? renderMonthlyDetailButton(monthKey, m.month) : null}
+                            {breakdown ? renderMonthlyDetailButton(monthKey, m.month, 'monthly') : null}
                             {movementTag ? <span className="report-pro-movement-pill">{movementTag}</span> : null}
                           </span>
                         </td>
@@ -1609,12 +1648,23 @@ export const ReportView: React.FC<ReportViewProps> = ({
                         <td className="text-right">{formatCurrency(m.endBalance ?? 0)}</td>
                       </tr>
                       {breakdown && expanded ? (
-                        <tr className="report-pro-expanded-row">
+                        <tr id={`report-month-detail-monthly-${monthKey}`} className="report-pro-expanded-row">
                           <td colSpan={4}>
                             <div className="report-pro-inline-breakdown">
                               <div className="report-pro-inline-title">
                                 <strong>Detalle de rentabilidad del mes - {m.month}</strong>
                               </div>
+                              <div className="report-pro-flow-summary">
+                                <div><span>Saldo al inicio del mes</span><strong>{formatCurrency(openingCapital)}</strong></div>
+                                {totalContributions > 0 ? <div><span>Aportaciones del mes</span><strong>+{formatCurrency(totalContributions)}</strong></div> : null}
+                                {totalWithdrawals > 0 ? <div><span>Capital retirado</span><strong>-{formatCurrency(totalWithdrawals)}</strong></div> : null}
+                                <div className="is-final"><span>Saldo al cierre del mes</span><strong>{formatCurrency(m.endBalance ?? 0)}</strong></div>
+                              </div>
+                              {totalWithdrawals > 0 ? (
+                                <p className="report-pro-flow-explanation">
+                                  El saldo inicial se divide entre el capital que permaneci&oacute; invertido hasta final de mes y el capital retirado. No falta dinero: la parte retirada aparece por separado con la rentabilidad generada hasta su fecha de salida.
+                                </p>
+                              ) : null}
                               <table>
                                 <thead>
                                   <tr>
@@ -1626,7 +1676,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                                 </thead>
                                 <tbody>
                                   <tr>
-                                    <td>{withdrawals.length > 0 ? 'Posición mantenida durante todo el mes' : 'Posición inicial del mes'}</td>
+                                    <td>{withdrawals.length > 0 ? 'Capital mantenido hasta final de mes' : 'Posición inicial del mes'}</td>
                                     <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
                                     <td className={`text-right ${visibleInitialPct >= 0 ? 'positive' : 'negative'}`}>
                                       {visibleInitialPct.toFixed(2)}%
@@ -1649,7 +1699,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                                   ))}
                                   {withdrawals.map((withdrawal) => (
                                     <tr key={`${monthKey}-${withdrawal.iso}-${withdrawal.amount}-withdrawal`}>
-                                      <td>Posici&oacute;n retirada el {getShortDateLabel(withdrawal.iso)}</td>
+                                      <td>Capital retirado el {getShortDateLabel(withdrawal.iso)}</td>
                                       <td className="text-right">{formatCurrency(withdrawal.amount)}</td>
                                       <td className={`text-right ${(withdrawal.returnPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
                                         {withdrawal.returnPct === undefined ? '—' : `${(withdrawal.returnPct * 100).toFixed(2)}%`}
@@ -1660,7 +1710,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                                     </tr>
                                   ))}
                                   <tr className="report-pro-breakdown-total">
-                                    <td>Beneficio explicado</td>
+                                    <td>Beneficio total del mes</td>
                                     <td className="text-right">—</td>
                                     <td className="text-right">—</td>
                                     <td className={`text-right ${explainedTotalProfit >= 0 ? 'positive' : 'negative'}`}>
@@ -1669,6 +1719,15 @@ export const ReportView: React.FC<ReportViewProps> = ({
                                   </tr>
                                 </tbody>
                               </table>
+                              <div className="report-pro-balance-formula">
+                                <span>Comprobaci&oacute;n del saldo final</span>
+                                <strong>
+                                  {formatCurrency(openingCapital)}
+                                  {totalContributions > 0 ? ` + ${formatCurrency(totalContributions)}` : ''}
+                                  {totalWithdrawals > 0 ? ` - ${formatCurrency(totalWithdrawals)}` : ''}
+                                  {` ${formatSignedCurrency(explainedTotalProfit)} = ${formatCurrency(m.endBalance ?? 0)}`}
+                                </strong>
+                              </div>
                             </div>
                           </td>
                         </tr>
