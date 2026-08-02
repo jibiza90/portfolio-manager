@@ -590,6 +590,40 @@ export const ReportView: React.FC<ReportViewProps> = ({
       </button>
     );
   };
+  const renderWithdrawalDistribution = (
+    openingCapital: number,
+    retainedCapital: number,
+    retainedProfit: number,
+    contributions: NonNullable<ReportData['contributionBreakdowns']>[number]['contributions'],
+    withdrawals: NonNullable<NonNullable<ReportData['contributionBreakdowns']>[number]['withdrawals']>,
+    totalProfit: number
+  ) => (
+    <div className="report-pro-withdrawal-story">
+      <strong className="report-pro-withdrawal-story-opening">
+        Saldo al inicio del mes: {formatCurrency(openingCapital)}
+      </strong>
+      <p>Este saldo se distribuye de la siguiente manera:</p>
+      <ul>
+        <li>
+          <strong>{formatCurrency(retainedCapital)}</strong> continuaron invertidos hasta final de mes y generaron <strong>{formatCurrency(retainedProfit)}</strong>.
+        </li>
+        {withdrawals.map((withdrawal) => (
+          <li key={`story-withdrawal-${withdrawal.iso}-${withdrawal.amount}`}>
+            <strong>{formatCurrency(withdrawal.amount)}</strong> estuvieron invertidos hasta su retirada el <strong>{getShortDateLabel(withdrawal.iso)}</strong> y generaron <strong>{formatCurrency(withdrawal.profit)}</strong>.
+          </li>
+        ))}
+        {contributions.map((contribution) => (
+          <li key={`story-contribution-${contribution.iso}-${contribution.amount}`}>
+            La aportaci&oacute;n de <strong>{formatCurrency(contribution.amount)}</strong> del <strong>{getShortDateLabel(contribution.iso)}</strong> gener&oacute; <strong>{formatCurrency(contribution.profit)}</strong>.
+          </li>
+        ))}
+      </ul>
+      <div className="report-pro-withdrawal-story-total">
+        <span>Beneficio total del mes</span>
+        <strong>{formatCurrency(totalProfit)}</strong>
+      </div>
+    </div>
+  );
   const renderMonthlyBreakdownRow = (
     month: (typeof monthlyWithData)[number],
     breakdown: NonNullable<ReportData['contributionBreakdowns']>[number],
@@ -617,17 +651,22 @@ export const ReportView: React.FC<ReportViewProps> = ({
             <div className="report-pro-inline-title">
               <strong>Detalle de rentabilidad del mes - {month.month}</strong>
             </div>
-            <div className="report-pro-flow-summary">
-              <div><span>Saldo al inicio del mes</span><strong>{formatCurrency(openingCapital)}</strong></div>
-              {totalContributions > 0 ? <div><span>Aportaciones del mes</span><strong>+{formatCurrency(totalContributions)}</strong></div> : null}
-              {totalWithdrawals > 0 ? <div><span>Capital retirado</span><strong>-{formatCurrency(totalWithdrawals)}</strong></div> : null}
-              <div className="is-final"><span>Saldo al cierre del mes</span><strong>{formatCurrency(month.endBalance ?? 0)}</strong></div>
-            </div>
-            {totalWithdrawals > 0 ? (
-              <p className="report-pro-flow-explanation">
-                El saldo inicial se divide entre el capital que permaneci&oacute; invertido hasta final de mes y el capital retirado. No falta dinero: la parte retirada aparece por separado con la rentabilidad generada hasta su fecha de salida.
-              </p>
-            ) : null}
+            {totalWithdrawals > 0
+              ? renderWithdrawalDistribution(
+                  openingCapital,
+                  breakdown.initialCapital,
+                  visibleInitialProfit,
+                  breakdown.contributions,
+                  withdrawals,
+                  explainedTotalProfit
+                )
+              : (
+                <div className="report-pro-flow-summary">
+                  <div><span>Saldo al inicio del mes</span><strong>{formatCurrency(openingCapital)}</strong></div>
+                  {totalContributions > 0 ? <div><span>Aportaciones del mes</span><strong>+{formatCurrency(totalContributions)}</strong></div> : null}
+                  <div className="is-final"><span>Saldo al cierre del mes</span><strong>{formatCurrency(month.endBalance ?? 0)}</strong></div>
+                </div>
+              )}
             <table>
               <thead>
                 <tr>
@@ -1654,17 +1693,22 @@ export const ReportView: React.FC<ReportViewProps> = ({
                               <div className="report-pro-inline-title">
                                 <strong>Detalle de rentabilidad del mes - {m.month}</strong>
                               </div>
-                              <div className="report-pro-flow-summary">
-                                <div><span>Saldo al inicio del mes</span><strong>{formatCurrency(openingCapital)}</strong></div>
-                                {totalContributions > 0 ? <div><span>Aportaciones del mes</span><strong>+{formatCurrency(totalContributions)}</strong></div> : null}
-                                {totalWithdrawals > 0 ? <div><span>Capital retirado</span><strong>-{formatCurrency(totalWithdrawals)}</strong></div> : null}
-                                <div className="is-final"><span>Saldo al cierre del mes</span><strong>{formatCurrency(m.endBalance ?? 0)}</strong></div>
-                              </div>
-                              {totalWithdrawals > 0 ? (
-                                <p className="report-pro-flow-explanation">
-                                  El saldo inicial se divide entre el capital que permaneci&oacute; invertido hasta final de mes y el capital retirado. No falta dinero: la parte retirada aparece por separado con la rentabilidad generada hasta su fecha de salida.
-                                </p>
-                              ) : null}
+                              {totalWithdrawals > 0
+                                ? renderWithdrawalDistribution(
+                                    openingCapital,
+                                    breakdown.initialCapital,
+                                    visibleInitialProfit,
+                                    breakdown.contributions,
+                                    withdrawals,
+                                    explainedTotalProfit
+                                  )
+                                : (
+                                    <div className="report-pro-flow-summary">
+                                      <div><span>Saldo al inicio del mes</span><strong>{formatCurrency(openingCapital)}</strong></div>
+                                      {totalContributions > 0 ? <div><span>Aportaciones del mes</span><strong>+{formatCurrency(totalContributions)}</strong></div> : null}
+                                      <div className="is-final"><span>Saldo al cierre del mes</span><strong>{formatCurrency(m.endBalance ?? 0)}</strong></div>
+                                    </div>
+                                  )}
                               <table>
                                 <thead>
                                   <tr>
