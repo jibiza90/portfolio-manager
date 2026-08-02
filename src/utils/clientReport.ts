@@ -170,11 +170,17 @@ export function buildClientReportData(
     .map((monthStat) => {
       const monthRows = rowsByMonth.get(monthStat.monthKey) ?? [];
       const contributionRows = monthRows.filter((row) => (row.increment ?? 0) > 0);
-      const withdrawalRows = monthRows.filter((row) => (row.decrement ?? 0) > 0);
+      const allWithdrawalRows = monthRows.filter((row) => (row.decrement ?? 0) > 0);
+      const hasCustomContribution = contributionRows.some(
+        (row) => normalizeMonthlyReturnPct(row.incrementReturnPct) !== undefined
+      );
+      const withdrawalRows = allWithdrawalRows.filter(
+        (row) => normalizeMonthlyReturnPct(row.decrementReturnPct) !== undefined
+      );
       if (
         !monthStat.hasData ||
         monthStat.monthKey < contributionBreakdownStartMonth ||
-        (contributionRows.length === 0 && withdrawalRows.length === 0)
+        (!hasCustomContribution && withdrawalRows.length === 0)
       ) return null;
 
       const firstRow = monthRows[0];
@@ -184,7 +190,7 @@ export function buildClientReportData(
       );
       const totalMonthProfit = monthStat.profit ?? 0;
       const fallbackReturnPct = (monthStat.profitPct ?? 0) / 100;
-      const totalWithdrawals = withdrawalRows.reduce((sum, row) => sum + (row.decrement ?? 0), 0);
+      const totalWithdrawals = allWithdrawalRows.reduce((sum, row) => sum + (row.decrement ?? 0), 0);
       const initialCapital = Math.max(0, openingCapital - totalWithdrawals);
       const initialReturnPct = fallbackReturnPct;
       const initialProfit = initialCapital * initialReturnPct;

@@ -65,6 +65,67 @@ const hasCustomFlowReturnOverride = (
 
 const getPortfolioClients = () => CLIENTS.filter(({ id }) => !isDemoClient(id));
 
+type StandaloneContributionResult = {
+  profit: number;
+  returnPct: number;
+};
+
+const getStandaloneContributionResults = (
+  records: Record<string, Record<string, Movement>>,
+  monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>
+) => {
+  const results: Record<string, Record<string, StandaloneContributionResult>> = {};
+
+  getPortfolioClients().forEach(({ id }) => {
+    const movements = Object.entries(records[id] ?? {})
+      .filter(([, movement]) =>
+        hasMeaningfulAmount(movement.increment) ||
+        hasMeaningfulAmount(movement.decrement) ||
+        hasMeaningfulAmount(movement.manualProfit) ||
+        normalizeReturnPct(movement.manualProfitPct) !== undefined
+      )
+      .sort(([left], [right]) => left.localeCompare(right));
+    const historyMonths = Object.entries(monthlyHistoryByClient[id] ?? {})
+      .filter(([, entry]) => entry.finalBalance !== undefined || normalizeReturnPct(entry.returnPct) !== undefined)
+      .map(([month]) => month);
+    const activityMonths = [
+      ...movements.map(([iso]) => iso.slice(0, 7)),
+      ...historyMonths
+    ].sort((left, right) => left.localeCompare(right));
+    const firstActivityMonth = activityMonths[0];
+    if (!firstActivityMonth || monthlyHistoryByClient[id]?.[firstActivityMonth]) return;
+
+    const firstMonthMovements = movements
+      .filter(([iso]) => iso.slice(0, 7) === firstActivityMonth)
+      .map(([, movement]) => movement);
+    const contributions = firstMonthMovements.filter((movement) => (movement.increment ?? 0) > 0);
+    const hasWithdrawal = firstMonthMovements.some((movement) => (movement.decrement ?? 0) > 0);
+    if (contributions.length === 0 || hasWithdrawal) return;
+
+    const allContributionsHaveReturn = contributions.every(
+      (movement) => normalizeReturnPct(movement.incrementReturnPct) !== undefined
+    );
+    if (!allContributionsHaveReturn) return;
+
+    const invested = contributions.reduce((sum, movement) => sum + (movement.increment ?? 0), 0);
+    if (invested <= 0) return;
+    const profit = contributions.reduce(
+      (sum, movement) =>
+        sum + (movement.increment ?? 0) * (normalizeReturnPct(movement.incrementReturnPct) ?? 0),
+      0
+    );
+
+    results[id] = {
+      [firstActivityMonth]: {
+        profit,
+        returnPct: profit / invested
+      }
+    };
+  });
+
+  return results;
+};
+
 const sumMovements = (records: Record<string, Record<string, Movement>>, iso: string) => {
   let incrementTotal = 0;
   let decrementTotal = 0;
@@ -105,6 +166,10 @@ export const buildSnapshot = (
   const historicalDays: string[] = [];
   const portfolioHistoricalDays: string[] = [];
   const clientTrackedDays: Record<string, string[]> = {};
+  const standaloneContributionResults = getStandaloneContributionResults(
+    movementsByClient,
+    monthlyHistoryByClient
+  );
 
   const months = new Set(Object.values(monthlyHistoryByClient).flatMap((entries) => Object.keys(entries)));
   months.forEach((month) => {
@@ -132,6 +197,15 @@ export const buildSnapshot = (
       if (!isDemoClient(clientId)) {
         portfolioHistoricalDays.push(iso);
       }
+    });
+  });
+
+  Object.entries(standaloneContributionResults).forEach(([clientId, months]) => {
+    Object.keys(months).forEach((month) => {
+      const iso = monthEndIso(month);
+      clientTrackedDays[clientId] = clientTrackedDays[clientId] ?? [];
+      clientTrackedDays[clientId].push(iso);
+      portfolioHistoricalDays.push(iso);
     });
   });
 
@@ -228,6 +302,10 @@ export const buildSnapshot = (
         manualProfitPct !== undefined && actualBase !== undefined ? actualBase * manualProfitPct : undefined
       );
       const monthKey = day.iso.slice(0, 7);
+      const standaloneContributionResult =
+        day.iso === monthEndIso(monthKey)
+          ? standaloneContributionResults[id]?.[monthKey]
+          : undefined;
       // Demo clients use the real monthly return curve, but never feed back into portfolio totals.
       const inheritedDemoReturn =
         demo && day.iso === monthEndIso(monthKey)
@@ -302,6 +380,10 @@ export const buildSnapshot = (
           isolatedProfitAdjustment = (allocatableBase ?? 0) * (normalizedReturn - (coreReturn ?? normalizedReturn));
           lockedReturnPct = normalizedReturn;
         }
+      } else if (!beyondClientLastRecorded && standaloneContributionResult) {
+        baseBalance = actualBase;
+        lockedCoreFinal = (allocatableBase ?? 0) + standaloneContributionResult.profit;
+        lockedReturnPct = standaloneContributionResult.returnPct;
       }
 
       return {

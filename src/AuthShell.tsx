@@ -178,15 +178,17 @@ const deriveContributionBreakdowns = (
       const contributionRows = movements.filter(
         (movement) => movement.type === 'increment' && movement.iso.slice(0, 7) === month.monthKey
       );
-      const withdrawalRows = movements.filter(
+      const allWithdrawalRows = movements.filter(
         (movement) => movement.type === 'decrement' && movement.iso.slice(0, 7) === month.monthKey
       );
-      if (month.monthKey < startMonth || (contributionRows.length === 0 && withdrawalRows.length === 0)) return null;
+      const hasCustomContribution = contributionRows.some((movement) => movement.returnPct !== undefined);
+      const withdrawalRows = allWithdrawalRows.filter((movement) => movement.returnPct !== undefined);
+      if (month.monthKey < startMonth || (!hasCustomContribution && withdrawalRows.length === 0)) return null;
 
       const openingCapital = Math.max(0, monthly[index - 1]?.endBalance ?? 0);
       const totalMonthProfit = month.profit ?? 0;
       const fallbackReturnPct = (month.profitPct ?? 0) / 100;
-      const totalWithdrawals = withdrawalRows.reduce((sum, item) => sum + (item.amount ?? 0), 0);
+      const totalWithdrawals = allWithdrawalRows.reduce((sum, item) => sum + (item.amount ?? 0), 0);
       const initialCapital = Math.max(0, openingCapital - totalWithdrawals);
       const initialReturnPct = fallbackReturnPct;
       const initialProfit = initialCapital * initialReturnPct;
