@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import App from './App';
 import { ReportView } from './components/ReportView';
 import { CLIENTS, DEMO_CLIENT_ID, isDemoClient } from './constants/clients';
@@ -2031,6 +2031,7 @@ const AuthShell = () => {
   });
   const [loginBusy, setLoginBusy] = useState(false);
   const [loadingDots, setLoadingDots] = useState('.');
+  const [adminStoreError, setAdminStoreError] = useState<string | null>(null);
   const saveStatus = usePortfolioStore((state) => state.saveStatus);
   const pendingLogoutTimerRef = useRef<number | null>(null);
   const inactivityTimerRef = useRef<number | null>(null);
@@ -2045,6 +2046,52 @@ const AuthShell = () => {
       inactivityTimerRef.current = null;
     }
   };
+
+  const initializeAdminSession = useCallback(async (user: firebase.User, email: string | null) => {
+    usePortfolioStore.setState({ canWrite: false, initialized: false });
+    setAdminStoreError(null);
+    setSession({
+      loading: true,
+      role: 'admin',
+      uid: user.uid,
+      clientId: null,
+      email,
+      loginId: null,
+      displayName: user.displayName ?? null,
+      error: null
+    });
+
+    try {
+      await initializePortfolioStore();
+      usePortfolioStore.getState().setWriteAccess(true);
+      setSession({
+        loading: false,
+        role: 'admin',
+        uid: user.uid,
+        clientId: null,
+        email,
+        loginId: null,
+        displayName: user.displayName ?? null,
+        error: null
+      });
+      return true;
+    } catch (error) {
+      console.error('Admin store init failed', error);
+      usePortfolioStore.setState({ canWrite: false, initialized: false });
+      setAdminStoreError('No se han podido cargar los datos de Firestore. La edición está bloqueada para proteger la información existente.');
+      setSession({
+        loading: false,
+        role: 'admin',
+        uid: user.uid,
+        clientId: null,
+        email,
+        loginId: null,
+        displayName: user.displayName ?? null,
+        error: null
+      });
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -2068,6 +2115,7 @@ const AuthShell = () => {
     const markLoggedOut = (error: string | null) => {
       usePortfolioStore.setState({ canWrite: false, initialized: false });
       adminUidRef.current = null;
+      setAdminStoreError(null);
       setSession({
         loading: false,
         role: null,
@@ -2133,17 +2181,22 @@ const AuthShell = () => {
         // If this UID was already verified as admin, keep admin session even if
         // email claims are transiently unavailable.
         if (adminUidRef.current && adminUidRef.current === user.uid) {
-          usePortfolioStore.getState().setWriteAccess(true);
-          setSession({
-            loading: false,
-            role: 'admin',
-            uid: user.uid,
-            clientId: null,
-            email: user.email ?? null,
-            loginId: null,
-            displayName: user.displayName ?? null,
-            error: null
-          });
+          if (usePortfolioStore.getState().initialized) {
+            usePortfolioStore.getState().setWriteAccess(true);
+            setAdminStoreError(null);
+            setSession({
+              loading: false,
+              role: 'admin',
+              uid: user.uid,
+              clientId: null,
+              email: user.email ?? null,
+              loginId: null,
+              displayName: user.displayName ?? null,
+              error: null
+            });
+          } else {
+            await initializeAdminSession(user, user.email ?? null);
+          }
           return;
         }
 
@@ -2154,21 +2207,7 @@ const AuthShell = () => {
 
         if (isAdmin) {
           adminUidRef.current = user.uid;
-          usePortfolioStore.getState().setWriteAccess(true);
-          setSession({
-            loading: false,
-            role: 'admin',
-            uid: user.uid,
-            clientId: null,
-            email: user.email ?? tokenEmailClaim ?? null,
-            loginId: null,
-            displayName: user.displayName ?? null,
-            error: null
-          });
-          void initializePortfolioStore()
-            .catch((initError) => {
-              console.error('Admin store init failed', initError);
-            });
+          await initializeAdminSession(user, user.email ?? tokenEmailClaim ?? null);
           return;
         }
 
@@ -2226,7 +2265,7 @@ const AuthShell = () => {
       clearInactivityTimer();
       unsubscribe();
     };
-  }, []);
+  }, [initializeAdminSession]);
 
   useEffect(() => {
     const triggerInactivityLogout = () => {
@@ -2358,6 +2397,16 @@ const AuthShell = () => {
     }
   };
 
+  const handleRetryAdminStore = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      await handleLogout();
+      return;
+    }
+    adminUidRef.current = user.uid;
+    await initializeAdminSession(user, session.email ?? user.email ?? null);
+  };
+
   if (session.loading) {
     return (
       <main className="pmLoadingRoot">
@@ -2443,6 +2492,62 @@ const AuthShell = () => {
 
   if (!session.role) {
     return <LoginCard onLogin={handleLogin} busy={loginBusy} error={session.error} />;
+  }
+
+  if (session.role === 'admin' && adminStoreError) {
+    return (
+      <main
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          padding: 20,
+          color: palette.text,
+          background:
+            'radial-gradient(900px 520px at 10% 8%, rgba(15,109,122,.14), transparent 58%), linear-gradient(180deg, #f6faff 0%, #f3efe7 100%)'
+        }}
+      >
+        <section
+          role="alert"
+          style={{
+            width: 'min(520px, 96vw)',
+            display: 'grid',
+            gap: 14,
+            padding: 26,
+            border: `1px solid ${palette.border}`,
+            borderRadius: 22,
+            background: '#fff',
+            boxShadow: '0 28px 60px rgba(22, 27, 39, 0.14)',
+            textAlign: 'center'
+          }}
+        >
+          <span style={{ color: palette.error, fontSize: 13, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase' }}>
+            Edición bloqueada
+          </span>
+          <h1 style={{ margin: 0, fontSize: 25 }}>No se pudieron cargar los datos</h1>
+          <p style={{ margin: 0, color: palette.muted, lineHeight: 1.55 }}>{adminStoreError}</p>
+          <p style={{ margin: 0, color: palette.text, fontSize: 13, fontWeight: 700 }}>
+            No se ha modificado ni guardado ningún dato.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
+            <button
+              type="button"
+              onClick={() => { void handleRetryAdminStore(); }}
+              style={{ border: 0, borderRadius: 10, padding: '10px 18px', background: palette.accent, color: palette.accentText, fontWeight: 800, cursor: 'pointer' }}
+            >
+              Reintentar carga
+            </button>
+            <button
+              type="button"
+              onClick={() => { void handleLogout(); }}
+              style={{ border: `1px solid ${palette.border}`, borderRadius: 10, padding: '10px 18px', background: '#fff', color: palette.text, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   if (session.role === 'client' && session.clientId) {

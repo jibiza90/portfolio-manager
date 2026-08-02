@@ -64,8 +64,8 @@ const persistCurrentState = () => {
 
     do {
       saveQueued = false;
-      const { canWrite, finalByDay, movementsByClient, monthlyHistoryByClient, revision, updatedAt } = usePortfolioStore.getState();
-      if (!canWrite) break;
+      const { canWrite, initialized, finalByDay, movementsByClient, monthlyHistoryByClient, revision, updatedAt } = usePortfolioStore.getState();
+      if (!canWrite || !initialized) break;
 
       try {
         await savePortfolioState({ finalByDay, movementsByClient, monthlyHistoryByClient, revision, updatedAt });
@@ -87,8 +87,8 @@ const persistCurrentState = () => {
     return currentSavePromise;
   }
 
-  const { canWrite } = usePortfolioStore.getState();
-  if (!canWrite) return Promise.resolve();
+  const { canWrite, initialized } = usePortfolioStore.getState();
+  if (!canWrite || !initialized) return Promise.resolve();
 
   saveInFlight = true;
   currentSavePromise = runSaveLoop();
@@ -114,8 +114,11 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
   lastSavedAt: undefined,
   canWrite: false,
   initialized: false,
-  setWriteAccess: (canWrite) => set({ canWrite }),
-  setInitialized: (initialized) => set({ initialized }),
+  setWriteAccess: (canWrite) => set((state) => ({ canWrite: canWrite && state.initialized })),
+  setInitialized: (initialized) => set((state) => ({
+    initialized,
+    canWrite: initialized ? state.canWrite : false
+  })),
   hydrate: (state) => {
     const finalByDay = state.finalByDay ?? {};
     const movementsByClient = state.movementsByClient ?? {};
@@ -136,7 +139,7 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
   },
   setDayFinal: (iso, value) => {
     set((state) => {
-      if (!state.canWrite) return state;
+      if (!state.canWrite || !state.initialized) return state;
       const finalByDay = { ...state.finalByDay };
       if (value === undefined || Number.isNaN(value)) {
         delete finalByDay[iso];
@@ -156,7 +159,7 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
   },
   setClientMovement: (clientId, iso, field, value) => {
     set((state) => {
-      if (!state.canWrite) return state;
+      if (!state.canWrite || !state.initialized) return state;
       const movementsByClient = { ...state.movementsByClient };
       const clientDays = { ...(movementsByClient[clientId] ?? {}) };
       const dayMovement = { ...(clientDays[iso] ?? {}) };
@@ -199,7 +202,7 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
   },
   setClientMonthlyHistory: (clientId, month, field, value) => {
     set((state) => {
-      if (!state.canWrite) return state;
+      if (!state.canWrite || !state.initialized) return state;
       const monthlyHistoryByClient = { ...state.monthlyHistoryByClient };
       const clientMonths = { ...(monthlyHistoryByClient[clientId] ?? {}) };
       const monthHistory = { ...(clientMonths[month] ?? {}) };
@@ -235,7 +238,7 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
   },
   removeClientData: (clientId) => {
     set((state) => {
-      if (!state.canWrite) return state;
+      if (!state.canWrite || !state.initialized) return state;
       const movementsByClient = { ...state.movementsByClient };
       const monthlyHistoryByClient = { ...state.monthlyHistoryByClient };
       delete movementsByClient[clientId];
@@ -258,16 +261,22 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
 }));
 
 export const initializePortfolioStore = async () => {
-  let remote = await fetchPortfolioState();
-  if (!remote.revision || !remote.updatedAt) {
-    remote = {
-      ...remote,
-      revision: remote.revision ?? createRevision(),
-      updatedAt: remote.updatedAt ?? Date.now()
-    };
-    await savePortfolioState(remote);
+  usePortfolioStore.setState({ canWrite: false, initialized: false });
+  try {
+    let remote = await fetchPortfolioState();
+    if (!remote.revision || !remote.updatedAt) {
+      remote = {
+        ...remote,
+        revision: remote.revision ?? createRevision(),
+        updatedAt: remote.updatedAt ?? Date.now()
+      };
+      await savePortfolioState(remote);
+    }
+    usePortfolioStore.getState().hydrate(remote);
+  } catch (error) {
+    usePortfolioStore.setState({ canWrite: false, initialized: false, saveStatus: 'error' });
+    throw error;
   }
-  usePortfolioStore.getState().hydrate(remote);
 };
 
 export const selectClientRows = (clientId: string) =>
