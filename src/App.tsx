@@ -27,6 +27,7 @@ import {
   publishClientOverviews,
   provisionClientAccess,
   archiveClientAndRevokeAccess,
+  CLIENT_PUBLICATION_PAYLOAD_VERSION,
   revokeClientAccess,
   type ClientPublicationState,
   type AccessProfileRecord
@@ -3831,7 +3832,9 @@ export default function App() {
 
   const isPrimaryAdmin = currentUserEmail === 'jibiza90@gmail.com';
   const publicationPending = publicationState
-    ? publicationState.revision !== portfolioRevision || publicationState.contactsRevision !== contactsRevision
+    ? publicationState.revision !== portfolioRevision ||
+      publicationState.contactsRevision !== contactsRevision ||
+      (publicationState.payloadVersion ?? 0) < CLIENT_PUBLICATION_PAYLOAD_VERSION
     : false;
 
   useEffect(() => {

@@ -9,6 +9,7 @@ const PUBLICATION_DOC_PATH = 'portfolio/client-publication';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
 const CONTACTS_STORAGE_KEY = 'portfolio-contacts';
 const GENERAL_REFERENCE_CLIENT_ID = 'client-004';
+export const CLIENT_PUBLICATION_PAYLOAD_VERSION = 2;
 
 export interface GeneralReferenceMonth {
   month: string;
@@ -104,6 +105,7 @@ export interface ClientPublicationState {
   contactsRevision: string;
   publishedAt: number;
   publishedBy?: string;
+  payloadVersion?: number;
 }
 
 export const fetchClientPublicationState = async (): Promise<ClientPublicationState | null> => {
@@ -115,7 +117,8 @@ export const fetchClientPublicationState = async (): Promise<ClientPublicationSt
     revision: data.revision,
     contactsRevision: data.contactsRevision,
     publishedAt: data.publishedAt,
-    publishedBy: data.publishedBy
+    publishedBy: data.publishedBy,
+    payloadVersion: Number(data.payloadVersion ?? 0)
   };
 };
 
@@ -137,7 +140,8 @@ export const ensureClientPublicationBaseline = async (
       revision,
       contactsRevision,
       publishedAt: Date.now(),
-      publishedBy: auth.currentUser?.uid ?? ''
+      publishedBy: auth.currentUser?.uid ?? '',
+      payloadVersion: CLIENT_PUBLICATION_PAYLOAD_VERSION
     };
     transaction.set(docRef, baseline);
     return baseline;
@@ -155,7 +159,8 @@ export const publishClientOverviews = async (
   const publicationState: ClientPublicationState = {
     ...publication,
     publishedAt,
-    publishedBy: auth.currentUser?.uid ?? ''
+    publishedBy: auth.currentUser?.uid ?? '',
+    payloadVersion: CLIENT_PUBLICATION_PAYLOAD_VERSION
   };
   const accessProfiles = await db.collection('access_profiles').where('role', '==', 'client').get();
   const generalReferenceMonthly = buildGeneralReferenceMonthly(clients, monthlyHistoryByClient);
