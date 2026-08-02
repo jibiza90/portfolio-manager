@@ -1999,6 +1999,7 @@ const ClientPortal = ({
 
   return (
     <main
+      className="client-portal-page"
       style={{
         minHeight: '100vh',
         padding: '24px 16px',
@@ -2009,6 +2010,7 @@ const ClientPortal = ({
       }}
     >
       <header
+        className="client-portal-toolbar"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -2021,13 +2023,14 @@ const ClientPortal = ({
           padding: '12px 14px'
         }}
       >
-        <div>
+        <div className="client-portal-toolbar-title">
           <h1 style={{ margin: 0, color: palette.text }}>Área Cliente</h1>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, color: palette.muted }}>{loginId ? `Usuario ${loginId}` : ''}</span>
+        <div className="client-portal-toolbar-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="client-portal-user" style={{ fontSize: 13, color: palette.muted }}>{loginId ? `Usuario ${loginId}` : ''}</span>
           <button
             type="button"
+            className="client-portal-action"
             onClick={() => setSupportOpen((prev) => !prev)}
             style={{
               padding: '8px 12px',
@@ -2057,6 +2060,7 @@ const ClientPortal = ({
           </button>
           <button
             type="button"
+            className="client-portal-action"
             onClick={() => {
               if (shouldUseModernReportPdf) {
                 setReportDownloadSignal((value) => value + 1);
@@ -2080,6 +2084,7 @@ const ClientPortal = ({
           </button>
           <button
             type="button"
+            className="client-portal-action client-portal-logout"
             onClick={() => {
               void onLogout();
             }}
@@ -2128,8 +2133,8 @@ const ClientPortal = ({
       ) : null}
 
       {supportOpen ? (
-        <section style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, overflow: 'hidden', marginBottom: 16 }}>
-          <div style={{ padding: 14, borderBottom: `1px solid ${palette.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <section className="client-portal-support" style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, overflow: 'hidden', marginBottom: 16 }}>
+          <div className="client-portal-support-head" style={{ padding: 14, borderBottom: `1px solid ${palette.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <strong>Mensajes con administracion</strong>
             <span style={{ fontSize: 12, color: palette.muted }}>Si hay respuesta nueva, veras aviso hasta abrir esta seccion.</span>
           </div>
@@ -2161,7 +2166,7 @@ const ClientPortal = ({
                 placeholder="Escribe tu duda para administracion..."
                 style={{ border: `1px solid ${palette.border}`, borderRadius: 10, padding: 10, font: 'inherit', resize: 'vertical' }}
               />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="client-portal-support-compose" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 12, color: palette.muted }}>Respuesta en el mismo hilo.</span>
                 <button
                   type="button"
@@ -2543,11 +2548,14 @@ const AuthShell = () => {
         : buildClientAuthEmail(normalizedIdentifier);
       await auth.signInWithEmailAndPassword(authEmail, password);
     } catch (error) {
-      let message = 'No se pudo iniciar sesion';
+      let message = 'No se pudo iniciar sesion. Intentalo de nuevo.';
       const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: string }).code) : '';
-      if (code === 'auth/invalid-credential') message = 'Usuario o contrasena incorrectos.';
-      if (code === 'auth/user-not-found') message = 'No existe ese usuario.';
-      if (code === 'auth/wrong-password') message = 'Contrasena incorrecta.';
+      if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
+        message = 'Usuario o contrasena incorrectos.';
+      }
+      if (code === 'auth/network-request-failed' || code === 'auth/internal-error') {
+        message = 'No se pudo conectar con el servicio. Comprueba tu conexion e intentalo de nuevo.';
+      }
       if (code === 'auth/too-many-requests') message = 'Demasiados intentos. Espera un momento e intentalo otra vez.';
       setSession((prev) => ({ ...prev, loading: false, error: message }));
     } finally {

@@ -1272,9 +1272,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   className="report-pro-dot-hit"
                   fill="transparent"
                   pointerEvents="all"
+                  tabIndex={0}
                   onMouseEnter={() => setHoveredPatrimonyPoint(pt)}
                   onMouseMove={() => setHoveredPatrimonyPoint(pt)}
                   onMouseLeave={() => setHoveredPatrimonyPoint(null)}
+                  onFocus={() => setHoveredPatrimonyPoint(pt)}
+                  onBlur={() => setHoveredPatrimonyPoint(null)}
+                  onPointerDown={() => setHoveredPatrimonyPoint(pt)}
                 />
               </g>
             ))}
@@ -1395,26 +1399,26 @@ export const ReportView: React.FC<ReportViewProps> = ({
         </header>
 
         <section className="report-pro-executive report-pro-executive-demo">
-          <div className="report-pro-info-card" data-tooltip="Saldo actual de tu cartera a fecha del informe.">
+          <div className="report-pro-info-card" tabIndex={0} data-tooltip="Saldo actual de tu cartera a fecha del informe.">
             <p>Saldo actual</p>
             <strong>{formatCurrency(report.saldo)}</strong>
           </div>
-          <div className="report-pro-info-card" data-tooltip={`Rentabilidad TWR de ${latestMonthLabel}. Mide el rendimiento de la estrategia sin contar aportaciones ni retiradas.`}>
+          <div className="report-pro-info-card" tabIndex={0} data-tooltip={`Rentabilidad TWR de ${latestMonthLabel}. Mide el rendimiento de la estrategia sin contar aportaciones ni retiradas.`}>
             <p>{`Rentabilidad ${latestMonthLabel}`}</p>
             <strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidadUltimoMes)}</strong>
           </div>
-          <div className="report-pro-info-card" data-tooltip={`Beneficio generado en euros durante ${latestMonthLabel}. Incluye el efecto real del capital invertido y de las aportaciones del mes.`}>
+          <div className="report-pro-info-card" tabIndex={0} data-tooltip={`Beneficio generado en euros durante ${latestMonthLabel}. Incluye el efecto real del capital invertido y de las aportaciones del mes.`}>
             <p>{`Beneficio ${latestMonthLabel}`}</p>
             <strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioUltimoMes)}</strong>
           </div>
         </section>
 
         <section className="report-pro-kpis report-pro-kpis-demo">
-          <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Beneficio acumulado generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
-          <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
-          <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus aportaciones registradas desde ${firstRegisteredDateLabel}.`}><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
-          <div className="report-pro-kpi report-pro-info-card" data-tooltip={`Suma total de todas tus retiradas registradas desde ${firstRegisteredDateLabel}.`}><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-          <div className="report-pro-kpi report-pro-info-card" data-tooltip="Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, si depende de aportaciones y retiradas."><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidad)}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Beneficio acumulado generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Suma total de todas tus aportaciones registradas desde ${firstRegisteredDateLabel}.`}><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Suma total de todas tus retiradas registradas desde ${firstRegisteredDateLabel}.`}><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip="Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, si depende de aportaciones y retiradas."><span>Rentabilidad total</span><strong className={report.rentabilidad >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(report.rentabilidad)}</strong></div>
         </section>
 
         <section className="report-pro-note">
@@ -1451,11 +1455,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <p>Separacion entre capital aportado, retiradas y beneficio obtenido.</p>
             </div>
             <div className="report-pro-capital-grid">
-              <div className="report-pro-info-card" data-tooltip="Total de dinero ingresado historicamente por el cliente."><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Total de dinero retirado historicamente por el cliente."><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Capital aportado menos capital retirado."><span>Capital neto aportado</span><strong>{formatCurrency(accumulatedNetCapital)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Beneficio acumulado generado desde el inicio de la relacion."><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
-              <div className="report-pro-info-card" data-tooltip="Saldo actual de la cartera del cliente."><span>Saldo actual</span><strong>{formatCurrency(report.saldo)}</strong></div>
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Total de dinero ingresado historicamente por el cliente."><span>Capital aportado</span><strong>{formatCurrency(report.incrementos)}</strong></div>
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Total de dinero retirado historicamente por el cliente."><span>Capital retirado</span><strong>{formatCurrency(report.decrementos)}</strong></div>
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Capital aportado menos capital retirado."><span>Capital neto aportado</span><strong>{formatCurrency(accumulatedNetCapital)}</strong></div>
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Beneficio acumulado generado desde el inicio de la relacion."><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Saldo actual de la cartera del cliente."><span>Saldo actual</span><strong>{formatCurrency(report.saldo)}</strong></div>
             </div>
         </section>
 
@@ -1521,26 +1525,26 @@ export const ReportView: React.FC<ReportViewProps> = ({
             </div>
             <div className="report-pro-period-summary">
               {Math.abs(periodStartBalance) > 0.01 ? (
-                <div className="report-pro-info-card" data-tooltip="Valor de la cartera al inicio del periodo seleccionado.">
+                <div className="report-pro-info-card" tabIndex={0} data-tooltip="Valor de la cartera al inicio del periodo seleccionado.">
                   <span>Valor inicial periodo</span><strong>{formatCurrency(periodStartBalance)}</strong>
                 </div>
               ) : null}
-              <div className="report-pro-info-card" data-tooltip="Valor de la cartera al final del periodo seleccionado.">
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Valor de la cartera al final del periodo seleccionado.">
                 <span>Valor final del periodo</span><strong>{formatCurrency(periodEndBalance)}</strong>
               </div>
-              <div className="report-pro-info-card" data-tooltip="Beneficio generado dentro del periodo seleccionado.">
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Beneficio generado dentro del periodo seleccionado.">
                 <span>Beneficio del periodo</span><strong className={periodProfit >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(periodProfit)}</strong>
               </div>
-              <div className="report-pro-info-card" data-tooltip="Rentabilidad acumulada del periodo, sin mezclarla con aportaciones o retiradas.">
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Rentabilidad acumulada del periodo, sin mezclarla con aportaciones o retiradas.">
                 <span>Rentabilidad periodo</span><strong className={periodReturnPct >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(periodReturnPct * 100)}</strong>
               </div>
-              <div className="report-pro-info-card" data-tooltip="Dinero ingresado por el cliente dentro del periodo seleccionado.">
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Dinero ingresado por el cliente dentro del periodo seleccionado.">
                 <span>Capital aportado del periodo</span><strong>{formatCurrency(periodIncrements)}</strong>
               </div>
-              <div className="report-pro-info-card" data-tooltip="Dinero retirado por el cliente dentro del periodo seleccionado.">
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Dinero retirado por el cliente dentro del periodo seleccionado.">
                 <span>Capital retirado del periodo</span><strong>{formatCurrency(periodDecrements)}</strong>
               </div>
-              <div className="report-pro-info-card" data-tooltip="Capital aportado menos capital retirado dentro del periodo seleccionado.">
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Capital aportado menos capital retirado dentro del periodo seleccionado.">
                 <span>Capital neto del periodo</span><strong>{formatCurrency(periodIncrements - periodDecrements)}</strong>
               </div>
             </div>
@@ -1676,9 +1680,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 <div
                   key={m.month}
                   className="report-pro-bar-col"
+                  tabIndex={0}
                   onMouseEnter={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
                   onMouseMove={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
                   onMouseLeave={() => setHoveredMonthlyBar(null)}
+                  onFocus={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
+                  onBlur={() => setHoveredMonthlyBar(null)}
+                  onPointerDown={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
                 >
                   {hoveredMonthlyBar?.month === m.month ? (
                     <div className="report-pro-bar-tooltip">

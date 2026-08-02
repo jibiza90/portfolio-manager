@@ -7578,3 +7578,373 @@ select {
     text-align: left;
   }
 }
+
+/* Client portal mobile layout */
+.report-pro-info-card:focus {
+  outline: 2px solid rgba(14, 165, 233, 0.72);
+  outline-offset: 2px;
+  z-index: 25;
+}
+
+.report-pro-info-card:focus::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.report-pro-bar-col:focus-visible {
+  outline: 2px solid #0ea5e9;
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+@media (max-width: 820px) {
+  html,
+  body,
+  #root {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .client-portal-page {
+    width: 100%;
+    max-width: none !important;
+    padding: max(10px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)) !important;
+  }
+
+  .client-portal-toolbar {
+    position: sticky;
+    top: max(6px, env(safe-area-inset-top));
+    z-index: 100;
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+    padding: 11px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 30px rgba(15, 30, 56, 0.12);
+    backdrop-filter: blur(14px);
+  }
+
+  .client-portal-toolbar-title h1 {
+    font-size: 21px;
+    line-height: 1.1;
+  }
+
+  .client-portal-toolbar-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px !important;
+    width: 100%;
+  }
+
+  .client-portal-user {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .client-portal-action {
+    min-width: 0;
+    min-height: 44px;
+    padding: 9px 7px !important;
+    font-size: 12px;
+    line-height: 1.15;
+    touch-action: manipulation;
+  }
+
+  .client-portal-support {
+    border-radius: 16px !important;
+  }
+
+  .client-portal-support-head,
+  .client-portal-support-compose {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .client-portal-support textarea {
+    width: 100%;
+    min-height: 110px;
+    font-size: 16px !important;
+  }
+
+  .client-portal-support-compose button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .client-portal-page .informes-container,
+  .client-portal-page .informes-pro-page,
+  .client-portal-page .report-pro-page-demo {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0;
+  }
+
+  .client-portal-page .report-pro-sheet {
+    width: 100%;
+    min-width: 0;
+    margin-top: 0;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .client-portal-page .report-pro-header {
+    align-items: flex-start;
+    padding: 22px 18px 18px;
+  }
+
+  .client-portal-page .report-pro-header h2 {
+    font-size: 24px;
+  }
+
+  .client-portal-page .report-pro-client-tag {
+    max-width: 45%;
+    overflow: hidden;
+    padding: 8px 10px;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .client-portal-page .report-pro-executive,
+  .client-portal-page .report-pro-kpis,
+  .client-portal-page .report-pro-grid {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .client-portal-page .report-pro-executive {
+    gap: 10px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .client-portal-page .report-pro-executive > div {
+    min-height: 94px;
+    padding: 14px 16px;
+  }
+
+  .client-portal-page .report-pro-executive strong {
+    font-size: clamp(22px, 7vw, 28px);
+    overflow-wrap: anywhere;
+  }
+
+  .client-portal-page .report-pro-kpis-demo,
+  .client-portal-page .report-pro-capital-grid,
+  .client-portal-page .report-pro-period-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .client-portal-page .report-pro-kpis-demo > .report-pro-info-card,
+  .client-portal-page .report-pro-capital-grid > .report-pro-info-card,
+  .client-portal-page .report-pro-period-summary > .report-pro-info-card {
+    min-height: 92px;
+    padding: 13px 11px;
+  }
+
+  .client-portal-page .report-pro-kpis-demo > .report-pro-info-card:last-child,
+  .client-portal-page .report-pro-capital-grid > .report-pro-info-card:last-child,
+  .client-portal-page .report-pro-period-summary > .report-pro-info-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .client-portal-page .report-pro-info-card {
+    cursor: pointer;
+  }
+
+  .client-portal-page .report-pro-info-card::after {
+    top: calc(100% + 6px);
+    bottom: auto;
+    left: 6px;
+    right: 6px;
+    font-size: 12px;
+  }
+
+  .client-portal-page .report-pro-info-card:focus::after,
+  .client-portal-page .report-pro-info-card:active::after {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .client-portal-page .report-pro-note,
+  .client-portal-page .report-pro-panel,
+  .client-portal-page .report-pro-panel.report-pro-panel-xl,
+  .client-portal-page .report-pro-demo-control-panel,
+  .client-portal-page .report-pro-capital-panel,
+  .client-portal-page .report-pro-waterfall-panel {
+    margin-left: 10px;
+    margin-right: 10px;
+    padding: 15px;
+    border-radius: 16px;
+  }
+
+  .client-portal-page .report-pro-panel-head:has(.report-pro-expand-chart-button) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .client-portal-page .report-pro-expand-chart-button,
+  .client-portal-page .report-pro-range-reset,
+  .client-portal-page .report-pro-expanded-reset,
+  .client-portal-page .report-pro-chart-modal-close,
+  .client-portal-page .report-pro-detail-button {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .client-portal-page .report-pro-period-toolbar,
+  .client-portal-page .report-pro-chart-toolbar,
+  .client-portal-page .report-pro-expanded-period-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .client-portal-page .report-pro-period-toolbar label,
+  .client-portal-page .report-pro-chart-toolbar label,
+  .client-portal-page .report-pro-expanded-period-toolbar label,
+  .client-portal-page .report-pro-period-toolbar select,
+  .client-portal-page .report-pro-chart-toolbar select,
+  .client-portal-page .report-pro-expanded-period-toolbar select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .client-portal-page select,
+  .client-portal-page textarea {
+    font-size: 16px;
+  }
+
+  .client-portal-page .report-pro-chart-scroll,
+  .client-portal-page .report-pro-patrimony-scroll {
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: visible;
+    padding-bottom: 9px;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .client-portal-page .report-pro-chart-scroll .report-pro-bars {
+    width: 720px !important;
+    min-width: 720px !important;
+    height: 300px;
+  }
+
+  .client-portal-page .report-pro-patrimony-scroll-inner {
+    width: 760px;
+    min-width: 760px !important;
+  }
+
+  .client-portal-page .report-pro-line-chart {
+    height: 330px;
+  }
+
+  .client-portal-page .report-pro-bar-col,
+  .client-portal-page .report-pro-dot-hit {
+    touch-action: manipulation;
+  }
+
+  .client-portal-page .table-scroll {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+  }
+
+  .client-portal-page .report-pro-demo-monthly-table,
+  .client-portal-page .movements-table,
+  .client-portal-page .report-pro-breakdown-table {
+    width: 680px;
+    min-width: 680px;
+  }
+
+  .client-portal-page .report-pro-benefits-table {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .client-portal-page .report-pro-demo-monthly-table thead th:first-child,
+  .client-portal-page .report-pro-demo-monthly-table tbody tr:not(.report-pro-expanded-row) > td:first-child,
+  .client-portal-page .movements-table thead th:first-child,
+  .client-portal-page .movements-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: #ffffff;
+    box-shadow: 8px 0 12px -12px rgba(15, 23, 42, 0.55);
+  }
+
+  .client-portal-page .report-pro-demo-monthly-table thead th:first-child,
+  .client-portal-page .movements-table thead th:first-child {
+    z-index: 5;
+    color: #ffffff;
+    background: #0a2740;
+  }
+
+  .client-portal-page .report-pro-inline-breakdown {
+    min-width: 0;
+  }
+
+  .client-portal-page .report-pro-inline-breakdown > table {
+    width: 640px;
+    min-width: 640px;
+  }
+
+  .report-pro-chart-overlay {
+    padding: 0;
+  }
+
+  .report-pro-chart-overlay .report-pro-patrimony-section.is-expanded {
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    padding: max(14px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom)) !important;
+    border-radius: 0;
+  }
+
+  .report-pro-chart-overlay .report-pro-line-wrap-expanded {
+    height: min(58dvh, 520px);
+    min-height: 360px;
+  }
+
+  .report-pro-chart-overlay .report-pro-patrimony-scroll-inner {
+    width: 920px;
+    min-width: 920px !important;
+  }
+
+  .client-portal-page .report-pro-waterfall-step {
+    height: 185px;
+  }
+}
+
+@media (max-width: 380px) {
+  .client-portal-toolbar-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .client-portal-logout {
+    grid-column: 1 / -1;
+  }
+
+  .client-portal-page .report-pro-kpis-demo,
+  .client-portal-page .report-pro-capital-grid,
+  .client-portal-page .report-pro-period-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .client-portal-page .report-pro-kpis-demo > .report-pro-info-card:last-child,
+  .client-portal-page .report-pro-capital-grid > .report-pro-info-card:last-child,
+  .client-portal-page .report-pro-period-summary > .report-pro-info-card:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+}
