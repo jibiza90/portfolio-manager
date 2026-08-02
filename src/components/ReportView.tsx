@@ -680,6 +680,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     openingCapital: number,
     retainedCapital: number,
     retainedProfit: number,
+    retainedReturnPct: number,
     contributions: NonNullable<ReportData['contributionBreakdowns']>[number]['contributions'],
     withdrawals: NonNullable<NonNullable<ReportData['contributionBreakdowns']>[number]['withdrawals']>,
     totalProfit: number
@@ -691,16 +692,16 @@ export const ReportView: React.FC<ReportViewProps> = ({
       <p>Este saldo se distribuye de la siguiente manera:</p>
       <ul>
         <li>
-          <strong>{formatCurrency(retainedCapital)}</strong> continuaron invertidos hasta final de mes y generaron <strong>{formatCurrency(retainedProfit)}</strong>.
+          <strong>{formatCurrency(retainedCapital)}</strong> continuaron invertidos hasta final de mes, obtuvieron un <strong>{formatSignedPercent(retainedReturnPct)}</strong> y generaron <strong>{formatCurrency(retainedProfit)}</strong>.
         </li>
         {withdrawals.map((withdrawal) => (
           <li key={`story-withdrawal-${withdrawal.iso}-${withdrawal.amount}`}>
-            <strong>{formatCurrency(withdrawal.amount)}</strong> estuvieron invertidos hasta su retirada el <strong>{getShortDateLabel(withdrawal.iso)}</strong> y generaron <strong>{formatCurrency(withdrawal.profit)}</strong>.
+            <strong>{formatCurrency(withdrawal.amount)}</strong> estuvieron invertidos hasta su retirada el <strong>{getShortDateLabel(withdrawal.iso)}</strong>, obtuvieron un <strong>{formatSignedPercent((withdrawal.returnPct ?? 0) * 100)}</strong> y generaron <strong>{formatCurrency(withdrawal.profit)}</strong>.
           </li>
         ))}
         {contributions.map((contribution) => (
           <li key={`story-contribution-${contribution.iso}-${contribution.amount}`}>
-            La aportaci&oacute;n de <strong>{formatCurrency(contribution.amount)}</strong> del <strong>{getShortDateLabel(contribution.iso)}</strong> gener&oacute; <strong>{formatCurrency(contribution.profit)}</strong>.
+            La aportaci&oacute;n de <strong>{formatCurrency(contribution.amount)}</strong> del <strong>{getShortDateLabel(contribution.iso)}</strong> obtuvo un <strong>{formatSignedPercent(contribution.returnPct * 100)}</strong> y gener&oacute; <strong>{formatCurrency(contribution.profit)}</strong>.
           </li>
         ))}
       </ul>
@@ -742,6 +743,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   openingCapital,
                   breakdown.initialCapital,
                   visibleInitialProfit,
+                  visibleInitialPct,
                   breakdown.contributions,
                   withdrawals,
                   explainedTotalProfit
@@ -1792,6 +1794,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                                     openingCapital,
                                     breakdown.initialCapital,
                                     visibleInitialProfit,
+                                    visibleInitialPct,
                                     breakdown.contributions,
                                     withdrawals,
                                     explainedTotalProfit
