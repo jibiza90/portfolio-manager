@@ -10,7 +10,7 @@ import {
   type GeneralReferenceMonth
 } from './services/cloudPortfolio';
 import { auth, db, firebase } from './services/firebaseApp';
-import { recordLoginEvent, startPresenceHeartbeat } from './services/loginTracker';
+import { recordLoginEvent, recordReportDownload, startPresenceHeartbeat } from './services/loginTracker';
 import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, type SupportMessage } from './services/supportInbox';
 import { initializePortfolioStore, usePortfolioStore, waitForPendingPortfolioSave } from './store/portfolio';
 import type { ReportData } from './services/reportLinks';
@@ -1239,6 +1239,23 @@ const ClientPortal = ({
     setKpiHint((prev) => (prev ? { ...prev, x: event.clientX + 12, y: event.clientY + 12 } : prev));
   };
 
+  const trackClientPdfDownload = (details: {
+    reportClientId: string;
+    reportLabel: string;
+    periodStart: string;
+    periodEnd: string;
+    filename: string;
+    reportUpdatedAt: number;
+  }) => {
+    void recordReportDownload({
+      loginId: loginId ?? clientId,
+      clientId,
+      ...details
+    }).catch((trackError) => {
+      console.error('No se pudo registrar la descarga del informe', trackError);
+    });
+  };
+
   const downloadClientPdf = async () => {
     if (!overview) return;
     try {
@@ -1817,7 +1834,17 @@ const ClientPortal = ({
         doc.text(`Pagina ${page} / ${totalPages}`, pageWidth - marginX, pageHeight - 18, { align: 'right' });
       }
 
-      doc.save(`portfolio-${safeName}-${now.toISOString().slice(0, 10)}.pdf`);
+      const filename = `portfolio-${safeName}-${now.toISOString().slice(0, 10)}.pdf`;
+      doc.save(filename);
+      const reportMonths = monthly.map((item) => item.month).filter(Boolean).sort();
+      trackClientPdfDownload({
+        reportClientId: clientId,
+        reportLabel: loginId ?? clientId,
+        periodStart: reportMonths[0] ?? 'todo',
+        periodEnd: reportMonths[reportMonths.length - 1] ?? 'todo',
+        filename,
+        reportUpdatedAt: overview.updatedAt ?? Date.now()
+      });
     } catch (pdfError) {
       console.error(pdfError);
       setError('No se pudo generar el PDF.');
@@ -2012,6 +2039,7 @@ const ClientPortal = ({
           reportData={clientReportData}
           downloadSignal={reportDownloadSignal}
           generalReferenceMonthly={overview?.generalReferenceMonthly}
+          onDownloaded={trackClientPdfDownload}
         />
       ) : null}
     </main>

@@ -36,10 +36,13 @@ import { createAndDownloadAdminBackup } from './services/adminBackup';
 import {
   fetchLoginEvents,
   fetchOnlinePresence,
+  fetchReportDownloadEvents,
   subscribeLoginEvents,
   subscribeOnlinePresence,
+  subscribeReportDownloadEvents,
   type LoginEvent,
-  type OnlinePresence
+  type OnlinePresence,
+  type ReportDownloadEvent
 } from './services/loginTracker';
 import { isValidReportToken } from './services/reportLinks';
 import { editAdminSupportMessage, markThreadSeenByAdmin, sendSupportMessage, subscribeSupportMessages, subscribeSupportThreads, type SupportMessage, type SupportThread } from './services/supportInbox';
@@ -2979,6 +2982,7 @@ function LoginAccessView({
   events,
   onlinePresence,
   presenceNow,
+  downloadEvents,
   error,
   accessProfiles,
   contacts,
@@ -2989,6 +2993,7 @@ function LoginAccessView({
   events: LoginEvent[];
   onlinePresence: OnlinePresence[];
   presenceNow: number;
+  downloadEvents: ReportDownloadEvent[];
   error: string | null;
   accessProfiles: AccessProfileRecord[];
   contacts: Record<string, ContactInfo>;
@@ -3096,6 +3101,46 @@ function LoginAccessView({
           </div>
         ) : (
           <p className="admin-online-empty">No hay ningún cliente conectado ahora.</p>
+        )}
+      </section>
+
+      <section className="admin-download-log">
+        <header>
+          <div>
+            <h3>Descargas de informes</h3>
+            <p>Usuario, informe descargado, periodo y momento exacto de la descarga.</p>
+          </div>
+          <span>{downloadEvents.length} descargas</span>
+        </header>
+        {downloadEvents.length ? (
+          <div className="admin-download-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha y hora</th>
+                  <th>Usuario</th>
+                  <th>Informe</th>
+                  <th>Periodo</th>
+                  <th>Archivo</th>
+                  <th>Datos actualizados</th>
+                </tr>
+              </thead>
+              <tbody>
+                {downloadEvents.map((event) => (
+                  <tr key={event.id}>
+                    <td>{new Date(event.downloadedAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'medium' })}</td>
+                    <td><strong>{event.loginId || event.email.split('@')[0] || 'Usuario'}</strong></td>
+                    <td>{event.reportLabel || event.reportClientId}</td>
+                    <td>{event.periodStart === 'todo' && event.periodEnd === 'todo' ? 'Todo el histórico' : `${event.periodStart} — ${event.periodEnd}`}</td>
+                    <td title={event.filename}>{event.filename}</td>
+                    <td>{event.reportUpdatedAt > 0 ? new Date(event.reportUpdatedAt).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="admin-download-empty">Todavía no hay descargas registradas.</p>
         )}
       </section>
 
@@ -3400,6 +3445,7 @@ export default function App() {
   const [ownerLoginEvents, setOwnerLoginEvents] = useState<LoginEvent[]>([]);
   const [ownerOnlinePresence, setOwnerOnlinePresence] = useState<OnlinePresence[]>([]);
   const [ownerPresenceNow, setOwnerPresenceNow] = useState(() => Date.now());
+  const [ownerReportDownloads, setOwnerReportDownloads] = useState<ReportDownloadEvent[]>([]);
   const [ownerLoginError, setOwnerLoginError] = useState<string | null>(null);
   const [ownerLoginRefreshBusy, setOwnerLoginRefreshBusy] = useState(false);
   const [ownerLoginNotice, setOwnerLoginNotice] = useState<{ key: string; user: string; loginAt: number } | null>(null);
@@ -3862,14 +3908,16 @@ export default function App() {
     setOwnerLoginRefreshBusy(true);
     setOwnerLoginError(null);
     try {
-      const [events, profiles, presence] = await Promise.all([
+      const [events, profiles, presence, downloads] = await Promise.all([
         fetchLoginEvents(),
         listClientAccessProfiles(),
-        fetchOnlinePresence()
+        fetchOnlinePresence(),
+        fetchReportDownloadEvents()
       ]);
       setOwnerLoginEvents(events);
       setOwnerAccessProfiles(profiles);
       setOwnerOnlinePresence(presence);
+      setOwnerReportDownloads(downloads);
       setOwnerPresenceNow(Date.now());
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Registro de accesos actualizado' }));
     } catch (error) {
@@ -3924,6 +3972,17 @@ export default function App() {
       window.removeEventListener('pointerdown', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
     };
+  }, [isPrimaryAdmin]);
+
+  useEffect(() => {
+    if (!isPrimaryAdmin) {
+      setOwnerReportDownloads([]);
+      return;
+    }
+    return subscribeReportDownloadEvents(
+      (events) => setOwnerReportDownloads(events),
+      (error) => console.error('No se pudo cargar el registro de descargas', error)
+    );
   }, [isPrimaryAdmin]);
 
   useEffect(() => {
@@ -4270,6 +4329,7 @@ export default function App() {
           events={ownerLoginEvents}
           onlinePresence={ownerOnlinePresence}
           presenceNow={ownerPresenceNow}
+          downloadEvents={ownerReportDownloads}
           error={ownerLoginError}
           accessProfiles={ownerAccessProfiles}
           contacts={contacts}

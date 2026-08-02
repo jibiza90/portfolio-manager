@@ -2350,26 +2350,27 @@ input[type='number'] {
 
 .admin-login-notice {
   position: fixed;
-  top: 72px;
-  right: 20px;
+  top: 50%;
+  left: 50%;
   z-index: 200000;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 11px;
-  width: min(360px, calc(100vw - 32px));
-  padding: 13px 14px;
-  border: 1px solid rgba(15, 109, 122, 0.28);
-  border-radius: 14px;
+  width: min(560px, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+  padding: 24px 26px;
+  border: 2px solid rgba(15, 109, 122, 0.35);
+  border-radius: 20px;
   background: linear-gradient(135deg, rgba(255,255,255,.98), rgba(236,250,250,.98));
   color: #102845;
-  box-shadow: 0 18px 42px rgba(9, 43, 55, 0.2);
+  box-shadow: 0 28px 90px rgba(9, 43, 55, 0.34), 0 0 0 9999px rgba(12, 28, 35, 0.18);
   animation: adminLoginNoticeIn 320ms cubic-bezier(.2,.8,.2,1);
 }
 
 .admin-login-notice-dot {
-  width: 11px;
-  height: 11px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
   background: #16a085;
   box-shadow: 0 0 0 5px rgba(22, 160, 133, 0.13);
@@ -2382,24 +2383,24 @@ input[type='number'] {
 }
 
 .admin-login-notice strong {
-  font-size: 13px;
+  font-size: 20px;
 }
 
 .admin-login-notice span {
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
 .admin-login-notice button {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border: 0;
   border-radius: 999px;
   background: rgba(15, 109, 122, 0.08);
   color: #0f5f6f;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -2507,9 +2508,92 @@ input[type='number'] {
   font-size: 13px;
 }
 
+.admin-download-log {
+  overflow: hidden;
+  border: 1px solid #d7d2c8;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.admin-download-log > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #ebe6dd;
+}
+
+.admin-download-log h3,
+.admin-download-log p {
+  margin: 0;
+}
+
+.admin-download-log h3 {
+  color: #173d43;
+  font-size: 17px;
+}
+
+.admin-download-log header p {
+  margin-top: 4px;
+  color: #6d6860;
+  font-size: 12px;
+}
+
+.admin-download-log header > span {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #edf3f4;
+  color: #315b62;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-download-table-wrap {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.admin-download-log table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+
+.admin-download-log th,
+.admin-download-log td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1ece2;
+  text-align: left;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.admin-download-log th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f7f4ee;
+  color: #5f5a52;
+  font-weight: 800;
+}
+
+.admin-download-log td:nth-child(5) {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-download-empty {
+  padding: 14px 16px;
+  color: #687779;
+  font-size: 13px;
+}
+
 @keyframes adminLoginNoticeIn {
-  from { opacity: 0; transform: translateY(-10px) scale(.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translate(-50%, calc(-50% - 14px)) scale(.94); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
 /* Modal genérico para alertas */

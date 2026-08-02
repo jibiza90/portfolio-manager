@@ -128,6 +128,29 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /report_download_events/{eventId} {
+      allow read: if isAdmin();
+      allow create: if signedIn() &&
+        request.resource.data.keys().hasOnly([
+          'uid', 'email', 'loginId', 'clientId', 'reportClientId', 'reportLabel',
+          'periodStart', 'periodEnd', 'filename', 'reportUpdatedAt', 'downloadedAt'
+        ]) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.email is string &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.loginId is string &&
+        request.resource.data.clientId is string &&
+        request.resource.data.reportClientId is string &&
+        request.resource.data.reportLabel is string &&
+        request.resource.data.periodStart is string &&
+        request.resource.data.periodEnd is string &&
+        request.resource.data.filename is string &&
+        request.resource.data.reportUpdatedAt is int &&
+        request.resource.data.downloadedAt is int &&
+        request.resource.data.downloadedAt > 0;
+      allow update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

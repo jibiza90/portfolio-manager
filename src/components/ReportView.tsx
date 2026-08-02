@@ -10,6 +10,14 @@ interface ReportViewProps {
   reportData?: ReportData | null;
   downloadSignal?: number;
   generalReferenceMonthly?: GeneralReferenceMonth[];
+  onDownloaded?: (details: {
+    reportClientId: string;
+    reportLabel: string;
+    periodStart: string;
+    periodEnd: string;
+    filename: string;
+    reportUpdatedAt: number;
+  }) => void;
 }
 
 interface PatrimonyTooltipState {
@@ -186,7 +194,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   token,
   reportData,
   downloadSignal,
-  generalReferenceMonthly = []
+  generalReferenceMonthly = [],
+  onDownloaded
 }) => {
   const [report, setReport] = useState<ReportData | null>(reportData ?? null);
   const [loading, setLoading] = useState(!reportData);
@@ -1138,6 +1147,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
     const filename = `informe-${currentReport.clientCode}-${rangeStart || 'todo'}-${rangeEnd || 'todo'}.pdf`;
     doc.save(filename);
+    onDownloaded?.({
+      reportClientId: currentReport.clientId,
+      reportLabel: currentReport.clientCode,
+      periodStart: rangeStart || 'todo',
+      periodEnd: rangeEnd || 'todo',
+      filename,
+      reportUpdatedAt: currentReport.createdAt
+    });
   }
 
   const renderPatrimonyChart = (expanded: boolean) => {

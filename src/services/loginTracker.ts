@@ -16,8 +16,24 @@ export interface OnlinePresence {
   lastSeen: number;
 }
 
+export interface ReportDownloadEvent {
+  id: string;
+  uid: string;
+  email: string;
+  loginId: string;
+  clientId: string;
+  reportClientId: string;
+  reportLabel: string;
+  periodStart: string;
+  periodEnd: string;
+  filename: string;
+  reportUpdatedAt: number;
+  downloadedAt: number;
+}
+
 const LOGIN_EVENTS_COLLECTION = 'auth_login_events';
 const ONLINE_PRESENCE_COLLECTION = 'auth_presence';
+const REPORT_DOWNLOAD_EVENTS_COLLECTION = 'report_download_events';
 const PRESENCE_HEARTBEAT_MS = 60_000;
 const inFlightAuthEventKeys = new Set<string>();
 
@@ -146,4 +162,71 @@ export const subscribeOnlinePresence = (
 export const fetchOnlinePresence = async (): Promise<OnlinePresence[]> => {
   const snapshot = await db.collection(ONLINE_PRESENCE_COLLECTION).get();
   return snapshot.docs.map(mapOnlinePresence);
+};
+
+const mapReportDownloadEvent = (
+  doc: firebase.firestore.QueryDocumentSnapshot<firebase.firestore.DocumentData>
+): ReportDownloadEvent => {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    uid: String(data.uid ?? ''),
+    email: String(data.email ?? ''),
+    loginId: String(data.loginId ?? ''),
+    clientId: String(data.clientId ?? ''),
+    reportClientId: String(data.reportClientId ?? ''),
+    reportLabel: String(data.reportLabel ?? ''),
+    periodStart: String(data.periodStart ?? ''),
+    periodEnd: String(data.periodEnd ?? ''),
+    filename: String(data.filename ?? ''),
+    reportUpdatedAt: Number(data.reportUpdatedAt ?? 0),
+    downloadedAt: Number(data.downloadedAt ?? 0)
+  };
+};
+
+export const recordReportDownload = async ({
+  loginId,
+  clientId,
+  reportClientId,
+  reportLabel,
+  periodStart,
+  periodEnd,
+  filename,
+  reportUpdatedAt
+}: Omit<ReportDownloadEvent, 'id' | 'uid' | 'email' | 'downloadedAt'>) => {
+  const user = firebase.auth().currentUser;
+  if (!user) return;
+  await db.collection(REPORT_DOWNLOAD_EVENTS_COLLECTION).add({
+    uid: user.uid,
+    email: normalizeEmail(user.email),
+    loginId: loginId.trim(),
+    clientId,
+    reportClientId,
+    reportLabel,
+    periodStart,
+    periodEnd,
+    filename,
+    reportUpdatedAt: Number.isFinite(reportUpdatedAt) ? reportUpdatedAt : 0,
+    downloadedAt: Date.now()
+  });
+};
+
+export const subscribeReportDownloadEvents = (
+  onValue: (events: ReportDownloadEvent[]) => void,
+  onError: (error: unknown) => void
+) =>
+  db.collection(REPORT_DOWNLOAD_EVENTS_COLLECTION)
+    .orderBy('downloadedAt', 'desc')
+    .limit(1000)
+    .onSnapshot(
+      (snapshot) => onValue(snapshot.docs.map(mapReportDownloadEvent)),
+      (error) => onError(error)
+    );
+
+export const fetchReportDownloadEvents = async (): Promise<ReportDownloadEvent[]> => {
+  const snapshot = await db.collection(REPORT_DOWNLOAD_EVENTS_COLLECTION)
+    .orderBy('downloadedAt', 'desc')
+    .limit(1000)
+    .get();
+  return snapshot.docs.map(mapReportDownloadEvent);
 };
