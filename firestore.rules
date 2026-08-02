@@ -115,6 +115,19 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /auth_presence/{uid} {
+      allow read: if isAdmin();
+      allow create, update: if signedIn() &&
+        request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['uid', 'email', 'lastSeen']) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.email is string &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.lastSeen is int &&
+        request.resource.data.lastSeen > 0;
+      allow delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

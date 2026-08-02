@@ -9,7 +9,16 @@ export interface LoginEvent {
   createdAt: number;
 }
 
+export interface OnlinePresence {
+  id: string;
+  uid: string;
+  email: string;
+  lastSeen: number;
+}
+
 const LOGIN_EVENTS_COLLECTION = 'auth_login_events';
+const ONLINE_PRESENCE_COLLECTION = 'auth_presence';
+const PRESENCE_HEARTBEAT_MS = 60_000;
 const inFlightAuthEventKeys = new Set<string>();
 
 const normalizeEmail = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
@@ -83,4 +92,58 @@ export const fetchLoginEvents = async (): Promise<LoginEvent[]> => {
     .limit(1200)
     .get();
   return snapshot.docs.map(mapLoginEvent);
+};
+
+const mapOnlinePresence = (doc: firebase.firestore.QueryDocumentSnapshot<firebase.firestore.DocumentData>): OnlinePresence => {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    uid: String(data.uid ?? doc.id),
+    email: String(data.email ?? ''),
+    lastSeen: Number(data.lastSeen ?? 0)
+  };
+};
+
+export const startPresenceHeartbeat = (user: firebase.User) => {
+  let stopped = false;
+  const presenceRef = db.collection(ONLINE_PRESENCE_COLLECTION).doc(user.uid);
+  const updatePresence = () => {
+    if (stopped) return;
+    void presenceRef.set({
+      uid: user.uid,
+      email: normalizeEmail(user.email),
+      lastSeen: Date.now()
+    }).catch((error) => {
+      console.debug('No se pudo actualizar la presencia de la sesion', error);
+    });
+  };
+  const updateWhenVisible = () => {
+    if (document.visibilityState === 'visible') updatePresence();
+  };
+
+  updatePresence();
+  const intervalId = window.setInterval(updatePresence, PRESENCE_HEARTBEAT_MS);
+  window.addEventListener('online', updatePresence);
+  document.addEventListener('visibilitychange', updateWhenVisible);
+
+  return () => {
+    stopped = true;
+    window.clearInterval(intervalId);
+    window.removeEventListener('online', updatePresence);
+    document.removeEventListener('visibilitychange', updateWhenVisible);
+  };
+};
+
+export const subscribeOnlinePresence = (
+  onValue: (presence: OnlinePresence[]) => void,
+  onError: (error: unknown) => void
+) =>
+  db.collection(ONLINE_PRESENCE_COLLECTION).onSnapshot(
+    (snapshot) => onValue(snapshot.docs.map(mapOnlinePresence)),
+    (error) => onError(error)
+  );
+
+export const fetchOnlinePresence = async (): Promise<OnlinePresence[]> => {
+  const snapshot = await db.collection(ONLINE_PRESENCE_COLLECTION).get();
+  return snapshot.docs.map(mapOnlinePresence);
 };

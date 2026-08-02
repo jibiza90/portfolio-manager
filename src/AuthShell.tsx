@@ -10,7 +10,7 @@ import {
   type GeneralReferenceMonth
 } from './services/cloudPortfolio';
 import { auth, db, firebase } from './services/firebaseApp';
-import { recordLoginEvent } from './services/loginTracker';
+import { recordLoginEvent, startPresenceHeartbeat } from './services/loginTracker';
 import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, type SupportMessage } from './services/supportInbox';
 import { initializePortfolioStore, usePortfolioStore, waitForPendingPortfolioSave } from './store/portfolio';
 import type { ReportData } from './services/reportLinks';
@@ -2039,6 +2039,12 @@ const AuthShell = () => {
   const manualLogoutRef = useRef(false);
   const adminUidRef = useRef<string | null>(null);
   const hadAuthenticatedUserRef = useRef(false);
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!session.role || !user || session.uid !== user.uid) return;
+    return startPresenceHeartbeat(user);
+  }, [session.role, session.uid]);
 
   const clearInactivityTimer = () => {
     if (inactivityTimerRef.current !== null) {

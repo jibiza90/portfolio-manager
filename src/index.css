@@ -2403,6 +2403,110 @@ input[type='number'] {
   line-height: 1;
 }
 
+.admin-online-panel {
+  overflow: hidden;
+  border: 1px solid rgba(15, 109, 122, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f7ffff 0%, #edf8f6 100%);
+  box-shadow: 0 10px 28px rgba(12, 73, 78, 0.08);
+}
+
+.admin-online-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15, 109, 122, 0.13);
+}
+
+.admin-online-panel h3,
+.admin-online-panel p {
+  margin: 0;
+}
+
+.admin-online-panel h3 {
+  color: #103b42;
+  font-size: 17px;
+}
+
+.admin-online-panel header p {
+  margin-top: 4px;
+  color: #5c6e70;
+  font-size: 12px;
+}
+
+.admin-online-panel header > span {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #d9f5e9;
+  color: #08704f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-online-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 9px;
+  padding: 12px;
+}
+
+.admin-online-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(15, 109, 122, 0.13);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.admin-online-list article > i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #17a673;
+  box-shadow: 0 0 0 4px rgba(23, 166, 115, 0.14);
+}
+
+.admin-online-list article > div {
+  display: grid;
+  min-width: 0;
+}
+
+.admin-online-list strong,
+.admin-online-list article span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-online-list strong {
+  color: #173d43;
+  font-size: 13px;
+}
+
+.admin-online-list article span {
+  color: #687779;
+  font-size: 11px;
+}
+
+.admin-online-list small {
+  color: #08704f;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.admin-online-empty {
+  padding: 14px 16px;
+  color: #687779;
+  font-size: 13px;
+}
+
 @keyframes adminLoginNoticeIn {
   from { opacity: 0; transform: translateY(-10px) scale(.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }

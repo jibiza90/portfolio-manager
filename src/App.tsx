@@ -33,7 +33,14 @@ import {
 } from './services/cloudPortfolio';
 import { auth } from './services/firebaseApp';
 import { createAndDownloadAdminBackup } from './services/adminBackup';
-import { fetchLoginEvents, subscribeLoginEvents, type LoginEvent } from './services/loginTracker';
+import {
+  fetchLoginEvents,
+  fetchOnlinePresence,
+  subscribeLoginEvents,
+  subscribeOnlinePresence,
+  type LoginEvent,
+  type OnlinePresence
+} from './services/loginTracker';
 import { isValidReportToken } from './services/reportLinks';
 import { editAdminSupportMessage, markThreadSeenByAdmin, sendSupportMessage, subscribeSupportMessages, subscribeSupportThreads, type SupportMessage, type SupportThread } from './services/supportInbox';
 
@@ -2970,6 +2977,8 @@ function AdminMessagesView({ contacts }: { contacts: Record<string, ContactInfo>
 
 function LoginAccessView({
   events,
+  onlinePresence,
+  presenceNow,
   error,
   accessProfiles,
   contacts,
@@ -2978,6 +2987,8 @@ function LoginAccessView({
   refreshing
 }: {
   events: LoginEvent[];
+  onlinePresence: OnlinePresence[];
+  presenceNow: number;
   error: string | null;
   accessProfiles: AccessProfileRecord[];
   contacts: Record<string, ContactInfo>;
@@ -3042,8 +3053,52 @@ function LoginAccessView({
     [accessProfiles, contacts]
   );
 
+  const onlineRows = useMemo(() => {
+    const profilesByUid = new Map(accessProfiles.map((profile) => [profile.uid, profile]));
+    return onlinePresence
+      .filter((presence) => presence.lastSeen >= presenceNow - 130_000)
+      .map((presence) => {
+        const profile = profilesByUid.get(presence.uid);
+        if (!profile || profile.active === false) return null;
+        return {
+          uid: presence.uid,
+          user: profile.loginId || presence.email.split('@')[0] || 'Usuario',
+          client: profile.clientId ? getClientDisplayName(profile.clientId, contacts) : '',
+          lastSeen: presence.lastSeen
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .sort((left, right) => right.lastSeen - left.lastSeen);
+  }, [accessProfiles, contacts, onlinePresence, presenceNow]);
+
   return (
     <div className="glass-card fade-in" style={{ display: 'grid', gap: 14 }}>
+      <section className="admin-online-panel">
+        <header>
+          <div>
+            <h3>Conectados ahora</h3>
+            <p>Clientes con una sesión activa en este momento.</p>
+          </div>
+          <span>{onlineRows.length} online</span>
+        </header>
+        {onlineRows.length ? (
+          <div className="admin-online-list">
+            {onlineRows.map((row) => (
+              <article key={row.uid}>
+                <i aria-hidden="true" />
+                <div>
+                  <strong>{row.user}</strong>
+                  {row.client ? <span>{row.client}</span> : null}
+                </div>
+                <small>En línea</small>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="admin-online-empty">No hay ningún cliente conectado ahora.</p>
+        )}
+      </section>
+
       <section style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
         <header style={{ padding: '12px 14px', borderBottom: '1px solid #ebe6dd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div>
@@ -3343,6 +3398,8 @@ export default function App() {
   const [supportUnreadTotal, setSupportUnreadTotal] = useState(0);
   const [currentUserEmail, setCurrentUserEmail] = useState(() => auth.currentUser?.email?.trim().toLowerCase() ?? '');
   const [ownerLoginEvents, setOwnerLoginEvents] = useState<LoginEvent[]>([]);
+  const [ownerOnlinePresence, setOwnerOnlinePresence] = useState<OnlinePresence[]>([]);
+  const [ownerPresenceNow, setOwnerPresenceNow] = useState(() => Date.now());
   const [ownerLoginError, setOwnerLoginError] = useState<string | null>(null);
   const [ownerLoginRefreshBusy, setOwnerLoginRefreshBusy] = useState(false);
   const [ownerLoginNotice, setOwnerLoginNotice] = useState<{ key: string; user: string; loginAt: number } | null>(null);
@@ -3805,12 +3862,15 @@ export default function App() {
     setOwnerLoginRefreshBusy(true);
     setOwnerLoginError(null);
     try {
-      const [events, profiles] = await Promise.all([
+      const [events, profiles, presence] = await Promise.all([
         fetchLoginEvents(),
-        listClientAccessProfiles()
+        listClientAccessProfiles(),
+        fetchOnlinePresence()
       ]);
       setOwnerLoginEvents(events);
       setOwnerAccessProfiles(profiles);
+      setOwnerOnlinePresence(presence);
+      setOwnerPresenceNow(Date.now());
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Registro de accesos actualizado' }));
     } catch (error) {
       console.error('No se pudo recargar el registro de accesos', error);
@@ -3863,6 +3923,27 @@ export default function App() {
     return () => {
       window.removeEventListener('pointerdown', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [isPrimaryAdmin]);
+
+  useEffect(() => {
+    if (!isPrimaryAdmin) {
+      setOwnerOnlinePresence([]);
+      return;
+    }
+    const unsubscribe = subscribeOnlinePresence(
+      (presence) => {
+        setOwnerOnlinePresence(presence);
+        setOwnerPresenceNow(Date.now());
+      },
+      (error) => {
+        console.error('No se pudo cargar la presencia online', error);
+      }
+    );
+    const timerId = window.setInterval(() => setOwnerPresenceNow(Date.now()), 15_000);
+    return () => {
+      unsubscribe();
+      window.clearInterval(timerId);
     };
   }, [isPrimaryAdmin]);
 
@@ -4187,6 +4268,8 @@ export default function App() {
       ) : activeView === ACCESOS_VIEW && isPrimaryAdmin ? (
         <LoginAccessView
           events={ownerLoginEvents}
+          onlinePresence={ownerOnlinePresence}
+          presenceNow={ownerPresenceNow}
           error={ownerLoginError}
           accessProfiles={ownerAccessProfiles}
           contacts={contacts}
