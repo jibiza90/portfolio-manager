@@ -1020,6 +1020,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
     };
 
     const tableRow = (columns: string[], widths: number[], rowY: number, opts: { header?: boolean; positiveIndex?: number; positiveValue?: number } = {}) => {
+      const tableInset = isDemoPdf ? 12 : 10;
+      const availableWidth = contentWidth - tableInset * 2;
+      const suppliedWidth = widths.reduce((sum, width) => sum + width, 0) || 1;
+      const fittedWidths = widths.map((width) => (width / suppliedWidth) * availableWidth);
       if (opts.header) {
         setFill(colors.teal);
         doc.roundedRect(margin, rowY - 13, contentWidth, 22, 5, 5, 'F');
@@ -1030,7 +1034,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         doc.setFont('helvetica', 'normal');
       }
       doc.setFontSize(opts.header ? (isDemoPdf ? 8.5 : 8) : (isDemoPdf ? 9 : 8.5));
-      let tx = margin + 10;
+      let tx = margin + tableInset;
       columns.forEach((column, idx) => {
         if (!opts.header && opts.positiveIndex === idx && opts.positiveValue !== undefined) {
           setText(opts.positiveValue >= 0 ? colors.green : colors.red);
@@ -1038,8 +1042,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
           setText(opts.header ? colors.white : colors.ink);
         }
         const align = idx === 0 ? 'left' : 'right';
-        doc.text(column, align === 'left' ? tx : tx + widths[idx] - 8, rowY, { align });
-        tx += widths[idx];
+        const cellWidth = fittedWidths[idx] ?? 0;
+        doc.text(column, align === 'left' ? tx : tx + cellWidth, rowY, { align });
+        tx += cellWidth;
       });
     };
 
@@ -1077,7 +1082,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     y += isDemoPdf ? 192 : 178;
 
     sectionTitle('Tabla mensual', 'Beneficio, rentabilidad y saldo por mes.', 48);
-    const widths = [170, 170, 130, contentWidth - 470];
+    const widths = [24, 25, 22, 29];
     tableRow(['Fecha', 'Beneficio', 'Rentabilidad', 'Saldo'], widths, y, { header: true });
     const monthlyRowHeight = isDemoPdf ? 24 : 20;
     y += isDemoPdf ? 28 : 24;
@@ -1152,7 +1157,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
     if (periodMovements.length > 0) {
       sectionTitle('Capital aportado y retirado', 'Capital aportado y capital retirado dentro del periodo seleccionado.', 54);
-      const movementWidths = [150, 170, 170, contentWidth - 490];
+      const movementWidths = [18, 22, 22, 38];
       tableRow(['Fecha', 'Aportacion', 'Retirada', 'Capital neto del periodo'], movementWidths, y, { header: true });
       const movementRowHeight = isDemoPdf ? 24 : 20;
       y += isDemoPdf ? 28 : 24;
