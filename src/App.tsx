@@ -2210,14 +2210,21 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                   )}</td>
                   <td>
                     {(r.decrement ?? 0) > 0 ? (
-                      r.isWeekend ? (
-                        r.decrementReturnPct === undefined ? '—' : formatPercent(r.decrementReturnPct)
-                      ) : (
-                        <PercentCell
-                          value={r.decrementReturnPct}
-                          onChange={(v) => setClientMovement(clientId, r.iso, 'decrementReturnPct', v)}
-                        />
-                      )
+                      <div>
+                        {r.isWeekend ? (
+                          r.decrementReturnPct === undefined ? '—' : formatPercent(r.decrementReturnPct)
+                        ) : (
+                          <PercentCell
+                            value={r.decrementReturnPct}
+                            onChange={(v) => setClientMovement(clientId, r.iso, 'decrementReturnPct', v)}
+                          />
+                        )}
+                        {r.decrementReturnPct !== undefined && (
+                          <small style={{ display: 'block', marginTop: 4, color: '#16a34a', whiteSpace: 'nowrap' }}>
+                            Genera {formatCurrency((r.decrement ?? 0) * r.decrementReturnPct)}
+                          </small>
+                        )}
+                      </div>
                     ) : (
                       '—'
                     )}
