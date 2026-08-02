@@ -965,7 +965,22 @@ export const ReportView: React.FC<ReportViewProps> = ({
       for (let i = 0; i < chartPoints.length - 1; i += 1) {
         doc.line(chartPoints[i].x, chartPoints[i].y, chartPoints[i + 1].x, chartPoints[i + 1].y);
       }
-      const labelStep = Math.max(1, Math.ceil(chartPoints.length / 10));
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      const compactMonthLabels = chartPoints.map((point) => getCompactMonthLabel(point.label));
+      const widestMonthLabel = Math.max(...compactMonthLabels.map((label) => doc.getTextWidth(label)), 1);
+      const maxVisibleMonthLabels = Math.max(2, Math.floor(plotW / (widestMonthLabel + 8)));
+      const visibleMonthLabelCount = Math.min(chartPoints.length, maxVisibleMonthLabels);
+      const visibleMonthLabelIndexes = new Set<number>();
+      if (visibleMonthLabelCount === 1) {
+        visibleMonthLabelIndexes.add(0);
+      } else {
+        for (let labelIndex = 0; labelIndex < visibleMonthLabelCount; labelIndex += 1) {
+          visibleMonthLabelIndexes.add(
+            Math.round((labelIndex * (chartPoints.length - 1)) / (visibleMonthLabelCount - 1))
+          );
+        }
+      }
       chartPoints.forEach((point, idx) => {
         setFill(colors.ink);
         doc.circle(point.x, point.y, 3, 'F');
@@ -974,10 +989,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
         setText(colors.ink);
         const valueLabelY = idx % 2 === 0 ? point.y - 7 : point.y + 12;
         doc.text(money0(point.value), point.x, valueLabelY, { align: 'center' });
-        if (idx % labelStep === 0 || idx === chartPoints.length - 1) {
+        if (visibleMonthLabelIndexes.has(idx)) {
           doc.setFontSize(7);
           setText(colors.ink);
-          doc.text(point.label, point.x, bottom + 20, { align: 'center' });
+          doc.text(compactMonthLabels[idx], point.x, bottom + 20, { align: 'center' });
         }
       });
     };
