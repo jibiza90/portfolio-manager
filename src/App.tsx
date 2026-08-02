@@ -3350,6 +3350,7 @@ export default function App() {
   const knownOwnerLoginKeysRef = useRef<Set<string> | null>(null);
   const ownerAccessProfilesRef = useRef<AccessProfileRecord[]>([]);
   const ownerLoginNoticeTimerRef = useRef<number | null>(null);
+  const ownerLoginAudioContextRef = useRef<AudioContext | null>(null);
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupError, setBackupError] = useState<string | null>(null);
   const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
@@ -3819,6 +3820,52 @@ export default function App() {
     }
   };
 
+  const playOwnerLoginSound = () => {
+    try {
+      const AudioContextClass = window.AudioContext
+        || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const context = ownerLoginAudioContextRef.current ?? new AudioContextClass();
+      ownerLoginAudioContextRef.current = context;
+      if (context.state === 'suspended') void context.resume();
+      const startAt = context.currentTime + 0.02;
+      [659.25, 783.99].forEach((frequency, index) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        const toneStart = startAt + (index * 0.11);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, toneStart);
+        gain.gain.setValueAtTime(0.0001, toneStart);
+        gain.gain.exponentialRampToValueAtTime(0.12, toneStart + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, toneStart + 0.2);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(toneStart);
+        oscillator.stop(toneStart + 0.21);
+      });
+    } catch (error) {
+      console.debug('El navegador ha bloqueado el sonido del aviso de acceso', error);
+    }
+  };
+
+  useEffect(() => {
+    if (!isPrimaryAdmin) return;
+    const unlockAudio = () => {
+      const AudioContextClass = window.AudioContext
+        || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const context = ownerLoginAudioContextRef.current ?? new AudioContextClass();
+      ownerLoginAudioContextRef.current = context;
+      if (context.state === 'suspended') void context.resume();
+    };
+    window.addEventListener('pointerdown', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [isPrimaryAdmin]);
+
   useEffect(() => {
     if (!isPrimaryAdmin) {
       setOwnerLoginEvents([]);
@@ -3842,6 +3889,7 @@ export default function App() {
             const profile = ownerAccessProfilesRef.current.find((item) => item.uid === newestLogin.uid);
             const user = profile?.loginId || (newestLogin.email.includes('@') ? newestLogin.email.split('@')[0] : newestLogin.email) || 'Usuario desconocido';
             setOwnerLoginNotice({ key: eventKey(newestLogin), user, loginAt: newestLogin.loginAt });
+            playOwnerLoginSound();
             if (ownerLoginNoticeTimerRef.current !== null) {
               window.clearTimeout(ownerLoginNoticeTimerRef.current);
             }
