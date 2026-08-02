@@ -158,6 +158,15 @@ export const startPresenceHeartbeat = (
   };
 };
 
+export const markPresenceOffline = async (user: firebase.User) => {
+  await db.collection(ONLINE_PRESENCE_COLLECTION).doc(user.uid).set({
+    uid: user.uid,
+    email: normalizeEmail(user.email),
+    lastSeen: 1,
+    presenceVersion: ACTIVE_PRESENCE_VERSION
+  });
+};
+
 export const subscribeOnlinePresence = (
   onValue: (presence: OnlinePresence[]) => void,
   onError: (error: unknown) => void

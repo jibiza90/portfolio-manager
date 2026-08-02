@@ -10,7 +10,7 @@ import {
   type GeneralReferenceMonth
 } from './services/cloudPortfolio';
 import { auth, db, firebase } from './services/firebaseApp';
-import { recordLoginEvent, recordReportDownload, startPresenceHeartbeat } from './services/loginTracker';
+import { markPresenceOffline, recordLoginEvent, recordReportDownload, startPresenceHeartbeat } from './services/loginTracker';
 import {
   consumeLocalLoginFailures,
   createClientActivityTracker,
@@ -2651,6 +2651,8 @@ const AuthShell = () => {
           if (session.role === 'admin') {
             await waitForPendingPortfolioSave();
           }
+          const currentUser = auth.currentUser;
+          if (currentUser) await markPresenceOffline(currentUser).catch(() => undefined);
           await auth.signOut();
         } catch (error) {
           console.error('Error cerrando sesion por inactividad', error);
@@ -2780,6 +2782,8 @@ const AuthShell = () => {
       if (session.role === 'admin') {
         await waitForPendingPortfolioSave();
       }
+      const currentUser = auth.currentUser;
+      if (currentUser) await markPresenceOffline(currentUser).catch(() => undefined);
       await auth.signOut();
     } catch (error) {
       console.error('Error cerrando sesion', error);
