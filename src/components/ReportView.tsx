@@ -4,6 +4,7 @@ import { getReportByToken, isValidReportToken, ReportData } from '../services/re
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 import type { GeneralReferenceMonth } from '../services/cloudPortfolio';
+import { DEMO_CLIENT_ID } from '../constants/clients';
 
 interface ReportViewProps {
   token?: string;
@@ -827,11 +828,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
   async function handleDownloadModernReport() {
     const currentReport = report;
     if (!currentReport) return;
+    const isDemoPdf = currentReport.clientId === DEMO_CLIENT_ID;
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 34;
+    const margin = isDemoPdf ? 40 : 34;
     const contentWidth = pageWidth - margin * 2;
     let y = margin;
 
@@ -860,26 +862,50 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const addPage = () => {
       doc.addPage();
       y = margin;
+      if (isDemoPdf) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        setText(colors.muted);
+        doc.text('PORTFOLIO MANAGER', margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${currentReport.clientCode} · ${selectedMonthLabel}`, pageWidth - margin, y, { align: 'right' });
+        setDraw(colors.border);
+        doc.setLineWidth(0.6);
+        doc.line(margin, y + 9, pageWidth - margin, y + 9);
+        y += 30;
+      }
     };
 
     const ensure = (needed: number) => {
-      if (y + needed > pageHeight - margin) addPage();
+      if (y + needed > pageHeight - margin) {
+        addPage();
+        return true;
+      }
+      return false;
     };
 
     const sectionTitle = (title: string, subtitle?: string, keepWith = 0) => {
-      ensure((subtitle ? 44 : 28) + keepWith);
+      const titleHeight = isDemoPdf ? (subtitle ? 54 : 36) : (subtitle ? 44 : 28);
+      ensure(titleHeight + keepWith + (isDemoPdf ? 12 : 0));
+      if (isDemoPdf && y > margin + 32) {
+        y += 10;
+        setDraw(colors.border);
+        doc.setLineWidth(0.7);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 20;
+      }
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(15);
+      doc.setFontSize(isDemoPdf ? 17 : 15);
       setText(colors.ink);
       doc.text(title, margin, y);
       if (subtitle) {
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
+        doc.setFontSize(isDemoPdf ? 10 : 9);
         setText(colors.muted);
-        doc.text(subtitle, margin, y + 16);
-        y += 36;
+        doc.text(subtitle, margin, y + (isDemoPdf ? 19 : 16));
+        y += isDemoPdf ? 46 : 36;
       } else {
-        y += 24;
+        y += isDemoPdf ? 31 : 24;
       }
     };
 
@@ -1003,7 +1029,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         setText(colors.ink);
         doc.setFont('helvetica', 'normal');
       }
-      doc.setFontSize(opts.header ? 8 : 8.5);
+      doc.setFontSize(opts.header ? (isDemoPdf ? 8.5 : 8) : (isDemoPdf ? 9 : 8.5));
       let tx = margin + 10;
       columns.forEach((column, idx) => {
         if (!opts.header && opts.positiveIndex === idx && opts.positiveValue !== undefined) {
@@ -1030,35 +1056,40 @@ export const ReportView: React.FC<ReportViewProps> = ({
     doc.setFontSize(10);
     doc.text(`${currentReport.clientCode} - ${selectedMonthLabel}`, margin + 28, y + 57);
     doc.text(`Emitido: ${new Date().toLocaleDateString('es-ES')}`, pageWidth - margin - 145, y + 34);
-    y += 110;
+    y += isDemoPdf ? 122 : 110;
 
     const cardW = (contentWidth - 30) / 3;
     card(margin, y, cardW, 68, 'Valor final del periodo', money(periodEndBalance), periodEndBalance >= 0);
     card(margin + cardW + 15, y, cardW, 68, 'Beneficio del periodo', money(periodProfit), periodProfit >= 0);
     card(margin + (cardW + 15) * 2, y, cardW, 68, 'Rentabilidad periodo', pct(periodReturnPct * 100), periodReturnPct >= 0);
-    y += 82;
+    y += isDemoPdf ? 92 : 82;
     card(margin, y, cardW, 62, 'Capital aportado del periodo', money(periodIncrements), true);
     card(margin + cardW + 15, y, cardW, 62, 'Capital retirado del periodo', money(periodDecrements), periodDecrements <= 0);
     card(margin + (cardW + 15) * 2, y, cardW, 62, 'Capital neto del periodo', money(periodIncrements - periodDecrements), periodIncrements - periodDecrements >= 0);
-    y += 86;
+    y += isDemoPdf ? 98 : 86;
 
     sectionTitle('Evolucion patrimonio', 'Saldo al cierre de cada mes del periodo seleccionado.', 205);
     drawLineChart(effectivePatrimonioData, margin, y, contentWidth, 190);
-    y += 216;
+    y += isDemoPdf ? 228 : 216;
 
     sectionTitle('Rentabilidad mensual', 'TWR mensual segun los meses visibles en pantalla.', 165);
     drawReturnBars(effectiveMonthlyWithData, margin, y, contentWidth, 150);
-    y += 178;
+    y += isDemoPdf ? 192 : 178;
 
     sectionTitle('Tabla mensual', 'Beneficio, rentabilidad y saldo por mes.', 48);
     const widths = [170, 170, 130, contentWidth - 470];
     tableRow(['Fecha', 'Beneficio', 'Rentabilidad', 'Saldo'], widths, y, { header: true });
-    y += 24;
+    const monthlyRowHeight = isDemoPdf ? 24 : 20;
+    y += isDemoPdf ? 28 : 24;
     effectiveMonthlyWithData.forEach((month, idx) => {
-      ensure(22);
+      const addedPage = ensure(monthlyRowHeight + 2);
+      if (addedPage && isDemoPdf) {
+        tableRow(['Fecha', 'Beneficio', 'Rentabilidad', 'Saldo'], widths, y, { header: true });
+        y += 28;
+      }
       if (idx % 2 === 0) {
         setFill([248, 251, 253]);
-        doc.rect(margin, y - 13, contentWidth, 20, 'F');
+        doc.rect(margin, y - 13, contentWidth, monthlyRowHeight, 'F');
       }
       tableRow(
         [getMonthEndLabel(month.month), money(month.profit ?? 0), pct(getDisplayedMonthReturnPct(month)), money(month.endBalance ?? 0)],
@@ -1066,7 +1097,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         y,
         { positiveIndex: 1, positiveValue: month.profit ?? 0 }
       );
-      y += 20;
+      y += monthlyRowHeight;
     });
 
     const selectedBreakdowns = tableContributionBreakdowns.filter((item) => {
@@ -1074,7 +1105,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       return key >= rangeStart && key <= rangeEnd;
     });
     if (selectedBreakdowns.length > 0) {
-      y += 12;
+      y += isDemoPdf ? 24 : 12;
       sectionTitle('Detalle de meses con movimientos', 'Rentabilidad aplicada a cada tramo de capital dentro del periodo.', 80);
       selectedBreakdowns.forEach((breakdown) => {
         const withdrawals = breakdown.withdrawals ?? [];
@@ -1115,7 +1146,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0) +
           withdrawals.reduce((sum, withdrawal) => sum + withdrawal.profit, 0);
         tableRow(['Beneficio explicado', '-', '-', money(total)], widths, y, { positiveIndex: 3, positiveValue: total });
-        y += 24;
+        y += isDemoPdf ? 34 : 24;
       });
     }
 
@@ -1123,14 +1154,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
       sectionTitle('Capital aportado y retirado', 'Capital aportado y capital retirado dentro del periodo seleccionado.', 54);
       const movementWidths = [150, 170, 170, contentWidth - 490];
       tableRow(['Fecha', 'Aportacion', 'Retirada', 'Capital neto del periodo'], movementWidths, y, { header: true });
-      y += 24;
+      const movementRowHeight = isDemoPdf ? 24 : 20;
+      y += isDemoPdf ? 28 : 24;
       let runningNet = 0;
       periodMovements.forEach((movement, idx) => {
-        ensure(22);
+        const addedPage = ensure(movementRowHeight + 2);
+        if (addedPage && isDemoPdf) {
+          tableRow(['Fecha', 'Aportacion', 'Retirada', 'Capital neto del periodo'], movementWidths, y, { header: true });
+          y += 28;
+        }
         runningNet += movement.type === 'increment' ? movement.amount : -movement.amount;
         if (idx % 2 === 0) {
           setFill([248, 251, 253]);
-          doc.rect(margin, y - 13, contentWidth, 20, 'F');
+          doc.rect(margin, y - 13, contentWidth, movementRowHeight, 'F');
         }
         tableRow(
           [
@@ -1143,8 +1179,30 @@ export const ReportView: React.FC<ReportViewProps> = ({
           y,
           { positiveIndex: 3, positiveValue: runningNet }
         );
-        y += 20;
+        y += movementRowHeight;
       });
+    }
+
+    if (isDemoPdf) {
+      sectionTitle('Resumen del periodo', 'Principales cifras del periodo seleccionado.', 78);
+      const summaryCardW = (contentWidth - 30) / 3;
+      card(margin, y, summaryCardW, 68, 'Valor final', money(periodEndBalance), periodEndBalance >= 0);
+      card(margin + summaryCardW + 15, y, summaryCardW, 68, 'Beneficio', money(periodProfit), periodProfit >= 0);
+      card(margin + (summaryCardW + 15) * 2, y, summaryCardW, 68, 'Rentabilidad', pct(periodReturnPct * 100), periodReturnPct >= 0);
+      y += 82;
+
+      const totalPages = doc.getNumberOfPages();
+      for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+        doc.setPage(pageNumber);
+        setDraw(colors.border);
+        doc.setLineWidth(0.5);
+        doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        setText(colors.muted);
+        doc.text(`Periodo: ${selectedMonthLabel}`, margin, pageHeight - 12);
+        doc.text(`Pagina ${pageNumber} de ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
+      }
     }
 
     const filename = `informe-${currentReport.clientCode}-${rangeStart || 'todo'}-${rangeEnd || 'todo'}.pdf`;
