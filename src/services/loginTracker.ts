@@ -75,3 +75,12 @@ export const subscribeLoginEvents = (
       (snapshot) => onValue(snapshot.docs.map(mapLoginEvent)),
       (error) => onError(error)
     );
+
+export const fetchLoginEvents = async (): Promise<LoginEvent[]> => {
+  const snapshot = await db
+    .collection(LOGIN_EVENTS_COLLECTION)
+    .orderBy('loginAt', 'desc')
+    .limit(1200)
+    .get();
+  return snapshot.docs.map(mapLoginEvent);
+};

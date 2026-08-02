@@ -33,7 +33,7 @@ import {
 } from './services/cloudPortfolio';
 import { auth } from './services/firebaseApp';
 import { createAndDownloadAdminBackup } from './services/adminBackup';
-import { subscribeLoginEvents, type LoginEvent } from './services/loginTracker';
+import { fetchLoginEvents, subscribeLoginEvents, type LoginEvent } from './services/loginTracker';
 import { isValidReportToken } from './services/reportLinks';
 import { editAdminSupportMessage, markThreadSeenByAdmin, sendSupportMessage, subscribeSupportMessages, subscribeSupportThreads, type SupportMessage, type SupportThread } from './services/supportInbox';
 
@@ -2973,13 +2973,17 @@ function LoginAccessView({
   error,
   accessProfiles,
   contacts,
-  onRevokeAccess
+  onRevokeAccess,
+  onRefresh,
+  refreshing
 }: {
   events: LoginEvent[];
   error: string | null;
   accessProfiles: AccessProfileRecord[];
   contacts: Record<string, ContactInfo>;
   onRevokeAccess: (profile: AccessProfileRecord) => Promise<void>;
+  onRefresh: () => void;
+  refreshing: boolean;
 }) {
   const dayKeyFromTs = (ts: number) => new Date(ts).toLocaleDateString('en-CA');
   const normalizedEvents = useMemo(() => {
@@ -3091,7 +3095,15 @@ function LoginAccessView({
           <h3 style={{ margin: 0 }}>Registro de accesos</h3>
           <p className="muted" style={{ marginTop: 6 }}>Detalle dia por dia con usuario y hora de inicio de sesion.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(120px, auto))', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshing}
+            style={{ border: '1px solid #0f6d7a', borderRadius: 10, padding: '8px 14px', background: refreshing ? '#e8f1f2' : '#0f6d7a', color: refreshing ? '#0f5f6f' : '#fff', cursor: refreshing ? 'default' : 'pointer', fontWeight: 750 }}
+          >
+            {refreshing ? 'Recargando...' : 'Recargar accesos'}
+          </button>
           <div style={{ border: '1px solid #d7d2c8', background: '#fff', borderRadius: 10, padding: '8px 10px' }}>
             <div style={{ fontSize: 11, color: '#5f5a52' }}>Eventos</div>
             <strong>{normalizedEvents.length}</strong>
@@ -3332,7 +3344,12 @@ export default function App() {
   const [currentUserEmail, setCurrentUserEmail] = useState(() => auth.currentUser?.email?.trim().toLowerCase() ?? '');
   const [ownerLoginEvents, setOwnerLoginEvents] = useState<LoginEvent[]>([]);
   const [ownerLoginError, setOwnerLoginError] = useState<string | null>(null);
+  const [ownerLoginRefreshBusy, setOwnerLoginRefreshBusy] = useState(false);
+  const [ownerLoginNotice, setOwnerLoginNotice] = useState<{ key: string; user: string; loginAt: number } | null>(null);
   const [ownerAccessProfiles, setOwnerAccessProfiles] = useState<AccessProfileRecord[]>([]);
+  const knownOwnerLoginKeysRef = useRef<Set<string> | null>(null);
+  const ownerAccessProfilesRef = useRef<AccessProfileRecord[]>([]);
+  const ownerLoginNoticeTimerRef = useRef<number | null>(null);
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupError, setBackupError] = useState<string | null>(null);
   const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
@@ -3782,15 +3799,59 @@ export default function App() {
     }
   }, [activeView, isPrimaryAdmin]);
 
+  const handleRefreshOwnerLogins = async () => {
+    if (!isPrimaryAdmin || ownerLoginRefreshBusy) return;
+    setOwnerLoginRefreshBusy(true);
+    setOwnerLoginError(null);
+    try {
+      const [events, profiles] = await Promise.all([
+        fetchLoginEvents(),
+        listClientAccessProfiles()
+      ]);
+      setOwnerLoginEvents(events);
+      setOwnerAccessProfiles(profiles);
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Registro de accesos actualizado' }));
+    } catch (error) {
+      console.error('No se pudo recargar el registro de accesos', error);
+      setOwnerLoginError('No se pudo recargar la actividad de accesos.');
+    } finally {
+      setOwnerLoginRefreshBusy(false);
+    }
+  };
+
   useEffect(() => {
     if (!isPrimaryAdmin) {
       setOwnerLoginEvents([]);
       setOwnerLoginError(null);
       setOwnerAccessProfiles([]);
+      setOwnerLoginNotice(null);
+      knownOwnerLoginKeysRef.current = null;
       return;
     }
+    knownOwnerLoginKeysRef.current = null;
     const unsubscribe = subscribeLoginEvents(
       (events) => {
+        const eventKey = (event: LoginEvent) => event.authEventKey || event.id;
+        const nextKeys = new Set(events.map(eventKey));
+        const knownKeys = knownOwnerLoginKeysRef.current;
+        if (knownKeys && document.visibilityState === 'visible') {
+          const newestLogin = events
+            .filter((event) => !knownKeys.has(eventKey(event)) && event.uid !== auth.currentUser?.uid)
+            .sort((left, right) => right.createdAt - left.createdAt)[0];
+          if (newestLogin) {
+            const profile = ownerAccessProfilesRef.current.find((item) => item.uid === newestLogin.uid);
+            const user = profile?.loginId || (newestLogin.email.includes('@') ? newestLogin.email.split('@')[0] : newestLogin.email) || 'Usuario desconocido';
+            setOwnerLoginNotice({ key: eventKey(newestLogin), user, loginAt: newestLogin.loginAt });
+            if (ownerLoginNoticeTimerRef.current !== null) {
+              window.clearTimeout(ownerLoginNoticeTimerRef.current);
+            }
+            ownerLoginNoticeTimerRef.current = window.setTimeout(() => {
+              setOwnerLoginNotice(null);
+              ownerLoginNoticeTimerRef.current = null;
+            }, 7000);
+          }
+        }
+        knownOwnerLoginKeysRef.current = nextKeys;
         setOwnerLoginEvents(events);
         setOwnerLoginError(null);
       },
@@ -3798,8 +3859,18 @@ export default function App() {
         setOwnerLoginError('No se pudo cargar actividad de accesos.');
       }
     );
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (ownerLoginNoticeTimerRef.current !== null) {
+        window.clearTimeout(ownerLoginNoticeTimerRef.current);
+        ownerLoginNoticeTimerRef.current = null;
+      }
+    };
   }, [isPrimaryAdmin]);
+
+  useEffect(() => {
+    ownerAccessProfilesRef.current = ownerAccessProfiles;
+  }, [ownerAccessProfiles]);
 
   useEffect(() => {
     if (!isPrimaryAdmin) return;
@@ -4072,6 +4143,8 @@ export default function App() {
           accessProfiles={ownerAccessProfiles}
           contacts={contacts}
           onRevokeAccess={handleRevokeClientAccess}
+          onRefresh={() => { void handleRefreshOwnerLogins(); }}
+          refreshing={ownerLoginRefreshBusy}
         />
       ) : activeView === BACKUP_VIEW && isPrimaryAdmin ? (
         <AdminBackupView
@@ -4114,6 +4187,19 @@ export default function App() {
         latestCoverageGap={latestMonthlyCoverageGap}
         generalMonthFinal={bulkMonthGeneralFinal}
       />
+      {isPrimaryAdmin && ownerLoginNotice ? (
+        <aside className="admin-login-notice" role="status" aria-live="polite">
+          <span className="admin-login-notice-dot" aria-hidden="true" />
+          <div>
+            <strong>Nuevo acceso</strong>
+            <span>
+              Se ha conectado <b>{ownerLoginNotice.user}</b> a las{' '}
+              {new Date(ownerLoginNotice.loginAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+          <button type="button" aria-label="Cerrar aviso" onClick={() => setOwnerLoginNotice(null)}>×</button>
+        </aside>
+      ) : null}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
