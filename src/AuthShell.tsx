@@ -6,7 +6,8 @@ import {
   buildClientAuthEmail,
   fetchAccessProfile,
   loginIdFromAuthEmail,
-  subscribeClientOverview
+  subscribeClientOverview,
+  type GeneralReferenceMonth
 } from './services/cloudPortfolio';
 import { auth, db, firebase } from './services/firebaseApp';
 import { recordLoginEvent } from './services/loginTracker';
@@ -38,6 +39,7 @@ interface ClientOverview {
   clientId: string;
   clientName: string;
   report?: ClientReportPayload | null;
+  generalReferenceMonthly?: GeneralReferenceMonth[];
   currentBalance?: number;
   cumulativeProfit?: number;
   dailyProfit?: number;
@@ -2005,7 +2007,13 @@ const ClientPortal = ({
         </section>
       ) : null}
 
-      {clientReportData ? <ReportView reportData={clientReportData} downloadSignal={reportDownloadSignal} /> : null}
+      {clientReportData ? (
+        <ReportView
+          reportData={clientReportData}
+          downloadSignal={reportDownloadSignal}
+          generalReferenceMonthly={overview?.generalReferenceMonthly}
+        />
+      ) : null}
     </main>
   );
 };

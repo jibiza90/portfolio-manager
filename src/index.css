@@ -2841,6 +2841,49 @@ input[type='number'] {
   background: linear-gradient(180deg, #ef4444, #dc2626);
 }
 
+.report-pro-reference-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(3, 105, 161, 0.22);
+  border-radius: 12px;
+  color: #17324d;
+  background: linear-gradient(135deg, rgba(224, 242, 254, 0.82), rgba(240, 249, 255, 0.96));
+}
+
+.report-pro-reference-note strong {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #0369a1;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.report-pro-reference-note span {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.report-pro-bars.is-general-reference .report-pro-bar.positive {
+  background: linear-gradient(180deg, #0ea5e9, #0369a1);
+}
+
+.report-pro-bars.is-general-reference .report-pro-bar.negative {
+  background: linear-gradient(180deg, #f97316, #c2410c);
+}
+
+@media (max-width: 620px) {
+  .report-pro-reference-note {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .report-pro-bar-label {
   text-align: center;
   font-size: 12px;

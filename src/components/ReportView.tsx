@@ -3,11 +3,13 @@ import { createPortal } from 'react-dom';
 import { getReportByToken, isValidReportToken, ReportData } from '../services/reportLinks';
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
+import type { GeneralReferenceMonth } from '../services/cloudPortfolio';
 
 interface ReportViewProps {
   token?: string;
   reportData?: ReportData | null;
   downloadSignal?: number;
+  generalReferenceMonthly?: GeneralReferenceMonth[];
 }
 
 interface PatrimonyTooltipState {
@@ -180,7 +182,12 @@ const getShortDateLabel = (iso: string) => {
   return `${day}.${month}.${year}`;
 };
 
-export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downloadSignal }) => {
+export const ReportView: React.FC<ReportViewProps> = ({
+  token,
+  reportData,
+  downloadSignal,
+  generalReferenceMonthly = []
+}) => {
   const [report, setReport] = useState<ReportData | null>(reportData ?? null);
   const [loading, setLoading] = useState(!reportData);
   const [expired, setExpired] = useState(false);
@@ -191,7 +198,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
   const [periodPreset, setPeriodPreset] = useState('all');
   const [periodStartMonth, setPeriodStartMonth] = useState('');
   const [periodEndMonth, setPeriodEndMonth] = useState('');
-  const [chartView, setChartView] = useState<'return' | 'profit' | 'balance'>('return');
+  const [chartView, setChartView] = useState<'return' | 'profit' | 'balance' | 'general'>('return');
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
@@ -232,6 +239,12 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
   useEffect(() => {
     setExpandedContributionMonths({});
   }, [report?.clientId]);
+
+  useEffect(() => {
+    if (chartView === 'general' && generalReferenceMonthly.length === 0) {
+      setChartView('return');
+    }
+  }, [chartView, generalReferenceMonthly.length]);
 
   useEffect(() => {
     if (!report) return;
@@ -369,23 +382,37 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     })
     : monthlyWithData;
   const effectiveMonthlyWithData = filteredMonthlyWithData.length > 0 ? filteredMonthlyWithData : monthlyWithData;
+  const generalReturnByMonth = new Map(
+    generalReferenceMonthly.map((item) => [item.month, item.returnPct * 100])
+  );
+  const hasGeneralReference = monthlyWithData.some((month) => generalReturnByMonth.has(reportMonthToKey(month.month)));
+  const chartMonthlyData = chartView === 'general'
+    ? effectiveMonthlyWithData.filter((month) => generalReturnByMonth.has(reportMonthToKey(month.month)))
+    : effectiveMonthlyWithData;
   const getChartValue = (month: (typeof monthlyWithData)[number]) => {
     if (chartView === 'profit') return month.profit ?? 0;
     if (chartView === 'balance') return month.endBalance ?? 0;
+    if (chartView === 'general') return generalReturnByMonth.get(reportMonthToKey(month.month)) ?? 0;
     return getDisplayedMonthReturnPct(month);
   };
+  const isPercentageChart = chartView === 'return' || chartView === 'general';
   const formatChartValue = (value: number) =>
-    chartView === 'return' ? `${value.toFixed(2)}%` : formatCurrencyNoCents(value);
+    isPercentageChart ? `${value.toFixed(2)}%` : formatCurrencyNoCents(value);
   const formatChartTooltipValue = (value: number) =>
-    chartView === 'return' ? `${value.toFixed(2)}%` : formatCurrency(value);
+    isPercentageChart ? `${value.toFixed(2)}%` : formatCurrency(value);
   const chartTitle = chartView === 'profit'
     ? 'Beneficio mensual'
     : chartView === 'balance'
       ? 'Saldo mensual'
-      : 'Rentabilidad mensual';
-  const monthlyChartMinWidth = effectiveMonthlyWithData.length > 12 ? `${effectiveMonthlyWithData.length * 86}px` : '100%';
-  const hasNegativeMonth = effectiveMonthlyWithData.some((m) => getChartValue(m) < 0);
-  const maxMonthPct = Math.max(1, ...effectiveMonthlyWithData.map((m) => Math.abs(getChartValue(m))));
+      : chartView === 'general'
+        ? 'Rentabilidad general de la estrategia'
+        : 'Rentabilidad mensual';
+  const chartSubtitle = chartView === 'general'
+    ? 'Referencia informativa de la rentabilidad mensual general'
+    : 'Comparativa mensual segun el periodo seleccionado';
+  const monthlyChartMinWidth = chartMonthlyData.length > 12 ? `${chartMonthlyData.length * 86}px` : '100%';
+  const hasNegativeMonth = chartMonthlyData.some((m) => getChartValue(m) < 0);
+  const maxMonthPct = Math.max(1, ...chartMonthlyData.map((m) => Math.abs(getChartValue(m))));
   const patrimonioWithData = report.patrimonioEvolution.filter((p) => p.hasData && p.balance !== undefined && (p.balance ?? 0) !== 0);
   const patrimonioChartData = rangeStart && rangeEnd
     ? patrimonioWithData.filter((p) => {
@@ -1271,7 +1298,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
         <section className="report-pro-panel report-pro-panel-xl">
           <div className="report-pro-panel-head">
             <h4>{chartTitle}</h4>
-            <p>Comparativa mensual segun el periodo seleccionado</p>
+            <p>{chartSubtitle}</p>
           </div>
           <div className="report-pro-chart-toolbar">
             <label>
@@ -1280,20 +1307,27 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                 <option value="return">Rentabilidad</option>
                 <option value="profit">Beneficio EUR</option>
                 <option value="balance">Saldo</option>
+                {hasGeneralReference ? <option value="general">Rentabilidad general</option> : null}
               </select>
             </label>
           </div>
-          <div className={`report-pro-chart-scroll ${effectiveMonthlyWithData.length > 12 ? 'is-scrollable' : ''}`}>
+          {chartView === 'general' ? (
+            <div className="report-pro-reference-note" role="note">
+              <strong>Solo como referencia</strong>
+              <span>Esta rentabilidad es la general de la estrategia. No se aplica a tu saldo, beneficio, rentabilidad ni TWR.</span>
+            </div>
+          ) : null}
+          <div className={`report-pro-chart-scroll ${chartMonthlyData.length > 12 ? 'is-scrollable' : ''}`}>
             <div
-              className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''}`}
+              className={`report-pro-bars ${hasNegativeMonth ? 'has-negative' : ''} ${chartView === 'general' ? 'is-general-reference' : ''}`}
               style={{
-                gridTemplateColumns: effectiveMonthlyWithData.length > 12
-                  ? `repeat(${Math.max(1, effectiveMonthlyWithData.length)}, minmax(76px, 1fr))`
-                  : `repeat(${Math.max(1, effectiveMonthlyWithData.length)}, minmax(0, 1fr))`,
+                gridTemplateColumns: chartMonthlyData.length > 12
+                  ? `repeat(${Math.max(1, chartMonthlyData.length)}, minmax(76px, 1fr))`
+                  : `repeat(${Math.max(1, chartMonthlyData.length)}, minmax(0, 1fr))`,
                 minWidth: monthlyChartMinWidth
               }}
             >
-              {effectiveMonthlyWithData.map((m) => {
+              {chartMonthlyData.map((m) => {
               const maxBarHeight = hasNegativeMonth ? 46 : 92;
               const chartValue = getChartValue(m);
               const height = Math.min(maxBarHeight, Math.max(4, (Math.abs(chartValue) / maxMonthPct) * maxBarHeight));

@@ -1,11 +1,19 @@
 import { MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
+import { isDemoClient } from '../constants/clients';
 import { auth, db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { buildClientReportData, toClientReportPayload, type ClientContactInfo } from '../utils/clientReport';
+import { getDominantMonthlyReturn } from '../utils/monthlyHistory';
 
 const DOC_PATH = 'portfolio/state';
 const PUBLICATION_DOC_PATH = 'portfolio/client-publication';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
 const CONTACTS_STORAGE_KEY = 'portfolio-contacts';
+const GENERAL_REFERENCE_CLIENT_ID = 'client-004';
+
+export interface GeneralReferenceMonth {
+  month: string;
+  returnPct: number;
+}
 
 const emptyPersisted: PersistedState = { finalByDay: {}, movementsByClient: {}, monthlyHistoryByClient: {} };
 
@@ -32,12 +40,33 @@ const readLocalContacts = (): Record<string, ClientContactInfo> => {
 const contactFullName = (contact?: ClientContactInfo) =>
   `${contact?.name ?? ''} ${contact?.surname ?? ''}`.trim();
 
+const buildGeneralReferenceMonthly = (
+  clients: Array<{ id: string }>,
+  monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>
+): GeneralReferenceMonth[] => {
+  const realClientIds = clients.filter((client) => !isDemoClient(client.id)).map((client) => client.id);
+  const months = new Set(
+    realClientIds.flatMap((clientId) => Object.keys(monthlyHistoryByClient[clientId] ?? {}))
+  );
+
+  return [...months]
+    .sort()
+    .map((month) => ({
+      month,
+      returnPct: getDominantMonthlyReturn(
+        realClientIds.map((clientId) => monthlyHistoryByClient[clientId]?.[month]?.returnPct)
+      )
+    }))
+    .filter((item): item is GeneralReferenceMonth => item.returnPct !== undefined);
+};
+
 const buildClientOverview = (
   snapshot: PortfolioSnapshot,
   clientId: string,
   clientName: string,
   monthlyHistory: Record<string, MonthlyHistoryEntry>,
-  contact?: ClientContactInfo
+  contact?: ClientContactInfo,
+  generalReferenceMonthly?: GeneralReferenceMonth[]
 ) => {
   const localContact = contact ?? readLocalContacts()[clientId];
   const displayName = contactFullName(localContact) || clientName;
@@ -54,6 +83,7 @@ const buildClientOverview = (
     clientId,
     clientName: report?.name ?? displayName,
     report: report ? toClientReportPayload(report) : null,
+    ...(generalReferenceMonthly?.length ? { generalReferenceMonthly } : {}),
     updatedAt: Date.now()
   };
 };
@@ -128,10 +158,18 @@ export const publishClientOverviews = async (
     publishedBy: auth.currentUser?.uid ?? ''
   };
   const accessProfiles = await db.collection('access_profiles').where('role', '==', 'client').get();
+  const generalReferenceMonthly = buildGeneralReferenceMonthly(clients, monthlyHistoryByClient);
   const batch = db.batch();
   clients.forEach((client) => {
     const docRef = db.collection(CLIENT_OVERVIEW_COLLECTION).doc(client.id);
-    batch.set(docRef, buildClientOverview(snapshot, client.id, client.name, monthlyHistoryByClient[client.id] ?? {}, contacts[client.id]));
+    batch.set(docRef, buildClientOverview(
+      snapshot,
+      client.id,
+      client.name,
+      monthlyHistoryByClient[client.id] ?? {},
+      contacts[client.id],
+      client.id === GENERAL_REFERENCE_CLIENT_ID ? generalReferenceMonthly : undefined
+    ));
   });
   accessProfiles.docs.forEach((profileDoc) => {
     const data = profileDoc.data() as AccessProfile;
