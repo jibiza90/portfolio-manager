@@ -515,6 +515,7 @@ const LoginCard = ({
         .pmShell > * {
           position: relative;
           z-index: 1;
+          min-width: 0;
         }
         .pmBrand {
           padding: clamp(24px, 3vw, 40px);
@@ -752,6 +753,33 @@ const LoginCard = ({
           box-shadow: 0 20px 36px rgba(15, 109, 122, 0.28);
           transition: transform 0.14s ease, opacity 0.14s ease, box-shadow 0.18s ease;
         }
+        .pmSubmitBusy {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+        }
+        .pmSubmitSpinner {
+          width: 15px;
+          height: 15px;
+          border: 2px solid rgba(255, 255, 255, 0.42);
+          border-top-color: #ffffff;
+          border-radius: 50%;
+          animation: pmSpin 0.75s linear infinite;
+        }
+        .pmAccessHelp {
+          margin: 16px 0 0;
+          color: #64717d;
+          font-size: 12.5px;
+          line-height: 1.5;
+          text-align: center;
+        }
+        .pmAccessHelp strong {
+          color: #304255;
+        }
+        @keyframes pmSpin {
+          to { transform: rotate(360deg); }
+        }
         .pmSubmit:disabled {
           cursor: not-allowed;
           opacity: 0.66;
@@ -791,12 +819,123 @@ const LoginCard = ({
           }
         }
         @media (max-width: 720px) {
-          .pmPills {
-            grid-template-columns: 1fr;
+          .pmLoginRoot {
+            min-height: 100dvh;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+          }
+          .pmLoginWrap {
+            width: 100%;
+          }
+          .pmShell {
+            width: 100%;
+            border-radius: 24px;
+            min-height: 0;
+          }
+          .pmBrand {
+            padding: 18px 18px 16px;
+            gap: 0;
+          }
+          .pmBrandIntro {
+            display: block;
+          }
+          .pmLogo {
+            margin: 0;
+          }
+          .pmMark {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+          }
+          .pmTitle,
+          .pmCopy,
+          .pmPills,
+          .pmBrand > div:last-child {
+            display: none;
+          }
+          .pmCard {
+            padding: 24px 18px 22px;
+            justify-content: flex-start;
+          }
+          .pmCardHead {
+            margin-bottom: 22px;
+          }
+          .pmCardTitle {
+            font-size: 27px;
+          }
+          .pmStatus {
+            display: none;
+          }
+          .pmField {
+            margin-bottom: 16px;
+          }
+          .pmInput {
+            min-height: 50px;
+            padding-top: 13px;
+            padding-bottom: 13px;
+            font-size: 16px;
+          }
+          .pmIconBtn {
+            min-height: 36px;
           }
           .pmLoginOptions {
+            align-items: stretch;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 2px;
+          }
+          .pmRemember {
+            min-height: 36px;
+          }
+          .pmForgetBtn {
+            align-self: flex-start;
+            min-height: 40px;
+            padding: 9px 12px;
+          }
+          .pmSubmit {
+            min-height: 52px;
+            margin-top: 10px;
+            font-size: 13px;
+          }
+          .pmAccessHelp {
+            max-width: 100%;
+            overflow-wrap: anywhere;
+          }
+          .pmCard form,
+          .pmControl,
+          .pmInput {
+            min-width: 0;
+            max-width: 100%;
+          }
+          .pmCard form {
+            width: 100%;
+          }
+        }
+        @media (max-width: 390px) {
+          .pmLoginRoot {
+            align-items: flex-start;
+          }
+          .pmCardHead {
             align-items: flex-start;
             flex-direction: column;
+            gap: 10px;
+          }
+          .pmStatus {
+            align-self: flex-start;
+          }
+        }
+        @media (max-height: 680px) and (max-width: 720px) {
+          .pmLoginRoot {
+            align-items: flex-start;
+          }
+          .pmBrand {
+            padding-top: 14px;
+            padding-bottom: 12px;
+          }
+          .pmCard {
+            padding-top: 18px;
+            padding-bottom: 18px;
           }
         }
       `}</style>
@@ -807,10 +946,11 @@ const LoginCard = ({
             <div className="pmBrandIntro">
               <div className="pmLogo">
                 <div className="pmMark" aria-hidden="true">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2l8.5 5v10L12 22 3.5 17V7L12 2Z" stroke="rgba(255,255,255,.95)" strokeWidth="1.6" />
-                    <path d="M7.2 14.1 12 16.9l4.8-2.8" stroke="rgba(255,255,255,.92)" strokeWidth="1.6" strokeLinecap="round" />
-                    <path d="M12 6.5v10.4" stroke="rgba(255,255,255,.86)" strokeWidth="1.6" strokeLinecap="round" />
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 19.5V5" stroke="rgba(255,255,255,.82)" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M4 19.5h16" stroke="rgba(255,255,255,.82)" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="m7 15 3.2-3.4 2.8 2.1 4.5-5.2" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M14.8 8.5h2.7v2.7" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
                 <div>
@@ -909,7 +1049,7 @@ const LoginCard = ({
                     onChange={(event) => setRememberIdentifier(event.target.checked)}
                   />
                   <span className="pmCheckBox" aria-hidden="true">{rememberIdentifier ? '✓' : ''}</span>
-                  <span>Recordar usuario en este dispositivo</span>
+                  <span>Recordar usuario</span>
                 </label>
                 <button
                   type="button"
@@ -921,15 +1061,18 @@ const LoginCard = ({
                     setPassword('');
                   }}
                 >
-                  Olvidar este dispositivo
+                  Borrar usuario guardado
                 </button>
               </div>
 
               <button className="pmSubmit" type="submit" disabled={busy || !identifier.trim() || !password}>
-                {busy ? 'Verificando...' : 'Iniciar sesion'}
+                {busy ? (
+                  <span className="pmSubmitBusy"><i className="pmSubmitSpinner" aria-hidden="true" /> Accediendo...</span>
+                ) : 'Iniciar sesion'}
               </button>
 
               {error ? <div className="pmError">{error}</div> : null}
+              <p className="pmAccessHelp"><strong>Problemas para acceder?</strong> Contacta con tu gestor.</p>
             </form>
           </section>
         </section>

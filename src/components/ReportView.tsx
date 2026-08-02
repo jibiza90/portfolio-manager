@@ -1049,33 +1049,36 @@ export const ReportView: React.FC<ReportViewProps> = ({
     };
 
     // Cover / header
+    const coverHeight = isDemoPdf ? 66 : 88;
     setFill(colors.ink);
-    doc.roundedRect(margin, y, contentWidth, 88, 16, 16, 'F');
+    doc.roundedRect(margin, y, contentWidth, coverHeight, 16, 16, 'F');
     setFill(colors.blue);
-    doc.roundedRect(margin, y, 8, 88, 4, 4, 'F');
+    doc.roundedRect(margin, y, 8, coverHeight, 4, 4, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(23);
+    doc.setFontSize(isDemoPdf ? 20 : 23);
     setText(colors.white);
-    doc.text('Investment Report', margin + 26, y + 34);
+    doc.text('Investment Report', margin + 26, y + (isDemoPdf ? 27 : 34));
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`${currentReport.clientCode} - ${selectedMonthLabel}`, margin + 28, y + 57);
-    doc.text(`Emitido: ${new Date().toLocaleDateString('es-ES')}`, pageWidth - margin - 145, y + 34);
-    y += isDemoPdf ? 122 : 110;
+    doc.setFontSize(isDemoPdf ? 9 : 10);
+    doc.text(`${currentReport.clientCode} - ${selectedMonthLabel}`, margin + 28, y + (isDemoPdf ? 47 : 57));
+    doc.text(`Emitido: ${new Date().toLocaleDateString('es-ES')}`, pageWidth - margin - 145, y + (isDemoPdf ? 27 : 34));
+    y += isDemoPdf ? 82 : 110;
 
     const cardW = (contentWidth - 30) / 3;
-    card(margin, y, cardW, 68, 'Valor final del periodo', money(periodEndBalance), periodEndBalance >= 0);
-    card(margin + cardW + 15, y, cardW, 68, 'Beneficio del periodo', money(periodProfit), periodProfit >= 0);
-    card(margin + (cardW + 15) * 2, y, cardW, 68, 'Rentabilidad periodo', pct(periodReturnPct * 100), periodReturnPct >= 0);
-    y += isDemoPdf ? 92 : 82;
-    card(margin, y, cardW, 62, 'Capital aportado del periodo', money(periodIncrements), true);
-    card(margin + cardW + 15, y, cardW, 62, 'Capital retirado del periodo', money(periodDecrements), periodDecrements <= 0);
-    card(margin + (cardW + 15) * 2, y, cardW, 62, 'Capital neto del periodo', money(periodIncrements - periodDecrements), periodIncrements - periodDecrements >= 0);
-    y += isDemoPdf ? 98 : 86;
+    const primaryCardHeight = isDemoPdf ? 56 : 68;
+    const secondaryCardHeight = isDemoPdf ? 54 : 62;
+    card(margin, y, cardW, primaryCardHeight, 'Valor final del periodo', money(periodEndBalance), periodEndBalance >= 0);
+    card(margin + cardW + 15, y, cardW, primaryCardHeight, 'Beneficio del periodo', money(periodProfit), periodProfit >= 0);
+    card(margin + (cardW + 15) * 2, y, cardW, primaryCardHeight, 'Rentabilidad periodo', pct(periodReturnPct * 100), periodReturnPct >= 0);
+    y += isDemoPdf ? 66 : 82;
+    card(margin, y, cardW, secondaryCardHeight, 'Capital aportado del periodo', money(periodIncrements), true);
+    card(margin + cardW + 15, y, cardW, secondaryCardHeight, 'Capital retirado del periodo', money(periodDecrements), periodDecrements <= 0);
+    card(margin + (cardW + 15) * 2, y, cardW, secondaryCardHeight, 'Capital neto del periodo', money(periodIncrements - periodDecrements), periodIncrements - periodDecrements >= 0);
+    y += isDemoPdf ? 72 : 86;
 
-    sectionTitle('Evolucion patrimonio', 'Saldo al cierre de cada mes del periodo seleccionado.', 205);
-    drawLineChart(effectivePatrimonioData, margin, y, contentWidth, 190);
-    y += isDemoPdf ? 228 : 216;
+    sectionTitle('Evolucion patrimonio', 'Saldo al cierre de cada mes del periodo seleccionado.', isDemoPdf ? 210 : 205);
+    drawLineChart(effectivePatrimonioData, margin, y, contentWidth, isDemoPdf ? 205 : 190);
+    y += isDemoPdf ? 226 : 216;
 
     sectionTitle('Rentabilidad mensual', 'TWR mensual segun los meses visibles en pantalla.', 165);
     drawReturnBars(effectiveMonthlyWithData, margin, y, contentWidth, 150);
