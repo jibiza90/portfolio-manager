@@ -2392,6 +2392,7 @@ const AuthShell = () => {
   const saveStatus = usePortfolioStore((state) => state.saveStatus);
   const pendingLogoutTimerRef = useRef<number | null>(null);
   const inactivityTimerRef = useRef<number | null>(null);
+  const inactivityLastActivityAtRef = useRef(Date.now());
   const inactivityLogoutRef = useRef(false);
   const manualLogoutRef = useRef(false);
   const adminUidRef = useRef<string | null>(null);
@@ -2400,8 +2401,15 @@ const AuthShell = () => {
   useEffect(() => {
     const user = auth.currentUser;
     if (!session.role || !user || session.uid !== user.uid) return;
-    return startPresenceHeartbeat(user);
-  }, [session.role, session.uid]);
+    const inactivityExempt = session.role === 'admin'
+      && normalizeEmail(session.email ?? '') === PRIMARY_ADMIN_EMAIL;
+    if (!inactivityExempt) inactivityLastActivityAtRef.current = Date.now();
+    return startPresenceHeartbeat(user, () => (
+      document.visibilityState === 'visible' && (
+        inactivityExempt || Date.now() - inactivityLastActivityAtRef.current < INACTIVITY_TIMEOUT_MS
+      )
+    ));
+  }, [session.email, session.role, session.uid]);
 
   const clearInactivityTimer = () => {
     if (inactivityTimerRef.current !== null) {
@@ -2632,7 +2640,7 @@ const AuthShell = () => {
 
   useEffect(() => {
     const triggerInactivityLogout = () => {
-      if (!auth.currentUser || !session.role) return;
+      if (!auth.currentUser || !session.role || inactivityLogoutRef.current) return;
       inactivityLogoutRef.current = true;
       adminUidRef.current = null;
       setSession((prev) =>
@@ -2652,9 +2660,17 @@ const AuthShell = () => {
       })();
     };
 
-    const armInactivityTimer = () => {
+    const checkInactivity = () => {
+      if (Date.now() - inactivityLastActivityAtRef.current >= INACTIVITY_TIMEOUT_MS) {
+        triggerInactivityLogout();
+        return;
+      }
       clearInactivityTimer();
-      inactivityTimerRef.current = window.setTimeout(triggerInactivityLogout, INACTIVITY_TIMEOUT_MS);
+      const remainingMs = Math.max(
+        250,
+        INACTIVITY_TIMEOUT_MS - (Date.now() - inactivityLastActivityAtRef.current)
+      );
+      inactivityTimerRef.current = window.setTimeout(checkInactivity, remainingMs);
     };
 
     const inactivityExempt = session.role === 'admin'
@@ -2664,15 +2680,23 @@ const AuthShell = () => {
       return;
     }
 
-    const onActivity = () => armInactivityTimer();
+    inactivityLastActivityAtRef.current = Date.now();
+    const onActivity = () => {
+      if (Date.now() - inactivityLastActivityAtRef.current >= INACTIVITY_TIMEOUT_MS) {
+        triggerInactivityLogout();
+        return;
+      }
+      inactivityLastActivityAtRef.current = Date.now();
+      checkInactivity();
+    };
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        armInactivityTimer();
+        checkInactivity();
       }
     };
-    const events: Array<keyof WindowEventMap> = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll', 'focus'];
+    const events: Array<keyof WindowEventMap> = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'];
 
-    armInactivityTimer();
+    checkInactivity();
     events.forEach((eventName) => {
       window.addEventListener(eventName, onActivity, { passive: true });
     });

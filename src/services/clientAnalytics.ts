@@ -329,7 +329,7 @@ export const createClientActivityTracker = async ({
   let currentChoice = choice;
   let ended = false;
   const heartbeat = window.setInterval(() => {
-    if (ended) return;
+    if (ended || document.visibilityState !== 'visible') return;
     void sessionRef.update({ lastSeenAt: Date.now() }).catch(() => undefined);
   }, HEARTBEAT_MS);
 

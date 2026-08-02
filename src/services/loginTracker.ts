@@ -14,6 +14,7 @@ export interface OnlinePresence {
   uid: string;
   email: string;
   lastSeen: number;
+  presenceVersion: string;
 }
 
 export interface ReportDownloadEvent {
@@ -36,6 +37,7 @@ const LOGIN_EVENTS_COLLECTION = 'auth_login_events';
 const ONLINE_PRESENCE_COLLECTION = 'auth_presence';
 const REPORT_DOWNLOAD_EVENTS_COLLECTION = 'report_download_events';
 const PRESENCE_HEARTBEAT_MS = 60_000;
+export const ACTIVE_PRESENCE_VERSION = 'active-v2';
 const inFlightAuthEventKeys = new Set<string>();
 
 const normalizeEmail = (value: string | null | undefined) => (value ?? '').trim().toLowerCase();
@@ -117,19 +119,24 @@ const mapOnlinePresence = (doc: firebase.firestore.QueryDocumentSnapshot<firebas
     id: doc.id,
     uid: String(data.uid ?? doc.id),
     email: String(data.email ?? ''),
-    lastSeen: Number(data.lastSeen ?? 0)
+    lastSeen: Number(data.lastSeen ?? 0),
+    presenceVersion: String(data.presenceVersion ?? '')
   };
 };
 
-export const startPresenceHeartbeat = (user: firebase.User) => {
+export const startPresenceHeartbeat = (
+  user: firebase.User,
+  shouldRefresh: () => boolean = () => document.visibilityState === 'visible'
+) => {
   let stopped = false;
   const presenceRef = db.collection(ONLINE_PRESENCE_COLLECTION).doc(user.uid);
   const updatePresence = () => {
-    if (stopped) return;
+    if (stopped || !shouldRefresh()) return;
     void presenceRef.set({
       uid: user.uid,
       email: normalizeEmail(user.email),
-      lastSeen: Date.now()
+      lastSeen: Date.now(),
+      presenceVersion: ACTIVE_PRESENCE_VERSION
     }).catch((error) => {
       console.debug('No se pudo actualizar la presencia de la sesion', error);
     });

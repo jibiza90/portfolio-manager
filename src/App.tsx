@@ -36,6 +36,7 @@ import {
 import { auth } from './services/firebaseApp';
 import { createAndDownloadAdminBackup } from './services/adminBackup';
 import {
+  ACTIVE_PRESENCE_VERSION,
   deleteReportDownloadEvent,
   fetchLoginEvents,
   fetchOnlinePresence,
@@ -3076,7 +3077,10 @@ function LoginAccessView({
   const onlineRows = useMemo(() => {
     const profilesByUid = new Map(accessProfiles.map((profile) => [profile.uid, profile]));
     return onlinePresence
-      .filter((presence) => presence.lastSeen >= presenceNow - 130_000)
+      .filter((presence) => (
+        presence.presenceVersion === ACTIVE_PRESENCE_VERSION &&
+        presence.lastSeen >= presenceNow - 130_000
+      ))
       .map((presence) => {
         const profile = profilesByUid.get(presence.uid);
         if (!profile || profile.active === false) return null;
