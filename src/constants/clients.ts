@@ -4,6 +4,7 @@ export interface ClientProfile {
 }
 
 const STORAGE_KEY = 'portfolio-clients';
+const DELETED_STORAGE_KEY = 'portfolio-deleted-clients';
 export const DEMO_CLIENT_ID = 'client-001';
 const LEGACY_DEMO_CLIENT_ID = 'client-demo';
 
@@ -24,10 +25,30 @@ const defaultClients: ClientProfile[] = [
   { id: LEGACY_DEMO_CLIENT_ID, name: 'Cliente Demo' }
 ];
 
-const mergeWithDefaultClients = (clients: ClientProfile[]) => {
+const loadDeletedClientIds = (): string[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(DELETED_STORAGE_KEY) ?? '[]') as unknown;
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistDeletedClientIds = (clientIds: string[]) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(DELETED_STORAGE_KEY, JSON.stringify([...new Set(clientIds)]));
+};
+
+const mergeWithDefaultClients = (clients: ClientProfile[], deletedClientIds: string[]) => {
+  const deleted = new Set(deletedClientIds);
   const merged = new Map<string, ClientProfile>();
-  defaultClients.forEach((client) => merged.set(client.id, client));
-  clients.forEach((client) => merged.set(client.id, client));
+  defaultClients.forEach((client) => {
+    if (!deleted.has(client.id)) merged.set(client.id, client);
+  });
+  clients.forEach((client) => {
+    if (!deleted.has(client.id)) merged.set(client.id, client);
+  });
   const ordered = Array.from(merged.values()).filter((client) => client.id !== LEGACY_DEMO_CLIENT_ID);
   const demoClient = merged.get(LEGACY_DEMO_CLIENT_ID);
   return demoClient ? [...ordered, demoClient] : ordered;
@@ -37,17 +58,17 @@ const loadClients = (): ClientProfile[] => {
   if (typeof window === 'undefined') return defaultClients;
 
   try {
+    const deletedClientIds = loadDeletedClientIds();
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultClients;
+    if (!raw) return mergeWithDefaultClients([], deletedClientIds);
     const parsed = JSON.parse(raw) as ClientProfile[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return defaultClients;
+    if (!Array.isArray(parsed)) return mergeWithDefaultClients([], deletedClientIds);
     const valid = parsed.filter((c) => typeof c?.id === 'string' && typeof c?.name === 'string');
-    if (valid.length === 0) return defaultClients;
-    const merged = mergeWithDefaultClients(valid);
+    const merged = mergeWithDefaultClients(valid, deletedClientIds);
     if (merged.length !== valid.length) persistClients(merged);
     return merged;
   } catch {
-    return defaultClients;
+    return mergeWithDefaultClients([], loadDeletedClientIds());
   }
 };
 
@@ -59,8 +80,9 @@ const persistClients = (clients: ClientProfile[]) => {
 export const CLIENTS: ClientProfile[] = loadClients();
 
 export const addClientProfile = (name?: string): ClientProfile => {
-  const maxIdx = CLIENTS.reduce((max, c) => {
-    const match = c.id.match(/client-(\d+)/);
+  const deletedClientIds = loadDeletedClientIds();
+  const maxIdx = [...CLIENTS.map((client) => client.id), ...deletedClientIds].reduce((max, clientId) => {
+    const match = clientId.match(/client-(\d+)/);
     const idx = match ? Number.parseInt(match[1], 10) : 0;
     return Number.isFinite(idx) ? Math.max(max, idx) : max;
   }, 0);
@@ -81,6 +103,7 @@ export const removeClientProfile = (clientId: string): boolean => {
   const idx = CLIENTS.findIndex((c) => c.id === clientId);
   if (idx < 0) return false;
   CLIENTS.splice(idx, 1);
+  persistDeletedClientIds([...loadDeletedClientIds(), clientId]);
   persistClients(CLIENTS);
   return true;
 };

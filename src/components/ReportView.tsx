@@ -202,6 +202,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
+  const detailScrollAnimationRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
   const twrExplanation = 'Mide la evolución de la cartera aislando el efecto de las aportaciones y retiradas de dinero. Permite conocer cómo se han comportado las inversiones durante un periodo determinado, independientemente de cuándo el cliente haya ingresado o retirado capital.';
@@ -239,6 +240,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
   useEffect(() => {
     setExpandedContributionMonths({});
   }, [report?.clientId]);
+
+  useEffect(() => () => {
+    if (detailScrollAnimationRef.current !== null) {
+      window.cancelAnimationFrame(detailScrollAnimationRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (chartView === 'general' && generalReferenceMonthly.length === 0) {
@@ -559,16 +566,56 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const hasVisibleMonthlyBreakdowns = effectiveMonthlyWithData.some((month) =>
     tableContributionByMonth.has(reportMonthToKey(month.month))
   );
+  const gentlyRevealDetail = (element: HTMLElement) => {
+    const margin = 20;
+    const rect = element.getBoundingClientRect();
+    const viewportBottom = window.innerHeight - margin;
+    const delta = rect.bottom > viewportBottom
+      ? rect.bottom - viewportBottom
+      : rect.top < margin
+        ? rect.top - margin
+        : 0;
+    if (Math.abs(delta) < 2) return;
+
+    if (detailScrollAnimationRef.current !== null) {
+      window.cancelAnimationFrame(detailScrollAnimationRef.current);
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      window.scrollBy(0, delta);
+      return;
+    }
+
+    const startY = window.scrollY;
+    const targetY = Math.max(0, startY + delta);
+    const startedAt = performance.now();
+    const duration = 650;
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      window.scrollTo(0, startY + (targetY - startY) * eased);
+      if (progress < 1) {
+        detailScrollAnimationRef.current = window.requestAnimationFrame(animate);
+      } else {
+        detailScrollAnimationRef.current = null;
+      }
+    };
+    detailScrollAnimationRef.current = window.requestAnimationFrame(animate);
+  };
   const toggleMonthlyBreakdown = (monthKey: string, source: 'benefits' | 'monthly') => {
+    if (detailScrollAnimationRef.current !== null) {
+      window.cancelAnimationFrame(detailScrollAnimationRef.current);
+      detailScrollAnimationRef.current = null;
+    }
     const willExpand = !expandedContributionMonths[monthKey];
     setExpandedContributionMonths((prev) => ({ ...prev, [monthKey]: willExpand }));
     if (!willExpand) return;
 
     window.setTimeout(() => {
-      document
-        .getElementById(`report-month-detail-${source}-${monthKey}`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 80);
+      const detail = document.getElementById(`report-month-detail-${source}-${monthKey}`);
+      if (detail) gentlyRevealDetail(detail);
+    }, 120);
   };
   const renderMonthlyDetailButton = (
     monthKey: string,

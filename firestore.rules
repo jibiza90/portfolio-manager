@@ -38,6 +38,10 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /portfolio_archived_clients/{clientId} {
+      allow read, write: if isAdmin();
+    }
+
     match /reportLinks/{token} {
       allow read: if isAdmin() || (resource.data.expiresAt is int && resource.data.expiresAt > request.time.toMillis());
       allow create, update: if isAdmin() &&

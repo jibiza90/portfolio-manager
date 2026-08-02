@@ -1,4 +1,4 @@
-import { MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
+import { Movement, MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
 import { isDemoClient } from '../constants/clients';
 import { auth, db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { buildClientReportData, toClientReportPayload, type ClientContactInfo } from '../utils/clientReport';
@@ -201,14 +201,16 @@ export interface AccessProfileRecord extends AccessProfile {
 
 export const listClientAccessProfiles = async (): Promise<AccessProfileRecord[]> => {
   const snapshot = await db.collection('access_profiles').where('role', '==', 'client').get();
-  return snapshot.docs.map((doc) => {
-    const data = doc.data() as AccessProfile;
-    return {
-      uid: doc.id,
-      ...data,
-      loginId: data.loginId ?? loginIdFromAuthEmail(data.email)
-    };
-  });
+  return snapshot.docs
+    .map((doc) => {
+      const data = doc.data() as AccessProfile;
+      return {
+        uid: doc.id,
+        ...data,
+        loginId: data.loginId ?? loginIdFromAuthEmail(data.email)
+      };
+    })
+    .filter((profile) => profile.active !== false);
 };
 
 export const fetchAccessProfile = async (uid: string): Promise<AccessProfile | null> => {
@@ -409,4 +411,52 @@ export const setClientPassword = async (
 
 export const revokeClientAccess = async (uid: string) => {
   await db.collection('access_profiles').doc(uid).delete();
+};
+
+export interface ArchiveClientInput {
+  clientId: string;
+  clientName: string;
+  contact?: Record<string, unknown>;
+  guarantee?: number;
+  commissionCharged?: number;
+  commissionSettled?: boolean;
+  followUp?: unknown[];
+  movements?: Record<string, Movement>;
+  monthlyHistory?: Record<string, MonthlyHistoryEntry>;
+}
+
+export const archiveClientAndRevokeAccess = async (input: ArchiveClientInput) => {
+  const clientId = input.clientId.trim();
+  if (!clientId) throw new Error('client_id_required');
+
+  const [accessProfiles, reportLinks] = await Promise.all([
+    db.collection('access_profiles').where('clientId', '==', clientId).where('role', '==', 'client').get(),
+    db.collection('reportLinks').where('clientId', '==', clientId).get()
+  ]);
+  const archivedAt = Date.now();
+  const archiveRef = db.collection('portfolio_archived_clients').doc(clientId);
+  const batch = db.batch();
+  const archiveData = JSON.parse(JSON.stringify(input)) as ArchiveClientInput;
+
+  batch.set(archiveRef, {
+    ...archiveData,
+    clientId,
+    archivedAt,
+    archivedBy: auth.currentUser?.uid ?? '',
+    accessProfiles: accessProfiles.docs.map((profileDoc) => ({
+      uid: profileDoc.id,
+      ...profileDoc.data()
+    }))
+  });
+  batch.delete(db.collection(CLIENT_OVERVIEW_COLLECTION).doc(clientId));
+  accessProfiles.docs.forEach((profileDoc) => {
+    batch.set(profileDoc.ref, { active: false, archivedAt, updatedAt: archivedAt }, { merge: true });
+  });
+  await batch.commit();
+
+  for (let index = 0; index < reportLinks.docs.length; index += 450) {
+    const deleteBatch = db.batch();
+    reportLinks.docs.slice(index, index + 450).forEach((reportDoc) => deleteBatch.delete(reportDoc.ref));
+    await deleteBatch.commit();
+  }
 };

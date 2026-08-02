@@ -26,6 +26,7 @@ import {
   listClientAccessProfiles,
   publishClientOverviews,
   provisionClientAccess,
+  archiveClientAndRevokeAccess,
   revokeClientAccess,
   type ClientPublicationState,
   type AccessProfileRecord
@@ -3391,7 +3392,27 @@ export default function App() {
     setFollowUpByClient((prev) => ({ ...prev, [created.id]: prev[created.id] ?? [] }));
     return created;
   };
-  const handleDeleteClient = (clientId: string) => {
+  const handleDeleteClient = async (clientId: string) => {
+    const client = CLIENTS.find((item) => item.id === clientId);
+    if (!client || isDemoClient(clientId)) return false;
+
+    try {
+      await archiveClientAndRevokeAccess({
+        clientId,
+        clientName: client.name,
+        contact: contacts[clientId],
+        guarantee: guarantees[clientId],
+        commissionCharged: comisionesCobradas[clientId],
+        commissionSettled: comisionEstado[clientId],
+        followUp: followUpByClient[clientId],
+        movements: movementsByClient[clientId],
+        monthlyHistory: monthlyHistoryByClient[clientId]
+      });
+    } catch (error) {
+      console.error('No se pudo archivar y revocar el acceso del cliente', error);
+      return false;
+    }
+
     const removed = removeClientProfile(clientId);
     if (!removed) return false;
     removeClientData(clientId);
@@ -3425,6 +3446,7 @@ export default function App() {
       delete next[clientId];
       return next;
     });
+    setOwnerAccessProfiles((prev) => prev.filter((profile) => profile.clientId !== clientId));
     if (activeView === clientId) setActiveView(GENERAL_OPTION);
     return true;
   };
@@ -4111,7 +4133,7 @@ function InfoClientes({
   guarantees: Record<string, number>;
   setGuarantees: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   onAddClient: (name?: string) => { id: string; name: string };
-  onDeleteClient: (clientId: string) => boolean;
+  onDeleteClient: (clientId: string) => Promise<boolean>;
   isPrimaryAdmin: boolean;
 }) {
   const { snapshot } = usePortfolioStore();
@@ -4129,6 +4151,7 @@ function InfoClientes({
   const [accessBusy, setAccessBusy] = useState(false);
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
   const [clientAccessProfile, setClientAccessProfile] = useState<AccessProfileRecord | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -4358,19 +4381,24 @@ function InfoClientes({
     setSelectedId(created.id);
     window.dispatchEvent(new CustomEvent('show-toast', { detail: `${created.name} creado` }));
   };
-  const deleteSelectedClient = () => {
-    if (!currentClient) return;
-    const confirmed = window.confirm(`¿Eliminar ${displayName}? Esta accion no se puede deshacer.`);
+  const deleteSelectedClient = async () => {
+    if (!currentClient || deleteBusy) return;
+    const confirmed = window.confirm(`¿Eliminar ${displayName}? Se revocara su acceso y sus datos quedaran archivados.`);
     if (!confirmed) return;
-    const removed = onDeleteClient(currentClient.id);
-    if (!removed) {
-      window.dispatchEvent(new CustomEvent('show-toast', { detail: 'No se pudo eliminar el cliente' }));
-      return;
+    setDeleteBusy(true);
+    try {
+      const removed = await onDeleteClient(currentClient.id);
+      if (!removed) {
+        window.dispatchEvent(new CustomEvent('show-toast', { detail: 'No se pudo eliminar el cliente ni revocar su acceso' }));
+        return;
+      }
+      setSelectedId(GENERAL_OPTION);
+      setSearch('');
+      setMonthPopupKey(null);
+      window.dispatchEvent(new CustomEvent('show-toast', { detail: `${displayName} eliminado y archivado` }));
+    } finally {
+      setDeleteBusy(false);
     }
-    setSelectedId(GENERAL_OPTION);
-    setSearch('');
-    setMonthPopupKey(null);
-    window.dispatchEvent(new CustomEvent('show-toast', { detail: `${displayName} eliminado` }));
   };
 
   const createClientLogin = async () => {
@@ -4506,8 +4534,8 @@ function InfoClientes({
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {currentClient && (
-              <button type="button" className="info-delete-btn" onClick={deleteSelectedClient}>
-                Eliminar cliente
+              <button type="button" className="info-delete-btn" onClick={() => { void deleteSelectedClient(); }} disabled={deleteBusy}>
+                {deleteBusy ? 'Eliminando...' : 'Eliminar cliente'}
               </button>
             )}
           </div>
