@@ -183,6 +183,19 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /client_legal_acknowledgements/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() &&
+        request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['uid', 'clientId', 'version', 'acknowledgedAt']) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.clientId is string &&
+        clientOwns(request.resource.data.clientId) &&
+        request.resource.data.version is string &&
+        request.resource.data.acknowledgedAt is timestamp;
+      allow delete: if isAdmin();
+    }
+
     match /client_activity/{clientId} {
       allow read, write: if false;
 

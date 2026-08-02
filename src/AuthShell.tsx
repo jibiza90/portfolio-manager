@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ReportView } from './components/ReportView';
+import { LegalPrivacyNotice } from './components/LegalPrivacyNotice';
 import { CLIENTS, DEMO_CLIENT_ID, isDemoClient } from './constants/clients';
 import {
   buildClientAuthEmail,
@@ -18,6 +19,11 @@ import {
   type ClientActivityTracker
 } from './services/clientAnalytics';
 import { markMessagesReadByClient, sendSupportMessage, subscribeSupportMessages, type SupportMessage } from './services/supportInbox';
+import {
+  acknowledgeClientLegalNotice,
+  CLIENT_LEGAL_NOTICE_VERSION,
+  fetchClientLegalAcknowledgement
+} from './services/legalNotice';
 import { initializePortfolioStore, usePortfolioStore, waitForPendingPortfolioSave } from './store/portfolio';
 import type { ReportData } from './services/reportLinks';
 import type { ClientReportPayload } from './utils/clientReport';
@@ -476,6 +482,7 @@ const LoginCard = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberIdentifier, setRememberIdentifier] = useState(() => !!localStorage.getItem(REMEMBERED_IDENTIFIER_KEY));
+  const [legalNoticeOpen, setLegalNoticeOpen] = useState(false);
   const currentYear = new Date().getFullYear();
 
   return (
@@ -1091,6 +1098,15 @@ const LoginCard = ({
           </section>
         </section>
       </div>
+      <footer className="pmLoginLegal">
+        <button type="button" onClick={() => setLegalNoticeOpen(true)}>Privacidad y cookies</button>
+      </footer>
+      {legalNoticeOpen ? (
+        <LegalPrivacyNotice
+          onAccept={() => setLegalNoticeOpen(false)}
+          onClose={() => setLegalNoticeOpen(false)}
+        />
+      ) : null}
     </main>
   );
 };
@@ -1125,6 +1141,11 @@ const ClientPortal = ({
   const [supportError, setSupportError] = useState<string | null>(null);
   const [clientUnreadCount, setClientUnreadCount] = useState(0);
   const [analyticsReady, setAnalyticsReady] = useState(false);
+  const [legalNoticeLoaded, setLegalNoticeLoaded] = useState(false);
+  const [legalNoticeOpen, setLegalNoticeOpen] = useState(false);
+  const [legalNoticeRequired, setLegalNoticeRequired] = useState(false);
+  const [legalNoticeBusy, setLegalNoticeBusy] = useState(false);
+  const [legalNoticeError, setLegalNoticeError] = useState<string | null>(null);
   const activityTrackerRef = useRef<ClientActivityTracker | null>(null);
 
   const trackClientUsage = useCallback((event: {
@@ -1154,6 +1175,31 @@ const ClientPortal = ({
       cancelled = true;
     };
   }, [clientId, profileUid]);
+
+  useEffect(() => {
+    if (!profileUid) return;
+    let cancelled = false;
+    setLegalNoticeLoaded(false);
+    void fetchClientLegalAcknowledgement(profileUid)
+      .then((acknowledgement) => {
+        if (cancelled) return;
+        const required = acknowledgement?.version !== CLIENT_LEGAL_NOTICE_VERSION;
+        setLegalNoticeRequired(required);
+        setLegalNoticeOpen(required);
+        setLegalNoticeLoaded(true);
+      })
+      .catch((noticeError) => {
+        console.error('No se pudo comprobar la lectura del aviso legal', noticeError);
+        if (cancelled) return;
+        setLegalNoticeRequired(true);
+        setLegalNoticeOpen(true);
+        setLegalNoticeError('No se pudo comprobar la confirmacion anterior. Vuelve a intentarlo.');
+        setLegalNoticeLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [profileUid]);
 
   useEffect(() => {
     if (!profileUid || !loginId || !analyticsReady || activityTrackerRef.current) return undefined;
@@ -1491,6 +1537,27 @@ const ClientPortal = ({
     activityTrackerRef.current = null;
     if (tracker) await tracker.end('manual_logout');
     await onLogout();
+  };
+
+  const acceptLegalNotice = async () => {
+    if (!profileUid || legalNoticeBusy) return;
+    setLegalNoticeBusy(true);
+    setLegalNoticeError(null);
+    try {
+      await acknowledgeClientLegalNotice(profileUid, clientId);
+      setLegalNoticeRequired(false);
+      setLegalNoticeOpen(false);
+      void activityTrackerRef.current?.record({
+        category: 'security',
+        type: 'legal_notice_acknowledged',
+        label: CLIENT_LEGAL_NOTICE_VERSION
+      });
+    } catch (noticeError) {
+      console.error('No se pudo guardar la confirmacion del aviso legal', noticeError);
+      setLegalNoticeError('No se pudo guardar la confirmacion. Comprueba la conexion e intentalo de nuevo.');
+    } finally {
+      setLegalNoticeBusy(false);
+    }
   };
 
   const downloadClientPdf = async () => {
@@ -2290,6 +2357,18 @@ const ClientPortal = ({
           onDownloaded={trackClientPdfDownload}
           analyticsEnabled={analyticsReady}
           onAnalyticsEvent={trackClientUsage}
+        />
+      ) : null}
+      <footer className="client-portal-legal-footer">
+        <button type="button" onClick={() => setLegalNoticeOpen(true)}>Privacidad y cookies</button>
+      </footer>
+      {legalNoticeLoaded && legalNoticeOpen ? (
+        <LegalPrivacyNotice
+          required={legalNoticeRequired}
+          busy={legalNoticeBusy}
+          error={legalNoticeError}
+          onAccept={() => { void acceptLegalNotice(); }}
+          onClose={legalNoticeRequired ? undefined : () => setLegalNoticeOpen(false)}
         />
       ) : null}
     </main>

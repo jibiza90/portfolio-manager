@@ -35,6 +35,17 @@ test('network state is announced and recovers automatically', async ({ page, con
   await expect(page.getByRole('status').filter({ hasText: 'Conexion recuperada' })).toBeVisible();
 });
 
+test('the privacy and cookies notice is readable from the login', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Privacidad y cookies' }).click();
+
+  const notice = page.getByRole('dialog', { name: /Privacidad y tecnolog/ });
+  await expect(notice).toBeVisible();
+  await expect(notice.getByText('JIGSA CAPITAL BROKERING - FZCO')).toBeVisible();
+  await notice.getByRole('button', { name: 'Cerrar', exact: true }).click();
+  await expect(notice).toBeHidden();
+});
+
 test('the mobile financial summary and monthly detail control remain readable', async ({ page }) => {
   await page.goto('/');
   await page.locator('#root').evaluate((root) => {

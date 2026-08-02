@@ -57,6 +57,7 @@ const eventLabels: Record<string, string> = {
   expanded_period_change: 'Periodo del grafico ampliado',
   expanded_period_reset: 'Periodo ampliado restablecido',
   failed_login_attempts: 'Intentos de acceso fallidos detectados',
+  legal_notice_acknowledged: 'Aviso de privacidad y cookies confirmado',
   login_success: 'Inicio de sesion correcto',
   period_change: 'Cambio de periodo',
   period_custom_change: 'Periodo personalizado',
