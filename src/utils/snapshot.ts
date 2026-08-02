@@ -21,34 +21,46 @@ const maxIso = (...dates: Array<string | undefined>) => {
   return validDates.sort((a, b) => (a > b ? 1 : -1))[validDates.length - 1];
 };
 
-const getIncrementReturnAdjustment = (
+const getCustomFlowReturnAdjustment = (
   records: Record<string, Record<string, Movement>>,
   clientId: string,
   monthKey: string,
   monthlyReturnPct: number
 ) =>
   Object.entries(records[clientId] ?? {}).reduce((adjustment, [iso, movement]) => {
-    if (iso.slice(0, 7) !== monthKey || !movement.increment || movement.increment <= 0) {
+    if (iso.slice(0, 7) !== monthKey) {
       return adjustment;
     }
 
-    const customReturnPct = normalizeReturnPct(movement.incrementReturnPct);
-    if (customReturnPct === undefined) {
-      return adjustment;
+    let nextAdjustment = adjustment;
+    if ((movement.increment ?? 0) > 0) {
+      const customReturnPct = normalizeReturnPct(movement.incrementReturnPct);
+      if (customReturnPct !== undefined) {
+        nextAdjustment += (movement.increment ?? 0) * (customReturnPct - monthlyReturnPct);
+      }
     }
 
-    return adjustment + movement.increment * (customReturnPct - monthlyReturnPct);
+    if ((movement.decrement ?? 0) > 0) {
+      const customReturnPct = normalizeReturnPct(movement.decrementReturnPct);
+      if (customReturnPct !== undefined) {
+        nextAdjustment += (movement.decrement ?? 0) * customReturnPct;
+      }
+    }
+
+    return nextAdjustment;
   }, 0);
 
-const hasIncrementReturnOverride = (
+const hasCustomFlowReturnOverride = (
   records: Record<string, Record<string, Movement>>,
   clientId: string,
   monthKey: string
 ) =>
   Object.entries(records[clientId] ?? {}).some(([iso, movement]) => (
     iso.slice(0, 7) === monthKey &&
-    (movement.increment ?? 0) > 0 &&
-    normalizeReturnPct(movement.incrementReturnPct) !== undefined
+    (
+      ((movement.increment ?? 0) > 0 && normalizeReturnPct(movement.incrementReturnPct) !== undefined) ||
+      ((movement.decrement ?? 0) > 0 && normalizeReturnPct(movement.decrementReturnPct) !== undefined)
+    )
   ));
 
 const getPortfolioClients = () => CLIENTS.filter(({ id }) => !isDemoClient(id));
@@ -198,6 +210,7 @@ export const buildSnapshot = (
       const increment = movement?.increment;
       const incrementReturnPct = movement?.incrementReturnPct;
       const decrement = movement?.decrement;
+      const decrementReturnPct = movement?.decrementReturnPct;
       const manualProfitPct = movement?.manualProfitPct;
       const prevBalance = clientState[id].balance;
       const netFlow = (increment ?? 0) - (decrement ?? 0);
@@ -241,7 +254,7 @@ export const buildSnapshot = (
         const useClientReturnForCustomFlows =
           monthKey >= '2026-04' &&
           normalizedReturn !== undefined &&
-          hasIncrementReturnOverride(movementsByClient, id, monthKey);
+          hasCustomFlowReturnOverride(movementsByClient, id, monthKey);
         const coreReturn = monthlyHistory.finalBalance === undefined
           ? useClientReturnForCustomFlows
             ? normalizedReturn
@@ -279,13 +292,13 @@ export const buildSnapshot = (
           lockedCoreFinal = monthlyHistory.finalBalance;
         } else if (normalizedReturn !== undefined) {
           baseBalance = actualBase;
-          const incrementReturnAdjustment = getIncrementReturnAdjustment(
+          const customFlowReturnAdjustment = getCustomFlowReturnAdjustment(
             movementsByClient,
             id,
             day.iso.slice(0, 7),
             coreReturn ?? normalizedReturn
           );
-          lockedCoreFinal = (allocatableBase ?? 0) * (1 + (coreReturn ?? normalizedReturn)) + incrementReturnAdjustment;
+          lockedCoreFinal = (allocatableBase ?? 0) * (1 + (coreReturn ?? normalizedReturn)) + customFlowReturnAdjustment;
           isolatedProfitAdjustment = (allocatableBase ?? 0) * (normalizedReturn - (coreReturn ?? normalizedReturn));
           lockedReturnPct = normalizedReturn;
         }
@@ -298,6 +311,7 @@ export const buildSnapshot = (
         increment,
         incrementReturnPct,
         decrement,
+        decrementReturnPct,
         manualProfit,
         manualProfitPct,
         prevBalance,
@@ -353,6 +367,7 @@ export const buildSnapshot = (
       const increment = draft.increment;
       const incrementReturnPct = draft.incrementReturnPct;
       const decrement = draft.decrement;
+      const decrementReturnPct = draft.decrementReturnPct;
       const manualProfit = draft.manualProfit;
       const manualProfitPct = draft.manualProfitPct;
       const baseBalance = draft.beyondClientLastRecorded ? undefined : draft.baseBalance;
@@ -414,6 +429,7 @@ export const buildSnapshot = (
         increment,
         incrementReturnPct,
         decrement,
+        decrementReturnPct,
         manualProfit,
         manualProfitPct,
         baseBalance,

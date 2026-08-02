@@ -59,6 +59,7 @@ interface ClientOverview {
     increment: number | null;
     incrementReturnPct?: number | null;
     decrement: number | null;
+    decrementReturnPct?: number | null;
     baseBalance: number | null;
     finalBalance: number | null;
     profit: number | null;
@@ -178,40 +179,44 @@ const deriveContributionBreakdowns = (
       const contributionRows = movements.filter(
         (movement) => movement.type === 'increment' && movement.iso.slice(0, 7) === month.monthKey
       );
-      if (month.monthKey < startMonth || contributionRows.length === 0) return null;
+      const withdrawalRows = movements.filter(
+        (movement) => movement.type === 'decrement' && movement.iso.slice(0, 7) === month.monthKey
+      );
+      if (month.monthKey < startMonth || (contributionRows.length === 0 && withdrawalRows.length === 0)) return null;
 
-      const initialCapital = Math.max(0, monthly[index - 1]?.endBalance ?? 0);
+      const openingCapital = Math.max(0, monthly[index - 1]?.endBalance ?? 0);
       const totalMonthProfit = month.profit ?? 0;
       const fallbackReturnPct = (month.profitPct ?? 0) / 100;
-      const explicitContributionProfit = contributionRows.reduce((sum, item) => (
-        item.returnPct === undefined ? sum : sum + (item.amount ?? 0) * item.returnPct
-      ), 0);
-      const fallbackContributionCapital = contributionRows.reduce((sum, item) => (
-        item.returnPct === undefined ? sum + (item.amount ?? 0) : sum
-      ), 0);
-      const residualCapital = initialCapital + fallbackContributionCapital;
-      const residualProfit = totalMonthProfit - explicitContributionProfit;
-      const residualReturnPct = residualCapital !== 0 ? residualProfit / residualCapital : fallbackReturnPct;
+      const totalWithdrawals = withdrawalRows.reduce((sum, item) => sum + (item.amount ?? 0), 0);
+      const initialCapital = Math.max(0, openingCapital - totalWithdrawals);
       const initialReturnPct = fallbackReturnPct;
-      const initialProfit = residualProfit - fallbackContributionCapital * residualReturnPct;
+      const initialProfit = initialCapital * initialReturnPct;
       const contributions = contributionRows.map((item) => ({
         iso: item.iso,
         amount: item.amount ?? 0,
-        returnPct: item.returnPct ?? residualReturnPct,
-        profit: (item.amount ?? 0) * (item.returnPct ?? residualReturnPct)
+        returnPct: item.returnPct ?? fallbackReturnPct,
+        profit: (item.amount ?? 0) * (item.returnPct ?? fallbackReturnPct)
+      }));
+      const withdrawals = withdrawalRows.map((item) => ({
+        iso: item.iso,
+        amount: item.amount ?? 0,
+        ...(item.returnPct !== undefined ? { returnPct: item.returnPct } : {}),
+        profit: (item.amount ?? 0) * (item.returnPct ?? 0)
       }));
       const totalProfit = totalMonthProfit;
 
       return {
         month: month.month,
+        openingCapital,
         initialCapital,
         initialReturnPct,
         initialProfit,
         contributions,
+        withdrawals,
         totalProfit
       };
     })
-    .filter((item): item is NonNullable<ReportData['contributionBreakdowns']>[number] => item !== null);
+    .filter((item): item is Exclude<typeof item, null> => item !== null);
 };
 const filterVisibleContributionBreakdowns = (
   breakdowns?: ReportData['contributionBreakdowns'],
@@ -252,7 +257,9 @@ const buildFallbackReportFromOverview = (
       type: (row.increment ?? 0) > 0 ? 'increment' : 'decrement',
       amount: (row.increment ?? 0) > 0 ? row.increment ?? 0 : row.decrement ?? 0,
       balance: row.finalBalance ?? 0,
-      returnPct: (row.increment ?? 0) > 0 ? row.incrementReturnPct ?? undefined : undefined
+      returnPct: (row.increment ?? 0) > 0
+        ? row.incrementReturnPct ?? undefined
+        : row.decrementReturnPct ?? undefined
     }));
 
   return {
@@ -1056,7 +1063,7 @@ const ClientPortal = ({
         : null,
     [clientId, loginId, overview, report]
   );
-  const shouldUseModernReportPdf = Boolean(clientReportData && isDemoClient(clientReportData.clientId));
+  const shouldUseModernReportPdf = Boolean(clientReportData);
 
   const sendClientSupportMessage = async () => {
     const cleanText = supportText.trim();

@@ -559,10 +559,12 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
         iso: m.iso,
         type: m.type,
         amount: m.amount ?? 0,
-        balance: m.balance ?? 0
+        balance: m.balance ?? 0,
+        ...(m.returnPct !== undefined ? { returnPct: m.returnPct } : {})
       })),
       contributionBreakdowns: clientData.contributionBreakdowns.map((item) => ({
         month: item.monthLabel,
+        openingCapital: item.openingCapital ?? item.initialCapital ?? 0,
         initialCapital: item.initialCapital ?? 0,
         initialReturnPct: item.initialReturnPct ?? 0,
         initialProfit: item.initialProfit ?? 0,
@@ -571,6 +573,12 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
           amount: contribution.amount ?? 0,
           returnPct: contribution.returnPct ?? 0,
           profit: contribution.profit ?? 0
+        })),
+        withdrawals: item.withdrawals.map((withdrawal) => ({
+          iso: withdrawal.iso,
+          amount: withdrawal.amount ?? 0,
+          ...(withdrawal.returnPct !== undefined ? { returnPct: withdrawal.returnPct } : {}),
+          profit: withdrawal.profit ?? 0
         })),
         totalProfit: item.totalProfit ?? 0
       }))
@@ -765,10 +773,12 @@ Su gestor de inversiones`
                             iso: m.iso,
                             type: m.type,
                             amount: m.amount ?? 0,
-                            balance: m.balance ?? 0
+                            balance: m.balance ?? 0,
+                            ...(m.returnPct !== undefined ? { returnPct: m.returnPct } : {})
                           })),
                           contributionBreakdowns: clientDataForEmail.contributionBreakdowns.map((item) => ({
                             month: item.monthLabel,
+                            openingCapital: item.openingCapital ?? item.initialCapital ?? 0,
                             initialCapital: item.initialCapital ?? 0,
                             initialReturnPct: item.initialReturnPct ?? 0,
                             initialProfit: item.initialProfit ?? 0,
@@ -777,6 +787,12 @@ Su gestor de inversiones`
                               amount: contribution.amount ?? 0,
                               returnPct: contribution.returnPct ?? 0,
                               profit: contribution.profit ?? 0
+                            })),
+                            withdrawals: item.withdrawals.map((withdrawal) => ({
+                              iso: withdrawal.iso,
+                              amount: withdrawal.amount ?? 0,
+                              ...(withdrawal.returnPct !== undefined ? { returnPct: withdrawal.returnPct } : {}),
+                              profit: withdrawal.profit ?? 0
                             })),
                             totalProfit: item.totalProfit ?? 0
                           }))

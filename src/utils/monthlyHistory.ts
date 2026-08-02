@@ -89,6 +89,7 @@ export function buildMonthlyStatsForMonths(
     baseStart?: number;
     finalEnd?: number;
     hasIncrementReturnOverride?: boolean;
+    hasDecrementReturnOverride?: boolean;
     manualReturnAdjustment?: number;
   }>();
   const twrByMonth = new Map(calculateAllMonthsTWR(scopedRows).map((item) => [item.month, item.twr]));
@@ -112,6 +113,9 @@ export function buildMonthlyStatsForMonths(
     if ((row.increment ?? 0) > 0 && row.incrementReturnPct !== undefined) {
       entry.hasIncrementReturnOverride = true;
     }
+    if ((row.decrement ?? 0) > 0 && row.decrementReturnPct !== undefined) {
+      entry.hasDecrementReturnOverride = true;
+    }
     const manualReturnPct = normalizeMonthlyReturnPct(row.manualProfitPct);
     if (manualReturnPct !== undefined) {
       entry.manualReturnAdjustment = (entry.manualReturnAdjustment ?? 0) + manualReturnPct;
@@ -131,7 +135,7 @@ export function buildMonthlyStatsForMonths(
     const hasCustomFlowReturn =
       monthKey >= '2026-04' &&
       normalizedHistoryReturn !== undefined &&
-      derivedEntry?.hasIncrementReturnOverride === true;
+      (derivedEntry?.hasIncrementReturnOverride === true || derivedEntry?.hasDecrementReturnOverride === true);
 
     let profit = derivedEntry?.profit ?? 0;
     let baseStart = derivedEntry?.baseStart;
@@ -186,7 +190,7 @@ export function buildMonthlyStatsForMonths(
     const simpleProfitPct = safeBase > 0 ? profit / safeBase : 0;
     const shouldUseHistoryReturn =
       normalizedHistoryReturn !== undefined &&
-      (forceHistoryReturn || canUseHistoryReturn || derivedEntry?.hasIncrementReturnOverride);
+      (forceHistoryReturn || canUseHistoryReturn || derivedEntry?.hasIncrementReturnOverride || derivedEntry?.hasDecrementReturnOverride);
     const baseProfitPct = shouldUseHistoryReturn ? normalizedHistoryReturn : monthlyTwr ?? simpleProfitPct;
     const profitPct = baseProfitPct + (shouldUseHistoryReturn ? derivedEntry?.manualReturnAdjustment ?? 0 : 0);
     const hasData = !!derivedEntry || hasMonthlyHistoryValue(historyEntry);

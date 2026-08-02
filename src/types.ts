@@ -2,6 +2,7 @@ export interface Movement {
   increment?: number;
   incrementReturnPct?: number;
   decrement?: number;
+  decrementReturnPct?: number;
   manualProfit?: number;
   manualProfitPct?: number;
 }
@@ -39,6 +40,7 @@ export interface ClientDayRow {
   increment?: number;
   incrementReturnPct?: number;
   decrement?: number;
+  decrementReturnPct?: number;
   manualProfit?: number;
   manualProfitPct?: number;
   baseBalance?: number;

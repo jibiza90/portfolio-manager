@@ -307,7 +307,9 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     (item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH
   );
   const tableContributionBreakdowns = (report.contributionBreakdowns ?? []).filter(
-    (item) => reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH && item.contributions.length > 0
+    (item) =>
+      reportMonthToKey(item.month) >= CONTRIBUTION_BREAKDOWN_START_MONTH &&
+      (item.contributions.length > 0 || (item.withdrawals?.length ?? 0) > 0)
   );
   const tableContributionByMonth = new Map(
     tableContributionBreakdowns.map((item) => [reportMonthToKey(item.month), item])
@@ -779,9 +781,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
     });
     if (selectedBreakdowns.length > 0) {
       y += 12;
-      sectionTitle('Detalle de meses con aportaciones', 'Separacion entre posicion inicial y aportaciones dentro del periodo.', 80);
+      sectionTitle('Detalle de meses con movimientos', 'Rentabilidad aplicada a cada tramo de capital dentro del periodo.', 80);
       selectedBreakdowns.forEach((breakdown) => {
-        ensure(74 + breakdown.contributions.length * 18);
+        const withdrawals = breakdown.withdrawals ?? [];
+        ensure(74 + (breakdown.contributions.length + withdrawals.length) * 18);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         setText(colors.ink);
@@ -791,7 +794,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
         y += 22;
         const visiblePct = getVisibleMonthReturnPct(reportMonthToKey(breakdown.month), breakdown.initialReturnPct * 100);
         const initialProfit = breakdown.initialCapital * (visiblePct / 100);
-        tableRow(['Posicion inicial del mes', money(breakdown.initialCapital), pct(visiblePct), money(initialProfit)], widths, y, {
+        tableRow([withdrawals.length > 0 ? 'Posicion mantenida todo el mes' : 'Posicion inicial del mes', money(breakdown.initialCapital), pct(visiblePct), money(initialProfit)], widths, y, {
           positiveIndex: 3,
           positiveValue: initialProfit
         });
@@ -805,7 +808,18 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
           );
           y += 18;
         });
-        const total = initialProfit + breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0);
+        withdrawals.forEach((withdrawal) => {
+          tableRow(
+            [`Posicion retirada ${getShortDateLabel(withdrawal.iso)}`, money(withdrawal.amount), withdrawal.returnPct === undefined ? '-' : pct(withdrawal.returnPct * 100), money(withdrawal.profit)],
+            widths,
+            y,
+            { positiveIndex: 3, positiveValue: withdrawal.profit }
+          );
+          y += 18;
+        });
+        const total = initialProfit +
+          breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0) +
+          withdrawals.reduce((sum, withdrawal) => sum + withdrawal.profit, 0);
         tableRow(['Beneficio explicado', '-', '-', money(total)], widths, y, { positiveIndex: 3, positiveValue: total });
         y += 24;
       });
@@ -1175,7 +1189,10 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                 const breakdownMonthKey = reportMonthToKey(breakdown.month);
                 const visibleInitialPct = getVisibleMonthReturnPct(breakdownMonthKey, breakdown.initialReturnPct * 100);
                 const visibleInitialProfit = breakdown.initialCapital * (visibleInitialPct / 100);
-                const explainedTotalProfit = visibleInitialProfit + breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0);
+                const withdrawals = breakdown.withdrawals ?? [];
+                const explainedTotalProfit = visibleInitialProfit +
+                  breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0) +
+                  withdrawals.reduce((sum, withdrawal) => sum + withdrawal.profit, 0);
                 return (
                 <div className="report-pro-breakdown-card" key={breakdown.month}>
                   <div className="report-pro-breakdown-title">
@@ -1200,7 +1217,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                       </thead>
                       <tbody>
                         <tr>
-                          <td>Posici&oacute;n inicial del mes</td>
+                          <td>{withdrawals.length > 0 ? 'Posición mantenida durante todo el mes' : 'Posición inicial del mes'}</td>
                           <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
                           <td className={`text-right ${visibleInitialPct >= 0 ? 'positive' : 'negative'}`}>
                             {visibleInitialPct.toFixed(2)}%
@@ -1218,6 +1235,18 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                             </td>
                             <td className={`text-right ${contribution.profit >= 0 ? 'positive' : 'negative'}`}>
                               {formatCurrency(contribution.profit)}
+                            </td>
+                          </tr>
+                        ))}
+                        {withdrawals.map((withdrawal) => (
+                          <tr key={`${breakdown.month}-${withdrawal.iso}-${withdrawal.amount}-withdrawal`}>
+                            <td>Posici&oacute;n retirada el {getShortDateLabel(withdrawal.iso)}</td>
+                            <td className="text-right">{formatCurrency(withdrawal.amount)}</td>
+                            <td className={`text-right ${(withdrawal.returnPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                              {withdrawal.returnPct === undefined ? '—' : `${(withdrawal.returnPct * 100).toFixed(2)}%`}
+                            </td>
+                            <td className={`text-right ${withdrawal.profit >= 0 ? 'positive' : 'negative'}`}>
+                              {formatCurrency(withdrawal.profit)}
                             </td>
                           </tr>
                         ))}
@@ -1389,8 +1418,11 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                   const visibleInitialProfit = breakdown
                     ? breakdown.initialCapital * (visibleInitialPct / 100)
                     : 0;
+                  const withdrawals = breakdown?.withdrawals ?? [];
                   const explainedTotalProfit = breakdown
-                    ? visibleInitialProfit + breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0)
+                    ? visibleInitialProfit +
+                      breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0) +
+                      withdrawals.reduce((sum, withdrawal) => sum + withdrawal.profit, 0)
                     : m.profit ?? 0;
 
                   return (
@@ -1404,7 +1436,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                                   type="button"
                                   className="report-pro-expand-button"
                                   aria-expanded={expanded}
-                                  aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de aportaciones ${m.month}`}
+                                  aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de movimientos ${m.month}`}
                                   onClick={() =>
                                     setExpandedContributionMonths((prev) => ({
                                       ...prev,
@@ -1446,7 +1478,7 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                                 </thead>
                                 <tbody>
                                   <tr>
-                                    <td>Posici&oacute;n inicial del mes</td>
+                                    <td>{withdrawals.length > 0 ? 'Posición mantenida durante todo el mes' : 'Posición inicial del mes'}</td>
                                     <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
                                     <td className={`text-right ${visibleInitialPct >= 0 ? 'positive' : 'negative'}`}>
                                       {visibleInitialPct.toFixed(2)}%
@@ -1464,6 +1496,18 @@ export const ReportView: React.FC<ReportViewProps> = ({ token, reportData, downl
                                       </td>
                                       <td className={`text-right ${contribution.profit >= 0 ? 'positive' : 'negative'}`}>
                                         {formatCurrency(contribution.profit)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                  {withdrawals.map((withdrawal) => (
+                                    <tr key={`${monthKey}-${withdrawal.iso}-${withdrawal.amount}-withdrawal`}>
+                                      <td>Posici&oacute;n retirada el {getShortDateLabel(withdrawal.iso)}</td>
+                                      <td className="text-right">{formatCurrency(withdrawal.amount)}</td>
+                                      <td className={`text-right ${(withdrawal.returnPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                                        {withdrawal.returnPct === undefined ? '—' : `${(withdrawal.returnPct * 100).toFixed(2)}%`}
+                                      </td>
+                                      <td className={`text-right ${withdrawal.profit >= 0 ? 'positive' : 'negative'}`}>
+                                        {formatCurrency(withdrawal.profit)}
                                       </td>
                                     </tr>
                                   ))}

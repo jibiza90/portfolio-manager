@@ -2149,6 +2149,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                 <th>Incremento</th>
                 <th>Rentab. ingreso</th>
                 <th>Decremento</th>
+                <th>Rentab. hasta retirada</th>
                 <th>Beneficio manual %</th>
                 <th>Inicial</th>
                 <th>Final</th>
@@ -2195,6 +2196,20 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                       }}
                     />
                   )}</td>
+                  <td>
+                    {(r.decrement ?? 0) > 0 ? (
+                      r.isWeekend ? (
+                        r.decrementReturnPct === undefined ? '—' : formatPercent(r.decrementReturnPct)
+                      ) : (
+                        <PercentCell
+                          value={r.decrementReturnPct}
+                          onChange={(v) => setClientMovement(clientId, r.iso, 'decrementReturnPct', v)}
+                        />
+                      )
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td>
                     <PercentCell
                       value={r.manualProfitPct ?? (r.baseBalance ? (r.manualProfit ?? 0) / r.baseBalance : undefined)}

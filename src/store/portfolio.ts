@@ -169,6 +169,10 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
         delete dayMovement.incrementReturnPct;
       }
 
+      if (field === 'decrement' && (value === undefined || Number.isNaN(value) || value === 0)) {
+        delete dayMovement.decrementReturnPct;
+      }
+
       if (!dayMovement.increment && !dayMovement.decrement && !dayMovement.manualProfit && !dayMovement.manualProfitPct) {
         delete clientDays[iso];
       } else {

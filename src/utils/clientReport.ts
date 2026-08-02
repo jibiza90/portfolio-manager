@@ -28,10 +28,12 @@ export interface ClientReportData {
   contributionBreakdowns: Array<{
     month: string;
     monthLabel: string;
+    openingCapital: number;
     initialCapital: number;
     initialReturnPct: number;
     initialProfit: number;
     contributions: Array<{ iso: string; amount: number; returnPct: number; profit: number }>;
+    withdrawals: Array<{ iso: string; amount: number; returnPct?: number; profit: number }>;
     totalProfit: number;
   }>;
   patrimonioEvolution: ReturnType<typeof buildMonthlyStatsForMonths>['patrimonioEvolution'];
@@ -74,6 +76,7 @@ export interface ClientReportPayload {
   }>;
   contributionBreakdowns: Array<{
     month: string;
+    openingCapital: number;
     initialCapital: number;
     initialReturnPct: number;
     initialProfit: number;
@@ -81,6 +84,12 @@ export interface ClientReportPayload {
       iso: string;
       amount: number;
       returnPct: number;
+      profit: number;
+    }>;
+    withdrawals: Array<{
+      iso: string;
+      amount: number;
+      returnPct?: number;
       profit: number;
     }>;
     totalProfit: number;
@@ -140,7 +149,13 @@ export function buildClientReportData(
       });
     }
     if (row.decrement && row.decrement > 0) {
-      movements.push({ iso: row.iso, type: 'decrement', amount: row.decrement, balance: row.finalBalance || 0 });
+      movements.push({
+        iso: row.iso,
+        type: 'decrement',
+        amount: row.decrement,
+        balance: row.finalBalance || 0,
+        returnPct: normalizeMonthlyReturnPct(row.decrementReturnPct)
+      });
     }
   });
 
@@ -155,30 +170,27 @@ export function buildClientReportData(
     .map((monthStat) => {
       const monthRows = rowsByMonth.get(monthStat.monthKey) ?? [];
       const contributionRows = monthRows.filter((row) => (row.increment ?? 0) > 0);
-      if (!monthStat.hasData || monthStat.monthKey < contributionBreakdownStartMonth || contributionRows.length === 0) return null;
+      const withdrawalRows = monthRows.filter((row) => (row.decrement ?? 0) > 0);
+      if (
+        !monthStat.hasData ||
+        monthStat.monthKey < contributionBreakdownStartMonth ||
+        (contributionRows.length === 0 && withdrawalRows.length === 0)
+      ) return null;
 
       const firstRow = monthRows[0];
-      const initialCapital = Math.max(
+      const openingCapital = Math.max(
         0,
         (firstRow?.baseBalance ?? 0) - (firstRow?.increment ?? 0) + (firstRow?.decrement ?? 0)
       );
       const totalMonthProfit = monthStat.profit ?? 0;
       const fallbackReturnPct = (monthStat.profitPct ?? 0) / 100;
-      const explicitContributionProfit = contributionRows.reduce((sum, row) => {
-        const returnPct = normalizeMonthlyReturnPct(row.incrementReturnPct);
-        return returnPct === undefined ? sum : sum + (row.increment ?? 0) * returnPct;
-      }, 0);
-      const fallbackContributionCapital = contributionRows.reduce((sum, row) => (
-        normalizeMonthlyReturnPct(row.incrementReturnPct) === undefined ? sum + (row.increment ?? 0) : sum
-      ), 0);
-      const residualCapital = initialCapital + fallbackContributionCapital;
-      const residualProfit = totalMonthProfit - explicitContributionProfit;
-      const residualReturnPct = residualCapital !== 0 ? residualProfit / residualCapital : fallbackReturnPct;
+      const totalWithdrawals = withdrawalRows.reduce((sum, row) => sum + (row.decrement ?? 0), 0);
+      const initialCapital = Math.max(0, openingCapital - totalWithdrawals);
       const initialReturnPct = fallbackReturnPct;
-      const initialProfit = residualProfit - fallbackContributionCapital * residualReturnPct;
+      const initialProfit = initialCapital * initialReturnPct;
       const contributions = contributionRows.map((row) => {
         const amount = row.increment ?? 0;
-        const returnPct = normalizeMonthlyReturnPct(row.incrementReturnPct) ?? residualReturnPct;
+        const returnPct = normalizeMonthlyReturnPct(row.incrementReturnPct) ?? fallbackReturnPct;
         return {
           iso: row.iso,
           amount,
@@ -186,19 +198,31 @@ export function buildClientReportData(
           profit: amount * returnPct
         };
       });
+      const withdrawals = withdrawalRows.map((row) => {
+        const amount = row.decrement ?? 0;
+        const returnPct = normalizeMonthlyReturnPct(row.decrementReturnPct);
+        return {
+          iso: row.iso,
+          amount,
+          ...(returnPct !== undefined ? { returnPct } : {}),
+          profit: amount * (returnPct ?? 0)
+        };
+      });
       const totalProfit = totalMonthProfit;
 
       return {
         month: monthStat.monthKey,
         monthLabel: monthStat.monthLabel,
+        openingCapital,
         initialCapital,
         initialReturnPct,
         initialProfit,
         contributions,
+        withdrawals,
         totalProfit
       };
     })
-    .filter((item): item is ClientReportData['contributionBreakdowns'][number] => item !== null);
+    .filter((item): item is Exclude<typeof item, null> => item !== null);
 
   const contact = contacts[clientId];
   const contactName = contact && (contact.name || contact.surname) ? `${contact.name ?? ''} ${contact.surname ?? ''}`.trim() : '';
@@ -276,6 +300,7 @@ export function toClientReportPayload(data: ClientReportData): ClientReportPaylo
     })),
     contributionBreakdowns: data.contributionBreakdowns.map((item) => ({
       month: item.monthLabel,
+      openingCapital: item.openingCapital ?? item.initialCapital ?? 0,
       initialCapital: item.initialCapital ?? 0,
       initialReturnPct: item.initialReturnPct ?? 0,
       initialProfit: item.initialProfit ?? 0,
@@ -284,6 +309,12 @@ export function toClientReportPayload(data: ClientReportData): ClientReportPaylo
         amount: contribution.amount ?? 0,
         returnPct: contribution.returnPct ?? 0,
         profit: contribution.profit ?? 0
+      })),
+      withdrawals: item.withdrawals.map((withdrawal) => ({
+        iso: withdrawal.iso,
+        amount: withdrawal.amount ?? 0,
+        ...(withdrawal.returnPct !== undefined ? { returnPct: withdrawal.returnPct } : {}),
+        profit: withdrawal.profit ?? 0
       })),
       totalProfit: item.totalProfit ?? 0
     }))
