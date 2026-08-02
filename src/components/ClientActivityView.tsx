@@ -52,6 +52,7 @@ const eventLabels: Record<string, string> = {
   chart_expand_request: 'Solicitud de ampliacion',
   chart_expanded_duration: 'Tiempo con grafico ampliado',
   chart_duration: 'Tiempo en grafico',
+  chart_point_view: 'Punto del grafico consultado',
   detail_expand: 'Detalle mensual abierto',
   detail_collapse: 'Detalle mensual cerrado',
   expanded_period_change: 'Periodo del grafico ampliado',
@@ -76,9 +77,15 @@ const readableEventLabel = (event: ClientActivityEvent) => {
   return detail ? `${base}: ${detail}` : base;
 };
 
+const ACTIVE_MEASUREMENT_VERSION = 'active-v2';
+const measuredDurationTypes = new Set(['section_duration', 'chart_duration', 'chart_expanded_duration']);
+const isCurrentDurationMeasurement = (event: ClientActivityEvent) => (
+  !measuredDurationTypes.has(event.type) || event.metadata.measurementVersion === ACTIVE_MEASUREMENT_VERSION
+);
+
 const sumByLabel = (events: ClientActivityEvent[], type: string) => {
   const totals = new Map<string, number>();
-  events.filter((event) => event.type === type).forEach((event) => {
+  events.filter((event) => event.type === type && isCurrentDurationMeasurement(event)).forEach((event) => {
     const label = chartLabels[event.label] ?? event.label;
     totals.set(label, (totals.get(label) ?? 0) + event.durationMs);
   });
@@ -163,6 +170,11 @@ export function ClientActivityView({ clients, accessProfiles, downloadEvents }: 
   const newDeviceCount = useMemo(() => sessions.filter((session) => session.isNewDevice).length, [sessions]);
   const detailOpenCount = useMemo(() => usageEvents.filter((event) => event.type === 'detail_expand').length, [usageEvents]);
   const chartChangeCount = useMemo(() => usageEvents.filter((event) => event.type === 'chart_change').length, [usageEvents]);
+  const chartPointCount = useMemo(() => usageEvents.filter((event) => event.type === 'chart_point_view').length, [usageEvents]);
+  const activeReadingDuration = useMemo(
+    () => sectionDurations.reduce((total, item) => total + item.durationMs, 0),
+    [sectionDurations]
+  );
   const failedLoginCount = useMemo(
     () => securityEvents
       .filter((event) => event.type === 'failed_login_attempts')
@@ -170,7 +182,10 @@ export function ClientActivityView({ clients, accessProfiles, downloadEvents }: 
     [securityEvents]
   );
   const timeline = useMemo(
-    () => [...events].sort((left, right) => right.occurredAt - left.occurredAt).slice(0, 160),
+    () => events
+      .filter(isCurrentDurationMeasurement)
+      .sort((left, right) => right.occurredAt - left.occurredAt)
+      .slice(0, 160),
     [events]
   );
 
@@ -238,11 +253,14 @@ export function ClientActivityView({ clients, accessProfiles, downloadEvents }: 
 
           <section className="client-activity-kpis">
             <article><span>Sesiones</span><strong>{sessions.length}</strong></article>
-            <article><span>Tiempo total</span><strong>{formatDuration(totalSessionDuration)}</strong></article>
+            <article><span>Tiempo de sesion</span><strong>{formatDuration(totalSessionDuration)}</strong></article>
+            <article><span>Tiempo activo medido</span><strong>{formatDuration(activeReadingDuration)}</strong></article>
+            <article><span>Seccion principal</span><strong>{sectionDurations[0]?.label ?? 'Sin datos'}</strong></article>
             <article><span>Dispositivos</span><strong>{snapshot.devices.length}</strong></article>
             <article><span>Nuevos dispositivos</span><strong>{newDeviceCount}</strong></article>
             <article><span>Detalles abiertos</span><strong>{detailOpenCount}</strong></article>
             <article><span>Cambios de grafico</span><strong>{chartChangeCount}</strong></article>
+            <article><span>Puntos consultados</span><strong>{chartPointCount}</strong></article>
             <article><span>Informes descargados</span><strong>{downloads.length}</strong></article>
             <article><span>Intentos fallidos detectados</span><strong>{failedLoginCount}</strong></article>
           </section>
@@ -263,6 +281,7 @@ export function ClientActivityView({ clients, accessProfiles, downloadEvents }: 
                   <i><b style={{ width: `${Math.max(4, item.durationMs / maxSectionDuration * 100)}%` }} /></i>
                 </div>
               )) : <p className="muted">Todavia no hay tiempo de lectura registrado para este periodo.</p>}
+              <p className="client-activity-footnote">Solo se suma tiempo registrado con la medicion activa actual: seccion visible, pestana activa y actividad reciente del usuario.</p>
             </article>
 
             <article className="glass-card client-activity-card">
@@ -339,6 +358,9 @@ export function ClientActivityView({ clients, accessProfiles, downloadEvents }: 
                       <strong>{readableEventLabel(event)}</strong>
                       <span>{formatDateTime(event.occurredAt)}</span>
                       {event.durationMs > 0 ? <small>Duracion: {formatDuration(event.durationMs)}</small> : null}
+                      {event.type === 'chart_point_view' && typeof event.metadata.chart === 'string' ? (
+                        <small>Grafico: {chartLabels[event.metadata.chart] ?? event.metadata.chart}</small>
+                      ) : null}
                     </div>
                   </div>
                 )) : <p className="muted">No hay eventos para mostrar.</p>}

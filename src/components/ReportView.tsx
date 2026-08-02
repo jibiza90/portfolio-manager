@@ -181,6 +181,9 @@ const getCompactMonthLabel = (monthLabel: string) => {
 };
 
 const CONTRIBUTION_BREAKDOWN_START_MONTH = '2026-04';
+const ANALYTICS_IDLE_AFTER_MS = 45_000;
+const ANALYTICS_FLUSH_INTERVAL_MS = 30_000;
+const ANALYTICS_TICK_MS = 1_000;
 
 const reportMonthToKey = (monthValue: string) => {
   if (/^\d{4}-\d{2}$/.test(monthValue)) return monthValue;
@@ -225,7 +228,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const reportRef = useRef<HTMLDivElement>(null);
   const chartVisibilityRef = useRef<HTMLDivElement>(null);
   const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
-  const activeSectionRef = useRef<{ label: string; startedAt: number } | null>(null);
+  const lastInteractionAtRef = useRef(Date.now());
+  const lastTrackedChartPointRef = useRef<{ key: string; at: number } | null>(null);
   const twrExplanation = 'Mide la evolución de la cartera aislando el efecto de las aportaciones y retiradas de dinero. Permite conocer cómo se han comportado las inversiones durante un periodo determinado, independientemente de cuándo el cliente haya ingresado o retirado capital.';
   const totalReturnExplanation = 'Mide el resultado acumulado de la inversión en relación con el capital neto aportado por el cliente. Por este motivo, puede variar cuando se realizan nuevas aportaciones o retiradas de dinero.';
 
@@ -280,12 +284,56 @@ export const ReportView: React.FC<ReportViewProps> = ({
   }, [report?.clientId]);
 
   useEffect(() => {
+    if (!analyticsEnabled) return undefined;
+    let lastPointerMoveAt = 0;
+    const markActivity = () => {
+      lastInteractionAtRef.current = Date.now();
+    };
+    const markVisibleActivity = () => {
+      if (document.visibilityState === 'visible') markActivity();
+    };
+    const markPointerActivity = () => {
+      const now = Date.now();
+      if (now - lastPointerMoveAt < 1_000) return;
+      lastPointerMoveAt = now;
+      lastInteractionAtRef.current = now;
+    };
+    const root = reportRef.current;
+    const passive = { passive: true } as AddEventListenerOptions;
+    window.addEventListener('focus', markActivity);
+    window.addEventListener('keydown', markActivity);
+    window.addEventListener('pointerdown', markActivity, passive);
+    window.addEventListener('pointermove', markPointerActivity, passive);
+    window.addEventListener('touchstart', markActivity, passive);
+    window.addEventListener('wheel', markActivity, passive);
+    window.addEventListener('scroll', markActivity, passive);
+    root?.addEventListener('scroll', markActivity, { passive: true, capture: true });
+    document.addEventListener('visibilitychange', markVisibleActivity);
+    return () => {
+      window.removeEventListener('focus', markActivity);
+      window.removeEventListener('keydown', markActivity);
+      window.removeEventListener('pointerdown', markActivity);
+      window.removeEventListener('pointermove', markPointerActivity);
+      window.removeEventListener('touchstart', markActivity);
+      window.removeEventListener('wheel', markActivity);
+      window.removeEventListener('scroll', markActivity);
+      root?.removeEventListener('scroll', markActivity, true);
+      document.removeEventListener('visibilitychange', markVisibleActivity);
+    };
+  }, [analyticsEnabled, report?.clientId]);
+
+  useEffect(() => {
     if (!analyticsEnabled || !onAnalyticsEvent || !reportRef.current) return undefined;
     const root = reportRef.current;
     const sections = Array.from(root.querySelectorAll<HTMLElement>(
       '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel'
     ));
-    const visibleRatios = new Map<HTMLElement, number>();
+    const visibleSections = new Map<HTMLElement, {
+      ratio: number;
+      visibleArea: number;
+      visibleHeight: number;
+      sectionHeight: number;
+    }>();
 
     const getSectionLabel = (section: HTMLElement) => {
       if (section.classList.contains('report-pro-executive')) return 'Resumen principal';
@@ -297,99 +345,198 @@ export const ReportView: React.FC<ReportViewProps> = ({
       return section.querySelector('h4, h3')?.textContent?.trim() || 'Seccion del informe';
     };
 
-    const changeActiveSection = (nextLabel: string | null) => {
-      const previous = activeSectionRef.current;
-      if (previous && previous.label !== nextLabel) {
-        const durationMs = Date.now() - previous.startedAt;
-        if (durationMs >= 1000) {
-          onAnalyticsEvent({ type: 'section_duration', label: previous.label, durationMs });
-        }
-        activeSectionRef.current = null;
+    let currentSection: { label: string; durationMs: number; maxVisibilityPct: number } | null = null;
+    let lastTickAt = Date.now();
+
+    const flushCurrentSection = () => {
+      if (!currentSection) return;
+      if (currentSection.durationMs >= 1_000) {
+        onAnalyticsEvent({
+          type: 'section_duration',
+          label: currentSection.label,
+          durationMs: currentSection.durationMs,
+          metadata: {
+            measurementVersion: 'active-v2',
+            maxVisibilityPct: Math.round(currentSection.maxVisibilityPct)
+          }
+        });
       }
-      if (nextLabel && activeSectionRef.current?.label !== nextLabel) {
-        activeSectionRef.current = { label: nextLabel, startedAt: Date.now() };
-      }
+      currentSection = null;
     };
 
-    const updateActiveFromVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        changeActiveSection(null);
+    const getMostVisibleSection = () => {
+      const best = [...visibleSections.entries()]
+        .filter(([, metrics]) => (
+          metrics.visibleHeight >= Math.min(120, metrics.sectionHeight * 0.45) &&
+          metrics.visibleArea > 0
+        ))
+        .sort((left, right) => (
+          right[1].visibleArea - left[1].visibleArea || right[1].ratio - left[1].ratio
+        ))[0];
+      if (!best) return null;
+      return {
+        label: getSectionLabel(best[0]),
+        visibilityPct: best[1].ratio * 100
+      };
+    };
+
+    const tick = () => {
+      const now = Date.now();
+      const elapsedMs = Math.min(ANALYTICS_TICK_MS * 2, Math.max(0, now - lastTickAt));
+      lastTickAt = now;
+      const visibleSection = getMostVisibleSection();
+      const canCount = Boolean(
+        visibleSection &&
+        !isPatrimonyExpanded &&
+        document.visibilityState === 'visible' &&
+        document.hasFocus() &&
+        now - lastInteractionAtRef.current <= ANALYTICS_IDLE_AFTER_MS
+      );
+
+      if (!canCount || !visibleSection) {
+        flushCurrentSection();
         return;
       }
-      const best = [...visibleRatios.entries()].sort((a, b) => b[1] - a[1])[0];
-      changeActiveSection(best && best[1] >= 0.18 ? getSectionLabel(best[0]) : null);
+      if (!currentSection || currentSection.label !== visibleSection.label) {
+        flushCurrentSection();
+        currentSection = {
+          label: visibleSection.label,
+          durationMs: 0,
+          maxVisibilityPct: visibleSection.visibilityPct
+        };
+      }
+      currentSection.durationMs += elapsedMs;
+      currentSection.maxVisibilityPct = Math.max(currentSection.maxVisibilityPct, visibleSection.visibilityPct);
+      if (currentSection.durationMs >= ANALYTICS_FLUSH_INTERVAL_MS) {
+        const label = currentSection.label;
+        const visibilityPct = currentSection.maxVisibilityPct;
+        flushCurrentSection();
+        currentSection = { label, durationMs: 0, maxVisibilityPct: visibilityPct };
+      }
     };
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
-        visibleRatios.set(entry.target as HTMLElement, entry.isIntersecting ? entry.intersectionRatio : 0);
+        const target = entry.target as HTMLElement;
+        visibleSections.set(target, {
+          ratio: entry.isIntersecting ? entry.intersectionRatio : 0,
+          visibleArea: entry.isIntersecting ? entry.intersectionRect.width * entry.intersectionRect.height : 0,
+          visibleHeight: entry.isIntersecting ? entry.intersectionRect.height : 0,
+          sectionHeight: entry.boundingClientRect.height
+        });
       });
-      updateActiveFromVisibility();
-    }, { threshold: [0, 0.18, 0.35, 0.6] });
+    }, { threshold: [0, 0.15, 0.3, 0.5, 0.75, 1] });
 
     sections.forEach((section) => observer.observe(section));
-    document.addEventListener('visibilitychange', updateActiveFromVisibility);
+    const timer = window.setInterval(tick, ANALYTICS_TICK_MS);
     return () => {
       observer.disconnect();
-      document.removeEventListener('visibilitychange', updateActiveFromVisibility);
-      changeActiveSection(null);
+      window.clearInterval(timer);
+      tick();
+      flushCurrentSection();
     };
-  }, [analyticsEnabled, onAnalyticsEvent, report?.clientId]);
+  }, [analyticsEnabled, isPatrimonyExpanded, onAnalyticsEvent, report?.clientId]);
 
   useEffect(() => {
-    if (!analyticsEnabled || !onAnalyticsEvent || !chartVisibilityRef.current) return undefined;
+    if (!analyticsEnabled || !onAnalyticsEvent || !chartVisibilityRef.current || isPatrimonyExpanded) return undefined;
     const chartElement = chartVisibilityRef.current;
     let visible = false;
-    let startedAt: number | null = null;
     let accumulatedMs = 0;
-    const updateTimer = () => {
-      const shouldRun = visible && document.visibilityState === 'visible';
-      if (shouldRun && startedAt === null) startedAt = Date.now();
-      if (!shouldRun && startedAt !== null) {
-        accumulatedMs += Date.now() - startedAt;
-        startedAt = null;
+    let lastTickAt = Date.now();
+    const flush = () => {
+      if (accumulatedMs >= 1_000) {
+        onAnalyticsEvent({
+          type: 'chart_duration',
+          label: chartView,
+          durationMs: accumulatedMs,
+          metadata: { measurementVersion: 'active-v2' }
+        });
       }
+      accumulatedMs = 0;
+    };
+    const tick = () => {
+      const now = Date.now();
+      const elapsedMs = Math.min(ANALYTICS_TICK_MS * 2, Math.max(0, now - lastTickAt));
+      lastTickAt = now;
+      const canCount = (
+        visible &&
+        document.visibilityState === 'visible' &&
+        document.hasFocus() &&
+        now - lastInteractionAtRef.current <= ANALYTICS_IDLE_AFTER_MS
+      );
+      if (!canCount) {
+        flush();
+        return;
+      }
+      accumulatedMs += elapsedMs;
+      if (accumulatedMs >= ANALYTICS_FLUSH_INTERVAL_MS) flush();
     };
     const observer = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting && entry.intersectionRatio >= 0.2;
-      updateTimer();
-    }, { threshold: [0, 0.2, 0.5] });
+      visible = entry.isIntersecting && entry.intersectionRect.height >= 120;
+    }, { threshold: [0, 0.2, 0.5, 0.75] });
     observer.observe(chartElement);
-    document.addEventListener('visibilitychange', updateTimer);
+    const timer = window.setInterval(tick, ANALYTICS_TICK_MS);
     return () => {
       observer.disconnect();
-      document.removeEventListener('visibilitychange', updateTimer);
-      if (startedAt !== null) accumulatedMs += Date.now() - startedAt;
-      const durationMs = accumulatedMs;
-      if (durationMs >= 1000) {
-        onAnalyticsEvent({ type: 'chart_duration', label: chartView, durationMs });
-      }
+      window.clearInterval(timer);
+      tick();
+      flush();
     };
-  }, [analyticsEnabled, chartView, onAnalyticsEvent]);
+  }, [analyticsEnabled, chartView, isPatrimonyExpanded, onAnalyticsEvent]);
 
   useEffect(() => {
     if (!analyticsEnabled || !onAnalyticsEvent || !isPatrimonyExpanded) return undefined;
-    let startedAt: number | null = document.visibilityState === 'visible' ? Date.now() : null;
     let accumulatedMs = 0;
-    const updateTimer = () => {
-      if (document.visibilityState === 'visible' && startedAt === null) startedAt = Date.now();
-      if (document.visibilityState !== 'visible' && startedAt !== null) {
-        accumulatedMs += Date.now() - startedAt;
-        startedAt = null;
+    let lastTickAt = Date.now();
+    const flush = () => {
+      if (accumulatedMs >= 1_000) {
+        onAnalyticsEvent({
+          type: 'chart_expanded_duration',
+          label: 'Evolucion patrimonio',
+          durationMs: accumulatedMs,
+          metadata: { measurementVersion: 'active-v2' }
+        });
       }
+      accumulatedMs = 0;
+    };
+    const tick = () => {
+      const now = Date.now();
+      const elapsedMs = Math.min(ANALYTICS_TICK_MS * 2, Math.max(0, now - lastTickAt));
+      lastTickAt = now;
+      const canCount = (
+        document.visibilityState === 'visible' &&
+        document.hasFocus() &&
+        now - lastInteractionAtRef.current <= ANALYTICS_IDLE_AFTER_MS
+      );
+      if (!canCount) {
+        flush();
+        return;
+      }
+      accumulatedMs += elapsedMs;
+      if (accumulatedMs >= ANALYTICS_FLUSH_INTERVAL_MS) flush();
     };
     onAnalyticsEvent({ type: 'chart_expand', label: 'Evolucion patrimonio' });
-    document.addEventListener('visibilitychange', updateTimer);
+    const timer = window.setInterval(tick, ANALYTICS_TICK_MS);
     return () => {
-      document.removeEventListener('visibilitychange', updateTimer);
-      if (startedAt !== null) accumulatedMs += Date.now() - startedAt;
-      onAnalyticsEvent({
-        type: 'chart_expanded_duration',
-        label: 'Evolucion patrimonio',
-        durationMs: accumulatedMs
-      });
+      window.clearInterval(timer);
+      tick();
+      flush();
     };
   }, [analyticsEnabled, isPatrimonyExpanded, onAnalyticsEvent]);
+
+  const trackChartPoint = (chart: string, month: string, value: number) => {
+    if (!analyticsEnabled || !onAnalyticsEvent) return;
+    const now = Date.now();
+    const key = `${chart}:${month}`;
+    const previous = lastTrackedChartPointRef.current;
+    if (previous?.key === key && now - previous.at < 5_000) return;
+    lastTrackedChartPointRef.current = { key, at: now };
+    onAnalyticsEvent({
+      type: 'chart_point_view',
+      label: month,
+      metadata: { chart, value }
+    });
+  };
 
   useEffect(() => {
     if (!isPatrimonyExpanded) return undefined;
@@ -1420,12 +1567,21 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   tabIndex={0}
                   role="img"
                   aria-label={`${pt.month}: ${formatCurrency(pt.value)}`}
-                  onMouseEnter={() => setHoveredPatrimonyPoint(pt)}
+                  onMouseEnter={() => {
+                    setHoveredPatrimonyPoint(pt);
+                    trackChartPoint('balance', pt.month, pt.value);
+                  }}
                   onMouseMove={() => setHoveredPatrimonyPoint(pt)}
                   onMouseLeave={() => setHoveredPatrimonyPoint(null)}
-                  onFocus={() => setHoveredPatrimonyPoint(pt)}
+                  onFocus={() => {
+                    setHoveredPatrimonyPoint(pt);
+                    trackChartPoint('balance', pt.month, pt.value);
+                  }}
                   onBlur={() => setHoveredPatrimonyPoint(null)}
-                  onPointerDown={() => setHoveredPatrimonyPoint(pt)}
+                  onPointerDown={() => {
+                    setHoveredPatrimonyPoint(pt);
+                    trackChartPoint('balance', pt.month, pt.value);
+                  }}
                 />
               </g>
             ))}
@@ -1868,12 +2024,21 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   tabIndex={0}
                   role="img"
                   aria-label={`${m.month}: ${formatChartTooltipValue(chartValue)}`}
-                  onMouseEnter={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
+                  onMouseEnter={() => {
+                    setHoveredMonthlyBar({ month: m.month, value: chartValue });
+                    trackChartPoint(chartView, m.month, chartValue);
+                  }}
                   onMouseMove={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
                   onMouseLeave={() => setHoveredMonthlyBar(null)}
-                  onFocus={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
+                  onFocus={() => {
+                    setHoveredMonthlyBar({ month: m.month, value: chartValue });
+                    trackChartPoint(chartView, m.month, chartValue);
+                  }}
                   onBlur={() => setHoveredMonthlyBar(null)}
-                  onPointerDown={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
+                  onPointerDown={() => {
+                    setHoveredMonthlyBar({ month: m.month, value: chartValue });
+                    trackChartPoint(chartView, m.month, chartValue);
+                  }}
                 >
                   {hoveredMonthlyBar?.month === m.month ? (
                     <div className="report-pro-bar-tooltip">
