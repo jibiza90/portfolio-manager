@@ -15,6 +15,39 @@ export function LegalPrivacyNotice({
   onAccept,
   onClose
 }: LegalPrivacyNoticeProps) {
+  const [showFullNotice, setShowFullNotice] = React.useState(!required);
+
+  if (required && !showFullNotice) {
+    return (
+      <div className="legal-notice-backdrop" role="presentation">
+        <section
+          className="legal-notice-dialog legal-notice-dialog-compact"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="legal-notice-compact-title"
+        >
+          <div className="legal-notice-compact-copy">
+            <span>Antes de entrar</span>
+            <h2 id="legal-notice-compact-title">Privacidad y cookies</h2>
+            <p>
+              Al continuar confirmas que has recibido la información de privacidad y cookies vinculada al servicio.
+            </p>
+          </div>
+
+          {error ? <p className="legal-notice-error" role="alert">{error}</p> : null}
+          <div className="legal-notice-compact-actions">
+            <button type="button" className="legal-notice-read-more" onClick={() => setShowFullNotice(true)}>
+              Consultar información completa
+            </button>
+            <button type="button" className="legal-notice-accept" onClick={onAccept} disabled={busy}>
+              {busy ? 'Entrando...' : 'Aceptar y entrar'}
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="legal-notice-backdrop" role="presentation">
       <section className="legal-notice-dialog" role="dialog" aria-modal="true" aria-labelledby="legal-notice-title">
@@ -24,7 +57,9 @@ export function LegalPrivacyNotice({
             <h2 id="legal-notice-title">Privacidad y tecnologías de almacenamiento</h2>
             <p>Versión agosto de 2026</p>
           </div>
-          {!required && onClose ? (
+          {required ? (
+            <button type="button" onClick={() => setShowFullNotice(false)} aria-label="Volver al aviso resumido">←</button>
+          ) : onClose ? (
             <button type="button" onClick={onClose} aria-label="Cerrar información legal">×</button>
           ) : null}
         </header>
@@ -160,7 +195,7 @@ export function LegalPrivacyNotice({
         <footer className="legal-notice-actions">
           <p>Al continuar confirmas que has recibido y leído esta información.</p>
           <button type="button" onClick={onAccept} disabled={busy}>
-            {busy ? 'Guardando...' : required ? 'Aceptar y continuar' : 'Cerrar'}
+            {busy ? 'Guardando...' : required ? 'Aceptar y entrar' : 'Cerrar'}
           </button>
         </footer>
       </section>
