@@ -27,6 +27,7 @@ import {
   listClientAccessProfiles,
   publishClientOverviews,
   provisionClientAccess,
+  syncInitialClientOverviews,
   archiveClientAndRevokeAccess,
   CLIENT_PUBLICATION_PAYLOAD_VERSION,
   revokeClientAccess,
@@ -3512,6 +3513,7 @@ export default function App() {
   const [publicationLoading, setPublicationLoading] = useState(true);
   const [publicationBusy, setPublicationBusy] = useState(false);
   const [publicationError, setPublicationError] = useState<string | null>(null);
+  const initialOverviewSyncRef = useRef<string>('');
 
   const handleDownloadAdminBackup = async () => {
     if (!isPrimaryAdmin || backupBusy) return;
@@ -3917,6 +3919,50 @@ export default function App() {
       cancelled = true;
     };
   }, [isPrimaryAdmin, portfolioInitialized]);
+
+  useEffect(() => {
+    if (
+      !isPrimaryAdmin ||
+      !portfolioInitialized ||
+      portfolioSaveStatus !== 'success' ||
+      publicationBusy
+    ) return;
+
+    const syncKey = `${portfolioRevision}:${contactsRevision}`;
+    if (initialOverviewSyncRef.current === syncKey) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          await waitForPendingPortfolioSave();
+          const state = usePortfolioStore.getState();
+          await syncInitialClientOverviews(
+            CLIENTS,
+            state.movementsByClient,
+            state.monthlyHistoryByClient,
+            contacts
+          );
+          if (!cancelled) initialOverviewSyncRef.current = syncKey;
+        } catch (error) {
+          console.error('No se pudo sincronizar la posicion inicial provisional', error);
+        }
+      })();
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    contacts,
+    contactsRevision,
+    isPrimaryAdmin,
+    portfolioInitialized,
+    portfolioRevision,
+    portfolioSaveStatus,
+    publicationBusy
+  ]);
 
   const handlePublishClientUpdates = async () => {
     if (!isPrimaryAdmin || publicationBusy || publicationLoading || !publicationPending) return;

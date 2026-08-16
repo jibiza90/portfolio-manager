@@ -3,6 +3,11 @@ import { isDemoClient } from '../constants/clients';
 import { auth, db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { buildClientReportData, toClientReportPayload, type ClientContactInfo } from '../utils/clientReport';
 import { getDominantMonthlyReturn } from '../utils/monthlyHistory';
+import {
+  getInitialClientPosition,
+  hasAnyClientContribution,
+  hasClosedClientPeriod
+} from '../utils/initialClientPosition';
 
 const DOC_PATH = 'portfolio/state';
 const PUBLICATION_DOC_PATH = 'portfolio/client-publication';
@@ -10,6 +15,7 @@ const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
 const CONTACTS_STORAGE_KEY = 'portfolio-contacts';
 const GENERAL_REFERENCE_CLIENT_ID = 'client-004';
 export const CLIENT_PUBLICATION_PAYLOAD_VERSION = 2;
+export const INITIAL_CLIENT_PUBLICATION_MODE = 'initial-provisional';
 
 export interface GeneralReferenceMonth {
   month: string;
@@ -187,6 +193,101 @@ export const publishClientOverviews = async (
   batch.set(db.doc(PUBLICATION_DOC_PATH), publicationState);
   await batch.commit();
   return publicationState;
+};
+
+export const syncInitialClientOverviews = async (
+  clients: Array<{ id: string; name: string }>,
+  movementsByClient: Record<string, Record<string, Movement>>,
+  monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>,
+  contacts: Record<string, ClientContactInfo> = readLocalContacts()
+) => {
+  const publishedAt = Date.now();
+  const clientIds = new Set(clients.map((client) => client.id));
+  const provisionalDocs = await db
+    .collection(CLIENT_OVERVIEW_COLLECTION)
+    .where('publicationMode', '==', INITIAL_CLIENT_PUBLICATION_MODE)
+    .get();
+  const provisionalByClientId = new Map(
+    provisionalDocs.docs.map((provisionalDoc) => [provisionalDoc.id, provisionalDoc.data()])
+  );
+  const batch = db.batch();
+  let operationCount = 0;
+
+  clients.forEach((client) => {
+    if (isDemoClient(client.id)) return;
+    const position = getInitialClientPosition(
+      movementsByClient[client.id] ?? {},
+      monthlyHistoryByClient[client.id] ?? {}
+    );
+    if (!position) return;
+
+    const displayName = contactFullName(contacts[client.id]) || client.name;
+    const existing = provisionalByClientId.get(client.id);
+    const existingPosition = existing?.initialPosition as Partial<{ iso: string; amount: number }> | undefined;
+    if (
+      existingPosition?.iso === position.iso &&
+      existingPosition.amount === position.amount &&
+      existing?.clientName === displayName
+    ) return;
+
+    const date = new Date(`${position.iso}T12:00:00`);
+    const label = Number.isNaN(date.getTime())
+      ? position.iso
+      : date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }).replace('.', '');
+    const docRef = db.collection(CLIENT_OVERVIEW_COLLECTION).doc(client.id);
+    batch.set(docRef, {
+      clientId: client.id,
+      clientName: displayName,
+      publicationMode: INITIAL_CLIENT_PUBLICATION_MODE,
+      initialPosition: position,
+      report: null,
+      currentBalance: position.amount,
+      cumulativeProfit: 0,
+      dailyProfit: 0,
+      dailyProfitPct: 0,
+      participation: 0,
+      totalIncrements: position.amount,
+      totalDecrements: 0,
+      ytdReturnPct: 0,
+      twrYtd: 0,
+      latestProfitMonth: null,
+      latestReturnMonth: null,
+      monthly: [],
+      twrMonthly: [],
+      rows: [{
+        iso: position.iso,
+        label,
+        increment: position.amount,
+        incrementReturnPct: null,
+        decrement: null,
+        decrementReturnPct: null,
+        baseBalance: position.amount,
+        finalBalance: position.amount,
+        profit: null,
+        profitPct: null,
+        sharePct: null,
+        cumulativeProfit: null
+      }],
+      updatedAt: publishedAt
+    });
+    operationCount += 1;
+  });
+
+  provisionalDocs.docs.forEach((provisionalDoc) => {
+    const clientId = provisionalDoc.id;
+    const history = monthlyHistoryByClient[clientId] ?? {};
+    const movements = movementsByClient[clientId] ?? {};
+    if (
+      !clientIds.has(clientId) ||
+      (!hasClosedClientPeriod(history) && !hasAnyClientContribution(movements))
+    ) {
+      batch.delete(provisionalDoc.ref);
+      operationCount += 1;
+    }
+  });
+
+  if (operationCount > 0) await batch.commit();
+  return operationCount;
 };
 
 export interface AccessProfile {

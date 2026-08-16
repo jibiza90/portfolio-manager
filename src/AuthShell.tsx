@@ -5,6 +5,7 @@ import { CLIENTS, DEMO_CLIENT_ID, isDemoClient } from './constants/clients';
 import {
   buildClientAuthEmail,
   fetchAccessProfile,
+  INITIAL_CLIENT_PUBLICATION_MODE,
   loginIdFromAuthEmail,
   subscribeClientOverview,
   type GeneralReferenceMonth
@@ -67,6 +68,8 @@ interface ClientOverview {
   monthly?: Array<{ month: string; profit: number; retPct: number; endBalance?: number }>;
   twrYtd?: number;
   twrMonthly?: Array<{ month: string; twr: number }>;
+  publicationMode?: string;
+  initialPosition?: { iso: string; amount: number };
   updatedAt: number;
   rows?: Array<{
     iso: string;
@@ -83,6 +86,74 @@ interface ClientOverview {
     cumulativeProfit: number | null;
   }>;
 }
+
+const InitialClientPositionView = ({
+  clientCode,
+  position
+}: {
+  clientCode: string;
+  position: { iso: string; amount: number };
+}) => {
+  const incorporationDate = new Date(`${position.iso}T12:00:00`).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  return (
+    <div className="informes-container informes-pro-page fade-in report-pro-page-demo client-initial-position-page">
+      <article className="informe-preview glass-card report-pro-sheet report-pro-demo-sheet client-initial-position-sheet">
+        <header className="report-pro-header">
+          <div>
+            <p className="report-pro-kicker">Portfolio Manager</p>
+            <h2>Investment Report</h2>
+            <p className="report-pro-date">Primer periodo en curso</p>
+          </div>
+          <div className="report-pro-client-tag">{clientCode}</div>
+        </header>
+
+        <section className="client-initial-position-hero">
+          <span>Saldo provisional</span>
+          <strong>{formatEuro(position.amount)}</strong>
+          <p>Posición registrada a partir de tu primera aportación.</p>
+        </section>
+
+        <section className="client-initial-position-kpis">
+          <div><span>Capital aportado</span><strong>{formatEuro(position.amount)}</strong></div>
+          <div><span>Fecha de incorporación</span><strong>{incorporationDate}</strong></div>
+          <div><span>Beneficio</span><strong>—</strong></div>
+          <div><span>Rentabilidad</span><strong>—</strong></div>
+        </section>
+
+        <section className="client-initial-position-notice" role="status">
+          <strong>Primer periodo en curso</strong>
+          <p>El beneficio y la rentabilidad se mostrarán cuando se publique el primer cierre mensual.</p>
+        </section>
+
+        <section className="report-pro-panel client-initial-position-movement">
+          <div className="report-pro-panel-head">
+            <h4>Posición inicial</h4>
+            <p>Primera aportación registrada en tu cartera.</p>
+          </div>
+          <div className="table-scroll">
+            <table className="monthly-table report-pro-table">
+              <thead>
+                <tr><th>Fecha</th><th className="text-right">Aportación</th><th className="text-right">Saldo provisional</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{incorporationDate}</td>
+                  <td className="text-right positive">{formatEuro(position.amount)}</td>
+                  <td className="text-right">{formatEuro(position.amount)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </article>
+    </div>
+  );
+};
 
 const palette = {
   bg: '#f2f0ea',
@@ -1294,6 +1365,13 @@ const ClientPortal = ({
   }, [clientId, clientUnreadCount, supportOpen]);
 
   const report = overview?.report ?? null;
+  const initialPosition =
+    overview?.publicationMode === INITIAL_CLIENT_PUBLICATION_MODE &&
+    overview.initialPosition &&
+    Number.isFinite(overview.initialPosition.amount) &&
+    overview.initialPosition.amount > 0
+      ? overview.initialPosition
+      : null;
   const clientName = useMemo(
     () => report?.clientName ?? overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId,
     [clientId, overview, report]
@@ -1311,7 +1389,7 @@ const ClientPortal = ({
   }, [clientName, displayName, loginId, liveProfileDisplayName]);
   const clientReportData = useMemo(
     () =>
-      overview
+      overview && !initialPosition
         ? report
           ? {
               ...report,
@@ -1334,7 +1412,7 @@ const ClientPortal = ({
             }
           : buildFallbackReportFromOverview(overview, loginId ?? clientId)
         : null,
-    [clientId, loginId, overview, report]
+    [clientId, initialPosition, loginId, overview, report]
   );
   const shouldUseModernReportPdf = Boolean(clientReportData);
 
@@ -2234,7 +2312,8 @@ const ClientPortal = ({
               }
               void downloadClientPdf();
             }}
-            disabled={!overview || (!shouldUseModernReportPdf && pdfBusy)}
+            disabled={!overview || Boolean(initialPosition) || (!shouldUseModernReportPdf && pdfBusy)}
+            title={initialPosition ? 'El PDF estará disponible después del primer cierre mensual.' : undefined}
             style={{
               padding: '8px 12px',
               borderRadius: 10,
@@ -2243,7 +2322,7 @@ const ClientPortal = ({
               color: palette.text,
               fontWeight: 600,
               cursor: 'pointer',
-              opacity: !overview || (!shouldUseModernReportPdf && pdfBusy) ? 0.7 : 1
+              opacity: !overview || initialPosition || (!shouldUseModernReportPdf && pdfBusy) ? 0.7 : 1
             }}
           >
             {!shouldUseModernReportPdf && pdfBusy ? 'Generando PDF...' : 'Descargar PDF'}
@@ -2349,7 +2428,12 @@ const ClientPortal = ({
         </section>
       ) : null}
 
-      {clientReportData ? (
+      {initialPosition ? (
+        <InitialClientPositionView
+          clientCode={loginId ?? clientId}
+          position={initialPosition}
+        />
+      ) : clientReportData ? (
         <ReportView
           reportData={clientReportData}
           downloadSignal={reportDownloadSignal}
