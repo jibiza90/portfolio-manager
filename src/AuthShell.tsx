@@ -99,6 +99,11 @@ const InitialClientPositionView = ({
     month: 'long',
     year: 'numeric'
   });
+  const incorporationDateShort = new Date(`${position.iso}T12:00:00`).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short'
+  });
+  const halfPosition = position.amount / 2;
 
   return (
     <div className="informes-container informes-pro-page fade-in report-pro-page-demo client-initial-position-page">
@@ -106,39 +111,101 @@ const InitialClientPositionView = ({
         <header className="report-pro-header">
           <div>
             <p className="report-pro-kicker">Portfolio Manager</p>
-            <h2>Investment Report</h2>
-            <p className="report-pro-date">Primer periodo en curso</p>
+            <h2>Resumen de tu inversión</h2>
+            <p className="report-pro-date">Información disponible desde tu primera aportación</p>
           </div>
           <div className="report-pro-client-tag">{clientCode}</div>
         </header>
 
         <section className="client-initial-position-hero">
-          <span>Saldo provisional</span>
+          <div className="client-initial-position-status"><i aria-hidden="true" /> Tu inversión ya está registrada</div>
+          <span>Saldo actual</span>
           <strong>{formatEuro(position.amount)}</strong>
-          <p>Posición registrada a partir de tu primera aportación.</p>
+          <p>Este importe corresponde al capital que has aportado.</p>
         </section>
 
         <section className="client-initial-position-kpis">
           <div><span>Capital aportado</span><strong>{formatEuro(position.amount)}</strong></div>
-          <div><span>Fecha de incorporación</span><strong>{incorporationDate}</strong></div>
-          <div><span>Beneficio</span><strong>—</strong></div>
-          <div><span>Rentabilidad</span><strong>—</strong></div>
+          <div><span>Fecha de inicio</span><strong>{incorporationDate}</strong></div>
+          <div className="is-awaiting-result"><span>Beneficio acumulado</span><strong>Disponible al finalizar el mes</strong></div>
+          <div className="is-awaiting-result"><span>Rentabilidad</span><strong>Disponible al finalizar el mes</strong></div>
         </section>
 
         <section className="client-initial-position-notice" role="status">
-          <strong>Primer periodo en curso</strong>
-          <p>El beneficio y la rentabilidad se mostrarán cuando se publique el primer cierre mensual.</p>
+          <div>
+            <strong>Tu posición está activa</strong>
+            <p>El beneficio, la rentabilidad y el valor actualizado de tu inversión aparecerán aquí al finalizar el mes.</p>
+          </div>
+          <button type="button" className="client-initial-position-info" aria-label="Más información sobre la actualización mensual">
+            i
+            <span role="tooltip">No tienes que hacer nada. Actualizaremos automáticamente esta información cuando estén disponibles los primeros resultados.</span>
+          </button>
+        </section>
+
+        <section className="report-pro-panel client-initial-position-evolution">
+          <div className="report-pro-panel-head">
+            <div>
+              <h4>Evolución de tu posición</h4>
+              <p>La entrada de capital queda identificada como aportación, no como beneficio.</p>
+            </div>
+            <span className="client-initial-position-chart-badge">Aportación registrada</span>
+          </div>
+          <div className="client-initial-position-chart" role="img" aria-label={`La posición pasa de cero a ${formatEuro(position.amount)} con la aportación del ${incorporationDate}`}>
+            <svg viewBox="0 0 820 300" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <linearGradient id="initial-position-area" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#0f7b88" stopOpacity="0.28" />
+                  <stop offset="100%" stopColor="#0f7b88" stopOpacity="0.03" />
+                </linearGradient>
+              </defs>
+              <g className="client-initial-position-grid">
+                <line x1="86" y1="38" x2="776" y2="38" />
+                <line x1="86" y1="138" x2="776" y2="138" />
+                <line x1="86" y1="238" x2="776" y2="238" />
+              </g>
+              <g className="client-initial-position-axis-labels">
+                <text x="72" y="43" textAnchor="end">{formatEuroRounded(position.amount)}</text>
+                <text x="72" y="143" textAnchor="end">{formatEuroRounded(halfPosition)}</text>
+                <text x="72" y="243" textAnchor="end">0 €</text>
+              </g>
+              <path className="client-initial-position-area" d="M112 238 L708 38 L708 238 L112 238 Z" />
+              <path className="client-initial-position-line" d="M112 238 L708 38" />
+              <circle className="client-initial-position-start-point" cx="112" cy="238" r="5" />
+              <circle className="client-initial-position-end-halo" cx="708" cy="38" r="12" />
+              <circle className="client-initial-position-end-point" cx="708" cy="38" r="6" />
+              <g className="client-initial-position-value-label">
+                <rect x="606" y="55" width="170" height="42" rx="12" />
+                <text x="691" y="73" textAnchor="middle">APORTACIÓN</text>
+                <text x="691" y="89" textAnchor="middle">{formatEuro(position.amount)}</text>
+              </g>
+              <g className="client-initial-position-x-labels">
+                <text x="112" y="273" textAnchor="middle">Inicio</text>
+                <text x="708" y="273" textAnchor="middle">{incorporationDateShort}</text>
+              </g>
+            </svg>
+          </div>
+        </section>
+
+        <section className="report-pro-panel client-initial-position-results">
+          <div className="report-pro-panel-head">
+            <h4>Resultados de tu inversión</h4>
+            <p>Estos datos se mostrarán cuando finalice tu primer mes.</p>
+          </div>
+          <div className="client-initial-position-result-grid">
+            <div><span>Beneficio mensual</span><strong>Disponible al finalizar el mes</strong></div>
+            <div><span>Rentabilidad mensual</span><strong>Disponible al finalizar el mes</strong></div>
+          </div>
         </section>
 
         <section className="report-pro-panel client-initial-position-movement">
           <div className="report-pro-panel-head">
-            <h4>Posición inicial</h4>
-            <p>Primera aportación registrada en tu cartera.</p>
+            <h4>Historial de movimientos</h4>
+            <p>Aportaciones y retiradas registradas en tu cartera.</p>
           </div>
           <div className="table-scroll">
             <table className="monthly-table report-pro-table">
               <thead>
-                <tr><th>Fecha</th><th className="text-right">Aportación</th><th className="text-right">Saldo provisional</th></tr>
+                <tr><th>Fecha</th><th className="text-right">Aportación</th><th className="text-right">Capital aportado</th></tr>
               </thead>
               <tbody>
                 <tr>
