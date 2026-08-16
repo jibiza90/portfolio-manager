@@ -50,6 +50,7 @@ import {
 } from './services/loginTracker';
 import { isValidReportToken } from './services/reportLinks';
 import { editAdminSupportMessage, markThreadSeenByAdmin, sendSupportMessage, subscribeSupportMessages, subscribeSupportThreads, type SupportMessage, type SupportThread } from './services/supportInbox';
+import { getAvailableBalanceBeforeWithdrawal } from './utils/withdrawalBalance';
 
 const INFO_VIEW = 'INFO_VIEW';
 const COMISIONES_VIEW = 'COMISIONES_VIEW';
@@ -2213,9 +2214,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
                     <CurrencyCell
                       value={r.decrement}
                       onChange={(v) => {
-                        const base = r.baseBalance ?? 0;
-                        const inc = r.increment ?? 0;
-                        const max = base + inc;
+                        const max = getAvailableBalanceBeforeWithdrawal(clientRows, r.iso);
                         if (v !== undefined && !Number.isNaN(v) && v > max) {
                           setAlertMessage(`Saldo excedido. Máximo disponible: ${formatCurrency(max)}`);
                           return;
