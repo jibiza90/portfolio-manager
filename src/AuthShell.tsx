@@ -4,6 +4,7 @@ import { LegalPrivacyNotice } from './components/LegalPrivacyNotice';
 import { CLIENTS, DEMO_CLIENT_ID, isDemoClient } from './constants/clients';
 import {
   buildClientAuthEmail,
+  fetchClientAccessProfile,
   fetchAccessProfile,
   INITIAL_CLIENT_PUBLICATION_MODE,
   loginIdFromAuthEmail,
@@ -443,6 +444,40 @@ const buildFallbackReportFromOverview = (
       },
       overview.clientId === DEMO_CLIENT_ID ? '0000-00' : CONTRIBUTION_BREAKDOWN_START_MONTH
     ),
+    createdAt: overview.updatedAt,
+    expiresAt: overview.updatedAt
+  };
+};
+
+const getInitialPositionFromOverview = (overview: ClientOverview | null) =>
+  overview?.publicationMode === INITIAL_CLIENT_PUBLICATION_MODE &&
+  overview.initialPosition &&
+  Number.isFinite(overview.initialPosition.amount) &&
+  overview.initialPosition.amount > 0
+    ? overview.initialPosition
+    : null;
+
+const buildPublishedClientReport = (
+  overview: ClientOverview | null,
+  clientId: string,
+  loginId: string | null
+): ReportData | null => {
+  if (!overview || getInitialPositionFromOverview(overview)) return null;
+  const report = overview.report ?? null;
+  const clientCode = loginId ?? clientId;
+
+  if (!report) return buildFallbackReportFromOverview(overview, clientCode);
+
+  return {
+    ...report,
+    clientName: clientCode,
+    clientCode,
+    contributionBreakdowns:
+      clientId === DEMO_CLIENT_ID
+        ? deriveContributionBreakdowns(report, '0000-00')
+        : report.contributionBreakdowns && report.contributionBreakdowns.length > 0
+          ? filterVisibleContributionBreakdowns(report.contributionBreakdowns, CONTRIBUTION_BREAKDOWN_START_MONTH)
+          : deriveContributionBreakdowns(report, CONTRIBUTION_BREAKDOWN_START_MONTH),
     createdAt: overview.updatedAt,
     expiresAt: overview.updatedAt
   };
@@ -1432,13 +1467,7 @@ const ClientPortal = ({
   }, [clientId, clientUnreadCount, supportOpen]);
 
   const report = overview?.report ?? null;
-  const initialPosition =
-    overview?.publicationMode === INITIAL_CLIENT_PUBLICATION_MODE &&
-    overview.initialPosition &&
-    Number.isFinite(overview.initialPosition.amount) &&
-    overview.initialPosition.amount > 0
-      ? overview.initialPosition
-      : null;
+  const initialPosition = getInitialPositionFromOverview(overview);
   const clientName = useMemo(
     () => report?.clientName ?? overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId,
     [clientId, overview, report]
@@ -1455,31 +1484,8 @@ const ClientPortal = ({
     return clientName;
   }, [clientName, displayName, loginId, liveProfileDisplayName]);
   const clientReportData = useMemo(
-    () =>
-      overview && !initialPosition
-        ? report
-          ? {
-              ...report,
-              clientName: loginId ?? clientId,
-              clientCode: loginId ?? clientId,
-              contributionBreakdowns:
-                clientId === DEMO_CLIENT_ID
-                  ? deriveContributionBreakdowns(report, '0000-00')
-                  : report.contributionBreakdowns && report.contributionBreakdowns.length > 0
-                  ? filterVisibleContributionBreakdowns(
-                      report.contributionBreakdowns,
-                      CONTRIBUTION_BREAKDOWN_START_MONTH
-                    )
-                  : deriveContributionBreakdowns(
-                      report,
-                      CONTRIBUTION_BREAKDOWN_START_MONTH
-                    ),
-              createdAt: overview.updatedAt,
-              expiresAt: overview.updatedAt
-            }
-          : buildFallbackReportFromOverview(overview, loginId ?? clientId)
-        : null,
-    [clientId, initialPosition, loginId, overview, report]
+    () => buildPublishedClientReport(overview, clientId, loginId),
+    [clientId, loginId, overview]
   );
   const shouldUseModernReportPdf = Boolean(clientReportData);
 
@@ -2526,6 +2532,97 @@ const ClientPortal = ({
   );
 };
 
+const AdminClientReportPreview = ({
+  clientId,
+  onClose
+}: {
+  clientId: string;
+  onClose: () => void;
+}) => {
+  const [overview, setOverview] = useState<ClientOverview | null>(null);
+  const [loginId, setLoginId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    let active = true;
+    void fetchClientAccessProfile(clientId)
+      .then((profile) => {
+        if (active) setLoginId(profile?.loginId?.trim() || null);
+      })
+      .catch(() => {
+        if (active) setLoginId(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [clientId]);
+
+  useEffect(() => {
+    setLoaded(false);
+    setError(null);
+    const unsubscribe = subscribeClientOverview(
+      clientId,
+      (value) => {
+        setOverview(value as ClientOverview | null);
+        setLoaded(true);
+      },
+      () => {
+        setError('No se pudo cargar la información publicada para este cliente.');
+        setLoaded(true);
+      }
+    );
+    return () => unsubscribe();
+  }, [clientId]);
+
+  const initialPosition = getInitialPositionFromOverview(overview);
+  const reportData = useMemo(
+    () => buildPublishedClientReport(overview, clientId, loginId),
+    [clientId, loginId, overview]
+  );
+
+  return (
+    <div className="admin-client-report-preview" role="dialog" aria-modal="true" aria-label="Vista del informe publicado del cliente">
+      <header className="admin-client-report-preview-bar">
+        <div>
+          <span>Vista del cliente</span>
+          <strong>{loginId ?? clientId}</strong>
+          <small>Estás viendo exactamente la última información publicada.</small>
+        </div>
+        <button type="button" onClick={onClose} aria-label="Cerrar vista del cliente">Cerrar <kbd>Esc</kbd></button>
+      </header>
+      <div className="admin-client-report-preview-body">
+        {!loaded ? <div className="admin-client-report-preview-status">Cargando vista publicada...</div> : null}
+        {error ? <div className="admin-client-report-preview-status is-error">{error}</div> : null}
+        {loaded && !error && !overview ? (
+          <div className="admin-client-report-preview-status">Este cliente todavía no tiene información publicada.</div>
+        ) : null}
+        {initialPosition ? (
+          <InitialClientPositionView clientCode={loginId ?? clientId} position={initialPosition} />
+        ) : reportData ? (
+          <ReportView
+            reportData={reportData}
+            generalReferenceMonthly={overview?.generalReferenceMonthly}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
 const AuthShell = () => {
   const [session, setSession] = useState<SessionState>({
     loading: true,
@@ -2540,6 +2637,7 @@ const AuthShell = () => {
   const [loginBusy, setLoginBusy] = useState(false);
   const [loadingDots, setLoadingDots] = useState('.');
   const [adminStoreError, setAdminStoreError] = useState<string | null>(null);
+  const [adminPreviewClientId, setAdminPreviewClientId] = useState<string | null>(null);
   const saveStatus = usePortfolioStore((state) => state.saveStatus);
   const pendingLogoutTimerRef = useRef<number | null>(null);
   const inactivityTimerRef = useRef<number | null>(null);
@@ -2548,6 +2646,21 @@ const AuthShell = () => {
   const manualLogoutRef = useRef(false);
   const adminUidRef = useRef<string | null>(null);
   const hadAuthenticatedUserRef = useRef(false);
+
+  useEffect(() => {
+    const isPrimaryAdmin = session.role === 'admin' && normalizeEmail(session.email ?? '') === PRIMARY_ADMIN_EMAIL;
+    if (!isPrimaryAdmin) {
+      setAdminPreviewClientId(null);
+      return;
+    }
+
+    const openClientPreview = (event: Event) => {
+      const clientId = (event as CustomEvent<{ clientId?: string }>).detail?.clientId?.trim();
+      if (clientId) setAdminPreviewClientId(clientId);
+    };
+    window.addEventListener('preview-client-report', openClientPreview);
+    return () => window.removeEventListener('preview-client-report', openClientPreview);
+  }, [session.email, session.role]);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -3161,6 +3274,12 @@ const AuthShell = () => {
       >
         <AdminApp />
       </React.Suspense>
+      {adminPreviewClientId ? (
+        <AdminClientReportPreview
+          clientId={adminPreviewClientId}
+          onClose={() => setAdminPreviewClientId(null)}
+        />
+      ) : null}
     </>
   );
 };

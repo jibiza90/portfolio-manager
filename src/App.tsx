@@ -1761,11 +1761,12 @@ function BulkMonthlyReturnModal({
   );
 }
 
-function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
+function ClientPanel({ clientId, focusDate, contacts, setAlertMessage, canPreviewClientReport }: {
   clientId: string;
   focusDate: string;
   contacts: Record<string, ContactInfo>;
   setAlertMessage: React.Dispatch<React.SetStateAction<string | null>>;
+  canPreviewClientReport: boolean;
 }) {
   const { snapshot } = usePortfolioStore();
   const setClientMovement = usePortfolioStore((s) => s.setClientMovement);
@@ -1963,6 +1964,14 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage }: {
           </div>
           <div className="panel-actions">
             <button className="ghost-btn" onClick={() => window.dispatchEvent(new CustomEvent('goto-general'))}>Volver a General</button>
+            {canPreviewClientReport ? (
+              <button
+                className="ghost-btn client-report-preview-trigger"
+                onClick={() => window.dispatchEvent(new CustomEvent('preview-client-report', { detail: { clientId } }))}
+              >
+                Ver como cliente
+              </button>
+            ) : null}
             <button className="ghost-btn" onClick={() => setShowMonthlyHistory(true)}>Histórico mensual</button>
             <button className="primary" onClick={() => setShowAnalytics(true)}>Ver estadísticas</button>
           </div>
@@ -4487,6 +4496,7 @@ export default function App() {
           focusDate={focusDate}
           contacts={contacts}
           setAlertMessage={setAlertMessage}
+          canPreviewClientReport={isPrimaryAdmin}
         />
       )}
       <BulkMonthlyReturnModal
