@@ -1,4 +1,4 @@
-import type { ClientDayRow, MonthlyHistoryEntry } from '../types';
+import type { ClientDayRow, MonthlyHistoryEntry, Movement } from '../types';
 import { calculateAllMonthsTWR } from './twr';
 
 const MONTH_NAMES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -60,6 +60,54 @@ export function hasMonthlyHistoryValue(entry?: MonthlyHistoryEntry) {
   return !!entry && (entry.finalBalance !== undefined || entry.returnPct !== undefined);
 }
 
+const hasMeaningfulMovement = (movement: Movement) =>
+  (movement.increment ?? 0) !== 0 ||
+  (movement.decrement ?? 0) !== 0 ||
+  movement.manualProfit !== undefined ||
+  movement.manualProfitPct !== undefined;
+
+export function getStandaloneContributionReturnForMonth(
+  movements: Record<string, Movement>,
+  monthlyHistory: Record<string, MonthlyHistoryEntry>,
+  monthKey: string
+) {
+  const hasEarlierMovement = Object.entries(movements).some(
+    ([iso, movement]) => iso.slice(0, 7) < monthKey && hasMeaningfulMovement(movement)
+  );
+  const hasEarlierHistory = Object.entries(monthlyHistory).some(
+    ([month, entry]) => month < monthKey && hasMonthlyHistoryValue(entry)
+  );
+  if (hasEarlierMovement || hasEarlierHistory) return undefined;
+
+  const monthMovements = Object.entries(movements)
+    .filter(([iso, movement]) => iso.slice(0, 7) === monthKey && hasMeaningfulMovement(movement))
+    .map(([, movement]) => movement);
+  const contributions = monthMovements.filter((movement) => (movement.increment ?? 0) > 0);
+  if (
+    contributions.length === 0 ||
+    monthMovements.some((movement) =>
+      (movement.decrement ?? 0) > 0 ||
+      movement.manualProfit !== undefined ||
+      movement.manualProfitPct !== undefined
+    )
+  ) {
+    return undefined;
+  }
+  if (contributions.some((movement) => normalizeMonthlyReturnPct(movement.incrementReturnPct) === undefined)) {
+    return undefined;
+  }
+
+  const invested = contributions.reduce((sum, movement) => sum + (movement.increment ?? 0), 0);
+  if (invested <= 0) return undefined;
+
+  const profit = contributions.reduce(
+    (sum, movement) =>
+      sum + (movement.increment ?? 0) * (normalizeMonthlyReturnPct(movement.incrementReturnPct) ?? 0),
+    0
+  );
+  return profit / invested;
+}
+
 export function canHonorMonthlyHistoryReturn(baseStart: number | undefined, entry?: MonthlyHistoryEntry) {
   const normalizedReturn = normalizeMonthlyReturnPct(entry?.returnPct);
   if (entry?.finalBalance === undefined || normalizedReturn === undefined || normalizedReturn <= -1) {
@@ -84,6 +132,16 @@ export function buildMonthlyStatsForMonths(
   const trackedMonths = [...monthKeys].sort((a, b) => (a > b ? 1 : -1));
   const trackedMonthSet = new Set(trackedMonths);
   const scopedRows = rows.filter((row) => trackedMonthSet.has(row.iso.slice(0, 7)));
+  const movementsFromRows = Object.fromEntries(
+    rows.map((row) => [row.iso, {
+      increment: row.increment,
+      incrementReturnPct: row.incrementReturnPct,
+      decrement: row.decrement,
+      decrementReturnPct: row.decrementReturnPct,
+      manualProfit: row.manualProfit,
+      manualProfitPct: row.manualProfitPct
+    }])
+  );
   const byMonth = new Map<string, {
     profit: number;
     baseStart?: number;
@@ -130,11 +188,17 @@ export function buildMonthlyStatsForMonths(
     const derivedEntry = byMonth.get(monthKey);
     const historyEntry = monthlyHistory[monthKey];
     const normalizedHistoryReturn = normalizeMonthlyReturnPct(historyEntry?.returnPct);
+    const standaloneContributionReturn = getStandaloneContributionReturnForMonth(
+      movementsFromRows,
+      monthlyHistory,
+      monthKey
+    );
+    const effectiveHistoryReturn = standaloneContributionReturn ?? normalizedHistoryReturn;
     const monthlyTwr = twrByMonth.get(monthKey);
     const hasManualReturnAdjustment = Math.abs(derivedEntry?.manualReturnAdjustment ?? 0) > 0.0000001;
     const hasCustomFlowReturn =
       monthKey >= '2026-04' &&
-      normalizedHistoryReturn !== undefined &&
+      effectiveHistoryReturn !== undefined &&
       (derivedEntry?.hasIncrementReturnOverride === true || derivedEntry?.hasDecrementReturnOverride === true);
 
     let profit = derivedEntry?.profit ?? 0;
@@ -155,7 +219,7 @@ export function buildMonthlyStatsForMonths(
     }
 
     const canUseHistoryReturn = canHonorMonthlyHistoryReturn(baseStart, historyEntry);
-    if (forceHistoryReturn && normalizedHistoryReturn !== undefined) {
+    if (forceHistoryReturn && effectiveHistoryReturn !== undefined) {
       if (hasManualReturnAdjustment && derivedEntry) {
         // El % manual se suma al TWR visible del cliente, pero el saldo/profit
         // se conserva derivado de la ficha para no afectar al general.
@@ -163,19 +227,19 @@ export function buildMonthlyStatsForMonths(
         // Desde abril 2026, si una aportacion tiene rentabilidad propia, el saldo
         // se conserva derivado de la ficha: posicion inicial x rentabilidad mensual
         // + aportacion x rentabilidad propia.
-      } else if (historyEntry?.finalBalance !== undefined && normalizedHistoryReturn > -1) {
+      } else if (historyEntry?.finalBalance !== undefined && effectiveHistoryReturn > -1) {
         finalEnd = historyEntry.finalBalance;
-        baseStart = historyEntry.finalBalance / (1 + normalizedHistoryReturn);
+        baseStart = historyEntry.finalBalance / (1 + effectiveHistoryReturn);
         profit = historyEntry.finalBalance - baseStart;
       } else if (derivedEntry?.hasIncrementReturnOverride) {
         // El historico fija la rentabilidad mensual, pero cada ingreso con override
         // aporta su propio beneficio en euros; conservamos el saldo/profit derivado.
       } else {
-        if ((baseStart === undefined || baseStart === 0) && finalEnd !== undefined && finalEnd > 0 && normalizedHistoryReturn > -1) {
-          baseStart = finalEnd / (1 + normalizedHistoryReturn);
+        if ((baseStart === undefined || baseStart === 0) && finalEnd !== undefined && finalEnd > 0 && effectiveHistoryReturn > -1) {
+          baseStart = finalEnd / (1 + effectiveHistoryReturn);
         }
         if (baseStart !== undefined && baseStart > 0) {
-          profit = baseStart * normalizedHistoryReturn;
+          profit = baseStart * effectiveHistoryReturn;
           if (finalEnd === undefined || finalEnd === 0) {
             finalEnd = baseStart + profit;
           }
@@ -189,9 +253,15 @@ export function buildMonthlyStatsForMonths(
     const safeBase = baseStart ?? 0;
     const simpleProfitPct = safeBase > 0 ? profit / safeBase : 0;
     const shouldUseHistoryReturn =
-      normalizedHistoryReturn !== undefined &&
-      (forceHistoryReturn || canUseHistoryReturn || derivedEntry?.hasIncrementReturnOverride || derivedEntry?.hasDecrementReturnOverride);
-    const baseProfitPct = shouldUseHistoryReturn ? normalizedHistoryReturn : monthlyTwr ?? simpleProfitPct;
+      effectiveHistoryReturn !== undefined &&
+      (
+        standaloneContributionReturn !== undefined ||
+        forceHistoryReturn ||
+        canUseHistoryReturn ||
+        derivedEntry?.hasIncrementReturnOverride ||
+        derivedEntry?.hasDecrementReturnOverride
+      );
+    const baseProfitPct = shouldUseHistoryReturn ? effectiveHistoryReturn : monthlyTwr ?? simpleProfitPct;
     const profitPct = baseProfitPct + (shouldUseHistoryReturn ? derivedEntry?.manualReturnAdjustment ?? 0 : 0);
     const hasData = !!derivedEntry || hasMonthlyHistoryValue(historyEntry);
 

@@ -16,6 +16,7 @@ import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import {
   buildMonthlyStatsForMonths,
   getDominantMonthlyReturn,
+  getStandaloneContributionReturnForMonth,
   hasMonthlyHistoryValue,
   normalizeMonthlyReturnPct
 } from './utils/monthlyHistory';
@@ -3796,12 +3797,19 @@ export default function App() {
     for (const clientId of bulkMonthlyClientIds) {
       const rawOverride = bulkMonthlyOverrideTextByClient[clientId]?.trim();
       const parsedOverride = rawOverride ? parseNumberEs(rawOverride) : undefined;
-      const selectedReturn = parsedOverride ?? generalReturn;
+      const standaloneContributionReturn = getStandaloneContributionReturnForMonth(
+        movementsByClient[clientId] ?? {},
+        monthlyHistoryByClient[clientId] ?? {},
+        bulkMonthlyMonth
+      );
+      const selectedReturn = parsedOverride !== undefined
+        ? parsedOverride / 100
+        : standaloneContributionReturn ?? (generalReturn !== undefined ? generalReturn / 100 : undefined);
       if (selectedReturn === undefined) {
         window.dispatchEvent(new CustomEvent('show-toast', { detail: `Falta rentabilidad para ${formatClientDisplayName(clientId, contacts)}.` }));
         return;
       }
-      valuesByClient[clientId] = selectedReturn / 100;
+      valuesByClient[clientId] = selectedReturn;
     }
 
     bulkMonthlyClientIds.forEach((clientId) => {

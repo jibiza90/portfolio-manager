@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import 'dayjs/locale/es';
+import 'dayjs/locale/es.js';
 
 export interface CalendarDay {
   iso: string;

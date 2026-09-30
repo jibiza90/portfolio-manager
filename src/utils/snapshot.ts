@@ -93,14 +93,19 @@ const getStandaloneContributionResults = (
       ...historyMonths
     ].sort((left, right) => left.localeCompare(right));
     const firstActivityMonth = activityMonths[0];
-    if (!firstActivityMonth || monthlyHistoryByClient[id]?.[firstActivityMonth]) return;
+    if (!firstActivityMonth) return;
 
     const firstMonthMovements = movements
       .filter(([iso]) => iso.slice(0, 7) === firstActivityMonth)
       .map(([, movement]) => movement);
     const contributions = firstMonthMovements.filter((movement) => (movement.increment ?? 0) > 0);
     const hasWithdrawal = firstMonthMovements.some((movement) => (movement.decrement ?? 0) > 0);
-    if (contributions.length === 0 || hasWithdrawal) return;
+    const hasManualResult = firstMonthMovements.some(
+      (movement) =>
+        hasMeaningfulAmount(movement.manualProfit) ||
+        normalizeReturnPct(movement.manualProfitPct) !== undefined
+    );
+    if (contributions.length === 0 || hasWithdrawal || hasManualResult) return;
 
     const allContributionsHaveReturn = contributions.every(
       (movement) => normalizeReturnPct(movement.incrementReturnPct) !== undefined
@@ -311,10 +316,14 @@ export const buildSnapshot = (
         demo && day.iso === monthEndIso(monthKey)
           ? portfolioReturnByMonth[monthKey]
           : undefined;
-      const monthlyHistory =
+      const recordedMonthlyHistory =
         inheritedDemoReturn !== undefined
           ? { returnPct: inheritedDemoReturn }
           : historicalByClientAndDay[id]?.[day.iso];
+      const monthlyHistory =
+        recordedMonthlyHistory && standaloneContributionResult
+          ? { ...recordedMonthlyHistory, returnPct: standaloneContributionResult.returnPct }
+          : recordedMonthlyHistory;
       const hasCarryBalance = actualBase !== undefined && Math.abs(actualBase) > MONTHLY_HISTORY_TOLERANCE;
       const isBootstrapMonth = actualBase === undefined || !hasCarryBalance;
 
