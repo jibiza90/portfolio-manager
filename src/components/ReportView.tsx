@@ -463,7 +463,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
   useEffect(() => {
     if (!report) return;
-    setPeriodPreset('last12');
+    setPeriodPreset('all');
   }, [report?.clientId]);
 
   useLayoutEffect(() => {
@@ -1854,7 +1854,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const chartData = expanded ? effectiveExpandedPatrimonioData : effectivePatrimonioData;
     const geometry = expanded ? expandedPatrimonyGeometry : patrimonyGeometry;
     const isScrollable = !expanded && chartData.length > 10;
-    const chartWidth = isScrollable ? `${(chartData.length / 10) * 100}%` : '100%';
+    const plotWidth = geometry.width - geometry.left - geometry.right;
+    const chartWidth = isScrollable
+      ? `calc(${(chartData.length / 10) * (geometry.width / plotWidth) * 100}% + 22px)`
+      : '100%';
     const showPointTooltip = (anchor: Element, point: PatrimonyTooltipState) => {
       showViewportTooltip(
         anchor,
@@ -1865,7 +1868,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         { tone: 'dark', preferredPlacement: 'top', maxWidth: 220 }
       );
     };
-    return (
+    const chart = (
       <div
         ref={expanded ? undefined : patrimonyScrollRef}
         className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${isScrollable ? 'is-scrollable' : ''}`}
@@ -1882,9 +1885,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
             {geometry.yTicks.map((tick, idx) => (
               <g key={`tick-${idx}`}>
                 <line className="report-pro-grid-line" x1={geometry.left} y1={tick.y} x2={geometry.width - geometry.right} y2={tick.y} />
-                <text className={`report-pro-y-label ${expanded ? 'report-pro-y-label-expanded' : ''}`} x={geometry.left - 10} y={tick.y + 4} textAnchor="end">
-                  {formatAxisCurrency(tick.value)}
-                </text>
+                {expanded ? (
+                  <text className="report-pro-y-label report-pro-y-label-expanded" x={geometry.left - 10} y={tick.y + 4} textAnchor="end">
+                    {formatAxisCurrency(tick.value)}
+                  </text>
+                ) : null}
               </g>
             ))}
             {geometry.areaPath && <path d={geometry.areaPath} className="report-pro-area" fill={`url(#${expanded ? 'patrimonyAreaExpanded' : 'patrimonyAreaShared'})`} />}
@@ -1927,7 +1932,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               const label = formatCurrencyNoCents(pt.value);
               const approxWidth = expanded
                 ? Math.min(154, Math.max(86, label.length * 7.1))
-                : Math.min(122, Math.max(68, label.length * 6.2));
+                : Math.min(110, Math.max(56, label.length * 5.4));
               const labelX = Math.max(geometry.left + approxWidth / 2, Math.min(pt.x, geometry.width - geometry.right - approxWidth / 2));
               const preferredY = pt.y + (idx % 2 === 0 ? (expanded ? -24 : -18) : (expanded ? 30 : 22));
               const labelY = Math.max(geometry.top + (expanded ? 14 : 10), Math.min(preferredY, geometry.plotBottom - (expanded ? 14 : 10)));
@@ -1953,6 +1958,21 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </div>
         </div>
         </div>
+      </div>
+    );
+    if (expanded) return chart;
+    return (
+      <div className="report-pro-patrimony-frame">
+        <div className="report-pro-fixed-y-axis" aria-hidden="true">
+          <svg viewBox={`0 0 88 ${geometry.height}`} preserveAspectRatio="none" className="report-pro-fixed-y-axis-chart">
+            {geometry.yTicks.map((tick, idx) => (
+              <text key={`fixed-tick-${idx}`} className="report-pro-y-label" x="80" y={tick.y + 4} textAnchor="end">
+                {formatAxisCurrency(tick.value)}
+              </text>
+            ))}
+          </svg>
+        </div>
+        {chart}
       </div>
     );
   };

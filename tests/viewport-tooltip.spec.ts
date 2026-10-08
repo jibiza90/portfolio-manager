@@ -30,6 +30,7 @@ test('keeps every report tooltip visible inside the real page viewport', async (
     harness.mountReportView(12);
   }, '/tests/fixtures/report-view-harness.tsx');
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
+  await expect(page.getByLabel('Periodo')).toHaveValue('all');
 
   const fittedPatrimonyChart = page.locator('.report-pro-patrimony-scroll');
   await expect.poll(async () => fittedPatrimonyChart.evaluate((element) => {
@@ -43,10 +44,21 @@ test('keeps every report tooltip visible inside the real page viewport', async (
     };
   })).toEqual({ atLatestMonth: true, scrollable: true });
   const fittedDimensions = await fittedPatrimonyChart.evaluate((element) => ({
-    clientWidth: element.clientWidth,
-    scrollWidth: element.scrollWidth
+    clientWidth: element.clientWidth
   }));
-  expect(12 * fittedDimensions.clientWidth / fittedDimensions.scrollWidth).toBeCloseTo(10, 1);
+  const fittedMonthRowWidth = await page.locator('.report-pro-patrimony-scroll .report-pro-month-row').evaluate((element) => (
+    element.getBoundingClientRect().width
+  ));
+  expect(12 * fittedDimensions.clientWidth / fittedMonthRowWidth).toBeCloseTo(10, 1);
+
+  const fixedAxis = page.locator('.report-pro-fixed-y-axis');
+  const fixedAxisBeforeScroll = await fixedAxis.boundingBox();
+  await fittedPatrimonyChart.evaluate((element) => { element.scrollLeft = 0; });
+  const fixedAxisAfterScroll = await fixedAxis.boundingBox();
+  expect(fixedAxisBeforeScroll).not.toBeNull();
+  expect(fixedAxisAfterScroll).not.toBeNull();
+  expect(fixedAxisAfterScroll!.x).toBeCloseTo(fixedAxisBeforeScroll!.x, 0);
+  await fittedPatrimonyChart.evaluate((element) => { element.scrollLeft = Number.MAX_SAFE_INTEGER; });
 
   const assertVisibleInsideViewport = async () => {
     const tooltip = page.locator('.report-pro-viewport-tooltip');
@@ -87,13 +99,18 @@ test('keeps every report tooltip visible inside the real page viewport', async (
     await assertVisibleInsideViewport();
   }
 
+  await page.getByRole('button', { name: 'Ampliar grafico' }).click();
+  await expect(page.getByRole('dialog', { name: 'Grafico de evolucion de patrimonio ampliado' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Grafico de evolucion de patrimonio ampliado' })).toBeHidden();
+
   await page.reload();
   await page.evaluate(async (modulePath) => {
     const harness = await import(/* @vite-ignore */ modulePath);
     harness.mountReportView(13);
   }, '/tests/fixtures/report-view-harness.tsx');
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
-  await page.getByLabel('Periodo').selectOption('all');
+  await expect(page.getByLabel('Periodo')).toHaveValue('all');
 
   const scrollablePatrimonyChart = page.locator('.report-pro-patrimony-scroll');
   await expect.poll(async () => scrollablePatrimonyChart.evaluate((element) => {
@@ -110,5 +127,8 @@ test('keeps every report tooltip visible inside the real page viewport', async (
   }));
   expect(scrollableDimensions.scrollable).toBe(true);
   expect(scrollableDimensions.scrollWidth).toBeGreaterThan(scrollableDimensions.clientWidth);
-  expect(13 * scrollableDimensions.clientWidth / scrollableDimensions.scrollWidth).toBeCloseTo(10, 1);
+  const scrollableMonthRowWidth = await page.locator('.report-pro-patrimony-scroll .report-pro-month-row').evaluate((element) => (
+    element.getBoundingClientRect().width
+  ));
+  expect(13 * scrollableDimensions.clientWidth / scrollableMonthRowWidth).toBeCloseTo(10, 1);
 });
