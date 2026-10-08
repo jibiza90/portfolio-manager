@@ -6,6 +6,7 @@ import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 import type { GeneralReferenceMonth } from '../services/cloudPortfolio';
 import { DEMO_CLIENT_ID } from '../constants/clients';
 import { getViewportTooltipPosition, ViewportTooltipPlacement } from '../utils/viewportTooltip';
+import { PremiumReportPage } from './PremiumReportPage';
 
 interface ReportViewProps {
   token?: string;
@@ -296,6 +297,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -453,7 +455,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       document.removeEventListener('pointerdown', onDocumentPointerDown, true);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [report?.clientId, report?.createdAt]);
+  }, [demoReportPage, report?.clientId, report?.createdAt]);
 
   useEffect(() => {
     if (chartView === 'general' && generalReferenceMonthly.length === 0) {
@@ -464,6 +466,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   useEffect(() => {
     if (!report) return;
     setPeriodPreset('all');
+    setDemoReportPage('page1');
   }, [report?.clientId]);
 
   useLayoutEffect(() => {
@@ -521,13 +524,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
       root?.removeEventListener('scroll', markActivity, true);
       document.removeEventListener('visibilitychange', markVisibleActivity);
     };
-  }, [analyticsEnabled, report?.clientId]);
+  }, [analyticsEnabled, demoReportPage, report?.clientId]);
 
   useEffect(() => {
     if (!analyticsEnabled || !onAnalyticsEvent || !reportRef.current) return undefined;
     const root = reportRef.current;
     const sections = Array.from(root.querySelectorAll<HTMLElement>(
-      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel'
+      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel, .premium-v2-primary-kpis, .premium-v2-secondary-kpis, .premium-v2-period-panel, .premium-v2-panel, .premium-v2-month-focus'
     ));
     const visibleSections = new Map<HTMLElement, {
       ratio: number;
@@ -543,6 +546,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (section.classList.contains('report-pro-capital-panel')) return 'Capital y beneficio acumulado';
       if (section.classList.contains('report-pro-demo-control-panel')) return 'Analisis por periodo';
       if (section.classList.contains('report-pro-waterfall-panel')) return 'Resumen financiero';
+      if (section.classList.contains('premium-v2-primary-kpis')) return 'Resumen principal premium';
+      if (section.classList.contains('premium-v2-secondary-kpis')) return 'Indicadores acumulados premium';
+      if (section.classList.contains('premium-v2-period-panel')) return 'Analisis por periodo premium';
+      if (section.classList.contains('premium-v2-month-focus')) return 'Detalle mensual premium';
       return section.querySelector('h4, h3')?.textContent?.trim() || 'Seccion del informe';
     };
 
@@ -636,7 +643,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       tick();
       flushCurrentSection();
     };
-  }, [analyticsEnabled, isPatrimonyExpanded, onAnalyticsEvent, report?.clientId]);
+  }, [analyticsEnabled, demoReportPage, isPatrimonyExpanded, onAnalyticsEvent, report?.clientId]);
 
   useEffect(() => {
     if (!analyticsEnabled || !onAnalyticsEvent || !chartVisibilityRef.current || isPatrimonyExpanded) return undefined;
@@ -683,7 +690,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       tick();
       flush();
     };
-  }, [analyticsEnabled, chartView, isPatrimonyExpanded, onAnalyticsEvent]);
+  }, [analyticsEnabled, chartView, demoReportPage, isPatrimonyExpanded, onAnalyticsEvent]);
 
   useEffect(() => {
     if (!analyticsEnabled || !onAnalyticsEvent || !isPatrimonyExpanded) return undefined;
@@ -2053,6 +2060,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
     )
     : null;
 
+  const isPremiumDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page2';
+
   return (
     <div className="informes-container informes-pro-page fade-in report-pro-page-demo">
       {viewportTooltip ? (
@@ -2062,7 +2071,42 @@ export const ReportView: React.FC<ReportViewProps> = ({
           onMouseLeave={() => hideViewportTooltip(viewportTooltip.anchor)}
         />
       ) : null}
-      {expandedPatrimonyOverlay}
+      {report.clientId === DEMO_CLIENT_ID ? (
+        <nav className="demo-report-page-switcher" aria-label="Seleccionar pagina del informe">
+          <span>Vista del informe</span>
+          <div>
+            <button
+              type="button"
+              className={demoReportPage === 'page1' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page1'}
+              onClick={() => setDemoReportPage('page1')}
+            >
+              Página 1
+            </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page2' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page2'}
+              onClick={() => {
+                setDemoReportPage('page2');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 2 premium' });
+              }}
+            >
+              Página 2
+            </button>
+          </div>
+        </nav>
+      ) : null}
+      {isPremiumDemoPage ? null : expandedPatrimonyOverlay}
+      {isPremiumDemoPage ? (
+        <PremiumReportPage
+          report={report}
+          generalReferenceMonthly={generalReferenceMonthly}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
+        />
+      ) : (
       <article className="informe-preview glass-card report-pro-sheet report-pro-demo-sheet" ref={reportRef}>
         <header className="report-pro-header">
           <div>
@@ -2791,6 +2835,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         </section>
 
       </article>
+      )}
     </div>
   );
 };
