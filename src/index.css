@@ -6926,6 +6926,20 @@ select {
   scrollbar-gutter: stable;
 }
 
+/* Up to twelve months must use the available card width without horizontal scroll. */
+.report-pro-patrimony-scroll:not(.is-scrollable) {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.report-pro-patrimony-scroll:not(.is-scrollable) .report-pro-patrimony-scroll-inner,
+.report-pro-patrimony-scroll:not(.is-scrollable) .report-pro-line-wrap {
+  width: 100%;
+  min-width: 0 !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* Align patrimony month/value labels exactly with the plotted points */
 .report-pro-patrimony-scroll .report-pro-month-row,
 .report-pro-patrimony-scroll .report-pro-value-row {
@@ -9601,6 +9615,12 @@ select {
   .client-portal-page .report-pro-patrimony-scroll-inner {
     width: 760px;
     min-width: 760px !important;
+  }
+
+  .client-portal-page .report-pro-patrimony-scroll:not(.is-scrollable) .report-pro-patrimony-scroll-inner {
+    width: 100%;
+    min-width: 0 !important;
+    max-width: 100%;
   }
 
   .client-portal-page .report-pro-line-chart {

@@ -27,9 +27,18 @@ test('keeps every report tooltip visible inside the real page viewport', async (
   await page.goto('/');
   await page.evaluate(async (modulePath) => {
     const harness = await import(/* @vite-ignore */ modulePath);
-    harness.mountReportView();
+    harness.mountReportView(12);
   }, '/tests/fixtures/report-view-harness.tsx');
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
+
+  const fittedPatrimonyChart = page.locator('.report-pro-patrimony-scroll');
+  const fittedDimensions = await fittedPatrimonyChart.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    scrollable: element.classList.contains('is-scrollable')
+  }));
+  expect(fittedDimensions.scrollable).toBe(false);
+  expect(fittedDimensions.scrollWidth).toBeLessThanOrEqual(fittedDimensions.clientWidth + 1);
 
   const assertVisibleInsideViewport = async () => {
     const tooltip = page.locator('.report-pro-viewport-tooltip');
@@ -69,4 +78,21 @@ test('keeps every report tooltip visible inside the real page viewport', async (
     await trigger.focus();
     await assertVisibleInsideViewport();
   }
+
+  await page.reload();
+  await page.evaluate(async (modulePath) => {
+    const harness = await import(/* @vite-ignore */ modulePath);
+    harness.mountReportView(13);
+  }, '/tests/fixtures/report-view-harness.tsx');
+  await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
+  await page.getByLabel('Periodo').selectOption('all');
+
+  const scrollablePatrimonyChart = page.locator('.report-pro-patrimony-scroll');
+  const scrollableDimensions = await scrollablePatrimonyChart.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    scrollable: element.classList.contains('is-scrollable')
+  }));
+  expect(scrollableDimensions.scrollable).toBe(true);
+  expect(scrollableDimensions.scrollWidth).toBeGreaterThan(scrollableDimensions.clientWidth);
 });
