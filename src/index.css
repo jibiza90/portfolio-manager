@@ -3449,6 +3449,10 @@ input[type='number'] {
   cursor: help;
 }
 
+.report-pro-info-card:not([data-tooltip])::after {
+  display: none;
+}
+
 .report-pro-info-card::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -6534,34 +6538,121 @@ select {
   line-height: 1.4;
 }
 
-.report-pro-provisional-month-row > td,
-.report-pro-provisional-movement-row > td {
-  background: rgba(225, 247, 249, 0.58) !important;
-  border-top-color: rgba(15, 109, 122, 0.2) !important;
-  border-bottom-color: rgba(15, 109, 122, 0.2) !important;
+.report-pro-demo-sheet .report-pro-executive-demo {
+  position: relative;
+  z-index: 60;
 }
 
-.report-pro-movement-pill.is-provisional,
-.report-pro-movement-status {
-  display: inline-flex;
+.report-pro-demo-sheet .report-pro-kpis-demo,
+.report-pro-demo-sheet .report-pro-capital-panel {
+  position: relative;
+  z-index: 40;
+}
+
+.report-pro-capital-history-card {
+  position: relative;
+  z-index: 1;
+}
+
+.report-pro-capital-history-card:hover,
+.report-pro-capital-history-card:focus,
+.report-pro-capital-history-card:focus-within {
+  z-index: 130;
+}
+
+.report-pro-capital-history-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 140;
+  display: grid;
+  gap: 9px;
+  width: min(340px, calc(100vw - 44px));
+  max-height: min(340px, 60vh);
+  padding: 14px;
+  overflow-y: auto;
+  border: 1px solid rgba(15, 109, 122, 0.25);
+  border-radius: 14px;
+  background: #ffffff;
+  color: #243b57;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 5px);
+  box-shadow: 0 18px 48px rgba(7, 27, 43, 0.22);
+  transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+}
+
+.report-pro-capital-history-card:hover .report-pro-capital-history-tooltip,
+.report-pro-capital-history-card:focus .report-pro-capital-history-tooltip,
+.report-pro-capital-history-card:focus-within .report-pro-capital-history-tooltip {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.report-pro-capital-history-tooltip h5 {
+  margin: 0;
+  color: #102a43;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.report-pro-capital-history-tooltip > p {
+  margin: 0;
+  color: #60718b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.report-pro-capital-history-list {
+  display: grid;
+  gap: 6px;
+}
+
+.report-pro-capital-history-list > div,
+.report-pro-capital-history-total {
+  display: flex;
   align-items: center;
-  width: fit-content;
-  margin-left: 8px;
-  padding: 3px 7px;
-  border: 1px solid rgba(15, 109, 122, 0.22);
-  border-radius: 999px;
-  background: #e5f7f8;
-  color: #0f6d7a;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
-.report-pro-provisional-month-row strong {
-  color: #0f6d7a;
+.report-pro-capital-history-list time {
+  color: #53677d;
   font-variant-numeric: tabular-nums;
+}
+
+.report-pro-capital-history-list b,
+.report-pro-capital-history-total b {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-pro-capital-history-total {
+  padding-top: 9px;
+  border-top: 1px solid rgba(15, 109, 122, 0.16);
+  color: #102a43;
+  font-weight: 900;
+}
+
+.report-pro-demo-sheet .report-pro-capital-history-tooltip .report-pro-capital-history-total span {
+  display: inline;
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
 }
 
 /* Keep KPI blocks centered and with breathing room */
@@ -9281,6 +9372,29 @@ select {
   .client-portal-page .report-pro-info-card:focus::after,
   .client-portal-page .report-pro-info-card:active::after {
     opacity: 1;
+    transform: translateY(0);
+  }
+
+  .client-portal-page .report-pro-capital-history-tooltip {
+    top: calc(100% + 8px);
+    bottom: auto;
+    width: min(340px, calc(200% + 9px));
+    transform: translateY(-5px);
+  }
+
+  .client-portal-page .report-pro-capital-history-card.is-increment .report-pro-capital-history-tooltip {
+    right: auto;
+    left: 0;
+  }
+
+  .client-portal-page .report-pro-capital-history-card.is-decrement .report-pro-capital-history-tooltip {
+    right: 0;
+    left: auto;
+  }
+
+  .client-portal-page .report-pro-capital-history-card:hover .report-pro-capital-history-tooltip,
+  .client-portal-page .report-pro-capital-history-card:focus .report-pro-capital-history-tooltip,
+  .client-portal-page .report-pro-capital-history-card:focus-within .report-pro-capital-history-tooltip {
     transform: translateY(0);
   }
 
