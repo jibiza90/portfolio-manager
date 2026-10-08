@@ -6352,6 +6352,91 @@ select {
   text-align: center;
 }
 
+.report-pro-pending-cash {
+  margin: 4px 26px 20px;
+  padding: 18px 20px;
+  border: 1px solid rgba(15, 109, 122, 0.24);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(225, 247, 249, 0.92), rgba(246, 252, 253, 0.98)),
+    #f5fbfc;
+  box-shadow: 0 12px 30px rgba(7, 56, 67, 0.08);
+}
+
+.report-pro-pending-cash-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.report-pro-pending-cash-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.report-pro-pending-cash-head span {
+  color: #0f6d7a;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.report-pro-pending-cash-head strong {
+  color: #102a43;
+  font-size: 17px;
+}
+
+.report-pro-pending-cash-balance {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 1px solid rgba(15, 109, 122, 0.2);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0b5965 !important;
+  font-size: 21px !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.report-pro-pending-cash-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.report-pro-pending-cash-list > div {
+  display: grid;
+  grid-template-columns: 120px minmax(130px, 1fr) minmax(130px, auto) minmax(170px, auto);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 109, 122, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.84);
+  color: #53677d;
+  font-size: 13px;
+}
+
+.report-pro-pending-cash-list b {
+  text-align: right;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-pro-pending-cash-list > div > span:last-child {
+  text-align: right;
+  font-weight: 700;
+}
+
+.report-pro-pending-cash > p {
+  margin: 13px 0 0;
+  color: #53677d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* Keep KPI blocks centered and with breathing room */
 .report-pro-demo-sheet .report-pro-executive-demo,
 .report-pro-demo-sheet .report-pro-kpis-demo,
@@ -9444,6 +9529,32 @@ select {
 @keyframes networkBannerIn {
   from { opacity: 0; transform: translate(-50%, 12px); }
   to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (max-width: 720px) {
+  .client-portal-page .report-pro-pending-cash {
+    margin: 4px 10px 16px;
+    padding: 15px;
+  }
+
+  .client-portal-page .report-pro-pending-cash-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .client-portal-page .report-pro-pending-cash-balance {
+    width: 100%;
+    text-align: center;
+  }
+
+  .client-portal-page .report-pro-pending-cash-list > div {
+    grid-template-columns: 1fr auto;
+  }
+
+  .client-portal-page .report-pro-pending-cash-list > div > span:last-child {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

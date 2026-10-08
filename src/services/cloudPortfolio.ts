@@ -1,5 +1,5 @@
 import { Movement, MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
-import { isDemoClient } from '../constants/clients';
+import { DEMO_CLIENT_ID, isDemoClient } from '../constants/clients';
 import { auth, db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { buildClientReportData, toClientReportPayload, type ClientContactInfo } from '../utils/clientReport';
 import { getDominantMonthlyReturn } from '../utils/monthlyHistory';
@@ -7,6 +7,7 @@ import {
   getInitialClientPosition,
   hasClosedClientPeriod
 } from '../utils/initialClientPosition';
+import { buildPendingCashMovements } from '../utils/pendingCashMovements';
 import { StaleWriteConflictError } from './writeConflict';
 
 const DOC_PATH = 'portfolio/state';
@@ -249,12 +250,13 @@ export const syncInitialClientOverviews = async (
 ) => {
   const publishedAt = Date.now();
   const clientIds = new Set(clients.map((client) => client.id));
-  const [provisionalDocs, accessProfiles] = await Promise.all([
+  const [provisionalDocs, accessProfiles, demoOverviewDoc] = await Promise.all([
     db
       .collection(CLIENT_OVERVIEW_COLLECTION)
       .where('publicationMode', '==', INITIAL_CLIENT_PUBLICATION_MODE)
       .get(),
-    db.collection('access_profiles').where('role', '==', 'client').get()
+    db.collection('access_profiles').where('role', '==', 'client').get(),
+    db.collection(CLIENT_OVERVIEW_COLLECTION).doc(DEMO_CLIENT_ID).get()
   ]);
   const provisionalByClientId = new Map(
     provisionalDocs.docs.map((provisionalDoc) => [provisionalDoc.id, provisionalDoc.data()])
@@ -347,6 +349,33 @@ export const syncInitialClientOverviews = async (
       operationCount += 1;
     }
   });
+
+  if (demoOverviewDoc.exists) {
+    const demoOverview = demoOverviewDoc.data() as {
+      report?: { movements?: Array<{ iso: string; type: string; amount: number }> } | null;
+      pendingCashMovements?: Array<{ iso: string; type: string; amount: number }>;
+    };
+    const publishedMovements = demoOverview.report?.movements;
+    if (publishedMovements) {
+      const pendingCashMovements = buildPendingCashMovements(
+        movementsByClient[DEMO_CLIENT_ID] ?? {},
+        publishedMovements
+      );
+      const existingPending = demoOverview.pendingCashMovements ?? [];
+      if (JSON.stringify(existingPending) !== JSON.stringify(pendingCashMovements)) {
+        batch.set(demoOverviewDoc.ref, pendingCashMovements.length > 0
+          ? {
+              pendingCashMovements,
+              pendingCashUpdatedAt: publishedAt
+            }
+          : {
+              pendingCashMovements: firebase.firestore.FieldValue.delete(),
+              pendingCashUpdatedAt: firebase.firestore.FieldValue.delete()
+            }, { merge: true });
+        operationCount += 1;
+      }
+    }
+  }
 
   if (operationCount > 0) await batch.commit();
   return operationCount;

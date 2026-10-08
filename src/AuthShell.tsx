@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ReportView } from './components/ReportView';
+import { ReportView, type PendingCashMovement } from './components/ReportView';
 import { LegalPrivacyNotice } from './components/LegalPrivacyNotice';
 import { CLIENTS, DEMO_CLIENT_ID, isDemoClient } from './constants/clients';
 import {
@@ -71,6 +71,8 @@ interface ClientOverview {
   twrMonthly?: Array<{ month: string; twr: number }>;
   publicationMode?: string;
   initialPosition?: InitialPosition;
+  pendingCashMovements?: PendingCashMovement[];
+  pendingCashUpdatedAt?: number;
   updatedAt: number;
   rows?: Array<{
     iso: string;
@@ -490,6 +492,19 @@ const getInitialPositionFromOverview = (overview: ClientOverview | null) =>
   overview.initialPosition.amount > 0
     ? overview.initialPosition
     : null;
+
+const getDemoPendingCashMovements = (
+  overview: ClientOverview | null,
+  clientId: string
+): PendingCashMovement[] => {
+  if (clientId !== DEMO_CLIENT_ID || !overview?.pendingCashMovements?.length) return [];
+  return overview.pendingCashMovements.filter((movement) =>
+    (movement.type === 'increment' || movement.type === 'decrement') &&
+    typeof movement.iso === 'string' &&
+    Number.isFinite(movement.amount) &&
+    movement.amount > 0
+  );
+};
 
 const buildPublishedClientReport = (
   overview: ClientOverview | null,
@@ -1502,6 +1517,10 @@ const ClientPortal = ({
 
   const report = overview?.report ?? null;
   const initialPosition = getInitialPositionFromOverview(overview);
+  const pendingCashMovements = useMemo(
+    () => getDemoPendingCashMovements(overview, clientId),
+    [clientId, overview]
+  );
   const clientName = useMemo(
     () => report?.clientName ?? overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId,
     [clientId, overview, report]
@@ -2545,6 +2564,7 @@ const ClientPortal = ({
           reportData={clientReportData}
           downloadSignal={reportDownloadSignal}
           generalReferenceMonthly={overview?.generalReferenceMonthly}
+          pendingCashMovements={pendingCashMovements}
           onDownloaded={trackClientPdfDownload}
           analyticsEnabled={analyticsReady}
           onAnalyticsEvent={trackClientUsage}
@@ -2623,6 +2643,10 @@ const AdminClientReportPreview = ({
   }, [clientId]);
 
   const initialPosition = getInitialPositionFromOverview(overview);
+  const pendingCashMovements = useMemo(
+    () => getDemoPendingCashMovements(overview, clientId),
+    [clientId, overview]
+  );
   const reportData = useMemo(
     () => buildPublishedClientReport(overview, clientId, loginId),
     [clientId, loginId, overview]
@@ -2634,7 +2658,9 @@ const AdminClientReportPreview = ({
         <div>
           <span>Vista del cliente</span>
           <strong>{loginId ?? clientId}</strong>
-          <small>Estás viendo exactamente la última información publicada.</small>
+          <small>{pendingCashMovements.length > 0
+            ? 'Vista publicada con los movimientos de capital provisionales posteriores.'
+            : 'Estás viendo exactamente la última información publicada.'}</small>
         </div>
         <button type="button" onClick={onClose} aria-label="Cerrar vista del cliente">Cerrar <kbd>Esc</kbd></button>
       </header>
@@ -2650,6 +2676,7 @@ const AdminClientReportPreview = ({
           <ReportView
             reportData={reportData}
             generalReferenceMonthly={overview?.generalReferenceMonthly}
+            pendingCashMovements={pendingCashMovements}
           />
         ) : null}
       </div>
