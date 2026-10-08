@@ -2063,7 +2063,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isPremiumDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page2';
 
   return (
-    <div className="informes-container informes-pro-page fade-in report-pro-page-demo">
+    <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isPremiumDemoPage ? ' report-pro-page-premium' : ''}`}>
       {viewportTooltip ? (
         <ViewportTooltip
           tooltip={viewportTooltip}
