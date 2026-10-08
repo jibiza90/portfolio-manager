@@ -70,7 +70,7 @@ interface ClientOverview {
   twrYtd?: number;
   twrMonthly?: Array<{ month: string; twr: number }>;
   publicationMode?: string;
-  initialPosition?: { iso: string; amount: number };
+  initialPosition?: InitialPosition;
   updatedAt: number;
   rows?: Array<{
     iso: string;
@@ -88,12 +88,25 @@ interface ClientOverview {
   }>;
 }
 
+interface InitialPosition {
+  iso: string;
+  amount: number;
+  totalIncrements?: number;
+  totalDecrements?: number;
+  movements?: Array<{
+    iso: string;
+    increment?: number;
+    decrement?: number;
+    balance: number;
+  }>;
+}
+
 const InitialClientPositionView = ({
   clientCode,
   position
 }: {
   clientCode: string;
-  position: { iso: string; amount: number };
+  position: InitialPosition;
 }) => {
   const incorporationDate = new Date(`${position.iso}T12:00:00`).toLocaleDateString('es-ES', {
     day: '2-digit',
@@ -105,6 +118,11 @@ const InitialClientPositionView = ({
     month: 'short'
   });
   const halfPosition = position.amount / 2;
+  const totalIncrements = position.totalIncrements ?? position.amount;
+  const totalDecrements = position.totalDecrements ?? 0;
+  const positionMovements = position.movements?.length
+    ? position.movements
+    : [{ iso: position.iso, increment: position.amount, balance: position.amount }];
 
   return (
     <div className="informes-container informes-pro-page fade-in report-pro-page-demo client-initial-position-page">
@@ -122,11 +140,12 @@ const InitialClientPositionView = ({
           <div className="client-initial-position-status"><i aria-hidden="true" /> Tu inversión ya está registrada</div>
           <span>Saldo actual</span>
           <strong>{formatEuro(position.amount)}</strong>
-          <p>Este importe corresponde al capital que has aportado.</p>
+          <p>Este importe corresponde al capital aportado menos las retiradas registradas.</p>
         </section>
 
         <section className="client-initial-position-kpis">
-          <div><span>Capital aportado</span><strong>{formatEuro(position.amount)}</strong></div>
+          <div><span>Capital aportado</span><strong>{formatEuro(totalIncrements)}</strong></div>
+          <div><span>Capital retirado</span><strong>{formatEuro(totalDecrements)}</strong></div>
           <div><span>Fecha de inicio</span><strong>{incorporationDate}</strong></div>
           <div className="is-awaiting-result"><span>Beneficio acumulado</span><strong>Disponible al finalizar el mes</strong></div>
           <div className="is-awaiting-result"><span>Rentabilidad</span><strong>Disponible al finalizar el mes</strong></div>
@@ -206,14 +225,28 @@ const InitialClientPositionView = ({
           <div className="table-scroll">
             <table className="monthly-table report-pro-table">
               <thead>
-                <tr><th>Fecha</th><th className="text-right">Aportación</th><th className="text-right">Capital aportado</th></tr>
+                <tr><th>Fecha</th><th>Tipo</th><th className="text-right">Importe</th><th className="text-right">Posición</th></tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>{incorporationDate}</td>
-                  <td className="text-right positive">{formatEuro(position.amount)}</td>
-                  <td className="text-right">{formatEuro(position.amount)}</td>
-                </tr>
+                {positionMovements.map((movement, index) => {
+                  const isIncrement = (movement.increment ?? 0) > 0;
+                  const amount = isIncrement ? movement.increment ?? 0 : movement.decrement ?? 0;
+                  const movementDate = new Date(`${movement.iso}T12:00:00`).toLocaleDateString('es-ES', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  });
+                  return (
+                    <tr key={`${movement.iso}-${index}`}>
+                      <td>{movementDate}</td>
+                      <td>{isIncrement ? 'Aportación' : 'Retirada'}</td>
+                      <td className={`text-right ${isIncrement ? 'positive' : 'negative'}`}>
+                        {isIncrement ? '+' : '-'}{formatEuro(amount)}
+                      </td>
+                      <td className="text-right">{formatEuro(movement.balance)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -427,6 +460,7 @@ const buildFallbackReportFromOverview = (
     saldo: overview.currentBalance ?? 0,
     beneficioTotal: overview.cumulativeProfit ?? 0,
     rentabilidad: 0,
+    rentabilidadDisponible: (overview.totalIncrements ?? 0) - (overview.totalDecrements ?? 0) > 0,
     beneficioUltimoMes: overview.latestProfitMonth?.profit ?? 0,
     rentabilidadUltimoMes: ((overview.latestReturnMonth?.retPct ?? 0) * 100),
     twrYtd: overview.twrYtd ?? overview.ytdReturnPct ?? 0,

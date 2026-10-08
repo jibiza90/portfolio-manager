@@ -176,7 +176,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       { label: 'TWR', value: `${(clientData.twrYtd * 100).toFixed(2)}%`, accent: true, positive: clientData.twrYtd >= 0 },
       { label: 'Beneficio Último Mes', value: formatCurrency(clientData.beneficioUltimoMes), accent: true, positive: clientData.beneficioUltimoMes >= 0 },
       { label: 'Rentabilidad Ultimo Mes', value: `${clientData.rentabilidadUltimoMes.toFixed(2)}%`, accent: true, positive: clientData.rentabilidadUltimoMes >= 0 },
-      { label: 'Rentabilidad Total', value: `${clientData.rentabilidad.toFixed(2)}%`, accent: true, positive: clientData.rentabilidad >= 0 }
+      { label: 'Rentabilidad Total', value: clientData.rentabilidadDisponible ? `${clientData.rentabilidad.toFixed(2)}%` : 'No aplicable', accent: true, positive: clientData.rentabilidadDisponible && clientData.rentabilidad >= 0 }
     ];
 
     kpis.forEach((kpi, i) => {
@@ -540,6 +540,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       saldo: clientData.saldo ?? 0,
       beneficioTotal: clientData.beneficioTotal ?? 0,
       rentabilidad: clientData.rentabilidad ?? 0,
+      rentabilidadDisponible: clientData.rentabilidadDisponible,
       beneficioUltimoMes: clientData.beneficioUltimoMes ?? 0,
       rentabilidadUltimoMes: clientData.rentabilidadUltimoMes ?? 0,
       twrYtd: clientData.twrYtd ?? 0,
@@ -604,7 +605,7 @@ Le envío su Informe de Inversión actualizado a fecha ${fecha}.
 • Saldo actual: ${formatCurrency(clientData.saldo)}
 • Beneficio acumulado: ${formatCurrency(clientData.beneficioTotal)}
 • TWR: ${((clientData.twrYtd ?? 0) * 100).toFixed(2)}%
-• Rentabilidad total: ${clientData.rentabilidad.toFixed(2)}%
+• Rentabilidad total: ${clientData.rentabilidadDisponible ? `${clientData.rentabilidad.toFixed(2)}%` : 'No aplicable'}
 
 🔗 ACCEDER AL INFORME:
 ${reportUrl}
@@ -754,6 +755,7 @@ Su gestor de inversiones`
                           saldo: clientDataForEmail.saldo ?? 0,
                           beneficioTotal: clientDataForEmail.beneficioTotal ?? 0,
                           rentabilidad: clientDataForEmail.rentabilidad ?? 0,
+                          rentabilidadDisponible: clientDataForEmail.rentabilidadDisponible,
                           beneficioUltimoMes: clientDataForEmail.beneficioUltimoMes ?? 0,
                           rentabilidadUltimoMes: clientDataForEmail.rentabilidadUltimoMes ?? 0,
                           twrYtd: clientDataForEmail.twrYtd ?? 0,
@@ -928,7 +930,7 @@ Su gestor de inversiones`
                 <div className="report-pro-kpi"><span>Capital retirado</span><strong>{formatCurrency(clientData.decrementos)}</strong></div>
                 <div className="report-pro-kpi"><span>Beneficio ultimo mes</span><strong className={clientData.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{formatCurrency(clientData.beneficioUltimoMes)}</strong></div>
                 <div className="report-pro-kpi"><span>Rentabilidad ultimo mes</span><strong className={clientData.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{clientData.rentabilidadUltimoMes.toFixed(2)}%</strong></div>
-                <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={clientData.rentabilidad >= 0 ? 'positive' : 'negative'}>{clientData.rentabilidad.toFixed(2)}%</strong></div>
+                <div className="report-pro-kpi"><span>Rentabilidad total</span><strong className={clientData.rentabilidadDisponible ? (clientData.rentabilidad >= 0 ? 'positive' : 'negative') : ''}>{clientData.rentabilidadDisponible ? `${clientData.rentabilidad.toFixed(2)}%` : 'No aplicable'}</strong></div>
               </section>
 
               <section className="report-pro-note">

@@ -1,19 +1,36 @@
 import { expect, test } from '@playwright/test';
 import { getInitialClientPosition, hasClosedClientPeriod } from '../src/utils/initialClientPosition';
 
-test('detects only a new client first contribution', () => {
+test('calculates a new client provisional position from all pre-close flows', () => {
   expect(getInitialClientPosition({
     '2026-08-10': { increment: 50_000 }
-  })).toEqual({ iso: '2026-08-10', amount: 50_000 });
+  })).toEqual({
+    iso: '2026-08-10',
+    amount: 50_000,
+    totalIncrements: 50_000,
+    totalDecrements: 0,
+    movements: [{ iso: '2026-08-10', increment: 50_000, balance: 50_000 }]
+  });
 
   expect(getInitialClientPosition({
     '2026-08-10': { increment: 50_000, incrementReturnPct: 0.02 }
-  })).toEqual({ iso: '2026-08-10', amount: 50_000 });
+  })?.amount).toBe(50_000);
 
   expect(getInitialClientPosition({
     '2026-08-10': { increment: 50_000 },
-    '2026-08-12': { increment: 10_000 }
-  })).toBeNull();
+    '2026-08-12': { increment: 10_000 },
+    '2026-08-20': { decrement: 5_000 }
+  })).toEqual({
+    iso: '2026-08-10',
+    amount: 55_000,
+    totalIncrements: 60_000,
+    totalDecrements: 5_000,
+    movements: [
+      { iso: '2026-08-10', increment: 50_000, balance: 50_000 },
+      { iso: '2026-08-12', increment: 10_000, balance: 60_000 },
+      { iso: '2026-08-20', decrement: 5_000, balance: 55_000 }
+    ]
+  });
 
   expect(getInitialClientPosition({
     '2026-08-10': { increment: 50_000 }

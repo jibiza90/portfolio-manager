@@ -9,6 +9,7 @@ export interface ReportData {
   saldo: number;
   beneficioTotal: number;
   rentabilidad: number;
+  rentabilidadDisponible?: boolean;
   beneficioUltimoMes: number;
   rentabilidadUltimoMes: number;
   twrYtd?: number;

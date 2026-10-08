@@ -23,6 +23,7 @@ export interface ClientReportData {
   saldo: number;
   beneficioTotal: number;
   rentabilidad: number;
+  rentabilidadDisponible: boolean;
   monthlyStats: ReturnType<typeof buildMonthlyStatsForMonths>['monthlyStats'];
   movements: Array<{ iso: string; type: 'increment' | 'decrement'; amount: number; balance: number; returnPct?: number }>;
   contributionBreakdowns: Array<{
@@ -52,6 +53,7 @@ export interface ClientReportPayload {
   saldo: number;
   beneficioTotal: number;
   rentabilidad: number;
+  rentabilidadDisponible: boolean;
   beneficioUltimoMes: number;
   rentabilidadUltimoMes: number;
   twrYtd: number;
@@ -121,12 +123,20 @@ export function buildClientReportData(
     : rows.filter((row) => row.iso.startsWith(`${selectedYear}-`));
   const incrementos = periodRows.reduce((sum, row) => sum + (row.increment || 0), 0);
   const decrementos = periodRows.reduce((sum, row) => sum + (row.decrement || 0), 0);
+  const openingRow = selectedYear === 'all'
+    ? undefined
+    : [...rows]
+        .reverse()
+        .find((row) => row.iso < `${selectedYear}-01-01` && (row.finalBalance !== undefined || row.baseBalance !== undefined));
+  const openingBalance = openingRow?.finalBalance ?? openingRow?.baseBalance ?? 0;
   const validRows = [...periodRows].reverse();
-  const lastWithFinal = validRows.find((row) => row.finalBalance !== undefined && row.finalBalance > 0);
-  const lastWithBase = validRows.find((row) => row.baseBalance !== undefined && row.baseBalance > 0);
-  const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
-  const beneficioTotal = saldo + decrementos - incrementos;
-  const rentabilidad = incrementos > 0 ? (beneficioTotal / incrementos) * 100 : 0;
+  const lastWithFinal = validRows.find((row) => row.finalBalance !== undefined);
+  const lastWithBase = validRows.find((row) => row.baseBalance !== undefined);
+  const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? openingBalance;
+  const beneficioTotal = saldo + decrementos - incrementos - openingBalance;
+  const capitalNeto = openingBalance + incrementos - decrementos;
+  const rentabilidadDisponible = capitalNeto > 0;
+  const rentabilidad = rentabilidadDisponible ? (beneficioTotal / capitalNeto) * 100 : 0;
 
   const periodYears = selectedYear === 'all' ? availableYears : [selectedYear];
   const periodMonthKeys = periodYears.flatMap((year) =>
@@ -254,6 +264,7 @@ export function buildClientReportData(
     saldo,
     beneficioTotal,
     rentabilidad,
+    rentabilidadDisponible,
     monthlyStats,
     movements,
     contributionBreakdowns,
@@ -282,6 +293,7 @@ export function toClientReportPayload(data: ClientReportData): ClientReportPaylo
     saldo: data.saldo ?? 0,
     beneficioTotal: data.beneficioTotal ?? 0,
     rentabilidad: data.rentabilidad ?? 0,
+    rentabilidadDisponible: data.rentabilidadDisponible,
     beneficioUltimoMes: data.beneficioUltimoMes ?? 0,
     rentabilidadUltimoMes: data.rentabilidadUltimoMes ?? 0,
     twrYtd: data.twrYtd ?? 0,

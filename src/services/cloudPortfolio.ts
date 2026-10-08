@@ -5,16 +5,16 @@ import { buildClientReportData, toClientReportPayload, type ClientContactInfo } 
 import { getDominantMonthlyReturn } from '../utils/monthlyHistory';
 import {
   getInitialClientPosition,
-  hasAnyClientContribution,
   hasClosedClientPeriod
 } from '../utils/initialClientPosition';
+import { StaleWriteConflictError } from './writeConflict';
 
 const DOC_PATH = 'portfolio/state';
 const PUBLICATION_DOC_PATH = 'portfolio/client-publication';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
 const CONTACTS_STORAGE_KEY = 'portfolio-contacts';
 const GENERAL_REFERENCE_CLIENT_ID = 'client-004';
-export const CLIENT_PUBLICATION_PAYLOAD_VERSION = 2;
+export const CLIENT_PUBLICATION_PAYLOAD_VERSION = 3;
 export const INITIAL_CLIENT_PUBLICATION_MODE = 'initial-provisional';
 
 export interface GeneralReferenceMonth {
@@ -46,6 +46,11 @@ const readLocalContacts = (): Record<string, ClientContactInfo> => {
 
 const contactFullName = (contact?: ClientContactInfo) =>
   `${contact?.name ?? ''} ${contact?.surname ?? ''}`.trim();
+
+const isMeaningfulDisplayName = (value?: string) => {
+  const clean = value?.trim() ?? '';
+  return clean.length > 0 && !/^cliente\s+\d+$/i.test(clean) && !/^client-\d+$/i.test(clean);
+};
 
 const buildGeneralReferenceMonthly = (
   clients: Array<{ id: string }>,
@@ -101,9 +106,24 @@ export const fetchPortfolioState = async (): Promise<PersistedState> => {
   return sanitizePersistedState(doc.data() as Partial<PersistedState>);
 };
 
-export const savePortfolioState = async (state: PersistedState) => {
-  // Overwrite the state document so deleted nested fields are really removed in Firestore.
-  await db.doc(DOC_PATH).set(state);
+export const savePortfolioState = async (
+  state: PersistedState,
+  expectedRevision?: string | null
+) => {
+  const docRef = db.doc(DOC_PATH);
+  await db.runTransaction(async (transaction) => {
+    const current = await transaction.get(docRef);
+    const currentRevision = current.exists
+      ? String((current.data() as Partial<PersistedState>).revision ?? '')
+      : null;
+
+    if (expectedRevision !== undefined && currentRevision !== expectedRevision) {
+      throw new StaleWriteConflictError('La cartera ha cambiado en otra pestaña o dispositivo.');
+    }
+
+    // Overwrite the state document so deleted nested fields are really removed in Firestore.
+    transaction.set(docRef, state);
+  });
 };
 
 export interface ClientPublicationState {
@@ -168,15 +188,38 @@ export const publishClientOverviews = async (
     publishedBy: auth.currentUser?.uid ?? '',
     payloadVersion: CLIENT_PUBLICATION_PAYLOAD_VERSION
   };
-  const accessProfiles = await db.collection('access_profiles').where('role', '==', 'client').get();
+  const [accessProfiles, existingOverviews] = await Promise.all([
+    db.collection('access_profiles').where('role', '==', 'client').get(),
+    db.collection(CLIENT_OVERVIEW_COLLECTION).get()
+  ]);
+  const profileByClientId = new Map<string, AccessProfile>();
+  accessProfiles.docs.forEach((profileDoc) => {
+    const profile = profileDoc.data() as AccessProfile;
+    if (profile.clientId && !profileByClientId.has(profile.clientId)) {
+      profileByClientId.set(profile.clientId, profile);
+    }
+  });
+  const overviewNameByClientId = new Map(
+    existingOverviews.docs.map((overviewDoc) => [
+      overviewDoc.id,
+      String(overviewDoc.data().clientName ?? '').trim()
+    ])
+  );
   const generalReferenceMonthly = buildGeneralReferenceMonthly(clients, monthlyHistoryByClient);
   const batch = db.batch();
   clients.forEach((client) => {
+    const storedDisplayName = profileByClientId.get(client.id)?.displayName?.trim();
+    const previousOverviewName = overviewNameByClientId.get(client.id);
+    const authoritativeName = contactFullName(contacts[client.id]);
+    const displayName = authoritativeName ||
+      (isMeaningfulDisplayName(storedDisplayName) ? storedDisplayName : '') ||
+      (isMeaningfulDisplayName(previousOverviewName) ? previousOverviewName : '') ||
+      client.name;
     const docRef = db.collection(CLIENT_OVERVIEW_COLLECTION).doc(client.id);
     batch.set(docRef, buildClientOverview(
       snapshot,
       client.id,
-      client.name,
+      displayName,
       monthlyHistoryByClient[client.id] ?? {},
       contacts[client.id],
       client.id === GENERAL_REFERENCE_CLIENT_ID ? generalReferenceMonthly : undefined
@@ -185,8 +228,11 @@ export const publishClientOverviews = async (
   accessProfiles.docs.forEach((profileDoc) => {
     const data = profileDoc.data() as AccessProfile;
     if (!data.clientId) return;
-    const client = clients.find((item) => item.id === data.clientId);
-    const displayName = contactFullName(contacts[data.clientId]) || client?.name;
+    const contactName = contactFullName(contacts[data.clientId]);
+    const previousOverviewName = overviewNameByClientId.get(data.clientId);
+    const displayName = contactName ||
+      (isMeaningfulDisplayName(data.displayName) ? data.displayName?.trim() : '') ||
+      (isMeaningfulDisplayName(previousOverviewName) ? previousOverviewName : '');
     if (!displayName) return;
     batch.set(profileDoc.ref, { displayName, updatedAt: publishedAt }, { merge: true });
   });
@@ -203,13 +249,24 @@ export const syncInitialClientOverviews = async (
 ) => {
   const publishedAt = Date.now();
   const clientIds = new Set(clients.map((client) => client.id));
-  const provisionalDocs = await db
-    .collection(CLIENT_OVERVIEW_COLLECTION)
-    .where('publicationMode', '==', INITIAL_CLIENT_PUBLICATION_MODE)
-    .get();
+  const [provisionalDocs, accessProfiles] = await Promise.all([
+    db
+      .collection(CLIENT_OVERVIEW_COLLECTION)
+      .where('publicationMode', '==', INITIAL_CLIENT_PUBLICATION_MODE)
+      .get(),
+    db.collection('access_profiles').where('role', '==', 'client').get()
+  ]);
   const provisionalByClientId = new Map(
     provisionalDocs.docs.map((provisionalDoc) => [provisionalDoc.id, provisionalDoc.data()])
   );
+  const profileNameByClientId = new Map<string, string>();
+  accessProfiles.docs.forEach((profileDoc) => {
+    const profile = profileDoc.data() as AccessProfile;
+    const displayName = profile.displayName?.trim();
+    if (profile.clientId && isMeaningfulDisplayName(displayName)) {
+      profileNameByClientId.set(profile.clientId, displayName ?? '');
+    }
+  });
   const batch = db.batch();
   let operationCount = 0;
 
@@ -221,19 +278,18 @@ export const syncInitialClientOverviews = async (
     );
     if (!position) return;
 
-    const displayName = contactFullName(contacts[client.id]) || client.name;
     const existing = provisionalByClientId.get(client.id);
-    const existingPosition = existing?.initialPosition as Partial<{ iso: string; amount: number }> | undefined;
+    const existingName = String(existing?.clientName ?? '').trim();
+    const displayName = contactFullName(contacts[client.id]) ||
+      profileNameByClientId.get(client.id) ||
+      (isMeaningfulDisplayName(existingName) ? existingName : '') ||
+      client.name;
+    const existingPosition = existing?.initialPosition as Partial<typeof position> | undefined;
     if (
-      existingPosition?.iso === position.iso &&
-      existingPosition.amount === position.amount &&
+      JSON.stringify(existingPosition) === JSON.stringify(position) &&
       existing?.clientName === displayName
     ) return;
 
-    const date = new Date(`${position.iso}T12:00:00`);
-    const label = Number.isNaN(date.getTime())
-      ? position.iso
-      : date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }).replace('.', '');
     const docRef = db.collection(CLIENT_OVERVIEW_COLLECTION).doc(client.id);
     batch.set(docRef, {
       clientId: client.id,
@@ -246,28 +302,34 @@ export const syncInitialClientOverviews = async (
       dailyProfit: 0,
       dailyProfitPct: 0,
       participation: 0,
-      totalIncrements: position.amount,
-      totalDecrements: 0,
+      totalIncrements: position.totalIncrements,
+      totalDecrements: position.totalDecrements,
       ytdReturnPct: 0,
       twrYtd: 0,
       latestProfitMonth: null,
       latestReturnMonth: null,
       monthly: [],
       twrMonthly: [],
-      rows: [{
-        iso: position.iso,
-        label,
-        increment: position.amount,
-        incrementReturnPct: null,
-        decrement: null,
-        decrementReturnPct: null,
-        baseBalance: position.amount,
-        finalBalance: position.amount,
-        profit: null,
-        profitPct: null,
-        sharePct: null,
-        cumulativeProfit: null
-      }],
+      rows: position.movements.map((movement) => {
+        const date = new Date(`${movement.iso}T12:00:00`);
+        const label = Number.isNaN(date.getTime())
+          ? movement.iso
+          : date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }).replace('.', '');
+        return {
+          iso: movement.iso,
+          label,
+          increment: movement.increment ?? null,
+          incrementReturnPct: null,
+          decrement: movement.decrement ?? null,
+          decrementReturnPct: null,
+          baseBalance: movement.balance,
+          finalBalance: movement.balance,
+          profit: null,
+          profitPct: null,
+          sharePct: null,
+          cumulativeProfit: null
+        };
+      }),
       updatedAt: publishedAt
     });
     operationCount += 1;
@@ -279,7 +341,7 @@ export const syncInitialClientOverviews = async (
     const movements = movementsByClient[clientId] ?? {};
     if (
       !clientIds.has(clientId) ||
-      (!hasClosedClientPeriod(history) && !hasAnyClientContribution(movements))
+      (!hasClosedClientPeriod(history) && !getInitialClientPosition(movements, history))
     ) {
       batch.delete(provisionalDoc.ref);
       operationCount += 1;

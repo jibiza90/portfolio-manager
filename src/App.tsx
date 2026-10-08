@@ -3403,6 +3403,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<string>(GENERAL_OPTION);
   const [menuOpen, setMenuOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const [portfolioSaveConflict, setPortfolioSaveConflict] = useState(false);
   const [contacts, setContacts] = useState<Record<string, ContactInfo>>(() => {
     // Try loading from localStorage first
     const raw = localStorage.getItem('portfolio-contacts');
@@ -3876,6 +3877,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const handleConflict = () => setPortfolioSaveConflict(true);
+    window.addEventListener('portfolio-save-conflict', handleConflict);
+    return () => window.removeEventListener('portfolio-save-conflict', handleConflict);
+  }, []);
+
+  useEffect(() => {
     const handler = () => setActiveView(GENERAL_OPTION);
     window.addEventListener('goto-general', handler);
     return () => window.removeEventListener('goto-general', handler);
@@ -4251,6 +4258,24 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {portfolioSaveConflict ? (
+        <div className="modal-backdrop">
+          <div className="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="portfolio-conflict-title">
+            <div className="modal-header">
+              <strong id="portfolio-conflict-title">Guardado bloqueado</strong>
+            </div>
+            <div className="modal-body">
+              <p>
+                La cartera ha cambiado desde otra pestaña o dispositivo. Este guardado se ha detenido para no sobrescribir información más reciente.
+              </p>
+              <p><strong>Recarga ahora para continuar con la última versión guardada.</strong></p>
+            </div>
+            <div className="modal-actions">
+              <button className="primary" onClick={() => window.location.reload()}>Recargar datos</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {alertMessage && (
         <div className="modal-backdrop" onClick={() => setAlertMessage(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>

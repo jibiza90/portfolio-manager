@@ -3,6 +3,7 @@ import { CLIENTS } from '../constants/clients';
 import { Movement, MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
 import { buildSnapshot } from '../utils/snapshot';
 import { fetchPortfolioState, savePortfolioState } from '../services/cloudPortfolio';
+import { isStaleWriteConflict } from '../services/writeConflict';
 
 const createRevision = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 const emptyPersisted: PersistedState = {
@@ -57,6 +58,7 @@ let saveInFlight = false;
 let saveQueued = false;
 let currentSavePromise: Promise<void> = Promise.resolve();
 let lastSaveError: unknown = null;
+let lastPersistedRevision: string | null = null;
 
 const persistCurrentState = () => {
   const runSaveLoop = async () => {
@@ -68,13 +70,26 @@ const persistCurrentState = () => {
       if (!canWrite || !initialized) break;
 
       try {
-        await savePortfolioState({ finalByDay, movementsByClient, monthlyHistoryByClient, revision, updatedAt });
+        await savePortfolioState(
+          { finalByDay, movementsByClient, monthlyHistoryByClient, revision, updatedAt },
+          lastPersistedRevision
+        );
+        lastPersistedRevision = revision;
         usePortfolioStore.setState({ saveStatus: 'success', lastSavedAt: Date.now() });
         lastError = null;
       } catch (error) {
         console.error('Error guardando portfolio', error);
-        usePortfolioStore.setState({ saveStatus: 'error' });
+        const conflict = isStaleWriteConflict(error);
+        usePortfolioStore.setState({
+          saveStatus: 'error',
+          ...(conflict ? { canWrite: false } : {})
+        });
+        if (conflict && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('portfolio-save-conflict'));
+          saveQueued = false;
+        }
         lastError = error;
+        if (conflict) break;
       }
     } while (saveQueued);
 
@@ -125,6 +140,7 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
     const monthlyHistoryByClient = state.monthlyHistoryByClient ?? {};
     const revision = state.revision ?? createRevision();
     const updatedAt = state.updatedAt ?? Date.now();
+    lastPersistedRevision = revision;
     set({
       finalByDay,
       movementsByClient,
@@ -261,6 +277,7 @@ export const usePortfolioStore = create<PortfolioState>((set) => ({
 }));
 
 export const initializePortfolioStore = async () => {
+  lastPersistedRevision = null;
   usePortfolioStore.setState({ canWrite: false, initialized: false });
   try {
     let remote = await fetchPortfolioState();
