@@ -18,7 +18,7 @@ test('keeps page 1 intact and renders the premium demo report with real data', a
 
   await pageTwoButton.click();
   await expect(pageTwoButton).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('heading', { name: 'Tu inversión, con una lectura completa.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Patrimonio.*en perspectiva/i })).toBeVisible();
   await expect(page.locator('.premium-v2-hero-balance > strong')).toHaveText(/127\.548,34/);
   await expect(page.locator('.premium-v2-primary-kpis')).toContainText('+4,33 %');
   await expect(page.getByRole('slider', { name: 'Inicio del periodo' })).toBeVisible();
@@ -41,7 +41,7 @@ test('keeps page 1 intact and renders the premium demo report with real data', a
   await februaryPoint.dispatchEvent('click');
   await expect(page.locator('.premium-v2-month-focus h2')).toContainText('Febrero');
 
-  await page.getByRole('button', { name: 'Ampliar' }).click();
+  await page.getByRole('button', { name: 'Pantalla completa' }).click();
   await expect(page.getByRole('dialog', { name: 'Evolución patrimonial ampliada' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'Evolución patrimonial ampliada' })).toBeHidden();

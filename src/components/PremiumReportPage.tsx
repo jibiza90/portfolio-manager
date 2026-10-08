@@ -596,42 +596,51 @@ export const PremiumReportPage: React.FC<PremiumReportPageProps> = ({
   return (
     <div className="premium-v2-report" ref={rootRef}>
       {expandedChart}
-      <header className="premium-v2-hero">
-        <div className="premium-v2-hero-copy">
-          <span className="premium-v2-eyebrow"><i /> Private Wealth Overview</span>
-          <h1>Tu inversión, con una lectura completa.</h1>
-          <p>Patrimonio, rendimiento y movimientos conectados en una única visión financiera.</p>
-          <div className="premium-v2-hero-meta">
-            <span><small>Cuenta</small><strong>{report.clientCode}</strong></span>
-            <span><small>Datos publicados</small><strong>{new Date(report.createdAt).toLocaleDateString('es-ES')}</strong></span>
-            <span><small>Inicio de la inversión</small><strong>{inceptionLabel}</strong></span>
-          </div>
-        </div>
-        <div className="premium-v2-hero-balance">
-          <span>Saldo actual</span>
-          <strong>{formatCurrency(visibleBalance)}</strong>
-          <small className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{signedMoney(report.beneficioTotal)} de beneficio acumulado</small>
-          {pendingCashMovements.length ? <em>Incluye movimientos posteriores al último cierre</em> : null}
+      <header className="premium-v2-topbar">
+        <div className="premium-v2-wordmark"><i />JIGSA <span>Private Office</span></div>
+        <div className="premium-v2-topbar-meta">
+          <span><small>Cuenta</small><strong>{report.clientCode}</strong></span>
+          <span><small>Última publicación</small><strong>{new Date(report.createdAt).toLocaleDateString('es-ES')}</strong></span>
         </div>
       </header>
 
-      <section className="premium-v2-primary-kpis" aria-label="Indicadores principales">
-        <article>
-          <span>Rentabilidad · {latestMonth?.label ?? 'Último mes'}</span>
-          <strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{signedPercent(report.rentabilidadUltimoMes)}</strong>
-          <p>Rendimiento TWR del último cierre, aislando aportaciones y retiradas.</p>
-        </article>
-        <article>
-          <span>Beneficio · {latestMonth?.label ?? 'Último mes'}</span>
-          <strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{signedMoney(report.beneficioUltimoMes)}</strong>
-          <p>Resultado generado en euros durante el último mes publicado.</p>
-        </article>
-        <article>
-          <span>TWR acumulado</span>
-          <strong className={twrPct >= 0 ? 'positive' : 'negative'}>{signedPercent(twrPct)}</strong>
-          <p>Evolución de la estrategia desde {inceptionLabel}, sin el efecto de los flujos.</p>
-        </article>
-      </section>
+      <div className="premium-v2-opening">
+        <header className="premium-v2-hero">
+          <div className="premium-v2-hero-copy">
+            <span className="premium-v2-eyebrow"><i /> Posición consolidada</span>
+            <h1>Patrimonio<br />en perspectiva.</h1>
+            <p>Una lectura precisa de la evolución de tu capital, sus resultados y cada movimiento.</p>
+            <div className="premium-v2-hero-meta">
+              <span><small>Desde</small><strong>{inceptionLabel}</strong></span>
+              <span><small>Mes de referencia</small><strong>{latestMonth?.label ?? 'Último cierre'}</strong></span>
+            </div>
+          </div>
+          <div className="premium-v2-hero-balance">
+            <span>Saldo actual</span>
+            <strong>{formatCurrency(visibleBalance)}</strong>
+            <small className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{signedMoney(report.beneficioTotal)} de beneficio acumulado</small>
+            {pendingCashMovements.length ? <em>Incluye movimientos posteriores al último cierre</em> : null}
+          </div>
+        </header>
+
+        <section className="premium-v2-primary-kpis" aria-label="Indicadores principales">
+          <article>
+            <span>Rentabilidad · {latestMonth?.label ?? 'Último mes'}</span>
+            <strong className={report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative'}>{signedPercent(report.rentabilidadUltimoMes)}</strong>
+            <p>TWR del último cierre</p>
+          </article>
+          <article>
+            <span>Beneficio · {latestMonth?.label ?? 'Último mes'}</span>
+            <strong className={report.beneficioUltimoMes >= 0 ? 'positive' : 'negative'}>{signedMoney(report.beneficioUltimoMes)}</strong>
+            <p>Resultado del último cierre</p>
+          </article>
+          <article>
+            <span>TWR acumulado</span>
+            <strong className={twrPct >= 0 ? 'positive' : 'negative'}>{signedPercent(twrPct)}</strong>
+            <p>Desde {inceptionLabel}</p>
+          </article>
+        </section>
+      </div>
 
       <section className="premium-v2-secondary-kpis" aria-label="Capital y resultados acumulados">
         <article><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{signedMoney(report.beneficioTotal)}</strong><small>Desde {inceptionLabel}</small></article>
@@ -662,50 +671,52 @@ export const PremiumReportPage: React.FC<PremiumReportPageProps> = ({
         </section>
       ) : null}
 
-      <section className="premium-v2-period-panel">
-        <div className="premium-v2-section-heading">
-          <div>
-            <span>Análisis por periodo</span>
-            <h2>Selecciona la ventana temporal</h2>
-            <p>Todos los gráficos y el detalle mensual permanecen sincronizados.</p>
+      <div className="premium-v2-analysis-grid">
+        <section className="premium-v2-period-panel">
+          <div className="premium-v2-section-heading">
+            <div>
+              <span>Ventana temporal</span>
+              <h2>Control de periodo</h2>
+              <p>Elige el tramo que quieres estudiar. Toda la página se sincroniza.</p>
+            </div>
+            <div className="premium-v2-presets" role="group" aria-label="Periodos rápidos">
+              <button type="button" onClick={() => setPreset(3)}>3M</button>
+              <button type="button" onClick={() => setPreset(6)}>6M</button>
+              <button type="button" onClick={() => setPreset(12)}>12M</button>
+              <button type="button" onClick={() => setPreset('all')}>Todo</button>
+            </div>
           </div>
-          <div className="premium-v2-presets" role="group" aria-label="Periodos rápidos">
-            <button type="button" onClick={() => setPreset(3)}>3 meses</button>
-            <button type="button" onClick={() => setPreset(6)}>6 meses</button>
-            <button type="button" onClick={() => setPreset(12)}>12 meses</button>
-            <button type="button" onClick={() => setPreset('all')}>Todo</button>
+          {renderNavigator()}
+          <div className="premium-v2-period-summary">
+            <span><small>Inicio</small><strong>{formatCurrency(rangeStartBalance)}</strong></span>
+            <span><small>Beneficio</small><strong className={rangeProfit >= 0 ? 'positive' : 'negative'}>{signedMoney(rangeProfit)}</strong></span>
+            <span><small>TWR</small><strong className={rangeReturn >= 0 ? 'positive' : 'negative'}>{signedPercent(rangeReturn * 100)}</strong></span>
+            <span><small>Cierre</small><strong>{formatCurrency(rangeEndBalance)}</strong></span>
           </div>
-        </div>
-        {renderNavigator()}
-        <div className="premium-v2-period-summary">
-          <span><small>Saldo inicial del periodo</small><strong>{formatCurrency(rangeStartBalance)}</strong></span>
-          <span><small>Beneficio del periodo</small><strong className={rangeProfit >= 0 ? 'positive' : 'negative'}>{signedMoney(rangeProfit)}</strong></span>
-          <span><small>TWR del periodo</small><strong className={rangeReturn >= 0 ? 'positive' : 'negative'}>{signedPercent(rangeReturn * 100)}</strong></span>
-          <span><small>Saldo final del periodo</small><strong>{formatCurrency(rangeEndBalance)}</strong></span>
-        </div>
-      </section>
+        </section>
 
-      <section className="premium-v2-panel premium-v2-wealth-panel">
-        <div className="premium-v2-section-heading">
-          <div>
-            <span>Patrimonio</span>
-            <h2>Evolución de la cartera</h2>
-            <p>Valor de cierre mensual y movimientos de capital registrados.</p>
+        <section className="premium-v2-panel premium-v2-wealth-panel">
+          <div className="premium-v2-section-heading">
+            <div>
+              <span>Trayectoria patrimonial</span>
+              <h2>Evolución de la cartera</h2>
+              <p>Saldo al cierre de cada mes y movimientos registrados.</p>
+            </div>
+            <button
+              type="button"
+              className="premium-v2-expand"
+              onClick={() => {
+                setIsExpanded(true);
+                onAnalyticsEvent?.({ type: 'chart_expand_request', label: 'Evolucion patrimonio premium' });
+              }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" /></svg>
+              Pantalla completa
+            </button>
           </div>
-          <button
-            type="button"
-            className="premium-v2-expand"
-            onClick={() => {
-              setIsExpanded(true);
-              onAnalyticsEvent?.({ type: 'chart_expand_request', label: 'Evolucion patrimonio premium' });
-            }}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" /></svg>
-            Ampliar
-          </button>
-        </div>
-        {renderWealthChart()}
-      </section>
+          {renderWealthChart()}
+        </section>
+      </div>
 
       <div className="premium-v2-chart-pair">
         <section className="premium-v2-panel">
