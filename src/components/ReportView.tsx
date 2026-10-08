@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getReportByToken, isValidReportToken, ReportData } from '../services/reportLinks';
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 import type { GeneralReferenceMonth } from '../services/cloudPortfolio';
 import { DEMO_CLIENT_ID } from '../constants/clients';
+import { getViewportTooltipPosition, ViewportTooltipPlacement } from '../utils/viewportTooltip';
 
 interface ReportViewProps {
   token?: string;
@@ -42,9 +43,74 @@ interface PatrimonyTooltipState {
   y: number;
 }
 
-interface InfoTooltipState {
-  visible: boolean;
+interface ViewportTooltipState {
+  anchor: Element;
+  content: React.ReactNode;
+  tone: 'dark' | 'light' | 'warm';
+  preferredPlacement: ViewportTooltipPlacement;
+  maxWidth?: number;
 }
+
+interface ViewportTooltipProps {
+  tooltip: ViewportTooltipState;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}
+
+const ViewportTooltip: React.FC<ViewportTooltipProps> = ({ tooltip, onMouseEnter, onMouseLeave }) => {
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ left: 12, top: 12, ready: false });
+
+  useLayoutEffect(() => {
+    let frame = 0;
+
+    const updatePosition = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const element = tooltipRef.current;
+        if (!element || !tooltip.anchor.isConnected) return;
+
+        const anchorRect = tooltip.anchor.getBoundingClientRect();
+        const tooltipRect = element.getBoundingClientRect();
+        const next = getViewportTooltipPosition(
+          anchorRect,
+          tooltipRect,
+          { width: window.innerWidth, height: window.innerHeight },
+          tooltip.preferredPlacement
+        );
+        setPosition({ left: next.left, top: next.top, ready: true });
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [tooltip]);
+
+  return createPortal(
+    <div
+      ref={tooltipRef}
+      role="tooltip"
+      className={`report-pro-viewport-tooltip is-${tooltip.tone}`}
+      style={{
+        left: `${position.left}px`,
+        top: `${position.top}px`,
+        maxWidth: `min(${tooltip.maxWidth ?? 420}px, calc(100vw - 24px))`,
+        visibility: position.ready ? 'visible' : 'hidden'
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {tooltip.content}
+    </div>,
+    document.body
+  );
+};
 
 const axisCurrencyFormatter = new Intl.NumberFormat('es-ES', {
   style: 'currency',
@@ -221,9 +287,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [report, setReport] = useState<ReportData | null>(reportData ?? null);
   const [loading, setLoading] = useState(!reportData);
   const [expired, setExpired] = useState(false);
-  const [hoveredPatrimonyPoint, setHoveredPatrimonyPoint] = useState<PatrimonyTooltipState | null>(null);
-  const [hoveredMonthlyBar, setHoveredMonthlyBar] = useState<{ month: string; value: number } | null>(null);
-  const [infoTooltip, setInfoTooltip] = useState<InfoTooltipState>({ visible: false });
+  const [viewportTooltip, setViewportTooltip] = useState<ViewportTooltipState | null>(null);
   const [expandedContributionMonths, setExpandedContributionMonths] = useState<Record<string, boolean>>({});
   const [periodPreset, setPeriodPreset] = useState('all');
   const [periodStartMonth, setPeriodStartMonth] = useState('');
@@ -233,6 +297,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
   const detailScrollAnimationRef = useRef<number | null>(null);
+  const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const chartVisibilityRef = useRef<HTMLDivElement>(null);
   const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
@@ -240,6 +305,41 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const lastTrackedChartPointRef = useRef<{ key: string; at: number } | null>(null);
   const twrExplanation = 'Mide la evolución de la cartera aislando el efecto de las aportaciones y retiradas de dinero. Permite conocer cómo se han comportado las inversiones durante un periodo determinado, independientemente de cuándo el cliente haya ingresado o retirado capital.';
   const totalReturnExplanation = 'Mide el resultado acumulado de la inversión en relación con el capital neto aportado por el cliente. Por este motivo, puede variar cuando se realizan nuevas aportaciones o retiradas de dinero.';
+
+  const clearTooltipHideTimer = () => {
+    if (tooltipHideTimerRef.current !== null) {
+      window.clearTimeout(tooltipHideTimerRef.current);
+      tooltipHideTimerRef.current = null;
+    }
+  };
+
+  const showViewportTooltip = (
+    anchor: Element,
+    content: React.ReactNode,
+    options: Partial<Pick<ViewportTooltipState, 'tone' | 'preferredPlacement' | 'maxWidth'>> = {}
+  ) => {
+    clearTooltipHideTimer();
+    setViewportTooltip({
+      anchor,
+      content,
+      tone: options.tone ?? 'dark',
+      preferredPlacement: options.preferredPlacement ?? 'top',
+      maxWidth: options.maxWidth
+    });
+  };
+
+  const hideViewportTooltip = (anchor?: Element, immediate = false) => {
+    clearTooltipHideTimer();
+    const close = () => {
+      setViewportTooltip((current) => (!anchor || current?.anchor === anchor ? null : current));
+      tooltipHideTimerRef.current = null;
+    };
+    if (immediate) {
+      close();
+      return;
+    }
+    tooltipHideTimerRef.current = window.setTimeout(close, 100);
+  };
 
   useEffect(() => {
     if (reportData) {
@@ -278,7 +378,81 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (detailScrollAnimationRef.current !== null) {
       window.cancelAnimationFrame(detailScrollAnimationRef.current);
     }
+    clearTooltipHideTimer();
   }, []);
+
+  useEffect(() => {
+    const root = reportRef.current;
+    if (!root) return undefined;
+
+    const getTooltipCard = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return null;
+      const card = target.closest<HTMLElement>('[data-tooltip]');
+      return card && root.contains(card) && card.dataset.tooltip?.trim() ? card : null;
+    };
+
+    const showCardTooltip = (card: HTMLElement) => {
+      showViewportTooltip(
+        card,
+        <span className="report-pro-tooltip-copy">{card.dataset.tooltip}</span>,
+        { tone: 'dark', preferredPlacement: 'top', maxWidth: 360 }
+      );
+    };
+
+    const onPointerOver = (event: PointerEvent) => {
+      const card = getTooltipCard(event.target);
+      if (card) showCardTooltip(card);
+    };
+    const onPointerOut = (event: PointerEvent) => {
+      const card = getTooltipCard(event.target);
+      if (!card) return;
+      if (event.relatedTarget instanceof Node && card.contains(event.relatedTarget)) return;
+      hideViewportTooltip(card);
+    };
+    const onFocusIn = (event: FocusEvent) => {
+      const card = getTooltipCard(event.target);
+      if (card) showCardTooltip(card);
+    };
+    const onFocusOut = (event: FocusEvent) => {
+      const card = getTooltipCard(event.target);
+      if (!card) return;
+      if (event.relatedTarget instanceof Node && card.contains(event.relatedTarget)) return;
+      hideViewportTooltip(card);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      const card = getTooltipCard(event.target);
+      if (card) showCardTooltip(card);
+    };
+    const onDocumentPointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return;
+      setViewportTooltip((current) => {
+        if (!current) return null;
+        if (current.anchor.contains(event.target as Node)) return current;
+        if (event.target instanceof Element && event.target.closest('.report-pro-viewport-tooltip')) return current;
+        return null;
+      });
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') hideViewportTooltip(undefined, true);
+    };
+
+    root.addEventListener('pointerover', onPointerOver);
+    root.addEventListener('pointerout', onPointerOut);
+    root.addEventListener('focusin', onFocusIn);
+    root.addEventListener('focusout', onFocusOut);
+    root.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('pointerdown', onDocumentPointerDown, true);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      root.removeEventListener('pointerover', onPointerOver);
+      root.removeEventListener('pointerout', onPointerOut);
+      root.removeEventListener('focusin', onFocusIn);
+      root.removeEventListener('focusout', onFocusOut);
+      root.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('pointerdown', onDocumentPointerDown, true);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [report?.clientId, report?.createdAt]);
 
   useEffect(() => {
     if (chartView === 'general' && generalReferenceMonthly.length === 0) {
@@ -553,7 +727,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsPatrimonyExpanded(false);
-        setHoveredPatrimonyPoint(null);
       }
     };
     window.addEventListener('keydown', closeOnEscape);
@@ -715,6 +888,16 @@ export const ReportView: React.FC<ReportViewProps> = ({
     isPercentageChart ? `${value.toFixed(2)}%` : formatCurrencyNoCents(value);
   const formatChartTooltipValue = (value: number) =>
     isPercentageChart ? `${value.toFixed(2)}%` : formatCurrency(value);
+  const showMonthlyChartTooltip = (anchor: Element, month: string, value: number) => {
+    showViewportTooltip(
+      anchor,
+      <div className="report-pro-chart-tooltip-content">
+        <strong>{month}</strong>
+        <span>{formatChartTooltipValue(value)}</span>
+      </div>,
+      { tone: 'dark', preferredPlacement: 'top', maxWidth: 220 }
+    );
+  };
   const chartTitle = chartView === 'profit'
     ? 'Beneficio mensual'
     : chartView === 'balance'
@@ -911,43 +1094,72 @@ export const ReportView: React.FC<ReportViewProps> = ({
   ) => {
     const isDemoClient = report.clientId === DEMO_CLIENT_ID;
     const movements = type === 'increment' ? visibleContributionMovements : visibleWithdrawalMovements;
-    const tooltipId = `report-capital-history-${type}-${extraClassName || 'summary'}`;
+    const tooltipContent = (
+      <div className="report-pro-capital-history-tooltip-content">
+        <h5>{type === 'increment' ? 'Aportaciones registradas' : 'Retiradas registradas'}</h5>
+        {movements.length > 0 ? (
+          <div className="report-pro-capital-history-list">
+            {movements.map((movement, index) => (
+              <div key={`${type}-${movement.iso}-${movement.amount}-${index}`}>
+                <time dateTime={movement.iso}>{getShortDateLabel(movement.iso)}</time>
+                <b className={type === 'increment' ? 'positive' : 'negative'}>
+                  {type === 'increment' ? '+' : '-'}{formatCurrency(movement.amount)}
+                </b>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>{type === 'increment' ? 'No hay aportaciones registradas.' : 'No hay retiradas registradas.'}</p>
+        )}
+        <div className="report-pro-capital-history-total">
+          <span>Total</span>
+          <b>{formatCurrency(total)}</b>
+        </div>
+      </div>
+    );
 
     return (
       <div
         className={`report-pro-info-card ${extraClassName} ${isDemoClient ? `report-pro-capital-history-card is-${type}` : ''}`.trim()}
         tabIndex={0}
         data-tooltip={isDemoClient ? undefined : fallbackTooltip}
-        aria-describedby={isDemoClient ? tooltipId : undefined}
+        aria-label={isDemoClient ? `${label}: ${formatCurrency(total)}. Ver desglose de movimientos.` : undefined}
+        onMouseEnter={isDemoClient ? (event) => showViewportTooltip(event.currentTarget, tooltipContent, { tone: 'light', preferredPlacement: 'top', maxWidth: 360 }) : undefined}
+        onMouseLeave={isDemoClient ? (event) => hideViewportTooltip(event.currentTarget) : undefined}
+        onFocus={isDemoClient ? (event) => showViewportTooltip(event.currentTarget, tooltipContent, { tone: 'light', preferredPlacement: 'top', maxWidth: 360 }) : undefined}
+        onBlur={isDemoClient ? (event) => hideViewportTooltip(event.currentTarget) : undefined}
+        onPointerDown={isDemoClient ? (event) => showViewportTooltip(event.currentTarget, tooltipContent, { tone: 'light', preferredPlacement: 'bottom', maxWidth: 360 }) : undefined}
       >
         <span>{label}</span>
         <strong>{formatCurrency(total)}</strong>
-        {isDemoClient ? (
-          <div id={tooltipId} role="tooltip" className="report-pro-capital-history-tooltip">
-            <h5>{type === 'increment' ? 'Aportaciones registradas' : 'Retiradas registradas'}</h5>
-            {movements.length > 0 ? (
-              <div className="report-pro-capital-history-list">
-                {movements.map((movement, index) => (
-                  <div key={`${type}-${movement.iso}-${movement.amount}-${index}`}>
-                    <time dateTime={movement.iso}>{getShortDateLabel(movement.iso)}</time>
-                    <b className={type === 'increment' ? 'positive' : 'negative'}>
-                      {type === 'increment' ? '+' : '-'}{formatCurrency(movement.amount)}
-                    </b>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p>{type === 'increment' ? 'No hay aportaciones registradas.' : 'No hay retiradas registradas.'}</p>
-            )}
-            <div className="report-pro-capital-history-total">
-              <span>Total</span>
-              <b>{formatCurrency(total)}</b>
-            </div>
-          </div>
-        ) : null}
       </div>
     );
   };
+  const pendingBalanceTooltipContent = pendingMovementRows.length > 0 ? (
+    <div className="report-pro-pending-balance-tooltip-content">
+      <div><span>Saldo del cierre publicado ({latestPublishedCloseLabel})</span><b>{formatCurrency(report.saldo)}</b></div>
+      {pendingMovementRows.map((movement) => (
+        <div key={`balance-${movement.iso}-${movement.type}-${movement.amount}`}>
+          <span>{movement.type === 'increment' ? 'Aportación' : 'Retirada'} {getShortDateLabel(movement.iso)}</span>
+          <b className={movement.type === 'increment' ? 'positive' : 'negative'}>
+            {movement.type === 'increment' ? '+' : '-'}{formatCurrency(movement.amount)}
+          </b>
+        </div>
+      ))}
+      <div className="is-total"><span>Saldo visible</span><b>{formatCurrency(visibleBalance)}</b></div>
+      <p>La rentabilidad se actualizará con la próxima publicación.</p>
+    </div>
+  ) : null;
+  const returnExampleTooltipContent = (
+    <div className="report-pro-note-tooltip-content">
+      <strong>TWR:</strong>
+      <p>Mide la rentabilidad de la inversión sin contar aportaciones ni retiradas.</p>
+      <p>Ejemplo: inviertes 10.000 EUR y sube a 11.000 EUR. El TWR es +10 %. Si después añades 20.000 EUR más, el TWR sigue siendo +10 %.</p>
+      <strong>Rentabilidad total:</strong>
+      <p>Mide cuánto has ganado sobre todo el dinero aportado.</p>
+      <p>En ese ejemplo, si has aportado 30.000 EUR y ahora tienes 31.000 EUR, la rentabilidad total es +3,33 %.</p>
+    </div>
+  );
   const detailExpansionKey = (source: 'benefits' | 'monthly', monthKey: string) => `${source}:${monthKey}`;
   const gentlyRevealDetail = (element: HTMLElement) => {
     if (detailScrollAnimationRef.current !== null) {
@@ -1623,22 +1835,20 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const chartData = expanded ? effectiveExpandedPatrimonioData : effectivePatrimonioData;
     const geometry = expanded ? expandedPatrimonyGeometry : patrimonyGeometry;
     const chartMinWidth = !expanded && chartData.length > 12 ? `${chartData.length * 92}px` : '100%';
+    const showPointTooltip = (anchor: Element, point: PatrimonyTooltipState) => {
+      showViewportTooltip(
+        anchor,
+        <div className="report-pro-chart-tooltip-content">
+          <strong>{point.month}</strong>
+          <span>{formatCurrency(point.value)}</span>
+        </div>,
+        { tone: 'dark', preferredPlacement: 'top', maxWidth: 220 }
+      );
+    };
     return (
       <div className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${!expanded && chartData.length > 12 ? 'is-scrollable' : ''}`}>
         <div className="report-pro-patrimony-scroll-inner" style={{ minWidth: chartMinWidth }}>
           <div className={`report-pro-line-wrap ${expanded ? 'report-pro-line-wrap-expanded' : ''}`}>
-          {hoveredPatrimonyPoint ? (
-            <div
-              className={`report-pro-line-tooltip ${expanded ? 'report-pro-line-tooltip-expanded' : ''}`}
-              style={{
-                left: `clamp(${expanded ? '118px' : '88px'}, ${(hoveredPatrimonyPoint.x / geometry.width) * 100}%, calc(100% - ${expanded ? '118px' : '88px'}))`,
-                top: `clamp(${expanded ? '82px' : '64px'}, ${(hoveredPatrimonyPoint.y / geometry.height) * 100}%, calc(100% - ${expanded ? '26px' : '20px'}))`
-              }}
-            >
-              <strong>{hoveredPatrimonyPoint.month}</strong>
-              <span>{formatCurrency(hoveredPatrimonyPoint.value)}</span>
-            </div>
-          ) : null}
           <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" className={`report-pro-line-chart ${expanded ? 'report-pro-line-chart-expanded' : ''}`}>
             <defs>
               <linearGradient id={expanded ? 'patrimonyAreaExpanded' : 'patrimonyAreaShared'} x1="0" y1="0" x2="0" y2="1">
@@ -1669,19 +1879,22 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   tabIndex={0}
                   role="img"
                   aria-label={`${pt.month}: ${formatCurrency(pt.value)}`}
-                  onMouseEnter={() => {
-                    setHoveredPatrimonyPoint(pt);
+                  onMouseEnter={(event) => {
+                    showPointTooltip(event.currentTarget, pt);
                     trackChartPoint('balance', pt.month, pt.value);
                   }}
-                  onMouseMove={() => setHoveredPatrimonyPoint(pt)}
-                  onMouseLeave={() => setHoveredPatrimonyPoint(null)}
-                  onFocus={() => {
-                    setHoveredPatrimonyPoint(pt);
+                  onMouseLeave={(event) => {
+                    hideViewportTooltip(event.currentTarget);
+                  }}
+                  onFocus={(event) => {
+                    showPointTooltip(event.currentTarget, pt);
                     trackChartPoint('balance', pt.month, pt.value);
                   }}
-                  onBlur={() => setHoveredPatrimonyPoint(null)}
-                  onPointerDown={() => {
-                    setHoveredPatrimonyPoint(pt);
+                  onBlur={(event) => {
+                    hideViewportTooltip(event.currentTarget);
+                  }}
+                  onPointerDown={(event) => {
+                    showPointTooltip(event.currentTarget, pt);
                     trackChartPoint('balance', pt.month, pt.value);
                   }}
                 />
@@ -1735,7 +1948,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
               className="report-pro-expand-chart-button"
               onClick={() => {
                 setIsPatrimonyExpanded(false);
-                setHoveredPatrimonyPoint(null);
               }}
             >
               Cerrar ampliado
@@ -1753,7 +1965,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     metadata: { value: event.target.value }
                   });
                   setExpandedStartMonth(event.target.value);
-                  setHoveredPatrimonyPoint(null);
                 }}
               >
                 {periodOptions.map((option) => (
@@ -1772,7 +1983,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     metadata: { value: event.target.value }
                   });
                   setExpandedEndMonth(event.target.value);
-                  setHoveredPatrimonyPoint(null);
                 }}
               >
                 {periodOptions.map((option) => (
@@ -1787,7 +1997,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 onAnalyticsEvent?.({ type: 'expanded_period_reset', label: 'Ver todo' });
                 setExpandedStartMonth(firstPeriodKey);
                 setExpandedEndMonth(lastPeriodKey);
-                setHoveredPatrimonyPoint(null);
               }}
             >
               Ver todo
@@ -1803,6 +2012,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
   return (
     <div className="informes-container informes-pro-page fade-in report-pro-page-demo">
+      {viewportTooltip ? (
+        <ViewportTooltip
+          tooltip={viewportTooltip}
+          onMouseEnter={clearTooltipHideTimer}
+          onMouseLeave={() => hideViewportTooltip(viewportTooltip.anchor)}
+        />
+      ) : null}
       {expandedPatrimonyOverlay}
       <article className="informe-preview glass-card report-pro-sheet report-pro-demo-sheet" ref={reportRef}>
         <header className="report-pro-header">
@@ -1822,24 +2038,18 @@ export const ReportView: React.FC<ReportViewProps> = ({
           >
             <p>Saldo actual</p>
             {pendingMovementRows.length > 0 ? (
-              <div className="report-pro-pending-balance">
+              <div
+                className="report-pro-pending-balance"
+                onMouseEnter={(event) => showViewportTooltip(event.currentTarget, pendingBalanceTooltipContent, { tone: 'light', preferredPlacement: 'bottom', maxWidth: 410 })}
+                onMouseLeave={(event) => hideViewportTooltip(event.currentTarget)}
+                onFocus={(event) => showViewportTooltip(event.currentTarget, pendingBalanceTooltipContent, { tone: 'light', preferredPlacement: 'bottom', maxWidth: 410 })}
+                onBlur={(event) => hideViewportTooltip(event.currentTarget)}
+                onPointerDown={(event) => showViewportTooltip(event.currentTarget, pendingBalanceTooltipContent, { tone: 'light', preferredPlacement: 'bottom', maxWidth: 410 })}
+              >
                 <strong>
                   {formatCurrency(visibleBalance)}
-                  <button type="button" aria-label="Ver desglose del saldo actualizado" aria-describedby="pending-balance-breakdown">*</button>
+                  <button type="button" aria-label="Ver desglose del saldo actualizado">*</button>
                 </strong>
-                <div id="pending-balance-breakdown" role="tooltip" className="report-pro-pending-balance-tooltip">
-                  <div><span>Saldo del cierre publicado ({latestPublishedCloseLabel})</span><b>{formatCurrency(report.saldo)}</b></div>
-                  {pendingMovementRows.map((movement) => (
-                    <div key={`balance-${movement.iso}-${movement.type}-${movement.amount}`}>
-                      <span>{movement.type === 'increment' ? 'Aportación' : 'Retirada'} {getShortDateLabel(movement.iso)}</span>
-                      <b className={movement.type === 'increment' ? 'positive' : 'negative'}>
-                        {movement.type === 'increment' ? '+' : '-'}{formatCurrency(movement.amount)}
-                      </b>
-                    </div>
-                  ))}
-                  <div className="is-total"><span>Saldo visible</span><b>{formatCurrency(visibleBalance)}</b></div>
-                  <p>La rentabilidad se actualizar&aacute; con la pr&oacute;xima publicaci&oacute;n.</p>
-                </div>
               </div>
             ) : <strong>{formatCurrency(visibleBalance)}</strong>}
           </div>
@@ -1895,23 +2105,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
             <button
               type="button"
               className="report-pro-note-help"
-              onMouseEnter={() => setInfoTooltip({ visible: true })}
-              onMouseLeave={() => setInfoTooltip({ visible: false })}
-              onFocus={() => setInfoTooltip({ visible: true })}
-              onBlur={() => setInfoTooltip({ visible: false })}
+              onMouseEnter={(event) => showViewportTooltip(event.currentTarget, returnExampleTooltipContent, { tone: 'warm', preferredPlacement: 'bottom', maxWidth: 480 })}
+              onMouseLeave={(event) => hideViewportTooltip(event.currentTarget)}
+              onFocus={(event) => showViewportTooltip(event.currentTarget, returnExampleTooltipContent, { tone: 'warm', preferredPlacement: 'bottom', maxWidth: 480 })}
+              onBlur={(event) => hideViewportTooltip(event.currentTarget)}
+              onPointerDown={(event) => showViewportTooltip(event.currentTarget, returnExampleTooltipContent, { tone: 'warm', preferredPlacement: 'bottom', maxWidth: 480 })}
             >
               Ejemplo
             </button>
-            {infoTooltip.visible ? (
-              <div className="report-pro-note-tooltip">
-                <strong>TWR:</strong>
-                <p>Mide la rentabilidad de la inversion sin contar aportaciones ni retiradas.</p>
-                <p>Ejemplo: inviertes 10.000 EUR y sube a 11.000 EUR. El TWR es +10 %. Si despues anades 20.000 EUR mas, el TWR sigue siendo +10 %.</p>
-                <strong>Rentabilidad total:</strong>
-                <p>Mide cuanto has ganado sobre todo el dinero aportado.</p>
-                <p>En ese ejemplo, si has aportado 30.000 EUR y ahora tienes 31.000 EUR, la rentabilidad total es +3,33 %.</p>
-              </div>
-            ) : null}
           </div>
           <p><strong>TWR (rentabilidad ponderada por el tiempo):</strong> {twrExplanation}</p>
           <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
@@ -1949,7 +2150,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
                       metadata: { previous: periodPreset }
                     });
                     setPeriodPreset(event.target.value);
-                    setHoveredPatrimonyPoint(null);
                   }}
                 >
                   <option value="last12">Ultimos 12 meses</option>
@@ -1974,7 +2174,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
                           metadata: { value: event.target.value }
                         });
                         setPeriodStartMonth(event.target.value);
-                        setHoveredPatrimonyPoint(null);
                       }}
                     >
                       <option value="">Inicio</option>
@@ -1994,7 +2193,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
                           metadata: { value: event.target.value }
                         });
                         setPeriodEndMonth(event.target.value);
-                        setHoveredPatrimonyPoint(null);
                       }}
                     >
                       <option value="">Actual</option>
@@ -2141,7 +2339,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     metadata: { previous: chartView }
                   });
                   setChartView(nextView);
-                  setHoveredMonthlyBar(null);
                 }}
               >
                 <option value="return">Rentabilidad</option>
@@ -2178,28 +2375,25 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   tabIndex={0}
                   role="img"
                   aria-label={`${m.month}: ${formatChartTooltipValue(chartValue)}`}
-                  onMouseEnter={() => {
-                    setHoveredMonthlyBar({ month: m.month, value: chartValue });
+                  onMouseEnter={(event) => {
+                    showMonthlyChartTooltip(event.currentTarget, m.month, chartValue);
                     trackChartPoint(chartView, m.month, chartValue);
                   }}
-                  onMouseMove={() => setHoveredMonthlyBar({ month: m.month, value: chartValue })}
-                  onMouseLeave={() => setHoveredMonthlyBar(null)}
-                  onFocus={() => {
-                    setHoveredMonthlyBar({ month: m.month, value: chartValue });
+                  onMouseLeave={(event) => {
+                    hideViewportTooltip(event.currentTarget);
+                  }}
+                  onFocus={(event) => {
+                    showMonthlyChartTooltip(event.currentTarget, m.month, chartValue);
                     trackChartPoint(chartView, m.month, chartValue);
                   }}
-                  onBlur={() => setHoveredMonthlyBar(null)}
-                  onPointerDown={() => {
-                    setHoveredMonthlyBar({ month: m.month, value: chartValue });
+                  onBlur={(event) => {
+                    hideViewportTooltip(event.currentTarget);
+                  }}
+                  onPointerDown={(event) => {
+                    showMonthlyChartTooltip(event.currentTarget, m.month, chartValue);
                     trackChartPoint(chartView, m.month, chartValue);
                   }}
                 >
-                  {hoveredMonthlyBar?.month === m.month ? (
-                    <div className="report-pro-bar-tooltip">
-                      <strong>{m.month}</strong>
-                      <span>{formatChartTooltipValue(hoveredMonthlyBar.value)}</span>
-                    </div>
-                  ) : null}
                   <span className={`report-pro-bar-value ${chartValue >= 0 ? 'positive' : 'negative'}`}>{formatChartValue(chartValue)}</span>
                   <div className="report-pro-bar-track">
                     <div
@@ -2282,7 +2476,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 onAnalyticsEvent?.({ type: 'chart_expand_request', label: 'Evolucion patrimonio' });
                 setExpandedStartMonth(rangeStart);
                 setExpandedEndMonth(rangeEnd);
-                setHoveredPatrimonyPoint(null);
                 setIsPatrimonyExpanded(true);
               }}
             >
