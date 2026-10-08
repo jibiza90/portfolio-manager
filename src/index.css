@@ -6437,6 +6437,133 @@ select {
   line-height: 1.5;
 }
 
+.report-pro-pending-cash > small {
+  display: block;
+  margin-top: 6px;
+  color: #34556d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.report-pro-pending-balance {
+  position: relative;
+  z-index: 12;
+  width: 100%;
+}
+
+.report-pro-pending-balance > strong {
+  display: inline-flex !important;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+}
+
+.report-pro-pending-balance > strong > button {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: -2px 0 0;
+  padding: 0;
+  border: 1px solid rgba(15, 109, 122, 0.28);
+  border-radius: 50%;
+  background: #e7f7f8;
+  color: #0f6d7a;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: help;
+}
+
+.report-pro-pending-balance-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  z-index: 80;
+  display: grid;
+  gap: 8px;
+  width: min(390px, calc(100vw - 44px));
+  padding: 14px;
+  border: 1px solid rgba(15, 109, 122, 0.25);
+  border-radius: 14px;
+  background: #ffffff;
+  color: #243b57;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -5px);
+  box-shadow: 0 18px 48px rgba(7, 27, 43, 0.2);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.report-pro-pending-balance:hover .report-pro-pending-balance-tooltip,
+.report-pro-pending-balance:focus-within .report-pro-pending-balance-tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.report-pro-pending-balance-tooltip > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.report-pro-pending-balance-tooltip b {
+  flex: 0 0 auto;
+  color: #102a43;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-pro-pending-balance-tooltip .is-total {
+  margin-top: 2px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(15, 109, 122, 0.16);
+  font-weight: 900;
+}
+
+.report-pro-pending-balance-tooltip > p {
+  margin: 1px 0 0;
+  color: #53677d;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.report-pro-provisional-month-row > td,
+.report-pro-provisional-movement-row > td {
+  background: rgba(225, 247, 249, 0.58) !important;
+  border-top-color: rgba(15, 109, 122, 0.2) !important;
+  border-bottom-color: rgba(15, 109, 122, 0.2) !important;
+}
+
+.report-pro-movement-pill.is-provisional,
+.report-pro-movement-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-left: 8px;
+  padding: 3px 7px;
+  border: 1px solid rgba(15, 109, 122, 0.22);
+  border-radius: 999px;
+  background: #e5f7f8;
+  color: #0f6d7a;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.report-pro-provisional-month-row strong {
+  color: #0f6d7a;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Keep KPI blocks centered and with breathing room */
 .report-pro-demo-sheet .report-pro-executive-demo,
 .report-pro-demo-sheet .report-pro-kpis-demo,

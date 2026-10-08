@@ -604,7 +604,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
   if (!report) return null;
 
   const visiblePendingCashMovements = report.clientId === DEMO_CLIENT_ID
-    ? pendingCashMovements.filter((movement) => Number.isFinite(movement.amount) && movement.amount > 0)
+    ? [...pendingCashMovements]
+        .filter((movement) => Number.isFinite(movement.amount) && movement.amount > 0)
+        .sort((left, right) => left.iso.localeCompare(right.iso))
     : [];
   const pendingIncrements = visiblePendingCashMovements
     .filter((movement) => movement.type === 'increment')
@@ -819,6 +821,20 @@ export const ReportView: React.FC<ReportViewProps> = ({
     });
     return acc;
   }, []);
+  let pendingNetCapital = visibleMovementCapitalSeries[visibleMovementCapitalSeries.length - 1]?.netCapital ?? 0;
+  const screenMovementCapitalSeries = [
+    ...visibleMovementCapitalSeries.map((movement) => ({ ...movement, provisional: false })),
+    ...pendingMovementRows.map((movement) => {
+      pendingNetCapital += movement.type === 'increment' ? movement.amount : -movement.amount;
+      return {
+        iso: movement.iso,
+        type: movement.type,
+        amount: movement.amount,
+        netCapital: pendingNetCapital,
+        provisional: true
+      };
+    })
+  ];
   const periodIncrements = periodMovements
     .filter((movement) => movement.type === 'increment')
     .reduce((sum, movement) => sum + (movement.amount ?? 0), 0);
@@ -856,6 +872,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
       : 'el inicio';
   const latestMonth = monthlyWithData[monthlyWithData.length - 1];
   const latestMonthLabel = latestMonth ? getLongMonthLabel(latestMonth.month) : 'ultimo mes';
+  const latestPublishedCloseLabel = latestMonth ? getMonthEndLabel(latestMonth.month) : 'sin cierre publicado';
+  const latestPendingMovement = pendingMovementRows[pendingMovementRows.length - 1];
+  const pendingMonthLabel = latestPendingMovement
+    ? new Date(`${latestPendingMovement.iso}T12:00:00`).toLocaleDateString('es-ES', {
+        month: 'short',
+        year: 'numeric'
+      }).replace('.', '')
+    : '';
   const waterfallValues = [visibleIncrements, visibleDecrements, report.beneficioTotal, visibleBalance];
   const waterfallScaleMax = Math.max(...waterfallValues.map((value) => Math.abs(value)), 1);
   const waterfallHeight = (value: number, min = 16) => `${Math.max(min, Math.min(100, (Math.abs(value) / waterfallScaleMax) * 100))}%`;
@@ -1739,9 +1763,33 @@ export const ReportView: React.FC<ReportViewProps> = ({
         </header>
 
         <section className="report-pro-executive report-pro-executive-demo">
-          <div className="report-pro-info-card" tabIndex={0} data-tooltip="Saldo actual de tu cartera a fecha del informe.">
+          <div
+            className="report-pro-info-card"
+            tabIndex={0}
+            data-tooltip={pendingMovementRows.length > 0 ? undefined : 'Saldo actual de tu cartera a fecha del informe.'}
+          >
             <p>Saldo actual</p>
-            <strong>{formatCurrency(visibleBalance)}</strong>
+            {pendingMovementRows.length > 0 ? (
+              <div className="report-pro-pending-balance">
+                <strong>
+                  {formatCurrency(visibleBalance)}
+                  <button type="button" aria-label="Ver desglose del saldo provisional" aria-describedby="pending-balance-breakdown">*</button>
+                </strong>
+                <div id="pending-balance-breakdown" role="tooltip" className="report-pro-pending-balance-tooltip">
+                  <div><span>Saldo del cierre publicado ({latestPublishedCloseLabel})</span><b>{formatCurrency(report.saldo)}</b></div>
+                  {pendingMovementRows.map((movement) => (
+                    <div key={`balance-${movement.iso}-${movement.type}-${movement.amount}`}>
+                      <span>{movement.type === 'increment' ? 'Aportación' : 'Retirada'} {getShortDateLabel(movement.iso)}</span>
+                      <b className={movement.type === 'increment' ? 'positive' : 'negative'}>
+                        {movement.type === 'increment' ? '+' : '-'}{formatCurrency(movement.amount)}
+                      </b>
+                    </div>
+                  ))}
+                  <div className="is-total"><span>Saldo visible</span><b>{formatCurrency(visibleBalance)}</b></div>
+                  <p>La rentabilidad se actualizar&aacute; con la pr&oacute;xima publicaci&oacute;n.</p>
+                </div>
+              </div>
+            ) : <strong>{formatCurrency(visibleBalance)}</strong>}
           </div>
           <div className="report-pro-info-card" tabIndex={0} data-tooltip={`Rentabilidad TWR de ${latestMonthLabel}. Mide el rendimiento de la estrategia sin contar aportaciones ni retiradas.`}>
             <p>{`Rentabilidad ${latestMonthLabel}`}</p>
@@ -1777,6 +1825,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
             <p>
               El saldo ya incluye estos movimientos. La rentabilidad y el beneficio se actualizar&aacute;n con la pr&oacute;xima publicaci&oacute;n.
             </p>
+            <small>&Uacute;ltimo cierre publicado: {latestPublishedCloseLabel}</small>
           </section>
         ) : null}
 
@@ -2163,6 +2212,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     </React.Fragment>
                   );
                 })}
+                {latestPendingMovement ? (
+                  <tr className="report-pro-provisional-month-row">
+                    <td>
+                      <span className="report-pro-month-cell">
+                        <span>{pendingMonthLabel}*</span>
+                        <span className="report-pro-movement-pill is-provisional">Provisional</span>
+                      </span>
+                    </td>
+                    <td className="text-right">&mdash;</td>
+                    <td className="text-right">&mdash;</td>
+                    <td className="text-right"><strong>{formatCurrency(visibleBalance)}*</strong></td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -2361,7 +2423,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </div>
         </section>
 
-        {visibleMovementCapitalSeries.length > 0 && (
+        {screenMovementCapitalSeries.length > 0 && (
           <section className="report-pro-panel">
             <div className="report-pro-panel-head">
               <h4>Capital aportado y retirado</h4>
@@ -2378,14 +2440,15 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleMovementCapitalSeries.map((mov, i) => {
+                  {screenMovementCapitalSeries.map((mov, i) => {
                     const [yy, mm, dd] = mov.iso.split('-');
                     const isIncrement = mov.type === 'increment';
                     return (
-                      <tr key={`${mov.iso}-${i}`}>
+                      <tr key={`${mov.iso}-${i}`} className={mov.provisional ? 'report-pro-provisional-movement-row' : undefined}>
                         <td>{`${dd}.${mm}.${yy}`}</td>
                         <td className={isIncrement ? 'positive' : 'negative'}>
                           {isIncrement ? 'Aportacion' : 'Retirada'}
+                          {mov.provisional ? <span className="report-pro-movement-status">Provisional</span> : null}
                         </td>
                         <td className={`text-right ${isIncrement ? 'positive' : 'negative'}`}>
                           {isIncrement ? '+' : '-'}{formatCurrency(mov.amount ?? 0)}
