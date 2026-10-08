@@ -6926,7 +6926,7 @@ select {
   scrollbar-gutter: stable;
 }
 
-/* Up to twelve months must use the available card width without horizontal scroll. */
+/* Ten months fit the card; longer periods keep every month in a horizontal timeline. */
 .report-pro-patrimony-scroll:not(.is-scrollable) {
   max-width: 100%;
   overflow-x: hidden;
@@ -9610,17 +9610,6 @@ select {
     width: 720px !important;
     min-width: 720px !important;
     height: 300px;
-  }
-
-  .client-portal-page .report-pro-patrimony-scroll-inner {
-    width: 760px;
-    min-width: 760px !important;
-  }
-
-  .client-portal-page .report-pro-patrimony-scroll:not(.is-scrollable) .report-pro-patrimony-scroll-inner {
-    width: 100%;
-    min-width: 0 !important;
-    max-width: 100%;
   }
 
   .client-portal-page .report-pro-line-chart {

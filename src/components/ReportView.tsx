@@ -300,6 +300,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const chartVisibilityRef = useRef<HTMLDivElement>(null);
+  const patrimonyScrollRef = useRef<HTMLDivElement>(null);
   const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
   const lastInteractionAtRef = useRef(Date.now());
   const lastTrackedChartPointRef = useRef<{ key: string; at: number } | null>(null);
@@ -464,6 +465,24 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (!report) return;
     setPeriodPreset('last12');
   }, [report?.clientId]);
+
+  useLayoutEffect(() => {
+    if (!report) return undefined;
+    let settledFrame = 0;
+    const scrollToLatestMonth = () => {
+      const scroller = patrimonyScrollRef.current;
+      if (!scroller) return;
+      scroller.scrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    };
+    const frame = window.requestAnimationFrame(() => {
+      scrollToLatestMonth();
+      settledFrame = window.requestAnimationFrame(scrollToLatestMonth);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(settledFrame);
+    };
+  }, [report?.clientId, report?.createdAt, report?.patrimonioEvolution.length, periodPreset, periodStartMonth, periodEndMonth]);
 
   useEffect(() => {
     if (!analyticsEnabled) return undefined;
@@ -1834,7 +1853,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const renderPatrimonyChart = (expanded: boolean) => {
     const chartData = expanded ? effectiveExpandedPatrimonioData : effectivePatrimonioData;
     const geometry = expanded ? expandedPatrimonyGeometry : patrimonyGeometry;
-    const chartMinWidth = !expanded && chartData.length > 12 ? `${chartData.length * 92}px` : '100%';
+    const isScrollable = !expanded && chartData.length > 10;
+    const chartWidth = isScrollable ? `${(chartData.length / 10) * 100}%` : '100%';
     const showPointTooltip = (anchor: Element, point: PatrimonyTooltipState) => {
       showViewportTooltip(
         anchor,
@@ -1846,8 +1866,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
       );
     };
     return (
-      <div className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${!expanded && chartData.length > 12 ? 'is-scrollable' : ''}`}>
-        <div className="report-pro-patrimony-scroll-inner" style={{ minWidth: chartMinWidth }}>
+      <div
+        ref={expanded ? undefined : patrimonyScrollRef}
+        className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${isScrollable ? 'is-scrollable' : ''}`}
+      >
+        <div className="report-pro-patrimony-scroll-inner" style={{ width: chartWidth, minWidth: chartWidth }}>
           <div className={`report-pro-line-wrap ${expanded ? 'report-pro-line-wrap-expanded' : ''}`}>
           <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" className={`report-pro-line-chart ${expanded ? 'report-pro-line-chart-expanded' : ''}`}>
             <defs>

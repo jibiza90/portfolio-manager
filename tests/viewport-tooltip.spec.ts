@@ -32,13 +32,21 @@ test('keeps every report tooltip visible inside the real page viewport', async (
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
 
   const fittedPatrimonyChart = page.locator('.report-pro-patrimony-scroll');
+  await expect.poll(async () => fittedPatrimonyChart.evaluate((element) => {
+    const currentScrollLeft = element.scrollLeft;
+    element.scrollLeft = Number.MAX_SAFE_INTEGER;
+    const maximumScrollLeft = element.scrollLeft;
+    element.scrollLeft = currentScrollLeft;
+    return {
+      atLatestMonth: Math.abs(currentScrollLeft - maximumScrollLeft) <= 1,
+      scrollable: element.classList.contains('is-scrollable')
+    };
+  })).toEqual({ atLatestMonth: true, scrollable: true });
   const fittedDimensions = await fittedPatrimonyChart.evaluate((element) => ({
     clientWidth: element.clientWidth,
-    scrollWidth: element.scrollWidth,
-    scrollable: element.classList.contains('is-scrollable')
+    scrollWidth: element.scrollWidth
   }));
-  expect(fittedDimensions.scrollable).toBe(false);
-  expect(fittedDimensions.scrollWidth).toBeLessThanOrEqual(fittedDimensions.clientWidth + 1);
+  expect(12 * fittedDimensions.clientWidth / fittedDimensions.scrollWidth).toBeCloseTo(10, 1);
 
   const assertVisibleInsideViewport = async () => {
     const tooltip = page.locator('.report-pro-viewport-tooltip');
@@ -88,6 +96,13 @@ test('keeps every report tooltip visible inside the real page viewport', async (
   await page.getByLabel('Periodo').selectOption('all');
 
   const scrollablePatrimonyChart = page.locator('.report-pro-patrimony-scroll');
+  await expect.poll(async () => scrollablePatrimonyChart.evaluate((element) => {
+    const currentScrollLeft = element.scrollLeft;
+    element.scrollLeft = Number.MAX_SAFE_INTEGER;
+    const maximumScrollLeft = element.scrollLeft;
+    element.scrollLeft = currentScrollLeft;
+    return Math.abs(currentScrollLeft - maximumScrollLeft) <= 1;
+  })).toBe(true);
   const scrollableDimensions = await scrollablePatrimonyChart.evaluate((element) => ({
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
@@ -95,4 +110,5 @@ test('keeps every report tooltip visible inside the real page viewport', async (
   }));
   expect(scrollableDimensions.scrollable).toBe(true);
   expect(scrollableDimensions.scrollWidth).toBeGreaterThan(scrollableDimensions.clientWidth);
+  expect(13 * scrollableDimensions.clientWidth / scrollableDimensions.scrollWidth).toBeCloseTo(10, 1);
 });
