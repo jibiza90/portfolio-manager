@@ -10,6 +10,7 @@ import { PremiumReportPage } from './PremiumReportPage';
 import { AnnualVisionReportPage } from './AnnualVisionReportPage';
 import { CapitalFlowReportPage } from './CapitalFlowReportPage';
 import { NarrativeReportPage } from './NarrativeReportPage';
+import { ClientLedgerReportPage } from './ClientLedgerReportPage';
 
 interface ReportViewProps {
   token?: string;
@@ -300,7 +301,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -533,7 +534,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (!analyticsEnabled || !onAnalyticsEvent || !reportRef.current) return undefined;
     const root = reportRef.current;
     const sections = Array.from(root.querySelectorAll<HTMLElement>(
-      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel, .premium-v2-primary-kpis, .premium-v2-secondary-kpis, .premium-v2-period-panel, .premium-v2-panel, .premium-v2-month-focus, .pv3-overview, .pv3-matrix-section, .pv3-month-insight, .pv3-year-digest, .pf4-hero, .pf4-engine-section, .pf4-inspector, .pf4-register, .pn5-opening, .pn5-chapter'
+      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel, .premium-v2-primary-kpis, .premium-v2-secondary-kpis, .premium-v2-period-panel, .premium-v2-panel, .premium-v2-month-focus, .pv3-overview, .pv3-matrix-section, .pv3-month-insight, .pv3-year-digest, .pf4-hero, .pf4-engine-section, .pf4-inspector, .pf4-register, .pn5-opening, .pn5-chapter, .ledger-hero, .ledger-kpis, .ledger-global-equation, .ledger-workspace, .ledger-pending'
     ));
     const visibleSections = new Map<HTMLElement, {
       ratio: number;
@@ -563,6 +564,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (section.classList.contains('pf4-register')) return 'Registro del capital';
       if (section.classList.contains('pn5-opening')) return 'Carta patrimonial';
       if (section.classList.contains('pn5-chapter')) return section.querySelector('h2')?.textContent?.trim() || 'Capitulo narrativo';
+      if (section.classList.contains('ledger-hero')) return 'Apertura del legajo';
+      if (section.classList.contains('ledger-kpis')) return 'Resumen del legajo';
+      if (section.classList.contains('ledger-global-equation')) return 'Reconciliacion global';
+      if (section.classList.contains('ledger-workspace')) return 'Extracto y dossier mensual';
+      if (section.classList.contains('ledger-pending')) return 'Movimientos pendientes del legajo';
       return section.querySelector('h4, h3, h2')?.textContent?.trim() || 'Seccion del informe';
     };
 
@@ -2183,7 +2189,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isAnnualVisionDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page3';
   const isCapitalFlowDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page4';
   const isNarrativeDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page5';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage;
+  const isLedgerDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page6';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}`}>
@@ -2195,60 +2202,83 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-five-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-six-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
               type="button"
               className={demoReportPage === 'page1' ? 'is-active' : ''}
               aria-pressed={demoReportPage === 'page1'}
+              aria-label="Página 1"
               onClick={() => setDemoReportPage('page1')}
             >
-              Página 1
+              <span className="demo-report-page-label">Página 1</span>
+              <small className="demo-report-page-author">ChatGPT</small>
             </button>
             <button
               type="button"
               className={demoReportPage === 'page2' ? 'is-active' : ''}
               aria-pressed={demoReportPage === 'page2'}
+              aria-label="Página 2"
               onClick={() => {
                 setDemoReportPage('page2');
                 onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 2 premium' });
               }}
             >
-              Página 2
+              <span className="demo-report-page-label">Página 2</span>
+              <small className="demo-report-page-author">ChatGPT</small>
             </button>
             <button
               type="button"
               className={demoReportPage === 'page3' ? 'is-active' : ''}
               aria-pressed={demoReportPage === 'page3'}
+              aria-label="Página 3"
               onClick={() => {
                 setDemoReportPage('page3');
                 onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 3 vision anual' });
               }}
             >
-              Página 3
+              <span className="demo-report-page-label">Página 3</span>
+              <small className="demo-report-page-author">SWE2</small>
             </button>
             <button
               type="button"
               className={demoReportPage === 'page4' ? 'is-active' : ''}
               aria-pressed={demoReportPage === 'page4'}
+              aria-label="Página 4"
               onClick={() => {
                 setDemoReportPage('page4');
                 onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 4 recorrido del capital' });
               }}
             >
-              Página 4
+              <span className="demo-report-page-label">Página 4</span>
+              <small className="demo-report-page-author">SWE2</small>
             </button>
             <button
               type="button"
               className={demoReportPage === 'page5' ? 'is-active' : ''}
               aria-pressed={demoReportPage === 'page5'}
+              aria-label="Página 5"
               onClick={() => {
                 setDemoReportPage('page5');
                 onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 5 carta patrimonial' });
               }}
             >
-              Página 5
+              <span className="demo-report-page-label">Página 5</span>
+              <small className="demo-report-page-author">SWE2</small>
+            </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page6' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page6'}
+              aria-label="Página 6"
+              onClick={() => {
+                setDemoReportPage('page6');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 6 legajo del cliente' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 6</span>
+              <small className="demo-report-page-author">Kimi 2.7</small>
             </button>
           </div>
         </nav>
@@ -2286,6 +2316,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
           rootRef={reportRef}
           onAnalyticsEvent={onAnalyticsEvent}
           onDownload={handleDownloadNarrativeReport}
+        />
+      ) : isLedgerDemoPage ? (
+        <ClientLedgerReportPage
+          report={report}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
         />
       ) : (
       <article className="informe-preview glass-card report-pro-sheet report-pro-demo-sheet" ref={reportRef}>
