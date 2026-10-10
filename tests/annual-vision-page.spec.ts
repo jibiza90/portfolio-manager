@@ -21,11 +21,16 @@ test('renders the annual vision for Demo1 and keeps its controls coherent', asyn
   await expect(page.locator('.pv3-year-controls > strong')).toHaveText('2026');
   await expect(page.locator('.pv3-calendar-row')).toHaveCount(1);
   await expect(page.locator('.pv3-month-cell.has-data')).toHaveCount(3);
+  await expect(page.getByRole('gridcell', { name: /Abr 2026: sin cierre todavía/i })).toBeVisible();
+  await expect(page.getByLabel('Leyenda de la matriz')).toContainText('Aportación');
+  await expect(page.getByLabel('Leyenda de la matriz')).toContainText('Sin datos');
 
   const marchCell = page.getByRole('gridcell', { name: /Marzo.*2026/i });
   await expect(marchCell).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.pv3-month-insight')).toContainText('4673,31');
   await expect(page.locator('.pv3-month-insight')).toContainText('4,33 %');
+  await expect(page.locator('.pv3-month-story')).toContainText('Marzo fue el mes con mayor beneficio de 2026');
+  await expect(page.locator('.pv3-year-digest')).toContainText('Mayor beneficio mensual');
 
   const profitLayer = page.getByRole('button', { name: /Beneficio €.*Resultado en euros/i });
   await profitLayer.click();

@@ -689,9 +689,78 @@
   font-size: 24px;
 }
 
+.pv3-month-cell.is-empty.is-pending-close {
+  border-color: rgba(169, 118, 63, 0.28);
+  background: rgba(232, 223, 207, 0.34);
+}
+
+.pv3-month-cell.is-empty.is-pending-close > strong {
+  color: #9a774f;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: 0.03em;
+}
+
+.pv3-month-cell.is-empty > small {
+  color: #8b9793;
+  text-align: center;
+}
+
 .pv3-month-cell.has-pending {
   border-color: rgba(169, 118, 63, 0.55);
   background: rgba(234, 220, 195, 0.55);
+}
+
+.pv3-matrix-key {
+  display: flex;
+  min-width: 0;
+  margin-top: 15px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  color: #6b7a76;
+}
+
+.pv3-matrix-key > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  font-weight: 720;
+  white-space: nowrap;
+}
+
+.pv3-matrix-key i {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.pv3-matrix-key i.is-increment {
+  background: var(--pv3-teal);
+}
+
+.pv3-matrix-key i.is-decrement {
+  background: var(--pv3-coral);
+}
+
+.pv3-matrix-key i.is-no-data {
+  color: #76847f;
+  background: #e2e0d6;
+}
+
+.pv3-matrix-key i.is-pending-close {
+  border: 1px dashed rgba(169, 118, 63, 0.65);
+  color: var(--pv3-copper);
+  background: rgba(169, 118, 63, 0.08);
 }
 
 .pv3-flow-markers {
@@ -1407,6 +1476,12 @@
 
   .pv3-month-cell > strong {
     font-size: clamp(18px, 5.7vw, 25px);
+  }
+
+  .pv3-matrix-key {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 9px 16px;
   }
 
   .pv3-month-result {

@@ -66,6 +66,7 @@ const monthLookup: Record<string, number> = {
 };
 
 const shortMonthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const rankingLabels = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo', 'undécimo', 'duodécimo'];
 
 const monthToKey = (value: string) => {
   if (/^\d{4}-\d{2}$/.test(value)) return value;
@@ -231,7 +232,7 @@ export const AnnualVisionReportPage: React.FC<AnnualVisionReportPageProps> = ({
   const scopeReturnPct = calculateTwrPct(scopeMonths);
   const scopeNetFlow = movementNet(scopedMovements);
   const scopeBestMonth = [...scopeMonths].sort((left, right) => right.returnPct - left.returnPct)[0];
-  const scopeWorstMonth = [...scopeMonths].sort((left, right) => left.returnPct - right.returnPct)[0];
+  const scopeBestProfitMonth = [...scopeMonths].sort((left, right) => right.profit - left.profit)[0];
   const scopeLabel = showAllYears ? 'Todo el histórico' : `Año ${selectedYear}`;
 
   const layerValues = visibleMonths.map((month) => getLayerValue(month, layer));
@@ -459,16 +460,19 @@ export const AnnualVisionReportPage: React.FC<AnnualVisionReportPageProps> = ({
                   const month = monthByKey.get(key);
                   const cellMovements = allMovements.filter((movement) => movement.iso.slice(0, 7) === key);
                   if (!month) {
+                    const isPendingClose = key > latestMonthKey;
+                    const emptyStatus = isPendingClose ? 'Sin cierre todavía' : 'Sin datos';
                     return (
                       <div
-                        className={`pv3-month-cell is-empty${cellMovements.length ? ' has-pending' : ''}`}
+                        className={`pv3-month-cell is-empty${isPendingClose ? ' is-pending-close' : ''}${cellMovements.length ? ' has-pending' : ''}`}
                         key={key}
                         role="gridcell"
                         aria-disabled="true"
-                        aria-label={`${monthName} ${year}: sin cierre`}
+                        aria-label={`${monthName} ${year}: ${emptyStatus.toLowerCase()}`}
                       >
                         <span>{monthName}</span>
-                        <strong>·</strong>
+                        <strong>{isPendingClose ? 'Pend.' : '—'}</strong>
+                        <small>{emptyStatus}</small>
                         {cellMovements.length ? (
                           <div className="pv3-flow-markers">
                             {cellMovements.some((movement) => movement.type === 'increment') ? <i className="is-increment">+</i> : null}
@@ -514,6 +518,12 @@ export const AnnualVisionReportPage: React.FC<AnnualVisionReportPageProps> = ({
             </div>
           ))}
         </div>
+        <div className="pv3-matrix-key" aria-label="Leyenda de la matriz">
+          <span><i className="is-increment">+</i>Aportación</span>
+          <span><i className="is-decrement">−</i>Retirada</span>
+          <span><i className="is-no-data">—</i>Sin datos</span>
+          <span><i className="is-pending-close">·</i>Sin cierre todavía</span>
+        </div>
       </section>
 
       {displayedMonth ? (
@@ -531,8 +541,10 @@ export const AnnualVisionReportPage: React.FC<AnnualVisionReportPageProps> = ({
             <div>
               <span>Lectura del mes</span>
               <p>
-                Ocupó la posición <strong>{displayedRanking} de {displayedYearMonths.length}</strong> por beneficio en {displayedMonth.year}.
-                {displayedProfitWeight > 0 && displayedProfitWeight <= 100
+                <strong>{displayedMonth.label.split(' de ')[0]}</strong> fue {displayedRanking === 1
+                  ? 'el mes con mayor beneficio'
+                  : `el ${rankingLabels[displayedRanking - 1] ?? `${displayedRanking}.º`} mes con mayor beneficio`} de {displayedMonth.year}.
+                {displayedYearProfit > 0 && displayedMonth.profit > 0 && displayedProfitWeight > 0 && displayedProfitWeight <= 100
                   ? <> Representó el <strong>{displayedProfitWeight.toLocaleString('es-ES', { maximumFractionDigits: 1 })} %</strong> del resultado anual.</>
                   : null}
               </p>
@@ -605,7 +617,7 @@ export const AnnualVisionReportPage: React.FC<AnnualVisionReportPageProps> = ({
         <header><span>Lectura del periodo</span><h2>{scopeLabel} en tres señales</h2></header>
         <div>
           <article><span>Mejor rentabilidad</span><strong>{scopeBestMonth?.label ?? '—'}</strong><small>{scopeBestMonth ? signedPercent(scopeBestMonth.returnPct) : 'Sin datos'}</small></article>
-          <article><span>Menor rentabilidad</span><strong>{scopeWorstMonth?.label ?? '—'}</strong><small>{scopeWorstMonth ? signedPercent(scopeWorstMonth.returnPct) : 'Sin datos'}</small></article>
+          <article><span>Mayor beneficio mensual</span><strong>{scopeBestProfitMonth?.label ?? '—'}</strong><small>{scopeBestProfitMonth ? signedMoney(scopeBestProfitMonth.profit) : 'Sin datos'}</small></article>
           <article><span>Meses con beneficio</span><strong>{profitableMonths} de {scopeMonths.length}</strong><small>{negativeMonths ? `${negativeMonths} con resultado negativo` : 'Ningún cierre negativo'}</small></article>
         </div>
         <div className="pv3-legend">
