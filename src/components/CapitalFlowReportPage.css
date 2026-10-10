@@ -1,0 +1,1254 @@
+.pf4-report {
+  --pf4-ink: #102b2c;
+  --pf4-ink-soft: #58706f;
+  --pf4-paper: #edf2ef;
+  --pf4-paper-light: #f8fbf8;
+  --pf4-panel: #102b2c;
+  --pf4-panel-deep: #091e20;
+  --pf4-line: rgba(24, 57, 57, 0.15);
+  --pf4-teal: #1aa68d;
+  --pf4-amber: #e8a74b;
+  --pf4-negative: #c85f5f;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(22, 55, 55, 0.16);
+  border-radius: 26px;
+  color: var(--pf4-ink);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(50, 150, 126, 0.14), transparent 26%),
+    radial-gradient(circle at 92% 9%, rgba(232, 167, 75, 0.13), transparent 23%),
+    var(--pf4-paper);
+  box-shadow: 0 28px 86px rgba(13, 43, 43, 0.16);
+  font-family: "Space Grotesk", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-report-page-switcher.has-four-pages button {
+  min-width: 88px;
+}
+
+.pf4-report::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(24, 57, 57, 0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(24, 57, 57, 0.026) 1px, transparent 1px);
+  background-size: 32px 32px;
+  content: "";
+  pointer-events: none;
+}
+
+.pf4-report *,
+.pf4-report *::before,
+.pf4-report *::after {
+  box-sizing: border-box;
+}
+
+.pf4-report button,
+.pf4-report input {
+  font: inherit;
+}
+
+.pf4-report button:focus-visible,
+.pf4-report input:focus-visible,
+.pf4-capital-lane path:focus-visible {
+  outline: 3px solid rgba(232, 167, 75, 0.52);
+  outline-offset: 3px;
+}
+
+.pf4-report .is-positive {
+  color: #087b68;
+}
+
+.pf4-report .is-negative {
+  color: var(--pf4-negative);
+}
+
+.pf4-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 72px;
+  padding: 16px clamp(24px, 4vw, 62px);
+  border-bottom: 1px solid var(--pf4-line);
+  background: rgba(248, 251, 248, 0.64);
+  backdrop-filter: blur(18px);
+}
+
+.pf4-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.pf4-wordmark i,
+.pf4-system-status i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--pf4-teal);
+  box-shadow: 0 0 0 5px rgba(26, 166, 141, 0.12);
+}
+
+.pf4-wordmark span {
+  color: var(--pf4-ink-soft);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+
+.pf4-topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 3vw, 42px);
+}
+
+.pf4-topbar-meta > span:not(.pf4-system-status) {
+  display: grid;
+  gap: 2px;
+}
+
+.pf4-topbar-meta small,
+.pf4-system-status {
+  color: var(--pf4-ink-soft);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pf4-topbar-meta strong {
+  font-size: 0.86rem;
+}
+
+.pf4-system-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 1px solid rgba(26, 166, 141, 0.22);
+  border-radius: 999px;
+  color: #087b68;
+  background: rgba(26, 166, 141, 0.08);
+}
+
+.pf4-system-status i {
+  width: 7px;
+  height: 7px;
+  box-shadow: none;
+}
+
+.pf4-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(270px, 0.65fr);
+  gap: 34px;
+  padding: clamp(46px, 7vw, 96px) clamp(24px, 5vw, 76px) 42px;
+}
+
+.pf4-hero-copy > span,
+.pf4-section-heading > div > span,
+.pf4-inspector-title > span,
+.pf4-method span,
+.pf4-empty span {
+  color: #087b68;
+  font-size: 0.71rem;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.pf4-hero-copy h1 {
+  max-width: 780px;
+  margin: 14px 0 18px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(3.6rem, 7.4vw, 7.4rem);
+  font-weight: 500;
+  line-height: 0.78;
+  letter-spacing: -0.06em;
+}
+
+.pf4-hero-copy p {
+  max-width: 660px;
+  margin: 0;
+  color: var(--pf4-ink-soft);
+  font-size: clamp(1rem, 1.35vw, 1.22rem);
+  line-height: 1.65;
+}
+
+.pf4-hero-balance {
+  align-self: end;
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 25px 26px;
+  border-left: 5px solid var(--pf4-teal);
+  border-radius: 4px 18px 18px 4px;
+  color: #effffb;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 48%),
+    var(--pf4-panel);
+  box-shadow: 0 20px 42px rgba(10, 41, 41, 0.19);
+}
+
+.pf4-hero-balance span,
+.pf4-hero-balance small {
+  color: #a9c3bf;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.pf4-hero-balance strong {
+  overflow-wrap: anywhere;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(2.3rem, 4.5vw, 4.3rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.pf4-hero-balance small {
+  margin-top: 4px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.pf4-equation {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr) auto);
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid var(--pf4-line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.pf4-equation article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  min-height: 112px;
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.pf4-equation article.is-total {
+  color: #effffb;
+  background: var(--pf4-panel);
+}
+
+.pf4-equation article > span,
+.pf4-equation article > small {
+  color: var(--pf4-ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pf4-equation article.is-total > span,
+.pf4-equation article.is-total > small {
+  color: #afc7c3;
+}
+
+.pf4-equation article strong {
+  align-self: center;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.15rem, 1.8vw, 1.62rem);
+}
+
+.pf4-equation > b {
+  color: var(--pf4-ink-soft);
+  font-size: 1.4rem;
+  font-weight: 400;
+}
+
+.pf4-control-deck {
+  display: grid;
+  grid-template-columns: minmax(200px, 0.7fr) minmax(360px, 1.3fr) auto;
+  align-items: center;
+  gap: 24px;
+  margin: 0 clamp(24px, 5vw, 76px) 28px;
+  padding: 20px 22px;
+  border: 1px solid var(--pf4-line);
+  border-radius: 18px;
+  background: rgba(248, 251, 248, 0.72);
+}
+
+.pf4-control-deck > div:first-child,
+.pf4-period-controls label {
+  display: grid;
+  gap: 5px;
+}
+
+.pf4-control-deck span,
+.pf4-period-controls label span {
+  color: var(--pf4-ink-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.pf4-period-controls {
+  display: grid;
+  grid-template-columns: auto minmax(130px, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+
+.pf4-period-controls > div,
+.pf4-display-toggle {
+  display: flex;
+  padding: 4px;
+  border: 1px solid var(--pf4-line);
+  border-radius: 999px;
+  background: rgba(16, 43, 44, 0.05);
+}
+
+.pf4-period-controls button,
+.pf4-display-toggle button {
+  border: 0;
+  border-radius: 999px;
+  color: var(--pf4-ink-soft);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.pf4-period-controls button {
+  min-width: 45px;
+  padding: 8px 10px;
+}
+
+.pf4-display-toggle button {
+  padding: 9px 14px;
+  white-space: nowrap;
+}
+
+.pf4-period-controls button.is-active,
+.pf4-display-toggle button.is-active {
+  color: #f4fffc;
+  background: var(--pf4-panel);
+  box-shadow: 0 6px 14px rgba(16, 43, 44, 0.16);
+}
+
+.pf4-period-controls input[type="range"] {
+  width: 100%;
+  accent-color: var(--pf4-teal);
+  cursor: pointer;
+}
+
+.pf4-engine-section {
+  margin: 0 clamp(14px, 3vw, 48px) clamp(48px, 7vw, 90px);
+  padding: clamp(24px, 3vw, 44px);
+  border-radius: 25px;
+  color: #e9f6f3;
+  background:
+    radial-gradient(circle at 76% 3%, rgba(26, 166, 141, 0.17), transparent 31%),
+    linear-gradient(145deg, var(--pf4-panel), var(--pf4-panel-deep));
+  box-shadow: 0 28px 60px rgba(8, 31, 32, 0.23);
+}
+
+.pf4-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 26px;
+}
+
+.pf4-section-heading h2,
+.pf4-inspector-title h2,
+.pf4-method h2 {
+  margin: 6px 0 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(2rem, 3.8vw, 3.65rem);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+.pf4-engine-section .pf4-section-heading > div > span {
+  color: #72cfbc;
+}
+
+.pf4-period-readout {
+  display: flex;
+  gap: 10px;
+}
+
+.pf4-period-readout > span {
+  display: grid;
+  gap: 6px;
+  min-width: 148px;
+  padding: 13px 15px;
+  border: 1px solid rgba(191, 225, 218, 0.15);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.pf4-period-readout small {
+  color: #91aaa6;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.pf4-period-readout strong {
+  color: #f4fffc;
+  font-size: 1rem;
+}
+
+.pf4-period-readout .is-positive {
+  color: #6fe0c8;
+}
+
+.pf4-period-readout .is-negative {
+  color: #f09a98;
+}
+
+.pf4-origin-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.pf4-origin-strip button {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 14px 14px 19px;
+  overflow: hidden;
+  border: 1px solid rgba(203, 232, 226, 0.13);
+  border-radius: 13px;
+  color: #dfece9;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.035);
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.pf4-origin-strip button:hover,
+.pf4-origin-strip button.is-active {
+  border-color: color-mix(in srgb, var(--pf4-lot-color) 68%, transparent);
+  background: rgba(255, 255, 255, 0.075);
+  transform: translateY(-2px);
+}
+
+.pf4-origin-strip button > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--pf4-lot-color);
+}
+
+.pf4-origin-strip button span {
+  overflow: hidden;
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf4-origin-strip button strong {
+  overflow-wrap: anywhere;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.pf4-origin-strip button small {
+  color: #91aaa6;
+  font-size: 0.68rem;
+}
+
+.pf4-origin-strip button.is-pending small {
+  color: #f4c67d;
+}
+
+.pf4-engine-canvas {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(196, 226, 220, 0.13);
+  border-radius: 18px;
+  background: rgba(5, 24, 26, 0.42);
+}
+
+.pf4-flow-diagram {
+  display: block;
+  width: 100%;
+  min-width: 780px;
+  height: auto;
+  min-height: 560px;
+}
+
+.pf4-svg-kicker {
+  fill: #78cdbc;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.pf4-svg-copy {
+  fill: #86a09c;
+  font-size: 13px;
+}
+
+.pf4-engine-frame {
+  fill: rgba(255, 255, 255, 0.018);
+  stroke: rgba(177, 213, 205, 0.16);
+  stroke-width: 1;
+}
+
+.pf4-time-layer line {
+  stroke: rgba(164, 203, 195, 0.11);
+  stroke-dasharray: 4 8;
+}
+
+.pf4-time-layer text {
+  fill: #88a49f;
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: start;
+  text-transform: capitalize;
+}
+
+.pf4-capital-lane path {
+  fill: none;
+  opacity: 0.62;
+  stroke-linecap: round;
+  cursor: pointer;
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.pf4-capital-lane:hover path,
+.pf4-capital-lane.is-active path {
+  filter: saturate(1.2) drop-shadow(0 0 9px rgba(123, 217, 197, 0.26));
+  opacity: 0.98;
+}
+
+.pf4-lane-value {
+  fill: #eaf6f3;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pf4-withdrawal-branch path {
+  fill: none;
+  stroke: #da7773;
+  stroke-dasharray: 6 6;
+  stroke-width: 2;
+}
+
+.pf4-withdrawal-branch circle {
+  fill: #da7773;
+}
+
+.pf4-withdrawal-branch text {
+  fill: #d99b98;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pf4-destination rect {
+  fill: rgba(239, 255, 251, 0.96);
+  stroke: #70d2bd;
+  stroke-width: 2;
+}
+
+.pf4-destination text:first-of-type {
+  fill: #56706b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.pf4-destination text:last-of-type {
+  fill: #102b2c;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.pf4-mobile-flow {
+  display: none;
+}
+
+.pf4-inspector,
+.pf4-register,
+.pf4-method {
+  margin: 0 clamp(24px, 5vw, 76px) clamp(48px, 7vw, 86px);
+}
+
+.pf4-inspector {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(230px, 0.55fr) minmax(0, 1.6fr);
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--pf4-line);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 18px 45px rgba(25, 56, 54, 0.1);
+}
+
+.pf4-inspector-title,
+.pf4-inspector-value,
+.pf4-inspector-grid article {
+  min-width: 0;
+  padding: 21px;
+  border-radius: 15px;
+}
+
+.pf4-inspector-title {
+  background: var(--pf4-paper-light);
+}
+
+.pf4-inspector-title h2 {
+  font-size: clamp(1.75rem, 2.8vw, 2.7rem);
+}
+
+.pf4-inspector-title p,
+.pf4-register .pf4-section-heading > p,
+.pf4-method p {
+  margin: 12px 0 0;
+  color: var(--pf4-ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.pf4-inspector-value {
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  color: #f1fffc;
+  background: var(--pf4-panel);
+}
+
+.pf4-inspector-value span,
+.pf4-inspector-value small,
+.pf4-inspector-grid span,
+.pf4-inspector-grid small {
+  color: #94ada8;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.pf4-inspector-value strong {
+  overflow-wrap: anywhere;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(2rem, 3.6vw, 3.4rem);
+  line-height: 0.95;
+}
+
+.pf4-inspector-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pf4-inspector-grid article {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  padding: 15px 17px;
+  background: rgba(16, 43, 44, 0.045);
+}
+
+.pf4-inspector-grid strong {
+  overflow-wrap: anywhere;
+  font-size: 1.05rem;
+}
+
+.pf4-inspector-grid .is-positive {
+  color: #087b68;
+}
+
+.pf4-entry-signal {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 5px 5px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: #76501d;
+  background: rgba(232, 167, 75, 0.16);
+  font-size: 0.82rem;
+}
+
+.pf4-entry-signal i {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pf4-amber);
+}
+
+.pf4-register .pf4-section-heading {
+  align-items: center;
+}
+
+.pf4-register .pf4-section-heading > p {
+  max-width: 400px;
+  text-align: right;
+}
+
+.pf4-register-head,
+.pf4-register-rows > button {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.3fr) repeat(5, minmax(110px, 1fr));
+  align-items: center;
+  gap: 12px;
+}
+
+.pf4-register-head {
+  padding: 0 17px 11px;
+  color: var(--pf4-ink-soft);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pf4-register-head span:not(:first-child) {
+  text-align: right;
+}
+
+.pf4-register-rows {
+  display: grid;
+  gap: 7px;
+}
+
+.pf4-register-rows > button {
+  width: 100%;
+  padding: 14px 17px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  color: var(--pf4-ink);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.57);
+  cursor: pointer;
+  transition: border-color 170ms ease, background 170ms ease, transform 170ms ease;
+}
+
+.pf4-register-rows > button:hover,
+.pf4-register-rows > button.is-active {
+  border-color: rgba(26, 166, 141, 0.32);
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateX(3px);
+}
+
+.pf4-register-rows > button > span {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding-left: 16px;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.pf4-register-rows > button > span i {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pf4-lot-color);
+}
+
+.pf4-register-rows small {
+  color: var(--pf4-ink-soft);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.pf4-register-rows > button > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-size: 0.84rem;
+}
+
+.pf4-method {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.3fr);
+  gap: clamp(30px, 6vw, 90px);
+  align-items: center;
+  padding: clamp(28px, 4vw, 52px);
+  border-top: 1px solid var(--pf4-line);
+  border-bottom: 1px solid var(--pf4-line);
+}
+
+.pf4-method h2 {
+  font-size: clamp(1.8rem, 3vw, 2.9rem);
+}
+
+.pf4-method p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.pf4-footer {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 24px;
+  padding: 25px clamp(24px, 5vw, 76px);
+  color: #c7dad6;
+  background: var(--pf4-panel-deep);
+}
+
+.pf4-footer > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.pf4-footer > div span {
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.pf4-footer small,
+.pf4-footer > span {
+  color: #809b96;
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pf4-footer > strong {
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.pf4-footer > span {
+  text-align: right;
+}
+
+.pf4-empty {
+  display: grid;
+  place-items: center;
+  min-height: 520px;
+  padding: 40px;
+  text-align: center;
+}
+
+.pf4-empty h1 {
+  margin: 12px 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(2.4rem, 6vw, 5rem);
+}
+
+@media (max-width: 1120px) {
+  .pf4-control-deck {
+    grid-template-columns: 1fr 1.5fr;
+  }
+
+  .pf4-display-toggle {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+
+  .pf4-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pf4-period-readout {
+    width: 100%;
+  }
+
+  .pf4-period-readout > span {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pf4-inspector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pf4-inspector-grid {
+    grid-column: 1 / -1;
+  }
+
+  .pf4-register {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .pf4-register-head,
+  .pf4-register-rows {
+    min-width: 970px;
+  }
+}
+
+@media (max-width: 900px) {
+  .pf4-topbar {
+    align-items: flex-start;
+  }
+
+  .pf4-topbar-meta > span:not(.pf4-system-status) {
+    display: none;
+  }
+
+  .pf4-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .pf4-hero-copy h1 {
+    font-size: clamp(3.5rem, 12vw, 6.4rem);
+  }
+
+  .pf4-equation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pf4-equation > b {
+    display: none;
+  }
+
+  .pf4-control-deck {
+    grid-template-columns: 1fr;
+  }
+
+  .pf4-display-toggle {
+    grid-column: auto;
+    justify-self: stretch;
+  }
+
+  .pf4-display-toggle button {
+    flex: 1;
+  }
+
+  .pf4-method {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .pf4-flow-diagram {
+    display: none;
+  }
+
+  .pf4-mobile-flow {
+    display: grid;
+    gap: 9px;
+    padding: 10px;
+  }
+
+  .pf4-mobile-flow button {
+    display: grid;
+    grid-template-columns: 4px 1fr auto 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 13px;
+    border: 1px solid rgba(190, 222, 215, 0.13);
+    border-radius: 12px;
+    color: #eaf7f4;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .pf4-mobile-flow button.is-active {
+    border-color: var(--pf4-lot-color);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .pf4-mobile-flow button > i {
+    width: 4px;
+    height: 100%;
+    border-radius: 99px;
+    background: var(--pf4-lot-color);
+  }
+
+  .pf4-mobile-flow button > span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .pf4-mobile-flow button small {
+    color: #7f9d97;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .pf4-mobile-flow button strong,
+  .pf4-mobile-flow button em {
+    overflow-wrap: anywhere;
+    font-size: 0.68rem;
+    font-style: normal;
+  }
+
+  .pf4-mobile-flow button em {
+    color: #8eaaa4;
+  }
+
+  .pf4-mobile-flow button > b {
+    color: #55736d;
+    font-size: 0.8rem;
+  }
+
+  .pf4-footer {
+    grid-template-columns: 1fr auto;
+  }
+
+  .pf4-footer > strong {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    text-align: left;
+  }
+}
+
+@media (max-width: 700px) {
+  .demo-report-page-switcher.has-four-pages > div {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .demo-report-page-switcher.has-four-pages button {
+    min-width: 0;
+    padding-inline: 7px;
+    font-size: 0.72rem;
+  }
+
+  .pf4-report {
+    border-radius: 18px;
+  }
+
+  .pf4-topbar,
+  .pf4-hero,
+  .pf4-control-deck,
+  .pf4-inspector,
+  .pf4-register,
+  .pf4-method {
+    margin-right: 14px;
+    margin-left: 14px;
+  }
+
+  .pf4-topbar {
+    margin: 0;
+    padding: 14px 16px;
+  }
+
+  .pf4-wordmark span,
+  .pf4-system-status {
+    display: none;
+  }
+
+  .pf4-hero {
+    gap: 24px;
+    margin: 0;
+    padding: 42px 18px 28px;
+  }
+
+  .pf4-hero-copy h1 {
+    margin-top: 11px;
+    font-size: clamp(3.1rem, 16vw, 4.8rem);
+  }
+
+  .pf4-hero-balance {
+    padding: 21px;
+  }
+
+  .pf4-equation {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .pf4-equation article {
+    min-height: 104px;
+    padding: 13px;
+  }
+
+  .pf4-equation article strong {
+    font-size: 1rem;
+  }
+
+  .pf4-control-deck {
+    gap: 18px;
+    padding: 16px;
+  }
+
+  .pf4-period-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .pf4-period-controls > div button {
+    flex: 1;
+  }
+
+  .pf4-engine-section {
+    margin: 0 8px 52px;
+    padding: 20px 12px;
+    border-radius: 18px;
+  }
+
+  .pf4-engine-section .pf4-section-heading {
+    padding-inline: 4px;
+  }
+
+  .pf4-period-readout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pf4-period-readout > span:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .pf4-origin-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pf4-inspector {
+    grid-template-columns: 1fr;
+    padding: 9px;
+  }
+
+  .pf4-inspector-grid {
+    grid-column: auto;
+  }
+
+  .pf4-inspector-value strong {
+    font-size: 2.4rem;
+  }
+
+  .pf4-register {
+    overflow: visible;
+  }
+
+  .pf4-register .pf4-section-heading > p {
+    text-align: left;
+  }
+
+  .pf4-register-head {
+    display: none;
+  }
+
+  .pf4-register-rows {
+    min-width: 0;
+  }
+
+  .pf4-register-rows > button {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    padding: 16px;
+  }
+
+  .pf4-register-rows > button > span {
+    grid-column: 1 / -1;
+    padding-bottom: 9px;
+    border-bottom: 1px solid var(--pf4-line);
+  }
+
+  .pf4-register-rows > button > strong {
+    display: grid;
+    gap: 3px;
+    text-align: left;
+  }
+
+  .pf4-register-rows > button > strong::before {
+    color: var(--pf4-ink-soft);
+    content: attr(data-label);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .pf4-method {
+    padding: 26px 20px;
+  }
+
+  .pf4-footer {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 24px 18px;
+  }
+
+  .pf4-footer > strong,
+  .pf4-footer > span {
+    text-align: left;
+  }
+}
+
+@media (max-width: 480px) {
+  .pf4-origin-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .pf4-mobile-flow button {
+    grid-template-columns: 4px 1fr;
+  }
+
+  .pf4-mobile-flow button > b {
+    display: none;
+  }
+
+  .pf4-mobile-flow button > span {
+    grid-column: 2;
+    padding: 5px 0;
+  }
+
+  .pf4-inspector-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pf4-report {
+    animation: pf4-enter 500ms ease both;
+  }
+
+  .pf4-capital-lane path {
+    animation: pf4-trace 850ms ease both;
+  }
+
+  .pf4-origin-strip button {
+    animation: pf4-rise 420ms ease both;
+  }
+
+  .pf4-origin-strip button:nth-child(2) { animation-delay: 55ms; }
+  .pf4-origin-strip button:nth-child(3) { animation-delay: 110ms; }
+  .pf4-origin-strip button:nth-child(4) { animation-delay: 165ms; }
+  .pf4-origin-strip button:nth-child(5) { animation-delay: 220ms; }
+}
+
+@keyframes pf4-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pf4-rise {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pf4-trace {
+  from { opacity: 0; }
+  to { opacity: 0.62; }
+}

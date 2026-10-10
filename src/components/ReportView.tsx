@@ -8,6 +8,7 @@ import { DEMO_CLIENT_ID } from '../constants/clients';
 import { getViewportTooltipPosition, ViewportTooltipPlacement } from '../utils/viewportTooltip';
 import { PremiumReportPage } from './PremiumReportPage';
 import { AnnualVisionReportPage } from './AnnualVisionReportPage';
+import { CapitalFlowReportPage } from './CapitalFlowReportPage';
 
 interface ReportViewProps {
   token?: string;
@@ -298,7 +299,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -531,7 +532,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (!analyticsEnabled || !onAnalyticsEvent || !reportRef.current) return undefined;
     const root = reportRef.current;
     const sections = Array.from(root.querySelectorAll<HTMLElement>(
-      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel, .premium-v2-primary-kpis, .premium-v2-secondary-kpis, .premium-v2-period-panel, .premium-v2-panel, .premium-v2-month-focus, .pv3-overview, .pv3-matrix-section, .pv3-month-insight, .pv3-year-digest'
+      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel, .premium-v2-primary-kpis, .premium-v2-secondary-kpis, .premium-v2-period-panel, .premium-v2-panel, .premium-v2-month-focus, .pv3-overview, .pv3-matrix-section, .pv3-month-insight, .pv3-year-digest, .pf4-hero, .pf4-engine-section, .pf4-inspector, .pf4-register'
     ));
     const visibleSections = new Map<HTMLElement, {
       ratio: number;
@@ -555,6 +556,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (section.classList.contains('pv3-matrix-section')) return 'Caleidoscopio anual';
       if (section.classList.contains('pv3-month-insight')) return 'Mes en contexto';
       if (section.classList.contains('pv3-year-digest')) return 'Lectura del periodo anual';
+      if (section.classList.contains('pf4-hero')) return 'Genealogia del saldo';
+      if (section.classList.contains('pf4-engine-section')) return 'Sala de maquinas del capital';
+      if (section.classList.contains('pf4-inspector')) return 'Inspector de lote';
+      if (section.classList.contains('pf4-register')) return 'Registro de lotes';
       return section.querySelector('h4, h3, h2')?.textContent?.trim() || 'Seccion del informe';
     };
 
@@ -2067,7 +2072,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
   const isPremiumDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page2';
   const isAnnualVisionDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page3';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage;
+  const isCapitalFlowDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page4';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}`}>
@@ -2079,7 +2085,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-three-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-four-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2112,6 +2118,17 @@ export const ReportView: React.FC<ReportViewProps> = ({
             >
               Página 3
             </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page4' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page4'}
+              onClick={() => {
+                setDemoReportPage('page4');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 4 sala de maquinas' });
+              }}
+            >
+              Página 4
+            </button>
           </div>
         </nav>
       ) : null}
@@ -2126,6 +2143,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : isAnnualVisionDemoPage ? (
         <AnnualVisionReportPage
+          report={report}
+          generalReferenceMonthly={generalReferenceMonthly}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
+        />
+      ) : isCapitalFlowDemoPage ? (
+        <CapitalFlowReportPage
           report={report}
           generalReferenceMonthly={generalReferenceMonthly}
           pendingCashMovements={visiblePendingCashMovements}
