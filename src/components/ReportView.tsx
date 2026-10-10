@@ -557,9 +557,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (section.classList.contains('pv3-month-insight')) return 'Mes en contexto';
       if (section.classList.contains('pv3-year-digest')) return 'Lectura del periodo anual';
       if (section.classList.contains('pf4-hero')) return 'Genealogia del saldo';
-      if (section.classList.contains('pf4-engine-section')) return 'Sala de maquinas del capital';
-      if (section.classList.contains('pf4-inspector')) return 'Inspector de lote';
-      if (section.classList.contains('pf4-register')) return 'Registro de lotes';
+      if (section.classList.contains('pf4-engine-section')) return 'Recorrido de las aportaciones';
+      if (section.classList.contains('pf4-inspector')) return 'Detalle de la aportacion';
+      if (section.classList.contains('pf4-register')) return 'Registro del capital';
       return section.querySelector('h4, h3, h2')?.textContent?.trim() || 'Seccion del informe';
     };
 
@@ -2124,7 +2124,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               aria-pressed={demoReportPage === 'page4'}
               onClick={() => {
                 setDemoReportPage('page4');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 4 sala de maquinas' });
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 4 recorrido del capital' });
               }}
             >
               Página 4

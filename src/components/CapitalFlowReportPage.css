@@ -420,6 +420,209 @@
   color: #f09a98;
 }
 
+.pf4-journey-guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr) auto) minmax(150px, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 15px 18px;
+  border: 1px solid rgba(194, 225, 219, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.pf4-journey-guide > span {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 9px;
+  align-items: center;
+  min-width: 0;
+}
+
+.pf4-journey-guide i {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  color: #0d2b2c;
+  background: #8edbca;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.pf4-journey-guide small {
+  color: #78938e;
+  font-size: 0.59rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pf4-journey-guide strong {
+  overflow: hidden;
+  color: #effbf8;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf4-journey-guide > b {
+  color: #55736d;
+  font-size: 1rem;
+}
+
+.pf4-journey-map {
+  display: grid;
+  gap: 11px;
+}
+
+.pf4-journey-map > button {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(160px, 0.95fr) minmax(135px, 1fr) auto minmax(135px, 1fr) auto minmax(135px, 1fr) auto minmax(145px, 1.06fr);
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(193, 225, 218, 0.13);
+  border-radius: 16px;
+  color: #eaf7f4;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.035);
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.pf4-journey-map > button::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--pf4-lot-color);
+  content: "";
+}
+
+.pf4-journey-map > button:hover,
+.pf4-journey-map > button.is-active {
+  border-color: color-mix(in srgb, var(--pf4-lot-color) 62%, transparent);
+  background: rgba(255, 255, 255, 0.075);
+  transform: translateY(-2px);
+}
+
+.pf4-journey-map > button > b {
+  align-self: center;
+  color: #64817b;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.pf4-journey-identity,
+.pf4-journey-step {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 102px;
+  padding: 14px;
+  border-radius: 12px;
+}
+
+.pf4-journey-identity {
+  position: relative;
+  padding-left: 25px;
+  background: rgba(4, 24, 25, 0.36);
+}
+
+.pf4-journey-identity > i {
+  position: absolute;
+  top: 17px;
+  left: 12px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pf4-lot-color);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--pf4-lot-color) 18%, transparent);
+}
+
+.pf4-journey-identity small,
+.pf4-journey-step small {
+  color: #819d97;
+  font-size: 0.61rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.pf4-journey-identity strong,
+.pf4-journey-step strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #f7fffd;
+  font-size: 0.88rem;
+}
+
+.pf4-journey-identity em,
+.pf4-journey-step em {
+  color: #88a39e;
+  font-size: 0.66rem;
+  font-style: normal;
+  line-height: 1.35;
+}
+
+.pf4-journey-step {
+  border: 1px solid rgba(194, 225, 219, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.pf4-journey-step.is-withdrawal strong {
+  color: #e9aaa5;
+}
+
+.pf4-journey-step.is-result .is-positive {
+  color: #70dfc6;
+}
+
+.pf4-journey-step.is-result .is-negative {
+  color: #f09a98;
+}
+
+.pf4-journey-step.is-current {
+  color: var(--pf4-ink);
+  background: #eef9f5;
+}
+
+.pf4-journey-step.is-current small,
+.pf4-journey-step.is-current em {
+  color: #5f7873;
+}
+
+.pf4-journey-step.is-current strong {
+  color: var(--pf4-ink);
+  font-size: 1rem;
+}
+
+.pf4-journey-formula {
+  grid-column: 2 / -1;
+  padding: 0 8px 2px;
+  color: #8ca7a1;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.pf4-journey-formula strong {
+  color: #eaf8f5;
+}
+
+.pf4-journey-map > button.is-pending .pf4-journey-identity em,
+.pf4-journey-map > button.is-pending .pf4-journey-step.is-result strong {
+  color: #f4c67d;
+}
+
 .pf4-origin-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -651,8 +854,10 @@
 .pf4-inspector-value strong {
   overflow-wrap: anywhere;
   font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: clamp(2rem, 3.6vw, 3.4rem);
+  font-size: clamp(2rem, 2.7vw, 3rem);
   line-height: 0.95;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
 }
 
 .pf4-inspector-grid {
@@ -857,6 +1062,25 @@
   margin: 12px 0;
   font-family: "Cormorant Garamond", Georgia, serif;
   font-size: clamp(2.4rem, 6vw, 5rem);
+}
+
+@media (max-width: 1200px) {
+  .pf4-journey-guide {
+    display: none;
+  }
+
+  .pf4-journey-map > button {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pf4-journey-identity,
+  .pf4-journey-formula {
+    grid-column: 1 / -1;
+  }
+
+  .pf4-journey-map > button > b {
+    display: none;
+  }
 }
 
 @media (max-width: 1120px) {
@@ -1121,6 +1345,24 @@
 
   .pf4-origin-strip {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .pf4-journey-map > button {
+    grid-template-columns: 1fr;
+  }
+
+  .pf4-journey-identity,
+  .pf4-journey-formula {
+    grid-column: auto;
+  }
+
+  .pf4-journey-identity,
+  .pf4-journey-step {
+    min-height: 90px;
+  }
+
+  .pf4-journey-formula {
+    padding: 5px 4px 2px;
   }
 
   .pf4-inspector {

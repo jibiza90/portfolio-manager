@@ -132,13 +132,6 @@ const signedPercent = (value: number) => {
   })} %`;
 };
 
-const compactMoney = (value: number) => new Intl.NumberFormat('es-ES', {
-  notation: 'compact',
-  maximumFractionDigits: 1
-}).format(value) + ' €';
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
 const calculateTwrPct = (months: FlowMonth[]) => (
   (months.reduce((factor, month) => factor * (1 + month.returnPct / 100), 1) - 1) * 100
 );
@@ -400,7 +393,6 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
     ?? capitalModel.lots[0];
   const selectedStartKey = timelineKeys[periodStartIndex] ?? timelineKeys[0] ?? '';
   const selectedEndKey = timelineKeys[timelineKeys.length - 1] ?? '';
-  const visibleTimeline = timelineKeys.slice(periodStartIndex);
   const visibleClosedMonths = months.filter((month) => month.key >= selectedStartKey && month.key <= selectedEndKey);
   const periodProfit = visibleClosedMonths.reduce((sum, month) => sum + month.profit, 0);
   const periodTwr = calculateTwrPct(visibleClosedMonths);
@@ -415,23 +407,6 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
   const isSixMonths = periodStartIndex === Math.max(0, timelineKeys.length - 6);
   const isTwelveMonths = periodStartIndex === Math.max(0, timelineKeys.length - 12);
   const isAllMonths = periodStartIndex === 0;
-
-  const diagramWidth = 1200;
-  const diagramHeight = 690;
-  const engineTop = 170;
-  const engineBottom = 500;
-  const laneStart = 270;
-  const laneEnd = 1020;
-  const lotCount = Math.max(1, capitalModel.lots.length);
-  const maxAbsoluteValue = Math.max(1, ...capitalModel.lots.map((lot) => Math.abs(lot.currentValue)));
-  const getLotX = (index: number) => lotCount === 1
-    ? (laneStart + laneEnd) / 2
-    : laneStart + (index / (lotCount - 1)) * (laneEnd - laneStart);
-  const getTimelineY = (key: string) => {
-    const visibleIndex = visibleTimeline.indexOf(key);
-    if (key <= selectedStartKey || visibleIndex < 0) return engineTop;
-    return engineTop + (visibleIndex / Math.max(1, visibleTimeline.length - 1)) * (engineBottom - engineTop);
-  };
 
   const setPreset = (monthsBack: number | 'all') => {
     const nextIndex = monthsBack === 'all' ? 0 : Math.max(0, timelineKeys.length - monthsBack);
@@ -454,7 +429,7 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
   if (!capitalModel.lots.length) {
     return (
       <div className="pf4-report" ref={rootRef}>
-        <div className="pf4-empty"><span>Sala de máquinas</span><h1>No hay capital que representar</h1></div>
+        <div className="pf4-empty"><span>Recorrido del capital</span><h1>No hay capital que representar</h1></div>
       </div>
     );
   }
@@ -479,7 +454,7 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
         <div className="pf4-hero-balance">
           <span>Saldo actual</span>
           <strong>{formatCurrency(capitalModel.visibleBalance)}</strong>
-          <small>{capitalModel.lots.length} lotes de capital trazados</small>
+          <small>{capitalModel.lots.length} aportaciones y posiciones trazadas</small>
         </div>
         <div className="pf4-equation" aria-label="Composición del saldo actual">
           <article><span>Capital de origen</span><strong>{formatCurrency(capitalModel.grossCapital)}</strong><small>Aportaciones y posición inicial</small></article>
@@ -494,7 +469,7 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
 
       <section className="pf4-control-deck">
         <div>
-          <span>Ventana de trazado</span>
+          <span>Periodo analizado</span>
           <strong>{selectedStartKey ? monthLabel(selectedStartKey, 'long') : 'Inicio'} — {selectedEndKey ? monthLabel(selectedEndKey, 'long') : 'Actualidad'}</strong>
         </div>
         <div className="pf4-period-controls">
@@ -515,7 +490,7 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
             />
           </label>
         </div>
-        <div className="pf4-display-toggle" role="group" aria-label="Dato mostrado en los lotes">
+        <div className="pf4-display-toggle" role="group" aria-label="Dato mostrado en las aportaciones">
           <button type="button" className={displayMode === 'euros' ? 'is-active' : ''} aria-pressed={displayMode === 'euros'} onClick={() => setDisplayMode('euros')}>Valor actual</button>
           <button type="button" className={displayMode === 'return' ? 'is-active' : ''} aria-pressed={displayMode === 'return'} onClick={() => setDisplayMode('return')}>Rentabilidad</button>
         </div>
@@ -523,7 +498,7 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
 
       <section className="pf4-engine-section">
         <header className="pf4-section-heading">
-          <div><span>Mapa maestro</span><h2>La sala de máquinas del capital</h2></div>
+          <div><span>Recorrido del capital</span><h2>Qué ocurrió con cada aportación</h2></div>
           <div className="pf4-period-readout">
             <span><small>TWR del periodo</small><strong className={periodTwr >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(periodTwr)}</strong></span>
             <span><small>Beneficio del periodo</small><strong className={periodProfit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(periodProfit)}</strong></span>
@@ -531,7 +506,17 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
           </div>
         </header>
 
-        <div className="pf4-origin-strip" aria-label="Lotes de capital de origen">
+        <div className="pf4-journey-guide" aria-label="Cómo leer el recorrido de una aportación">
+          <span><i>1</i><small>Entrada</small><strong>Capital incorporado</strong></span>
+          <b>→</b>
+          <span><i>2</i><small>Salidas</small><strong>Capital retirado</strong></span>
+          <b>→</b>
+          <span><i>3</i><small>Evolución</small><strong>Resultado generado</strong></span>
+          <b>→</b>
+          <span><i>4</i><small>Situación actual</small><strong>Valor atribuido hoy</strong></span>
+        </div>
+
+        <div className="pf4-journey-map" aria-label="Recorrido de las aportaciones">
           {capitalModel.lots.map((lot, index) => (
             <button
               type="button"
@@ -539,124 +524,57 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
               className={`${selectedLot?.id === lot.id ? 'is-active' : ''}${lot.pending ? ' is-pending' : ''}`}
               style={{ '--pf4-lot-color': lotPalette[index % lotPalette.length] } as React.CSSProperties}
               aria-pressed={selectedLot?.id === lot.id}
-              onClick={() => activateLot(lot, 'origin')}
+              aria-label={`${lot.label}: se incorporaron ${formatCurrency(lot.amount)}, se atribuyen ${formatCurrency(lot.allocatedWithdrawal)} en retiradas, generó ${signedMoney(lot.attributedProfit)} y hoy representa ${formatCurrency(lot.currentValue)}`}
+              onClick={() => activateLot(lot, 'journey')}
             >
-              <i />
-              <span>{lot.label}</span>
-              <strong>{displayMode === 'euros' ? formatCurrency(lot.currentValue) : signedPercent(lot.accumulatedReturnPct)}</strong>
-              <small>{lot.pending ? 'Pendiente de cierre' : `${lot.activeMonths} meses de recorrido`}</small>
+              <span className="pf4-journey-identity">
+                <i />
+                <small>Aportación {index + 1}</small>
+                <strong>{lot.label}</strong>
+                <em>{lot.pending ? 'Incorporada después del último cierre' : `${lot.activeMonths} cierres recorridos`}</em>
+              </span>
+              <span className="pf4-journey-step is-origin">
+                <small>Capital incorporado</small>
+                <strong>{formatCurrency(lot.amount)}</strong>
+                <em>{formatDate(lot.iso)}</em>
+              </span>
+              <b aria-hidden="true">→</b>
+              <span className="pf4-journey-step is-withdrawal">
+                <small>Capital retirado</small>
+                <strong>{lot.allocatedWithdrawal > 0 ? `−${formatCurrency(lot.allocatedWithdrawal)}` : formatCurrency(0)}</strong>
+                <em>{lot.allocatedWithdrawal > 0 ? 'Parte atribuida de las retiradas' : 'Sin retiradas asociadas'}</em>
+              </span>
+              <b aria-hidden="true">→</b>
+              <span className="pf4-journey-step is-result">
+                <small>Resultado generado</small>
+                <strong className={lot.attributedProfit >= 0 ? 'is-positive' : 'is-negative'}>
+                  {displayMode === 'euros' ? signedMoney(lot.attributedProfit) : signedPercent(lot.accumulatedReturnPct)}
+                </strong>
+                <em>{displayMode === 'euros' ? signedPercent(lot.accumulatedReturnPct) : signedMoney(lot.attributedProfit)}</em>
+              </span>
+              <b aria-hidden="true">→</b>
+              <span className="pf4-journey-step is-current">
+                <small>Valor atribuido hoy</small>
+                <strong>{formatCurrency(lot.currentValue)}</strong>
+                <em>{lot.sharePct.toLocaleString('es-ES', { maximumFractionDigits: 1 })} % del saldo actual</em>
+              </span>
+              <span className="pf4-journey-formula">
+                {formatCurrency(lot.amount)} incorporados
+                {lot.allocatedWithdrawal > 0 ? ` − ${formatCurrency(lot.allocatedWithdrawal)} retirados` : ''}
+                {lot.attributedProfit >= 0
+                  ? ` + ${formatCurrency(lot.attributedProfit)} de resultado`
+                  : ` − ${formatCurrency(Math.abs(lot.attributedProfit))} de resultado`}
+                {' = '}<strong>{formatCurrency(lot.currentValue)}</strong>
+              </span>
             </button>
           ))}
-        </div>
-
-        <div className="pf4-engine-canvas">
-          <svg className="pf4-flow-diagram" viewBox={`0 0 ${diagramWidth} ${diagramHeight}`} role="img" aria-label="Diagrama del recorrido del capital">
-            <defs>
-              <pattern id="pf4-grid" width="28" height="28" patternUnits="userSpaceOnUse">
-                <path d="M 28 0 L 0 0 0 28" fill="none" stroke="rgba(136, 184, 177, 0.09)" strokeWidth="1" />
-              </pattern>
-              <filter id="pf4-glow" x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="5" result="blur" />
-                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-              </filter>
-            </defs>
-            <rect x="0" y="0" width={diagramWidth} height={diagramHeight} fill="url(#pf4-grid)" />
-            <text x="46" y="64" className="pf4-svg-kicker">CAPITAL DE ORIGEN</text>
-            <text x="46" y="92" className="pf4-svg-copy">Cada carril conserva la identidad de una aportación.</text>
-            <rect x="155" y={engineTop - 22} width="940" height={engineBottom - engineTop + 44} rx="18" className="pf4-engine-frame" />
-            <text x="178" y={engineTop + 20} className="pf4-svg-kicker">TIEMPO × ESTRATEGIA</text>
-
-            {visibleTimeline.map((key, index) => {
-              const y = getTimelineY(key);
-              const showLabel = visibleTimeline.length <= 12 || index % 2 === 0 || index === visibleTimeline.length - 1;
-              return (
-                <g key={key} className="pf4-time-layer">
-                  <line x1="178" x2="1072" y1={y} y2={y} />
-                  {showLabel ? <text x="184" y={y + 4}>{monthLabel(key)}</text> : null}
-                </g>
-              );
-            })}
-
-            {capitalModel.withdrawals
-              .filter((withdrawal) => withdrawal.monthKey >= selectedStartKey && withdrawal.monthKey <= selectedEndKey)
-              .map((withdrawal, index) => {
-                const y = getTimelineY(withdrawal.monthKey);
-                const branchY = y + (index % 2) * 10;
-                return (
-                  <g key={withdrawal.id} className="pf4-withdrawal-branch">
-                    <path d={`M 610 ${branchY} C 470 ${branchY}, 315 ${branchY + 12}, 150 ${branchY + 12}`} />
-                    <circle cx="150" cy={branchY + 12} r="7" />
-                    <text x="137" y={branchY + 4} textAnchor="end">Retirada {formatDate(withdrawal.iso)}</text>
-                    <text x="137" y={branchY + 20} textAnchor="end">−{compactMoney(withdrawal.amount)}</text>
-                  </g>
-                );
-              })}
-
-            {capitalModel.lots.map((lot, index) => {
-              const x = getLotX(index);
-              const entryY = getTimelineY(lot.entryKey);
-              const destinationX = 600 + (index - (lotCount - 1) / 2) * 22;
-              const strokeWidth = clamp(12 + Math.abs(lot.currentValue) / maxAbsoluteValue * 54, 12, 66);
-              const color = lotPalette[index % lotPalette.length];
-              const isActive = selectedLot?.id === lot.id;
-              const path = `M ${x} 118 C ${x} 138, ${x} ${Math.max(145, entryY - 30)}, ${x} ${entryY} L ${x} ${engineBottom} C ${x} 560, ${destinationX} 558, ${destinationX} 610`;
-              return (
-                <g key={lot.id} className={`pf4-capital-lane${isActive ? ' is-active' : ''}`}>
-                  <path
-                    d={path}
-                    stroke={color}
-                    strokeWidth={strokeWidth}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`${lot.label}: valor actual estimado ${formatCurrency(lot.currentValue)}, rentabilidad atribuida ${signedPercent(lot.accumulatedReturnPct)}`}
-                    onClick={() => activateLot(lot, 'diagram')}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        activateLot(lot, 'diagram-keyboard');
-                      }
-                    }}
-                  />
-                  <circle cx={x} cy="118" r={isActive ? 11 : 8} fill={color} filter={isActive ? 'url(#pf4-glow)' : undefined} />
-                  <text x={x} y="92" textAnchor="middle" className="pf4-lane-value">
-                    {displayMode === 'euros' ? compactMoney(lot.currentValue) : signedPercent(lot.accumulatedReturnPct)}
-                  </text>
-                </g>
-              );
-            })}
-
-            <g className="pf4-destination">
-              <rect x="430" y="590" width="340" height="78" rx="16" />
-              <text x="600" y="618" textAnchor="middle">SALDO ACTUAL</text>
-              <text x="600" y="650" textAnchor="middle">{formatCurrency(capitalModel.visibleBalance)}</text>
-            </g>
-          </svg>
-
-          <div className="pf4-mobile-flow" aria-label="Recorrido del capital en formato móvil">
-            {capitalModel.lots.map((lot, index) => (
-              <button
-                type="button"
-                key={lot.id}
-                className={selectedLot?.id === lot.id ? 'is-active' : ''}
-                style={{ '--pf4-lot-color': lotPalette[index % lotPalette.length] } as React.CSSProperties}
-                onClick={() => activateLot(lot, 'mobile-flow')}
-              >
-                <i />
-                <span><small>Origen</small><strong>{lot.label}</strong><em>{formatCurrency(lot.amount)}</em></span>
-                <b>→</b>
-                <span><small>Recorrido</small><strong>{lot.pending ? 'Pendiente de cierre' : `${lot.activeMonths} meses`}</strong><em>{signedPercent(lot.accumulatedReturnPct)}</em></span>
-                <b>→</b>
-                <span><small>Valor atribuido</small><strong>{formatCurrency(lot.currentValue)}</strong><em>{lot.sharePct.toLocaleString('es-ES', { maximumFractionDigits: 1 })} % del saldo</em></span>
-              </button>
-            ))}
-          </div>
         </div>
       </section>
 
       {selectedLot ? (
         <section className="pf4-inspector" aria-live="polite">
           <div className="pf4-inspector-title">
-            <span>Lote seleccionado</span>
+            <span>Aportación seleccionada</span>
             <h2>{selectedLot.label}</h2>
             <p>Seguimiento estimado desde su incorporación hasta el último cierre publicado.</p>
           </div>
@@ -679,7 +597,7 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
 
       <section className="pf4-register">
         <header className="pf4-section-heading">
-          <div><span>Registro de lotes</span><h2>De dónde procede el saldo</h2></div>
+          <div><span>Registro del capital</span><h2>De dónde procede el saldo</h2></div>
           <p>Todos los importes terminan en la misma ecuación, pero conservan su historia.</p>
         </header>
         <div className="pf4-register-head" aria-hidden="true">
@@ -706,7 +624,7 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
 
       <section className="pf4-method">
         <div><span>Nota metodológica</span><h2>Una lectura trazable, no una segunda contabilidad.</h2></div>
-        <p>La atribución por lote es una estimación pedagógica: combina el rendimiento publicado desde cada fecha de entrada, distribuye proporcionalmente las retiradas y reconcilia el resultado con el saldo total. Los importes oficiales siguen siendo el saldo, los movimientos y los cierres publicados.</p>
+        <p>La atribución por aportación es una estimación pedagógica: combina el rendimiento publicado desde cada fecha de entrada, distribuye proporcionalmente las retiradas y reconcilia el resultado con el saldo total. Los importes oficiales siguen siendo el saldo, los movimientos y los cierres publicados.</p>
       </section>
 
       <footer className="pf4-footer">

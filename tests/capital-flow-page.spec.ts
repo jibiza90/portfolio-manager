@@ -17,16 +17,21 @@ test('renders the capital flow room for Demo1 and reconciles its figures', async
 
   await expect(pageFourButton).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('heading', { name: /Cada euro tiene.*un recorrido/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Qué ocurrió con cada aportación' })).toBeVisible();
   await expect(page.locator('.pf4-hero-balance > strong')).toHaveText(/127\.548,34/);
   await expect(page.locator('.pf4-equation')).toContainText('115.000,00');
   await expect(page.locator('.pf4-equation')).toContainText('10.000,00');
   await expect(page.locator('.pf4-equation')).toContainText('+22.548,34');
-  await expect(page.locator('.pf4-origin-strip > button')).toHaveCount(3);
+  await expect(page.locator('.pf4-journey-map > button')).toHaveCount(3);
+  await expect(page.locator('.pf4-journey-map > button').first()).toContainText('Capital incorporado');
+  await expect(page.locator('.pf4-journey-map > button').first()).toContainText('Capital retirado');
+  await expect(page.locator('.pf4-journey-map > button').first()).toContainText('Resultado generado');
+  await expect(page.locator('.pf4-journey-map > button').first()).toContainText('Valor atribuido hoy');
   await expect(page.locator('.pf4-register-rows > button')).toHaveCount(3);
   await expect(page.locator('.pf4-footer')).toContainText('105.000,00');
   await expect(page.locator('.pf4-footer')).toContainText('127.548,34');
 
-  const contributionLot = page.locator('.pf4-origin-strip > button').filter({ hasText: '06.03.2026' });
+  const contributionLot = page.locator('.pf4-journey-map > button').filter({ hasText: '06.03.2026' });
   await contributionLot.click();
   await expect(page.locator('.pf4-inspector-title h2')).toContainText('06.03.2026');
   await expect(page.locator('.pf4-entry-signal')).toContainText('4,08 %');
@@ -37,10 +42,7 @@ test('renders the capital flow room for Demo1 and reconciles its figures', async
   await expect(contributionLot).toContainText('%');
   await expect(page.getByLabel('Inicio del trazado')).toBeVisible();
 
-  if ((page.viewportSize()?.width ?? 0) <= 900) {
-    await expect(page.locator('.pf4-mobile-flow')).toBeVisible();
-    await expect(page.locator('.pf4-flow-diagram')).toBeHidden();
-  }
+  await expect(page.locator('.pf4-journey-map')).toBeVisible();
 
   const hasHorizontalPageOverflow = await page.evaluate(() => (
     document.documentElement.scrollWidth > window.innerWidth + 1
