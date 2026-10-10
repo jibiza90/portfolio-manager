@@ -22,6 +22,7 @@ interface NarrativeReportPageProps {
     durationMs?: number;
     metadata?: Record<string, string | number | boolean>;
   }) => void;
+  onDownload?: () => Promise<void> | void;
 }
 
 interface NarrativeMonth {
@@ -97,12 +98,14 @@ export const NarrativeReportPage: React.FC<NarrativeReportPageProps> = ({
   report,
   pendingCashMovements = [],
   rootRef,
-  onAnalyticsEvent
+  onAnalyticsEvent,
+  onDownload
 }) => {
   const localRootRef = useRef<HTMLDivElement | null>(null);
   const [activeChapter, setActiveChapter] = useState(chapterItems[0].id);
   const [summaryMode, setSummaryMode] = useState(false);
   const [selectedFact, setSelectedFact] = useState<FactKey | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const months = useMemo<NarrativeMonth[]>(() => {
     const valid = report.monthlyStats
@@ -143,7 +146,6 @@ export const NarrativeReportPage: React.FC<NarrativeReportPageProps> = ({
   const latestMonth = months[months.length - 1];
   const bestMonth = [...months].sort((left, right) => right.profit - left.profit)[0];
   const positiveMonths = months.filter((month) => month.profit > 0).length;
-  const maxMonthlyProfit = Math.max(1, ...months.map((month) => Math.abs(month.profit)));
 
   const allMovements = useMemo(() => [
     ...(report.movements ?? []).map((movement) => ({
@@ -168,6 +170,39 @@ export const NarrativeReportPage: React.FC<NarrativeReportPageProps> = ({
   }, [months]);
   const sparklineLastPoint = sparklinePoints ? sparklinePoints.split(' ').slice(-1)[0] : '';
   const sparklineLastY = sparklineLastPoint.split(',')[1] ?? '4';
+  const largestContribution = allMovements
+    .filter((movement) => movement.type === 'increment')
+    .sort((left, right) => right.amount - left.amount)[0];
+  const editorialMilestones = [
+    firstMonth ? {
+      eyebrow: 'Primer cierre',
+      date: firstMonth.label,
+      title: 'La cartera empieza a dejar una trayectoria medible.',
+      value: formatCurrency(firstMonth.balance),
+      tone: 'opening'
+    } : null,
+    largestContribution ? {
+      eyebrow: 'Mayor aportación',
+      date: formatDate(largestContribution.iso),
+      title: 'El principal impulso de capital del periodo.',
+      value: `+${formatCurrency(largestContribution.amount)}`,
+      tone: 'capital'
+    } : null,
+    bestMonth ? {
+      eyebrow: 'Mes más productivo',
+      date: bestMonth.label,
+      title: `El cierre que más beneficio incorporó: ${signedPercent(bestMonth.returnPct)}.`,
+      value: signedMoney(bestMonth.profit),
+      tone: 'growth'
+    } : null,
+    latestMonth ? {
+      eyebrow: 'Posición actual',
+      date: latestMonth.label,
+      title: 'El punto al que conduce todo el recorrido publicado.',
+      value: formatCurrency(visibleBalance),
+      tone: 'today'
+    } : null
+  ].filter((item): item is NonNullable<typeof item> => Boolean(item));
 
   const facts = useMemo<Record<FactKey, { eyebrow: string; value: string; title: string; body: string; foot: string }>>(() => ({
     balance: {
@@ -238,6 +273,34 @@ export const NarrativeReportPage: React.FC<NarrativeReportPageProps> = ({
     onAnalyticsEvent?.({ type: 'narrative_chapter_open', label: id });
   };
 
+  const renderChapterTurner = (chapterId: string) => {
+    const chapterIndex = chapterItems.findIndex((chapter) => chapter.id === chapterId);
+    const previous = chapterItems[chapterIndex - 1];
+    const next = chapterItems[chapterIndex + 1];
+    return (
+      <nav className="pn5-chapter-turner" aria-label="Navegación entre capítulos">
+        <button type="button" disabled={!previous} onClick={() => previous && goToChapter(previous.id)}>
+          <span>Anterior</span><strong>{previous?.label ?? 'Inicio'}</strong>
+        </button>
+        <i>{String(chapterIndex + 1).padStart(2, '0')} / {String(chapterItems.length).padStart(2, '0')}</i>
+        <button type="button" disabled={!next} onClick={() => next && goToChapter(next.id)}>
+          <span>Siguiente</span><strong>{next?.label ?? 'Final'}</strong>
+        </button>
+      </nav>
+    );
+  };
+
+  const downloadLetter = async () => {
+    if (!onDownload || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      await onDownload();
+      onAnalyticsEvent?.({ type: 'narrative_download', label: 'Carta patrimonial' });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const openFact = (fact: FactKey) => {
     setSelectedFact(fact);
     onAnalyticsEvent?.({ type: 'narrative_fact_open', label: fact });
@@ -264,6 +327,11 @@ export const NarrativeReportPage: React.FC<NarrativeReportPageProps> = ({
           >
             {summaryMode ? 'Lectura completa' : 'Modo resumen'}
           </button>
+          {onDownload ? (
+            <button type="button" className="pn5-download" disabled={isDownloading} onClick={() => void downloadLetter()}>
+              {isDownloading ? 'Preparando…' : 'Descargar carta'}
+            </button>
+          ) : null}
         </div>
       </header>
 
@@ -302,6 +370,7 @@ export const NarrativeReportPage: React.FC<NarrativeReportPageProps> = ({
               <button type="button" onClick={() => openFact('twr')}><span>TWR acumulado</span><strong className={twr >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(twr)}</strong><small>{months.length} cierres enlazados</small></button>
             </div>
             <div className="pn5-opening-line" aria-hidden="true"><span /><i /></div>
+            {renderChapterTurner('pn5-opening')}
           </section>
 
           <section className="pn5-chapter" id="pn5-capital" data-chapter="capital">
@@ -320,6 +389,7 @@ export const NarrativeReportPage: React.FC<NarrativeReportPageProps> = ({
                 </article>
               )) : <p>No hay movimientos de capital registrados en este periodo.</p>}
             </div>
+            {renderChapterTurner('pn5-capital')}
           </section>
 
           <section className="pn5-chapter" id="pn5-growth" data-chapter="growth">
@@ -328,23 +398,20 @@ export const NarrativeReportPage: React.FC<NarrativeReportPageProps> = ({
             <button type="button" className="pn5-monument is-profit" onClick={() => openFact('profit')}>
               <span>Beneficio acumulado</span><strong className={totalProfit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(totalProfit)}</strong><small>{signedPercent(totalReturn)} sobre el capital neto aportado</small>
             </button>
-            {bestMonth ? (
-              <aside className="pn5-highlight">
-                <span>El capítulo más productivo</span>
-                <strong>{bestMonth.label}</strong>
-                <p>Ese cierre añadió {signedMoney(bestMonth.profit)} con una rentabilidad mensual del {signedPercent(bestMonth.returnPct)}.</p>
-              </aside>
-            ) : null}
-            <div className="pn5-monthly-story" aria-label="Historia del beneficio mensual">
-              {months.map((month) => (
-                <article key={month.key}>
-                  <span>{month.shortLabel}</span>
-                  <i><b style={{ width: `${Math.max(2, Math.abs(month.profit) / maxMonthlyProfit * 100)}%` }} className={month.profit >= 0 ? 'is-positive' : 'is-negative'} /></i>
-                  <strong className={month.profit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(month.profit)}</strong>
-                  <small>{signedPercent(month.returnPct)}</small>
+            <div className="pn5-narrative-timeline" aria-label="Hitos principales de la trayectoria">
+              {editorialMilestones.map((milestone, index) => (
+                <article key={`${milestone.eyebrow}-${milestone.date}`} className={`is-${milestone.tone}`}>
+                  <div><i>{String(index + 1).padStart(2, '0')}</i><span /></div>
+                  <time>{milestone.date}</time>
+                  <section>
+                    <small>{milestone.eyebrow}</small>
+                    <h3>{milestone.title}</h3>
+                  </section>
+                  <strong>{milestone.value}</strong>
                 </article>
               ))}
             </div>
+            {renderChapterTurner('pn5-growth')}
           </section>
 
           <section className="pn5-chapter" id="pn5-method" data-chapter="method">
@@ -357,6 +424,7 @@ export const NarrativeReportPage: React.FC<NarrativeReportPageProps> = ({
               <span>Una forma sencilla de entenderlo</span>
               <p>Si una cartera pasa de 10.000 € a 11.000 €, ha avanzado un 10 %. Si después se añaden 20.000 €, el saldo crece, pero ese ingreso no altera el 10 % ya conseguido por la estrategia.</p>
             </div>
+            {renderChapterTurner('pn5-method')}
           </section>
 
           <section className="pn5-chapter pn5-closing" id="pn5-today" data-chapter="today">
@@ -369,7 +437,12 @@ export const NarrativeReportPage: React.FC<NarrativeReportPageProps> = ({
               <b>=</b>
               <span className="is-total"><small>Saldo actual</small><strong>{formatCurrency(visibleBalance)}</strong></span>
             </div>
-            <blockquote>“Una buena lectura patrimonial no consiste en mostrar más números, sino en explicar cómo se relacionan.”</blockquote>
+            <div className="pn5-personal-conclusion">
+              <span>Lectura de tu trayectoria</span>
+              <p>Desde {firstMonth?.label ?? 'el primer cierre'}, el capital neto de {formatCurrency(netCapital)} ha generado {signedMoney(totalProfit)} y sitúa la cartera en {formatCurrency(visibleBalance)}.</p>
+              <p>{bestMonth ? `${bestMonth.label} fue el cierre con mayor beneficio, con ${signedMoney(bestMonth.profit)}.` : ''} El TWR acumulado de {signedPercent(twr)} permite leer ese avance sin confundirlo con las aportaciones o retiradas realizadas durante el periodo.</p>
+            </div>
+            {renderChapterTurner('pn5-today')}
             <div className="pn5-signature"><i /><span>El equipo de gestión<small>JIGSA Capital</small></span></div>
           </section>
         </main>

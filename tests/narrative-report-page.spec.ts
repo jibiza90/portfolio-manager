@@ -23,8 +23,16 @@ test('renders the editorial narrative for Demo1 with real report data', async ({
   await expect(page.locator('.pn5-movement-ledger article')).toHaveCount(5);
   await expect(page.locator('.pn5-movement-ledger')).toContainText('Pendiente de cierre');
   await expect(page.getByRole('heading', { name: 'Lo que creció por el camino.' })).toBeVisible();
-  await expect(page.locator('.pn5-highlight')).toContainText('Marzo 2026');
-  await expect(page.locator('.pn5-highlight')).toContainText('+4673,31');
+  await expect(page.locator('.pn5-narrative-timeline article')).toHaveCount(4);
+  await expect(page.locator('.pn5-narrative-timeline')).toContainText('Mayor aportación');
+  await expect(page.locator('.pn5-narrative-timeline')).toContainText('Marzo 2026');
+  await expect(page.locator('.pn5-narrative-timeline')).toContainText('+4673,31');
+  await expect(page.locator('.pn5-personal-conclusion')).toContainText('Lectura de tu trayectoria');
+  await expect(page.locator('.pn5-personal-conclusion')).toContainText('127.548,34');
+
+  const nextChapter = page.getByRole('button', { name: /Siguiente.*El capital/i }).first();
+  await nextChapter.click();
+  await expect(page.locator('.pn5-rail button').filter({ hasText: 'El capital' })).toHaveClass(/is-active/);
 
   const summaryButton = page.getByRole('button', { name: 'Modo resumen' });
   await summaryButton.click();
@@ -37,6 +45,8 @@ test('renders the editorial narrative for Demo1 with real report data', async ({
   await expect(factDialog).toContainText('127.548,34');
   await page.getByRole('button', { name: 'Cerrar explicación' }).click();
   await expect(factDialog).toBeHidden();
+
+  await expect(page.locator('.pn5-download')).toBeAttached();
 
   const hasHorizontalPageOverflow = await page.evaluate(() => (
     document.documentElement.scrollWidth > window.innerWidth + 1

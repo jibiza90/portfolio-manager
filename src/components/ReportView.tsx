@@ -777,6 +777,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
   const handleDownload = async () => {
     if (!report) return;
+    if (report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page5') {
+      await handleDownloadNarrativeReport();
+      return;
+    }
     await handleDownloadModernReport();
   };
 
@@ -1454,6 +1458,108 @@ export const ReportView: React.FC<ReportViewProps> = ({
       </tr>
     );
   };
+
+  async function handleDownloadNarrativeReport() {
+    const currentReport = report;
+    const narrativeRoot = reportRef.current?.querySelector<HTMLElement>('.pn5-report');
+    if (!currentReport || !narrativeRoot) return;
+
+    const [{ jsPDF }, html2canvasModule] = await Promise.all([
+      import('jspdf'),
+      import('html2canvas')
+    ]);
+    const html2canvas = html2canvasModule.default;
+    await document.fonts?.ready;
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 34;
+    const imageTop = 42;
+    const imageBottom = 32;
+    const imageWidth = pageWidth - marginX * 2;
+    const imageHeight = pageHeight - imageTop - imageBottom;
+    const sections = Array.from(narrativeRoot.querySelectorAll<HTMLElement>('.pn5-opening, .pn5-chapter'));
+    let pageCount = 0;
+
+    const preparePage = () => {
+      if (pageCount > 0) doc.addPage();
+      pageCount += 1;
+      doc.setFillColor(244, 240, 232);
+      doc.rect(0, 0, pageWidth, pageHeight, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(22, 39, 53);
+      doc.text('JIGSA  ·  CARTA PATRIMONIAL', marginX, 23);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(97, 113, 123);
+      doc.text(currentReport.clientCode.toUpperCase(), pageWidth - marginX, 23, { align: 'right' });
+    };
+
+    for (const section of sections) {
+      const canvas = await html2canvas(section, {
+        backgroundColor: '#f4f0e8',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: 1440,
+        onclone: (clonedDocument) => {
+          const clonedSection = clonedDocument.getElementById(section.id);
+          if (!clonedSection) return;
+          clonedSection.style.minHeight = '0';
+          clonedSection.style.padding = '58px 34px';
+          clonedSection.querySelectorAll<HTMLElement>('.pn5-chapter-turner').forEach((node) => {
+            node.style.display = 'none';
+          });
+        }
+      });
+      const sourcePageHeight = Math.max(1, Math.floor(canvas.width * imageHeight / imageWidth));
+      let sourceY = 0;
+      while (sourceY < canvas.height) {
+        preparePage();
+        const sliceHeight = Math.min(sourcePageHeight, canvas.height - sourceY);
+        const slice = document.createElement('canvas');
+        slice.width = canvas.width;
+        slice.height = sliceHeight;
+        const context = slice.getContext('2d');
+        context?.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+        const renderedHeight = sliceHeight * imageWidth / canvas.width;
+        doc.addImage(slice.toDataURL('image/jpeg', 0.94), 'JPEG', marginX, imageTop, imageWidth, renderedHeight, undefined, 'FAST');
+        sourceY += sliceHeight;
+      }
+    }
+
+    const totalPages = doc.getNumberOfPages();
+    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+      doc.setPage(pageNumber);
+      doc.setDrawColor(190, 183, 170);
+      doc.setLineWidth(0.45);
+      doc.line(marginX, pageHeight - 23, pageWidth - marginX, pageHeight - 23);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(97, 113, 123);
+      doc.text(`Pagina ${pageNumber} de ${totalPages}`, pageWidth - marginX, pageHeight - 11, { align: 'right' });
+    }
+
+    const filename = `carta-patrimonial-${currentReport.clientCode}.pdf`;
+    const pdfUrl = URL.createObjectURL(doc.output('blob'));
+    const downloadLink = document.createElement('a');
+    downloadLink.href = pdfUrl;
+    downloadLink.download = filename;
+    downloadLink.style.display = 'none';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 30_000);
+    onDownloaded?.({
+      reportClientId: currentReport.clientId,
+      reportLabel: currentReport.clientCode,
+      periodStart: rangeStart || 'todo',
+      periodEnd: rangeEnd || 'todo',
+      filename,
+      reportUpdatedAt: currentReport.createdAt
+    });
+  }
 
   async function handleDownloadModernReport() {
     const currentReport = report;
@@ -2179,6 +2285,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           pendingCashMovements={visiblePendingCashMovements}
           rootRef={reportRef}
           onAnalyticsEvent={onAnalyticsEvent}
+          onDownload={handleDownloadNarrativeReport}
         />
       ) : (
       <article className="informe-preview glass-card report-pro-sheet report-pro-demo-sheet" ref={reportRef}>
