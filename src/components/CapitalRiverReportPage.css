@@ -232,7 +232,12 @@
 .river-legend i.is-in { background: var(--river-in); }
 .river-legend i.is-out { background: var(--river-out); }
 .river-legend i.is-water { height: 7px; background: linear-gradient(90deg, var(--river-water), var(--river-water-deep)); }
+.river-legend i.is-positive-result,
+.river-legend i.is-negative-result { width: 8px; height: 8px; border-radius: 50%; }
+.river-legend i.is-positive-result { background: #7cdbc1; box-shadow: 0 0 8px rgba(124, 219, 193, 0.45); }
+.river-legend i.is-negative-result { background: #e58c7e; box-shadow: 0 0 8px rgba(229, 140, 126, 0.4); }
 .river-chart-instruction { margin: 14px 0 22px; color: #789592; font-size: 0.74rem; }
+.river-mobile-swipe { display: none; }
 
 .river-chart-frame {
   display: grid;
@@ -306,6 +311,34 @@
 }
 
 .river-month-hit.is-active .river-month-label { color: #ead89b; }
+.river-selected-callout {
+  position: absolute;
+  z-index: 6;
+  display: grid;
+  min-width: 112px;
+  padding: 8px 11px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(210, 185, 120, 0.42);
+  border-radius: 10px;
+  background: rgba(4, 24, 32, 0.92);
+  box-shadow: 0 9px 24px rgba(0, 10, 15, 0.32);
+  pointer-events: none;
+  text-align: center;
+}
+.river-selected-callout::after {
+  position: absolute;
+  bottom: -5px;
+  left: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  border-right: 1px solid rgba(210, 185, 120, 0.42);
+  border-bottom: 1px solid rgba(210, 185, 120, 0.42);
+  background: #061d27;
+  content: "";
+}
+.river-selected-callout strong { color: #f2e1aa; font-size: 0.72rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.river-selected-callout span { margin-top: 2px; color: #91d9c3; font-size: 0.62rem; font-weight: 800; }
 .river-month-tooltip,
 .river-flow > span {
   position: absolute;
@@ -400,6 +433,7 @@
 .river-station-reading strong { display: block; }
 .river-station-reading span { min-height: 31px; color: #87a3a1; font-size: 0.64rem; font-weight: 800; letter-spacing: 0.08em; line-height: 1.35; text-transform: uppercase; }
 .river-station-reading strong { margin-top: 7px; overflow-wrap: anywhere; color: #eaf3ef; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.river-reading-note { display: block; margin-top: 5px; color: #6f8d8a; font-size: 0.55rem; line-height: 1.35; }
 
 .river-month-equation { min-width: 0; padding: 23px; border-radius: 16px; background: rgba(4, 23, 32, 0.65); }
 .river-month-equation > p { margin: 0 0 17px; color: #93aeab; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.11em; text-transform: uppercase; }
@@ -526,6 +560,7 @@
   .river-section-title h2,
   .river-station-heading h2 { font-size: 2.25rem; }
   .river-legend { gap: 10px 14px; }
+  .river-mobile-swipe { display: block; margin: -10px 0 13px; color: #9ab4b1; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.04em; text-align: right; }
   .river-chart-frame { grid-template-columns: 50px minmax(0, 1fr); border-radius: 17px; }
   .river-scale { padding: 105px 5px 86px 7px; }
   .river-scale span { font-size: 0.52rem; }

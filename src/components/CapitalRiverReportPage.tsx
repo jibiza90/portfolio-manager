@@ -89,6 +89,12 @@ const compactMoney = (value: number) => new Intl.NumberFormat('es-ES', {
   maximumFractionDigits: 1
 }).format(value);
 
+const roundedCurrency = (value: number) => new Intl.NumberFormat('es-ES', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 0
+}).format(value);
+
 const movementTotal = (movements: ReportData['movements'], type: 'increment' | 'decrement') => (
   movements
     .filter((movement) => movement.type === type)
@@ -315,9 +321,12 @@ export const CapitalRiverReportPage: React.FC<CapitalRiverReportPageProps> = ({
                 <span><i className="is-in" /> Aportación</span>
                 <span><i className="is-out" /> Retirada</span>
                 <span><i className="is-water" /> Valor de cartera</span>
+                <span><i className="is-positive-result" /> Mes positivo</span>
+                <span><i className="is-negative-result" /> Mes negativo</span>
               </div>
             </div>
             <p className="river-chart-instruction">Selecciona cualquier mes para abrir su estación de medición.</p>
+            <span className="river-mobile-swipe" aria-hidden="true">← Desliza para recorrer el histórico →</span>
             <div className="river-chart-frame">
               <div className="river-scale" aria-hidden="true">
                 <span>{compactMoney(maxBalance)} €</span>
@@ -398,6 +407,17 @@ export const CapitalRiverReportPage: React.FC<CapitalRiverReportPageProps> = ({
                     );
                   })}
 
+                  {selectedPoint && selectedMonth ? (
+                    <div
+                      className="river-selected-callout"
+                      style={{ left: selectedPoint.x, top: Math.max(42, selectedPoint.y - 72) }}
+                      aria-hidden="true"
+                    >
+                      <strong>{roundedCurrency(selectedMonth.balance)}</strong>
+                      <span>{signedPercent(selectedMonth.returnPct)}</span>
+                    </div>
+                  ) : null}
+
                   {visibleMonths.flatMap((month, monthIndex) => month.movements.map((movement, movementIndex) => {
                     const point = points[monthIndex];
                     const isIncrement = movement.type === 'increment';
@@ -445,7 +465,7 @@ export const CapitalRiverReportPage: React.FC<CapitalRiverReportPageProps> = ({
                 <div>
                   <p>Estación de medición</p>
                   <h2>{selectedMonth.label}</h2>
-                  <span>Lectura exacta del tramo seleccionado</span>
+                  <span>Cierre {selectedIndex + 1} de {visibleMonths.length} · Lectura exacta del tramo seleccionado</span>
                 </div>
                 <div className="river-station-controls">
                   <button type="button" aria-label="Mes anterior" disabled={selectedIndex === 0} onClick={() => moveSelection(-1, 'arrow')}>←</button>
@@ -460,7 +480,11 @@ export const CapitalRiverReportPage: React.FC<CapitalRiverReportPageProps> = ({
                   <div><span>Beneficio del mes</span><strong className={selectedMonth.profit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(selectedMonth.profit)}</strong></div>
                   <div><span>Rentabilidad del mes</span><strong className={selectedMonth.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(selectedMonth.returnPct)}</strong></div>
                   <div><span>Flujo neto</span><strong className={selectedMonth.netFlow >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(selectedMonth.netFlow)}</strong></div>
-                  <div><span>Cambio frente al cierre anterior</span><strong>{previousMonth ? signedMoney(selectedMonth.balance - previousMonth.balance) : 'Primer cierre visible'}</strong></div>
+                  <div>
+                    <span>Variación del saldo</span>
+                    <strong>{previousMonth ? signedMoney(selectedMonth.balance - previousMonth.balance) : 'Primer cierre visible'}</strong>
+                    {previousMonth ? <small className="river-reading-note">Incluye beneficio, aportaciones y retiradas</small> : null}
+                  </div>
                 </div>
 
                 <div className="river-month-equation">

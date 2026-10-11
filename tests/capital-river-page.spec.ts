@@ -22,7 +22,12 @@ test('renders the Kimi 2.7 capital river concept for Demo1 with selectable month
   await expect(page.locator('.river-kpis')).toContainText('+18,34 %');
   await expect(page.locator('.river-canvas svg')).toBeVisible();
   await expect(page.locator('.river-month-hit')).toHaveCount(13);
+  await expect(page.locator('.river-selected-callout')).toContainText('112.548');
+  await expect(page.locator('.river-selected-callout')).toContainText('+4,33 %');
   await expect(page.locator('.river-station-heading')).toContainText('Marzo 2026');
+  await expect(page.locator('.river-station-heading')).toContainText('Cierre 13 de 13');
+  await expect(page.locator('.river-station-reading')).toContainText('Variación del saldo');
+  await expect(page.locator('.river-station-reading')).toContainText('Incluye beneficio, aportaciones y retiradas');
   await expect(page.locator('.river-month-equation')).toContainText('Cierre reconciliado');
   await expect(page.locator('.river-flow-register')).toContainText('Aportación incorporada');
   await expect(page.locator('.river-flow-register')).toContainText('Posición retirada');
