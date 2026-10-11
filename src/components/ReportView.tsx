@@ -11,6 +11,7 @@ import { AnnualVisionReportPage } from './AnnualVisionReportPage';
 import { CapitalFlowReportPage } from './CapitalFlowReportPage';
 import { NarrativeReportPage } from './NarrativeReportPage';
 import { ClientLedgerReportPage } from './ClientLedgerReportPage';
+import { CapitalRiverReportPage } from './CapitalRiverReportPage';
 
 interface ReportViewProps {
   token?: string;
@@ -301,7 +302,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -534,7 +535,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (!analyticsEnabled || !onAnalyticsEvent || !reportRef.current) return undefined;
     const root = reportRef.current;
     const sections = Array.from(root.querySelectorAll<HTMLElement>(
-      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel, .premium-v2-primary-kpis, .premium-v2-secondary-kpis, .premium-v2-period-panel, .premium-v2-panel, .premium-v2-month-focus, .pv3-overview, .pv3-matrix-section, .pv3-month-insight, .pv3-year-digest, .pf4-hero, .pf4-engine-section, .pf4-inspector, .pf4-register, .pn5-opening, .pn5-chapter, .ledger-hero, .ledger-kpis, .ledger-global-equation, .ledger-workspace, .ledger-pending'
+      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel, .premium-v2-primary-kpis, .premium-v2-secondary-kpis, .premium-v2-period-panel, .premium-v2-panel, .premium-v2-month-focus, .pv3-overview, .pv3-matrix-section, .pv3-month-insight, .pv3-year-digest, .pf4-hero, .pf4-engine-section, .pf4-inspector, .pf4-register, .pn5-opening, .pn5-chapter, .ledger-hero, .ledger-kpis, .ledger-global-equation, .ledger-workspace, .ledger-pending, .river-hero, .river-kpis, .river-chart-section, .river-station'
     ));
     const visibleSections = new Map<HTMLElement, {
       ratio: number;
@@ -569,6 +570,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (section.classList.contains('ledger-global-equation')) return 'Reconciliacion global';
       if (section.classList.contains('ledger-workspace')) return 'Extracto y dossier mensual';
       if (section.classList.contains('ledger-pending')) return 'Movimientos pendientes del legajo';
+      if (section.classList.contains('river-hero')) return 'Apertura del rio patrimonial';
+      if (section.classList.contains('river-kpis')) return 'Resumen del rio patrimonial';
+      if (section.classList.contains('river-chart-section')) return 'Rio patrimonial';
+      if (section.classList.contains('river-station')) return 'Estacion de medicion mensual';
       return section.querySelector('h4, h3, h2')?.textContent?.trim() || 'Seccion del informe';
     };
 
@@ -2190,7 +2195,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isCapitalFlowDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page4';
   const isNarrativeDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page5';
   const isLedgerDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page6';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage;
+  const isRiverDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page7';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}`}>
@@ -2202,7 +2208,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-six-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-seven-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2280,6 +2286,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="demo-report-page-label">Página 6</span>
               <small className="demo-report-page-author">Kimi 2.7</small>
             </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page7' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page7'}
+              aria-label="Página 7"
+              onClick={() => {
+                setDemoReportPage('page7');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 7 rio del capital' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 7</span>
+              <small className="demo-report-page-author">Kimi 2.7</small>
+            </button>
           </div>
         </nav>
       ) : null}
@@ -2319,6 +2338,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : isLedgerDemoPage ? (
         <ClientLedgerReportPage
+          report={report}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
+        />
+      ) : isRiverDemoPage ? (
+        <CapitalRiverReportPage
           report={report}
           pendingCashMovements={visiblePendingCashMovements}
           rootRef={reportRef}
