@@ -14,6 +14,7 @@ import { ClientLedgerReportPage } from './ClientLedgerReportPage';
 import { CapitalRiverReportPage } from './CapitalRiverReportPage';
 import { WealthMosaicReportPage } from './WealthMosaicReportPage';
 import { AuraQuantumReportPage } from './AuraQuantumReportPage';
+import { AuraStrataReportPage } from './AuraStrataReportPage';
 
 interface ReportViewProps {
   token?: string;
@@ -304,7 +305,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -537,7 +538,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (!analyticsEnabled || !onAnalyticsEvent || !reportRef.current) return undefined;
     const root = reportRef.current;
     const sections = Array.from(root.querySelectorAll<HTMLElement>(
-      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel, .premium-v2-primary-kpis, .premium-v2-secondary-kpis, .premium-v2-period-panel, .premium-v2-panel, .premium-v2-month-focus, .pv3-overview, .pv3-matrix-section, .pv3-month-insight, .pv3-year-digest, .pf4-hero, .pf4-engine-section, .pf4-inspector, .pf4-register, .pn5-opening, .pn5-chapter, .ledger-hero, .ledger-kpis, .ledger-global-equation, .ledger-workspace, .ledger-pending, .river-hero, .river-kpis, .river-chart-section, .river-station, .mosaic-hero, .mosaic-summary, .mosaic-gallery, .mosaic-detail, .mosaic-highlights, .mosaic-twr-note, .aura-executive, .aura-capital-core, .aura-twr-bridge, .aura-quantum-canvas, .aura-reconciliation, .aura-movements, .aura-global-equation'
+      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel, .premium-v2-primary-kpis, .premium-v2-secondary-kpis, .premium-v2-period-panel, .premium-v2-panel, .premium-v2-month-focus, .pv3-overview, .pv3-matrix-section, .pv3-month-insight, .pv3-year-digest, .pf4-hero, .pf4-engine-section, .pf4-inspector, .pf4-register, .pn5-opening, .pn5-chapter, .ledger-hero, .ledger-kpis, .ledger-global-equation, .ledger-workspace, .ledger-pending, .river-hero, .river-kpis, .river-chart-section, .river-station, .mosaic-hero, .mosaic-summary, .mosaic-gallery, .mosaic-detail, .mosaic-highlights, .mosaic-twr-note, .aura-executive, .aura-capital-core, .aura-twr-bridge, .aura-quantum-canvas, .aura-reconciliation, .aura-movements, .aura-global-equation, .strata-executive-grid, .strata-metrics-strip, .strata-didactic-box, .strata-canvas-container, .strata-audit-section, .strata-movements-section, .strata-footer'
     ));
     const visibleSections = new Map<HTMLElement, {
       ratio: number;
@@ -589,6 +590,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (section.classList.contains('aura-reconciliation')) return 'Mesa de conciliacion Aura Quantum';
       if (section.classList.contains('aura-movements')) return 'Registro de movimientos Aura Quantum';
       if (section.classList.contains('aura-global-equation')) return 'Conciliacion integral Aura Quantum';
+      if (section.classList.contains('strata-executive-grid')) return 'Resumen ejecutivo Aura Strata';
+      if (section.classList.contains('strata-metrics-strip')) return 'Atribucion patrimonial Aura Strata';
+      if (section.classList.contains('strata-didactic-box')) return 'Metodologia TWR Aura Strata';
+      if (section.classList.contains('strata-canvas-container')) return 'Cordillera patrimonial Aura Strata';
+      if (section.classList.contains('strata-audit-section')) return 'Mesa de conciliacion Aura Strata';
+      if (section.classList.contains('strata-movements-section')) return 'Tesoreria Aura Strata';
+      if (section.classList.contains('strata-footer')) return 'Conciliacion final Aura Strata';
       return section.querySelector('h4, h3, h2')?.textContent?.trim() || 'Seccion del informe';
     };
 
@@ -2213,7 +2221,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isRiverDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page7';
   const isMosaicDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page8';
   const isAuraDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page9';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage;
+  const isStrataDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page10';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}`}>
@@ -2225,7 +2234,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-nine-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-ten-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2340,7 +2349,20 @@ export const ReportView: React.FC<ReportViewProps> = ({
               }}
             >
               <span className="demo-report-page-label">Página 9</span>
-              <small className="demo-report-page-author">IA externa</small>
+              <small className="demo-report-page-author">Gemini 3.8</small>
+            </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page10' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page10'}
+              aria-label="Página 10"
+              onClick={() => {
+                setDemoReportPage('page10');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 10 Aura Strata' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 10</span>
+              <small className="demo-report-page-author">Gemini 3.8</small>
             </button>
           </div>
         </nav>
@@ -2402,6 +2424,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : isAuraDemoPage ? (
         <AuraQuantumReportPage
+          report={report}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
+          onDownload={handleDownloadModernReport}
+        />
+      ) : isStrataDemoPage ? (
+        <AuraStrataReportPage
           report={report}
           pendingCashMovements={visiblePendingCashMovements}
           rootRef={reportRef}

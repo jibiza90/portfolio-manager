@@ -55,6 +55,6 @@ test('renders the editorial narrative for Demo1 with real report data', async ({
 
   await page.getByRole('button', { name: 'Página 4' }).click();
   await expect(page.getByRole('heading', { name: /Cada euro tiene.*un recorrido/i })).toBeVisible();
-  await page.getByRole('button', { name: 'Página 1' }).click();
+  await page.getByRole('button', { name: 'Página 1', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
 });

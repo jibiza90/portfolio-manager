@@ -21,7 +21,7 @@ test('renders the Kimi 2.7 ledger concept for Demo1 and reconciles its statement
 
   await expect(pageSixButton).toHaveAttribute('aria-pressed', 'true');
   await expect(pageSixButton).toHaveClass(/is-active/);
-  await expect(page.getByRole('button', { name: 'Página 1' })).not.toHaveClass(/is-active/);
+  await expect(page.getByRole('button', { name: 'Página 1', exact: true })).not.toHaveClass(/is-active/);
   await expect(page.getByRole('heading', { name: 'Tu inversión, mes a mes.' })).toBeVisible();
   await expect(page.locator('.ledger-balance-seal')).toContainText('127.548,34');
   await expect(page.locator('.ledger-kpis')).toContainText('105.000,00');
@@ -52,6 +52,6 @@ test('renders the Kimi 2.7 ledger concept for Demo1 and reconciles its statement
 
   await page.getByRole('button', { name: 'Página 5' }).click();
   await expect(page.getByRole('heading', { name: 'La historia de tu patrimonio, contada con claridad.' })).toBeVisible();
-  await page.getByRole('button', { name: 'Página 1' }).click();
+  await page.getByRole('button', { name: 'Página 1', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
 });

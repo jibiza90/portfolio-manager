@@ -11,7 +11,7 @@ const mountDemoReport = async (page: import('@playwright/test').Page) => {
 test('keeps page 1 intact and renders the premium demo report with real data', async ({ page }) => {
   await mountDemoReport(page);
 
-  const pageOneButton = page.getByRole('button', { name: 'Página 1' });
+  const pageOneButton = page.getByRole('button', { name: 'Página 1', exact: true });
   const pageTwoButton = page.getByRole('button', { name: 'Página 2' });
   await expect(pageOneButton).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();

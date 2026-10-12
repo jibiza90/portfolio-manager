@@ -1,0 +1,516 @@
+.demo-report-page-switcher.has-ten-pages button {
+  min-width: 70px;
+}
+
+.strata-page {
+  --str-bg-canvas: #070a0d;
+  --str-bg-surface-1: #0e1318;
+  --str-bg-surface-2: #141b22;
+  --str-bg-surface-hover: #1b242e;
+  --str-border-subtle: rgba(255, 255, 255, 0.06);
+  --str-border-strong: rgba(255, 255, 255, 0.14);
+  --str-border-gold: rgba(212, 175, 55, 0.35);
+  --str-font-display: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  --str-font-body: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+  --str-font-mono: "Space Grotesk", monospace;
+  --str-text-primary: #f4f6f8;
+  --str-text-secondary: #8e9cae;
+  --str-text-muted: #576575;
+  --str-text-gold: #e5c06e;
+  --str-layer-bedrock-start: #18202a;
+  --str-layer-bedrock-end: #222d3b;
+  --str-layer-drawdown: rgba(168, 62, 42, 0.75);
+  --str-color-positive: #2ec4b6;
+  --str-color-negative: #e76f51;
+  --str-color-increment: #00f5d4;
+  --str-color-decrement: #f77f00;
+  --str-color-pending: #ffd166;
+  --str-shadow-card: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --str-shadow-glow-gold: 0 0 24px rgba(212, 175, 55, 0.15);
+  --str-shadow-laser: 0 0 12px rgba(0, 245, 212, 0.6);
+  --str-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --str-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --str-duration-fast: 150ms;
+  --str-duration-normal: 250ms;
+  --str-duration-slow: 400ms;
+  width: 100%;
+  max-width: 1480px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 40px 32px 80px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 80% 4%, rgba(0, 245, 212, 0.035), transparent 26%),
+    radial-gradient(circle at 12% 18%, rgba(229, 192, 110, 0.04), transparent 23%),
+    var(--str-bg-canvas);
+  color: var(--str-text-primary);
+  font-family: var(--str-font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.strata-page button,
+.strata-page select {
+  font: inherit;
+}
+
+.strata-page button:focus-visible,
+.strata-page select:focus-visible,
+.strata-page [tabindex="0"]:focus-visible {
+  outline: 2px solid var(--str-text-gold);
+  outline-offset: 3px;
+}
+
+.strata-page .is-pos { color: var(--str-color-positive); }
+.strata-page .is-neg { color: var(--str-color-negative); }
+.strata-text-gold { color: var(--str-text-gold) !important; }
+.strata-text-increment { color: var(--str-color-increment) !important; }
+.strata-text-decrement { color: var(--str-color-decrement) !important; }
+
+.strata-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--str-border-subtle);
+}
+
+.strata-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--str-text-gold);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.strata-title {
+  margin: 0 0 6px;
+  color: var(--str-text-primary);
+  font-family: var(--str-font-display);
+  font-size: clamp(2rem, 3.1vw, 2.65rem);
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 0.95;
+}
+
+.strata-date { color: var(--str-text-secondary); font-size: 13px; }
+.strata-header-actions { display: flex; align-items: center; gap: 16px; }
+
+.strata-client-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--str-border-strong);
+  border-radius: 999px;
+  background: var(--str-bg-surface-2);
+  font-family: var(--str-font-mono);
+  font-size: 12px;
+}
+
+.strata-client-badge small { color: var(--str-text-muted); font-size: 9px; letter-spacing: 0.08em; }
+.strata-client-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--str-color-increment); box-shadow: 0 0 8px var(--str-color-increment); }
+
+.strata-btn-download {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #e5c06e 0%, #c5a059 100%);
+  box-shadow: 0 4px 18px rgba(229, 192, 110, 0.15);
+  color: #070a0d;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: transform var(--str-duration-fast) var(--str-ease-out-expo), box-shadow var(--str-duration-fast);
+}
+
+.strata-btn-download:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(229, 192, 110, 0.35); }
+.strata-icon-pdf { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+.strata-executive-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.strata-monolith-card {
+  min-width: 0;
+  padding: 28px;
+  border: 1px solid var(--str-border-subtle);
+  border-radius: 16px;
+  background: var(--str-bg-surface-1);
+  box-shadow: var(--str-shadow-card);
+  transition: border-color var(--str-duration-normal), transform var(--str-duration-normal);
+}
+
+.strata-monolith-card:hover,
+.strata-monolith-card:focus-visible { border-color: var(--str-border-strong); transform: translateY(-2px); }
+.strata-monolith-card.is-primary { border-color: var(--str-border-gold); background: linear-gradient(180deg, rgba(229, 192, 110, 0.04), var(--str-bg-surface-1)); box-shadow: var(--str-shadow-card), var(--str-shadow-glow-gold); }
+.strata-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; margin-bottom: 16px; }
+.strata-card-label { color: var(--str-text-secondary); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.strata-card-status,
+.strata-card-tag { flex: 0 0 auto; padding: 4px 9px; border-radius: 6px; background: var(--str-bg-surface-2); color: var(--str-text-gold); font-family: var(--str-font-mono); font-size: 9px; text-transform: uppercase; }
+.strata-card-status.is-ok { color: var(--str-color-positive); }
+.strata-card-status.is-review { color: var(--str-color-pending); }
+
+.strata-monumental-number {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--str-text-primary);
+  font-family: var(--str-font-display);
+  font-size: clamp(2.5rem, 4vw, 3.6rem);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+}
+
+.strata-monumental-number sup { margin-left: 3px; color: var(--str-color-pending); font-family: var(--str-font-body); font-size: 0.35em; }
+.strata-card-foot { display: flex; align-items: center; gap: 8px; min-height: 32px; margin-top: 18px; color: var(--str-text-secondary); font-size: 12px; line-height: 1.35; }
+.strata-subtext { color: var(--str-text-muted); }
+.strata-separator { color: var(--str-border-strong); }
+
+.strata-pending-banner {
+  margin-bottom: 24px;
+  padding: 16px 24px;
+  border: 1px solid rgba(255, 209, 102, 0.25);
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(255, 209, 102, 0.08), rgba(20, 27, 34, 0.6));
+}
+
+.strata-pending-lead { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.strata-pending-lead strong { color: #f2d886; font-size: 13px; }
+.strata-pending-lead p { margin: 2px 0 0; color: var(--str-text-secondary); font-size: 12px; }
+.strata-pulse-beacon { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; background: var(--str-color-pending); box-shadow: 0 0 10px var(--str-color-pending); animation: strataPulse 2s infinite var(--str-ease-in-out); }
+.strata-pending-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.strata-pending-chip { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border: 1px solid var(--str-border-subtle); border-radius: 8px; background: var(--str-bg-surface-2); color: var(--str-text-secondary); font-size: 12px; }
+.strata-pending-foot { color: var(--str-text-muted); font-size: 11px; }
+
+@keyframes strataPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.4); }
+}
+
+.strata-metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.strata-kpi-pill { display: flex; min-width: 0; flex-direction: column; gap: 6px; padding: 16px; border: 1px solid var(--str-border-subtle); border-radius: 12px; background: var(--str-bg-surface-1); }
+.strata-kpi-label { color: var(--str-text-muted); font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+.strata-kpi-val { overflow-wrap: anywhere; color: var(--str-text-primary); font-family: var(--str-font-mono); font-size: clamp(0.9rem, 1.35vw, 1.12rem); font-weight: 600; font-variant-numeric: tabular-nums; }
+.strata-kpi-pill small { color: var(--str-text-muted); font-size: 10px; }
+
+.strata-didactic-box { margin-bottom: 28px; padding: 20px 24px; border: 1px solid var(--str-border-subtle); border-radius: 12px; background: var(--str-bg-surface-1); }
+.strata-didactic-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; color: var(--str-text-gold); font-size: 13px; font-weight: 600; }
+.strata-didactic-head strong { flex: 1; }
+.strata-didactic-head button { padding: 6px 10px; border: 1px solid var(--str-border-gold); border-radius: 6px; background: rgba(229, 192, 110, 0.06); color: var(--str-text-gold); cursor: pointer; font-size: 10px; }
+.strata-info-icon { flex: 0 0 auto; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+.strata-didactic-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; color: var(--str-text-secondary); font-size: 12px; line-height: 1.5; }
+.strata-didactic-cols p { margin: 4px 0 0; }
+.strata-didactic-tag { color: var(--str-text-primary); font-weight: 600; }
+.strata-method-example { display: flex; gap: 16px; margin-top: 16px; padding: 12px 14px; border-left: 2px solid var(--str-text-gold); background: rgba(229, 192, 110, 0.04); color: var(--str-text-secondary); font-size: 11px; line-height: 1.45; }
+.strata-method-example strong { flex: 0 0 auto; color: var(--str-text-gold); }
+
+.strata-toolbar { display: grid; grid-template-columns: minmax(190px, 0.65fr) minmax(0, 1.35fr); align-items: center; gap: 16px; margin-bottom: 20px; }
+.strata-toolbar-range { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.strata-toolbar-range span { color: var(--str-text-muted); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+.strata-toolbar-range strong { color: var(--str-text-primary); font-family: var(--str-font-display); font-size: 1.25rem; font-weight: 400; }
+.strata-toolbar-range small { overflow-wrap: anywhere; color: var(--str-text-secondary); font-size: 10px; }
+.strata-preset-group { display: flex; justify-content: flex-end; gap: 4px; padding: 4px; border: 1px solid var(--str-border-subtle); border-radius: 10px; background: var(--str-bg-surface-1); }
+.strata-preset-group button { min-width: 0; padding: 8px 12px; border: 0; border-radius: 6px; background: transparent; color: var(--str-text-secondary); cursor: pointer; font-size: 11px; font-weight: 500; white-space: nowrap; transition: all var(--str-duration-fast); }
+.strata-preset-group button.is-active { background: var(--str-bg-surface-2); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); color: var(--str-text-primary); font-weight: 600; }
+.strata-custom-dates { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 12px; }
+.strata-custom-dates label { display: flex; align-items: center; gap: 7px; color: var(--str-text-secondary); font-size: 11px; }
+.strata-custom-dates select { padding: 7px 12px; border: 1px solid var(--str-border-subtle); border-radius: 6px; background: var(--str-bg-surface-1); color: var(--str-text-primary); font-family: var(--str-font-mono); }
+
+.strata-canvas-container { position: relative; margin-bottom: 36px; padding: 24px; border: 1px solid var(--str-border-subtle); border-radius: 16px; background: var(--str-bg-surface-1); box-shadow: var(--str-shadow-card); }
+.strata-canvas-container.is-fullscreen { position: fixed; z-index: 10020; inset: 10px; width: auto; max-width: none; height: calc(100vh - 20px); margin: 0; overflow: auto; border-color: var(--str-border-gold); background: #080c10; }
+.strata-canvas-container.is-fullscreen .strata-svg-wrapper { height: min(62vh, 680px); }
+.strata-canvas-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.strata-canvas-heading > div > span,
+.strata-audit-heading > div > span,
+.strata-section-lead > div > span { color: var(--str-text-gold); font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+.strata-canvas-heading h2 { margin: 5px 0 3px; font-family: var(--str-font-display); font-size: clamp(1.7rem, 2.7vw, 2.4rem); font-weight: 400; line-height: 1; }
+.strata-canvas-heading p { margin: 0; color: var(--str-text-secondary); font-size: 12px; }
+.strata-btn-fullscreen { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; padding: 8px 16px; border: 1px solid var(--str-border-subtle); border-radius: 8px; background: var(--str-bg-surface-1); color: var(--str-text-secondary); cursor: pointer; font-size: 11px; }
+.strata-btn-fullscreen svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+.strata-hud { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; margin-bottom: 20px; overflow: hidden; border: 1px solid var(--str-border-subtle); border-radius: 10px; background: var(--str-border-subtle); }
+.strata-hud-chip { display: flex; min-width: 0; flex-direction: column; gap: 3px; padding: 12px 14px; background: var(--str-bg-surface-2); }
+.strata-hud-chip span { color: var(--str-text-muted); font-size: 9px; letter-spacing: 0.04em; text-transform: uppercase; }
+.strata-hud-chip strong { overflow-wrap: anywhere; color: var(--str-text-primary); font-family: var(--str-font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+.strata-svg-wrapper { position: relative; width: 100%; height: 420px; touch-action: pan-y; cursor: crosshair; }
+.strata-svg { width: 100%; height: 100%; overflow: visible; }
+.strata-grid-line line { stroke: var(--str-border-subtle); stroke-dasharray: 4 4; }
+.strata-grid-line text { fill: var(--str-text-muted); font-family: var(--str-font-mono); font-size: 10px; }
+.strata-bedrock-layer,
+.strata-bedrock-texture,
+.strata-mineral-layer,
+.strata-mineral-texture { animation: strataRise 750ms var(--str-ease-out-expo) both; transform-origin: center bottom; }
+.strata-mineral-layer,
+.strata-mineral-texture { animation-delay: 90ms; }
+.strata-bedrock-ridge { fill: none; stroke: rgba(255, 255, 255, 0.2); stroke-width: 1.5; }
+.strata-summit-line { fill: none; stroke: var(--str-color-positive); stroke-width: 2.5; }
+.strata-drawdown { stroke: var(--str-layer-drawdown); stroke-width: 12; opacity: 0.85; }
+.strata-axis-month { fill: var(--str-text-muted); font-family: var(--str-font-body); font-size: 10px; }
+
+@keyframes strataRise {
+  from { opacity: 0; transform: scaleY(0.35); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+
+.strata-beacon-group { cursor: pointer; }
+.strata-beacon-group line { stroke-width: 1; stroke-dasharray: 2 2; }
+.strata-beacon-group circle { transition: r var(--str-duration-fast); }
+.strata-beacon-group:hover circle { r: 7; }
+.strata-beacon-group text { fill: var(--str-text-primary); font-family: var(--str-font-mono); font-size: 9px; }
+.strata-beacon-group.is-increment line { stroke: var(--str-color-increment); }
+.strata-beacon-group.is-increment circle { fill: var(--str-color-increment); }
+.strata-beacon-group.is-decrement line { stroke: var(--str-color-decrement); }
+.strata-beacon-group.is-decrement circle { fill: var(--str-color-decrement); }
+.strata-laser-needle { pointer-events: none; filter: drop-shadow(0 0 8px rgba(0, 245, 212, 0.5)); transition: transform 250ms var(--str-ease-out-expo); }
+.strata-laser-needle line { stroke: var(--str-color-increment); stroke-width: 1.5; }
+.strata-laser-needle circle { fill: #070a0d; stroke: var(--str-color-increment); stroke-width: 2.5; }
+.strata-laser-needle circle.is-bedrock { stroke: rgba(255, 255, 255, 0.65); stroke-width: 1.5; }
+.strata-pending-layer text { fill: var(--str-color-pending); font-family: var(--str-font-body); font-size: 9px; }
+
+.strata-layer-legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 10px 0 18px; color: var(--str-text-secondary); font-size: 10px; }
+.strata-layer-legend span { display: flex; align-items: center; gap: 6px; }
+.strata-layer-legend i { width: 20px; height: 7px; border-radius: 3px; }
+.strata-layer-legend i.is-bedrock { background: linear-gradient(90deg, var(--str-layer-bedrock-start), var(--str-layer-bedrock-end)); }
+.strata-layer-legend i.is-mineral { background: linear-gradient(90deg, #c5a059, #1b7c4b); }
+.strata-layer-legend i.is-increment { width: 7px; background: var(--str-color-increment); }
+.strata-layer-legend i.is-decrement { width: 7px; background: var(--str-color-decrement); }
+
+.strata-histogram-strip { padding-top: 18px; border-top: 1px solid var(--str-border-subtle); }
+.strata-strip-title { display: block; margin-bottom: 12px; color: var(--str-text-muted); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+.strata-histogram-bars { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(54px, 1fr); gap: 6px; height: 112px; overflow-x: auto; scrollbar-color: rgba(229, 192, 110, 0.4) transparent; }
+.strata-hist-col { display: flex; height: 100%; min-width: 0; flex-direction: column; align-items: center; justify-content: space-between; padding: 5px 3px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; transition: background var(--str-duration-fast); }
+.strata-hist-col:hover,
+.strata-hist-col.is-focused { background: var(--str-bg-surface-2); }
+.strata-hist-tag { color: var(--str-text-secondary); font-family: var(--str-font-mono); font-size: 9px; white-space: nowrap; }
+.strata-hist-track { position: relative; display: block; width: 12px; height: 58px; border-radius: 3px; background: linear-gradient(to bottom, rgba(255,255,255,0.04) 49%, rgba(255,255,255,0.16) 50%, rgba(255,255,255,0.04) 51%); }
+.strata-hist-track i { position: absolute; left: 0; width: 100%; border-radius: 2px; }
+.strata-hist-track i.is-pos { background: var(--str-color-positive); }
+.strata-hist-track i.is-neg { background: var(--str-color-negative); }
+.strata-hist-label { color: var(--str-text-muted); font-size: 9px; white-space: nowrap; }
+
+.strata-minimap { display: flex; align-items: flex-end; gap: 2px; height: 34px; margin-top: 12px; padding: 4px; border: 1px solid var(--str-border-subtle); border-radius: 7px; background: rgba(0,0,0,0.18); }
+.strata-minimap button { display: flex; height: 100%; min-width: 3px; flex: 1; align-items: flex-end; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.strata-minimap i { width: 100%; min-height: 3px; background: #34414e; }
+.strata-minimap button.is-active i { background: var(--str-text-gold); box-shadow: 0 0 8px rgba(229,192,110,0.4); }
+.strata-fullscreen-hint { display: block; margin-top: 12px; color: var(--str-text-muted); text-align: center; }
+.strata-empty-state { display: grid; min-height: 330px; place-items: center; align-content: center; text-align: center; }
+.strata-empty-state > span { display: grid; width: 64px; height: 64px; place-items: center; border: 1px solid var(--str-border-gold); border-radius: 18px; color: var(--str-text-gold); font-family: var(--str-font-display); font-size: 1.3rem; }
+.strata-empty-state h3 { margin: 18px 0 5px; font-family: var(--str-font-display); font-size: 2rem; font-weight: 400; }
+.strata-empty-state p { margin: 0; color: var(--str-text-secondary); }
+
+.strata-audit-section { margin-bottom: 36px; padding: 28px; border: 1px solid var(--str-border-subtle); border-radius: 16px; background: var(--str-bg-surface-1); }
+.strata-audit-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 24px; }
+.strata-audit-heading h2 { margin: 5px 0 4px; font-family: var(--str-font-display); font-size: clamp(1.7rem, 2.7vw, 2.25rem); font-weight: 400; line-height: 1; }
+.strata-audit-heading p { margin: 0; color: var(--str-text-secondary); font-size: 12px; }
+.strata-audit-controls { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
+.strata-audit-controls button { padding: 7px 10px; border: 1px solid var(--str-border-subtle); border-radius: 6px; background: var(--str-bg-surface-2); color: var(--str-text-primary); cursor: pointer; font-size: 10px; }
+.strata-audit-controls button:disabled { opacity: 0.35; cursor: not-allowed; }
+.strata-audit-controls span { padding: 7px 11px; border-radius: 6px; background: rgba(229, 192, 110, 0.08); color: var(--str-text-gold); font-family: var(--str-font-mono); font-size: 10px; white-space: nowrap; }
+
+.strata-table { width: 100%; overflow: hidden; border: 1px solid var(--str-border-subtle); border-radius: 10px; font-size: 12px; }
+.strata-table-head,
+.strata-table-row { display: grid; grid-template-columns: minmax(130px, 1.2fr) repeat(6, minmax(105px, 1fr)) minmax(92px, 0.8fr); align-items: center; }
+.strata-table-head { min-height: 44px; background: #0b1015; color: var(--str-text-muted); font-size: 9px; font-weight: 600; letter-spacing: 0.045em; text-transform: uppercase; }
+.strata-table-head span,
+.strata-table-row > span { min-width: 0; padding: 11px 10px; text-align: right; }
+.strata-table-head span:first-child,
+.strata-table-row > span:first-child { text-align: left; }
+.strata-table-head span:last-child,
+.strata-table-row > span:last-child { text-align: center; }
+.strata-table-row { min-height: 54px; border-top: 1px solid var(--str-border-subtle); color: var(--str-text-secondary); cursor: pointer; font-family: var(--str-font-mono); font-variant-numeric: tabular-nums; transition: background var(--str-duration-fast); }
+.strata-table-row:hover { background: var(--str-bg-surface-hover); }
+.strata-table-row.is-focused { box-shadow: inset 2px 0 var(--str-color-increment); background: rgba(0, 245, 212, 0.04); }
+.strata-table-row > span:first-child { display: flex; flex-direction: column; gap: 2px; font-family: var(--str-font-body); }
+.strata-table-row > span:first-child strong { color: var(--str-text-primary); font-size: 11px; }
+.strata-table-row > span:first-child small { color: var(--str-text-gold); font-size: 8px; text-transform: uppercase; }
+.strata-table-row > span:last-child i { color: var(--str-text-muted); font-style: normal; }
+.strata-btn-tramos { padding: 5px 8px; border: 1px solid var(--str-border-subtle); border-radius: 6px; background: var(--str-bg-surface-2); color: var(--str-text-secondary); cursor: pointer; font-size: 9px; }
+.strata-btn-tramos.is-open { background: var(--str-text-gold); color: #070a0d; font-weight: 600; }
+.strata-table-detail { padding: 16px; border-top: 1px solid var(--str-border-subtle); background: rgba(20, 27, 34, 0.45); animation: strataDetail 250ms var(--str-ease-out-expo) both; }
+.strata-table-detail > div > header { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 13px; color: var(--str-text-secondary); font-size: 11px; }
+.strata-table-detail > div > header span { color: var(--str-text-primary); font-weight: 600; }
+.strata-table-detail > div > header strong { color: var(--str-text-gold); }
+
+@keyframes strataDetail {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.strata-month-equation { display: grid; grid-template-columns: repeat(9, auto); align-items: center; gap: 8px; margin-bottom: 14px; padding: 12px; border: 1px solid var(--str-border-subtle); border-radius: 9px; background: #0e1318; }
+.strata-month-equation span { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.strata-month-equation small { color: var(--str-text-muted); font-size: 8px; text-transform: uppercase; }
+.strata-month-equation strong { overflow-wrap: anywhere; color: var(--str-text-primary); font-family: var(--str-font-mono); font-size: 10px; }
+.strata-month-equation b { color: var(--str-text-gold); font-size: 13px; }
+.strata-month-equation .is-final { padding: 7px; border: 1px solid var(--str-border-gold); border-radius: 6px; background: rgba(229,192,110,0.05); }
+.strata-month-equation em { justify-self: end; padding: 4px 7px; border-radius: 999px; font-size: 8px; font-style: normal; }
+.strata-month-equation em.is-ok { background: rgba(46,196,182,0.08); color: var(--str-color-positive); }
+.strata-month-equation em.is-review { background: rgba(255,209,102,0.08); color: var(--str-color-pending); }
+.strata-breakdown-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.strata-breakdown-grid article { min-width: 0; padding: 12px; border: 1px solid var(--str-border-subtle); border-radius: 8px; background: var(--str-bg-surface-2); }
+.strata-breakdown-grid article > span { display: block; min-height: 28px; color: var(--str-text-secondary); font-size: 9px; line-height: 1.35; }
+.strata-breakdown-grid article > strong { display: block; margin-top: 5px; overflow-wrap: anywhere; color: var(--str-text-primary); font-family: var(--str-font-mono); font-size: 12px; }
+.strata-breakdown-grid article > small { display: block; margin-top: 5px; color: var(--str-color-positive); font-size: 9px; }
+.strata-breakdown-grid article.is-total { border-color: var(--str-border-gold); background: rgba(229,192,110,0.05); }
+.strata-breakdown-grid article.is-total > strong { color: var(--str-text-gold); }
+
+.strata-movements-section { margin-bottom: 36px; padding: 28px; border: 1px solid var(--str-border-subtle); border-radius: 16px; background: var(--str-bg-surface-1); }
+.strata-section-lead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.strata-section-lead h3 { margin: 5px 0 4px; font-family: var(--str-font-display); font-size: 1.8rem; font-weight: 400; line-height: 1; }
+.strata-section-lead p { margin: 0 0 20px; color: var(--str-text-secondary); font-size: 12px; }
+.strata-section-lead > strong { color: var(--str-text-gold); font-family: var(--str-font-display); font-size: 1.3rem; font-weight: 400; }
+.strata-movements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.strata-movement-item { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; padding: 14px 18px; border: 1px solid var(--str-border-subtle); border-radius: 10px; background: var(--str-bg-surface-2); }
+.strata-mov-date { color: var(--str-text-muted); font-family: var(--str-font-mono); font-size: 10px; }
+.strata-mov-concept { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.strata-mov-concept strong { color: var(--str-text-primary); font-size: 11px; }
+.strata-mov-concept span { overflow-wrap: anywhere; color: var(--str-text-secondary); font-size: 9px; }
+.strata-mov-amount { font-family: var(--str-font-mono); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.strata-no-movements { margin: 0; padding: 22px; color: var(--str-text-muted); text-align: center; }
+
+.strata-footer { padding-top: 32px; border-top: 1px solid var(--str-border-strong); }
+.strata-formula-banner { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 22px; margin-bottom: 24px; padding: 20px 28px; border: 1px solid var(--str-border-gold); border-radius: 12px; background: linear-gradient(180deg, rgba(229,192,110,0.05), rgba(14,19,24,0.8)); }
+.strata-formula-title { color: var(--str-text-gold); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.strata-formula-equation { display: flex; align-items: center; justify-content: center; gap: 16px; color: var(--str-text-secondary); font-size: 12px; }
+.strata-formula-equation span { display: flex; flex-direction: column; gap: 3px; }
+.strata-formula-equation strong { overflow-wrap: anywhere; color: var(--str-text-primary); font-family: var(--str-font-mono); font-size: 14px; }
+.strata-formula-equation b { color: var(--str-text-gold); font-size: 18px; }
+.strata-formula-equation .is-final { padding: 8px 10px; border: 1px solid var(--str-border-gold); border-radius: 7px; background: rgba(229,192,110,0.05); }
+.strata-formula-banner > i { padding: 5px 8px; border-radius: 999px; font-size: 9px; font-style: normal; white-space: nowrap; }
+.strata-formula-banner > i.is-ok { background: rgba(46,196,182,0.08); color: var(--str-color-positive); }
+.strata-formula-banner > i.is-review { background: rgba(255,209,102,0.08); color: var(--str-color-pending); }
+.strata-footer-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--str-text-muted); font-size: 10px; }
+.strata-footer-meta p { margin: 0; }
+
+@media (max-width: 1279px) {
+  .demo-report-page-switcher.has-ten-pages { align-items: stretch; flex-direction: column; }
+  .demo-report-page-switcher.has-ten-pages > div { display: grid; width: 100%; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .demo-report-page-switcher.has-ten-pages button { width: auto; min-width: 0; }
+  .strata-page { padding-inline: 24px; }
+  .strata-executive-grid { grid-template-columns: 1fr 1fr; }
+  .strata-executive-grid .strata-monolith-card:last-child { grid-column: 1 / -1; }
+  .strata-metrics-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .strata-svg-wrapper { height: 340px; }
+  .strata-hud { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .strata-table-head,
+  .strata-table-row { grid-template-columns: minmax(125px, 1.25fr) repeat(5, minmax(100px, 1fr)) minmax(90px, 0.8fr); }
+  .strata-table-head span:nth-child(2),
+  .strata-table-row > span:nth-child(2) { display: none; }
+}
+
+@media (max-width: 767px) {
+  .demo-report-page-switcher.has-ten-pages { padding: 9px; }
+  .demo-report-page-switcher.has-ten-pages > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .demo-report-page-switcher.has-ten-pages button { min-height: 48px; padding-inline: 3px; }
+  .strata-page { padding: 24px 16px 60px; }
+  .strata-header { flex-direction: column; gap: 16px; }
+  .strata-header-actions { width: 100%; justify-content: space-between; }
+  .strata-client-badge { min-width: 0; }
+  .strata-btn-download { padding-inline: 14px; }
+  .strata-executive-grid { grid-template-columns: 1fr; }
+  .strata-executive-grid .strata-monolith-card:last-child { grid-column: auto; }
+  .strata-monolith-card { padding: 22px; }
+  .strata-monolith-card.is-primary { position: sticky; z-index: 3; top: 8px; backdrop-filter: blur(16px); }
+  .strata-card-head { align-items: flex-start; }
+  .strata-card-status,
+  .strata-card-tag { max-width: 44%; text-align: right; }
+  .strata-monumental-number { font-size: clamp(2.35rem, 12vw, 3.2rem); }
+  .strata-metrics-strip { grid-template-columns: 1fr 1fr; }
+  .strata-didactic-head { align-items: flex-start; flex-wrap: wrap; }
+  .strata-didactic-head button { margin-left: 28px; }
+  .strata-didactic-cols { grid-template-columns: 1fr; }
+  .strata-method-example { flex-direction: column; gap: 4px; }
+  .strata-toolbar { grid-template-columns: 1fr; }
+  .strata-preset-group { justify-content: flex-start; overflow-x: auto; }
+  .strata-preset-group button { flex: 0 0 auto; }
+  .strata-custom-dates { grid-column: auto; flex-direction: column; }
+  .strata-custom-dates label { justify-content: space-between; }
+  .strata-canvas-container { padding: 16px; }
+  .strata-canvas-heading { flex-direction: column; }
+  .strata-btn-fullscreen { align-self: flex-end; }
+  .strata-canvas-container.is-fullscreen { inset: 4px; height: calc(100vh - 8px); padding: 14px; }
+  .strata-canvas-container.is-fullscreen .strata-svg-wrapper { height: min(52vh, 430px); }
+  .strata-hud { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .strata-hud-chip { flex: 0 0 47%; scroll-snap-align: start; }
+  .strata-svg-wrapper { height: 260px; overflow-x: auto; touch-action: pan-x pan-y; }
+  .strata-svg { min-width: 740px; }
+  .strata-layer-legend { gap: 10px; }
+  .strata-histogram-bars { grid-auto-columns: 64px; }
+  .strata-audit-section { padding: 18px 14px; }
+  .strata-audit-heading { align-items: flex-start; flex-direction: column; }
+  .strata-audit-controls { width: 100%; justify-content: space-between; }
+  .strata-audit-controls button { font-size: 0; }
+  .strata-audit-controls button:first-child::after { content: "◀"; font-size: 11px; }
+  .strata-audit-controls button:last-child::after { content: "▶"; font-size: 11px; }
+  .strata-table { overflow: visible; border: 0; background: transparent; }
+  .strata-table-head { display: none; }
+  .strata-table-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 10px; overflow: hidden; border: 1px solid var(--str-border-subtle); border-radius: 10px; background: var(--str-bg-surface-2); }
+  .strata-table-row > span,
+  .strata-table-row > span:nth-child(2) { display: flex; min-height: 49px; flex-direction: column; justify-content: center; padding: 9px 10px; border-bottom: 1px solid var(--str-border-subtle); text-align: right; }
+  .strata-table-row > span:nth-child(odd) { border-right: 1px solid var(--str-border-subtle); text-align: left; }
+  .strata-table-row > span::before { content: attr(data-label); margin-bottom: 3px; color: var(--str-text-muted); font-family: var(--str-font-body); font-size: 8px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .strata-table-row > span:first-child { grid-column: 1 / -1; border-right: 0; }
+  .strata-table-row > span:last-child { grid-column: 1 / -1; border-right: 0; border-bottom: 0; text-align: center; }
+  .strata-table-detail { margin: -11px 0 12px; border: 1px solid var(--str-border-gold); border-radius: 0 0 10px 10px; }
+  .strata-table-detail > div > header { flex-direction: column; gap: 4px; }
+  .strata-month-equation { grid-template-columns: 1fr 1fr; }
+  .strata-month-equation b { display: none; }
+  .strata-month-equation em { grid-column: 1 / -1; justify-self: stretch; text-align: center; }
+  .strata-breakdown-grid { grid-template-columns: 1fr; }
+  .strata-movements-section { padding: 20px 16px; }
+  .strata-movements-grid { grid-template-columns: 1fr; }
+  .strata-movement-item { grid-template-columns: 1fr auto; }
+  .strata-mov-date { grid-column: 1 / -1; }
+  .strata-formula-banner { grid-template-columns: 1fr; }
+  .strata-formula-equation { align-items: stretch; flex-direction: column; gap: 8px; }
+  .strata-formula-equation b { display: none; }
+  .strata-formula-banner > i { justify-self: start; }
+  .strata-footer-meta { flex-direction: column; }
+}
+
+@media (max-width: 420px) {
+  .strata-header-actions { align-items: stretch; flex-direction: column; }
+  .strata-btn-download { justify-content: center; }
+  .strata-metrics-strip { grid-template-columns: 1fr; }
+  .strata-hud-chip { flex-basis: 72%; }
+  .strata-movement-item { grid-template-columns: 1fr; }
+  .strata-mov-amount { justify-self: start; }
+}
+
+@media (orientation: landscape) and (max-height: 540px) {
+  .strata-canvas-container.is-fullscreen .strata-canvas-heading,
+  .strata-canvas-container.is-fullscreen .strata-hud { margin-bottom: 8px; }
+  .strata-canvas-container.is-fullscreen .strata-svg-wrapper { height: 68vh; }
+  .strata-canvas-container.is-fullscreen .strata-histogram-strip,
+  .strata-canvas-container.is-fullscreen .strata-layer-legend { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strata-page *,
+  .strata-page *::before,
+  .strata-page *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

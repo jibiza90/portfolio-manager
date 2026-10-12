@@ -51,6 +51,6 @@ test('renders the capital flow room for Demo1 and reconciles its figures', async
 
   await page.getByRole('button', { name: 'Página 3' }).click();
   await expect(page.getByRole('heading', { name: /Tu año, de un vistazo/i })).toBeVisible();
-  await page.getByRole('button', { name: 'Página 1' }).click();
+  await page.getByRole('button', { name: 'Página 1', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
 });
