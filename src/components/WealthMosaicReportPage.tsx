@@ -178,6 +178,11 @@ export const WealthMosaicReportPage: React.FC<WealthMosaicReportPageProps> = ({
     selectedYear === 'all' ? months : months.filter((month) => month.year === selectedYear)
   ), [months, selectedYear]);
 
+  const periodMonths = useMemo(
+    () => [...filteredMonths].sort((left, right) => left.key.localeCompare(right.key)),
+    [filteredMonths]
+  );
+
   const orderedMonths = useMemo(() => {
     const ordered = [...filteredMonths];
     if (sortBy === 'date') return ordered.sort((left, right) => right.key.localeCompare(left.key));
@@ -197,6 +202,7 @@ export const WealthMosaicReportPage: React.FC<WealthMosaicReportPageProps> = ({
     ?? orderedMonths[0]
     ?? months[months.length - 1];
   const selectedIndex = orderedMonths.findIndex((month) => month.key === selectedMonth?.key);
+  const selectedPeriodIndex = periodMonths.findIndex((month) => month.key === selectedMonth?.key);
   const selectedBreakdown = selectedMonth?.breakdown;
   const pendingIncrements = pendingCashMovements.filter((movement) => movement.type === 'increment').reduce((sum, movement) => sum + movement.amount, 0);
   const pendingDecrements = pendingCashMovements.filter((movement) => movement.type === 'decrement').reduce((sum, movement) => sum + movement.amount, 0);
@@ -205,12 +211,19 @@ export const WealthMosaicReportPage: React.FC<WealthMosaicReportPageProps> = ({
   const totalReturn = netCapital ? (report.beneficioTotal / netCapital) * 100 : 0;
   const maxBalance = Math.max(1, ...months.map((month) => Math.abs(month.balance)));
   const maxReturn = Math.max(0.01, ...months.map((month) => Math.abs(month.returnPct)));
+  const maxPeriodReturn = Math.max(0.01, ...periodMonths.map((month) => Math.abs(month.returnPct)));
+  const periodBenefit = periodMonths.reduce((sum, month) => sum + month.profit, 0);
+  const periodNetFlow = periodMonths.reduce((sum, month) => sum + month.netFlow, 0);
+  const periodTwr = periodMonths.reduce((factor, month) => factor * (1 + month.returnPct / 100), 1) - 1;
+  const periodLabel = periodMonths.length
+    ? `${periodMonths[0].shortLabel} — ${periodMonths[periodMonths.length - 1].shortLabel}`
+    : 'Sin cierres';
   const selectedDifference = selectedMonth
     ? selectedMonth.balance - selectedMonth.openingBalance - selectedMonth.netFlow - selectedMonth.profit
     : 0;
-  const bestReturnMonth = months.reduce<MosaicMonth | undefined>((best, month) => !best || month.returnPct > best.returnPct ? month : best, undefined);
-  const highestProfitMonth = months.reduce<MosaicMonth | undefined>((best, month) => !best || month.profit > best.profit ? month : best, undefined);
-  const highestFlowMonth = months.reduce<MosaicMonth | undefined>((best, month) => !best || Math.abs(month.netFlow) > Math.abs(best.netFlow) ? month : best, undefined);
+  const bestReturnMonth = periodMonths.reduce<MosaicMonth | undefined>((best, month) => !best || month.returnPct > best.returnPct ? month : best, undefined);
+  const highestProfitMonth = periodMonths.reduce<MosaicMonth | undefined>((best, month) => !best || month.profit > best.profit ? month : best, undefined);
+  const highestFlowMonth = periodMonths.reduce<MosaicMonth | undefined>((best, month) => !best || Math.abs(month.netFlow) > Math.abs(best.netFlow) ? month : best, undefined);
   const pendingMonthKey = pendingCashMovements[0]?.iso.slice(0, 7) ?? '';
   const pendingVisible = pendingCashMovements.length > 0 && (selectedYear === 'all' || pendingMonthKey.startsWith(selectedYear));
 
@@ -238,6 +251,14 @@ export const WealthMosaicReportPage: React.FC<WealthMosaicReportPageProps> = ({
     if (!next) return;
     selectMonth(next.key, 'keyboard');
     document.getElementById(`mosaic-month-${next.key}`)?.focus();
+  };
+
+  const stepSelectedMonth = (direction: -1 | 1) => {
+    if (selectedPeriodIndex < 0) return;
+    const next = periodMonths[selectedPeriodIndex + direction];
+    if (!next) return;
+    selectMonth(next.key, 'keyboard');
+    onAnalyticsEvent?.({ type: 'mosaic_detail_navigate', label: next.key, metadata: { direction } });
   };
 
   return (
@@ -280,6 +301,39 @@ export const WealthMosaicReportPage: React.FC<WealthMosaicReportPageProps> = ({
 
       {orderedMonths.length ? (
         <>
+          <section className="mosaic-period-lens" aria-label="Lectura del periodo visible">
+            <div className="mosaic-period-lens-heading">
+              <div><p>Firma del periodo</p><h2>{periodLabel}</h2></div>
+              <span>La secuencia conserva el orden cronológico aunque reorganices las piezas.</span>
+            </div>
+            <div className="mosaic-period-lens-body">
+              <div className="mosaic-return-signature" role="group" aria-label="Rentabilidad mensual del periodo">
+                {periodMonths.map((month) => {
+                  const magnitude = Math.max(8, Math.abs(month.returnPct) / maxPeriodReturn * 42);
+                  const isSelected = month.key === selectedMonth?.key;
+                  return (
+                    <button
+                      type="button"
+                      key={month.key}
+                      className={`${month.returnPct >= 0 ? 'is-positive' : 'is-negative'} ${isSelected ? 'is-selected' : ''}`}
+                      aria-label={`${month.label}: ${signedPercent(month.returnPct)}`}
+                      aria-pressed={isSelected}
+                      onClick={() => selectMonth(month.key)}
+                    >
+                      <i style={{ height: `${magnitude}%` }} />
+                      <span>{month.shortLabel.replace(' ', ' ')}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mosaic-period-metrics">
+                <article><span>TWR enlazado</span><strong className={periodTwr >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(periodTwr * 100)}</strong><small>Rentabilidad de los cierres visibles</small></article>
+                <article><span>Beneficio generado</span><strong className={periodBenefit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(periodBenefit)}</strong><small>Suma del resultado mensual</small></article>
+                <article><span>Flujo neto</span><strong className={periodNetFlow >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(periodNetFlow)}</strong><small>Aportaciones menos retiradas</small></article>
+              </div>
+            </div>
+          </section>
+
           <section className="mosaic-gallery" aria-label="Mosaico de cierres mensuales">
             {orderedMonths.map((month, index) => {
               const isLatest = month.key === latestMonthKey;
@@ -323,7 +377,14 @@ export const WealthMosaicReportPage: React.FC<WealthMosaicReportPageProps> = ({
             <section className="mosaic-detail" aria-live="polite">
               <div className="mosaic-detail-heading">
                 <div><p>Pieza seleccionada</p><h2>{selectedMonth.label}</h2><span>Detalle exacto del cierre mensual</span></div>
-                <div><span>Rentabilidad del mes</span><strong className={selectedMonth.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(selectedMonth.returnPct)}</strong></div>
+                <div className="mosaic-detail-actions">
+                  <div><span>Rentabilidad del mes</span><strong className={selectedMonth.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(selectedMonth.returnPct)}</strong></div>
+                  <nav aria-label="Cambiar pieza seleccionada">
+                    <button type="button" disabled={selectedPeriodIndex <= 0} onClick={() => stepSelectedMonth(-1)} aria-label="Ver mes anterior">←</button>
+                    <span>{selectedPeriodIndex + 1} / {periodMonths.length}</span>
+                    <button type="button" disabled={selectedPeriodIndex < 0 || selectedPeriodIndex >= periodMonths.length - 1} onClick={() => stepSelectedMonth(1)} aria-label="Ver mes siguiente">→</button>
+                  </nav>
+                </div>
               </div>
 
               <div className="mosaic-detail-body">
@@ -369,7 +430,7 @@ export const WealthMosaicReportPage: React.FC<WealthMosaicReportPageProps> = ({
           ) : null}
 
           <section className="mosaic-highlights">
-            <div className="mosaic-section-heading"><p>Piezas destacadas</p><h2>Tres lecturas del histórico</h2></div>
+            <div className="mosaic-section-heading"><p>Piezas destacadas</p><h2>Tres lecturas del periodo visible</h2></div>
             <div>
               <article><span>Mayor rentabilidad</span><strong>{bestReturnMonth?.label ?? '—'}</strong><b>{bestReturnMonth ? signedPercent(bestReturnMonth.returnPct) : '—'}</b><small>El cierre con mejor rendimiento mensual</small></article>
               <article><span>Mayor beneficio</span><strong>{highestProfitMonth?.label ?? '—'}</strong><b>{highestProfitMonth ? signedMoney(highestProfitMonth.profit) : '—'}</b><small>El mes con más resultado en euros</small></article>

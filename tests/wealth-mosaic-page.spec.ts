@@ -23,10 +23,18 @@ test('renders the Kimi 2.7 wealth mosaic for Demo1 with sortable monthly pieces'
   await expect(page.locator('button.mosaic-card')).toHaveCount(13);
   await expect(page.locator('.mosaic-card.is-featured')).toContainText('Marzo 2026');
   await expect(page.locator('.mosaic-card.is-pending')).toContainText('Abril 2026');
+  await expect(page.locator('.mosaic-period-lens')).toContainText('Mar 25 — Mar 26');
+  await expect(page.locator('.mosaic-period-lens')).toContainText('TWR enlazado');
+  await expect(page.locator('.mosaic-period-lens')).toContainText('+39,84 %');
   await expect(page.locator('.mosaic-detail-heading')).toContainText('Marzo 2026');
   await expect(page.locator('.mosaic-ledger')).toContainText('Cierre reconciliado');
   await expect(page.locator('.mosaic-movements')).toContainText('Aportación incorporada');
   await expect(page.locator('.mosaic-highlights')).not.toContainText('Menor rentabilidad');
+
+  await page.getByRole('button', { name: 'Ver mes anterior' }).click();
+  await expect(page.locator('.mosaic-detail-heading')).toContainText('Febrero 2026');
+  await page.getByRole('button', { name: 'Ver mes siguiente' }).click();
+  await expect(page.locator('.mosaic-detail-heading')).toContainText('Marzo 2026');
 
   await page.getByRole('button', { name: /Enero 2026, rentabilidad/ }).click();
   await expect(page.locator('.mosaic-detail-heading')).toContainText('Enero 2026');
@@ -37,6 +45,8 @@ test('renders the Kimi 2.7 wealth mosaic for Demo1 with sortable monthly pieces'
   await page.locator('.mosaic-year-filter select').selectOption('2025');
   await expect(page.locator('button.mosaic-card')).toHaveCount(10);
   await expect(page.locator('.mosaic-card.is-pending')).toHaveCount(0);
+  await expect(page.locator('.mosaic-period-lens')).toContainText('Mar 25 — Dic 25');
+  await expect(page.locator('.mosaic-highlights')).not.toContainText('Febrero 2026');
 
   const hasHorizontalPageOverflow = await page.evaluate(() => (
     document.documentElement.scrollWidth > window.innerWidth + 1
