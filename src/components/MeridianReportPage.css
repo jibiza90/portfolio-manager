@@ -1,0 +1,400 @@
+.meridian-report {
+  --mer-paper: #f7f5f1;
+  --mer-surface: #ffffff;
+  --mer-sunken: #f3f1ec;
+  --mer-border: #e4e0d8;
+  --mer-divider: #efece6;
+  --mer-ink: #1c1e22;
+  --mer-secondary: #5e6570;
+  --mer-muted: #9aa1ab;
+  --mer-positive: #1f7a4d;
+  --mer-negative: #a33b3b;
+  --mer-increment: #1f6f8b;
+  --mer-decrement: #a15c2e;
+  --mer-pending: #8a7340;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 40px 48px 80px;
+  overflow-x: hidden;
+  color: var(--mer-ink);
+  background: var(--mer-paper);
+  font-family: Inter, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  box-sizing: border-box;
+}
+
+.meridian-report *, .meridian-report *::before, .meridian-report *::after { box-sizing: border-box; }
+.meridian-report button, .meridian-report select { font: inherit; }
+.meridian-report button { min-height: 44px; cursor: pointer; }
+.meridian-report button:focus-visible, .meridian-report select:focus-visible, .meridian-report [tabindex]:focus-visible { outline: 2px solid var(--mer-ink); outline-offset: 2px; }
+.meridian-report .is-positive { color: var(--mer-positive); }
+.meridian-report .is-negative { color: var(--mer-negative); }
+.meridian-report .is-neutral { color: var(--mer-secondary); }
+.meridian-report .is-increment { color: var(--mer-increment); }
+.meridian-report .is-decrement { color: var(--mer-decrement); }
+
+.meridian-mast {
+  min-height: 72px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--mer-border);
+}
+
+.meridian-kicker, .meridian-chart-head > div > span, .meridian-month-panel header span,
+.meridian-section-heading span, .meridian-seal > span, .meridian-pending > div:first-child > span {
+  display: block;
+  margin: 0 0 4px;
+  color: var(--mer-pending);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: .16em;
+}
+
+.meridian-mast h1 {
+  margin: 0;
+  font-family: Newsreader, Georgia, serif;
+  font-size: 28px;
+  line-height: 32px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .025em;
+}
+
+.meridian-mast p:not(.meridian-kicker) { margin: 3px 0 0; color: var(--mer-secondary); font-size: 13px; }
+.meridian-mast-actions { display: flex; align-items: center; gap: 12px; }
+.meridian-mast-actions > span { color: var(--mer-secondary); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.meridian-mast-actions button, .meridian-expand, .meridian-month-panel header button, .meridian-section-heading button, .meridian-dialog-head button {
+  min-width: 116px;
+  padding: 0 18px;
+  border: 1px solid var(--mer-ink);
+  border-radius: 8px;
+  color: var(--mer-paper);
+  background: var(--mer-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.meridian-identity {
+  min-height: 96px;
+  display: grid;
+  grid-template-columns: minmax(380px, .8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 48px;
+  margin-top: 32px;
+  padding: 6px 0;
+}
+
+.meridian-main-balance { min-width: 0; container-type: inline-size; }
+.meridian-main-balance > span, .meridian-identity-metrics span, .meridian-month-equation span, .meridian-month-return span {
+  display: block;
+  color: var(--mer-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.meridian-main-balance strong {
+  display: block;
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+  font-family: Newsreader, Georgia, serif;
+  font-size: clamp(44px, 8cqw, 56px);
+  line-height: 1.05;
+  font-weight: 500;
+  letter-spacing: -.025em;
+}
+.meridian-main-balance small { display: block; margin-top: 3px; color: var(--mer-secondary); font-size: 11px; }
+.meridian-identity-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 28px; }
+.meridian-identity-metrics > div { min-width: 0; }
+.meridian-identity-metrics strong { display: block; margin-top: 4px; overflow-wrap: anywhere; font-size: 20px; line-height: 24px; font-weight: 600; }
+
+.meridian-pending {
+  display: grid;
+  grid-template-columns: minmax(260px, .65fr) minmax(0, 1.35fr);
+  gap: 28px;
+  margin-top: 32px;
+  padding: 18px 20px;
+  border: 1px dashed rgba(138, 115, 64, .55);
+  border-radius: 8px;
+  background: rgba(138, 115, 64, .055);
+}
+.meridian-pending h2 { margin: 0; font-family: Newsreader, Georgia, serif; font-size: 22px; font-weight: 500; }
+.meridian-pending p { margin: 5px 0 0; color: var(--mer-secondary); font-size: 12px; line-height: 18px; }
+.meridian-pending-list { display: grid; gap: 6px; min-width: 0; }
+.meridian-pending-list > div { display: grid; grid-template-columns: 90px 1fr auto; gap: 14px; align-items: center; min-width: 0; }
+.meridian-pending-list time, .meridian-pending-list span { color: var(--mer-secondary); font-size: 12px; }
+.meridian-pending-list strong { font-size: 13px; }
+.meridian-pending-list small { grid-column: 2 / -1; margin-top: -10px; color: var(--mer-secondary); font-size: 10px; }
+
+.meridian-chart-section { margin-top: 32px; border-top: 1px solid var(--mer-border); }
+.meridian-chart-head { min-height: 80px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 14px 0 12px; }
+.meridian-chart-head h2, .meridian-month-panel h2, .meridian-section-heading h2, .meridian-dialog-head h2 {
+  margin: 0;
+  font-family: Newsreader, Georgia, serif;
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 500;
+}
+.meridian-chart-head p { margin: 3px 0 0; color: var(--mer-secondary); font-size: 12px; }
+.meridian-chart-controls { display: flex; align-items: center; gap: 12px; }
+.meridian-periods { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--mer-border); border-radius: 8px; background: var(--mer-surface); }
+.meridian-periods button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 5px;
+  color: var(--mer-ink);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+}
+.meridian-periods button.is-active { color: var(--mer-paper); background: var(--mer-ink); }
+.meridian-expand { min-width: 86px; }
+.meridian-custom-period { display: flex; justify-content: flex-end; gap: 12px; padding: 0 0 12px; }
+.meridian-custom-period label { display: flex; align-items: center; gap: 7px; color: var(--mer-secondary); font-size: 12px; font-weight: 600; }
+.meridian-custom-period select { height: 40px; padding: 0 32px 0 11px; border: 1px solid var(--mer-border); border-radius: 7px; color: var(--mer-ink); background: var(--mer-surface); }
+
+.meridian-staff-scroll {
+  width: 100%;
+  min-width: 0;
+  height: 520px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  background: var(--mer-surface);
+  cursor: crosshair;
+  scrollbar-color: var(--mer-muted) var(--mer-divider);
+  touch-action: pan-x pan-y;
+}
+.meridian-staff-svg { display: block; min-width: 100%; }
+.meridian-band-even { fill: var(--mer-sunken); }
+.meridian-band-odd { fill: var(--mer-surface); }
+.meridian-axis-line, .meridian-month-guide { stroke: var(--mer-divider); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.meridian-band-label { fill: var(--mer-secondary); font-family: Inter, system-ui, sans-serif; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.meridian-axis-value, .meridian-month-name, .meridian-empty-label { fill: var(--mer-muted); font-family: Inter, system-ui, sans-serif; font-size: 11px; font-weight: 500; }
+.meridian-month-column { cursor: pointer; scroll-snap-align: center; }
+.meridian-column-hit { fill: transparent; }
+.meridian-month-column:hover .meridian-column-hit { fill: rgba(28, 30, 34, .025); }
+.meridian-month-column.is-focused .meridian-column-hit { fill: rgba(28, 30, 34, .04); }
+.meridian-focus-rule { stroke: var(--mer-ink); stroke-width: 2; vector-effect: non-scaling-stroke; transition: x1 160ms cubic-bezier(.2, 0, 0, 1), x2 160ms cubic-bezier(.2, 0, 0, 1); }
+.meridian-zero-line { stroke: var(--mer-divider); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.meridian-positive-fill { fill: var(--mer-positive); }
+.meridian-negative-fill { fill: var(--mer-negative); }
+.meridian-increment-fill { fill: var(--mer-increment); }
+.meridian-decrement-fill { fill: var(--mer-decrement); }
+.meridian-month-column text.is-positive { fill: var(--mer-positive); font-size: 10px; font-weight: 600; }
+.meridian-month-column text.is-negative { fill: var(--mer-negative); font-size: 10px; font-weight: 600; }
+.meridian-month-column text.is-neutral { fill: var(--mer-secondary); font-size: 10px; font-weight: 600; }
+.meridian-balance-line { fill: none; stroke: var(--mer-ink); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 0; animation: meridian-draw 700ms linear both; pointer-events: none; }
+.meridian-balance-point { fill: var(--mer-paper); stroke: var(--mer-ink); stroke-width: 1.5; vector-effect: non-scaling-stroke; pointer-events: none; }
+.meridian-transit-column rect { fill: rgba(138, 115, 64, .06); }
+.meridian-transit-column line { stroke: rgba(138, 115, 64, .55); stroke-width: 1; stroke-dasharray: 4 4; }
+.meridian-transit-column text { fill: var(--mer-pending); font-size: 9px; font-weight: 600; }
+
+.meridian-legend {
+  min-height: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--mer-border);
+}
+.meridian-legend > div { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.meridian-legend i { width: 9px; height: 9px; display: block; background: currentColor; }
+.meridian-legend i.is-profit { color: var(--mer-positive); }
+.meridian-legend i.is-loss { color: var(--mer-negative); }
+.meridian-legend span { color: var(--mer-secondary); font-size: 11px; }
+.meridian-legend strong { font-size: 13px; }
+.meridian-legend-note { margin-left: auto; }
+.meridian-legend-note + .meridian-legend-note { margin-left: 0; }
+
+.meridian-month-panel {
+  margin-top: 32px;
+  padding: 22px 24px;
+  border: 1px solid var(--mer-border);
+  border-radius: 8px;
+  background: var(--mer-surface);
+  box-shadow: 0 1px 2px rgba(28, 30, 34, .04), 0 8px 24px rgba(28, 30, 34, .06);
+}
+.meridian-month-panel header, .meridian-section-heading, .meridian-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.meridian-month-panel header button, .meridian-section-heading button { min-width: 130px; color: var(--mer-ink); background: var(--mer-surface); border-color: var(--mer-border); }
+.meridian-month-equation { display: grid; grid-template-columns: repeat(9, auto); align-items: end; justify-content: space-between; gap: 10px; margin-top: 24px; }
+.meridian-month-equation > div { min-width: 0; }
+.meridian-month-equation strong { display: block; margin-top: 5px; overflow-wrap: anywhere; font-size: 16px; line-height: 21px; }
+.meridian-month-equation b { padding-bottom: 2px; color: var(--mer-pending); font-family: Newsreader, Georgia, serif; font-size: 24px; font-weight: 400; }
+.meridian-month-return { display: flex; align-items: center; justify-content: flex-end; gap: 14px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--mer-divider); }
+.meridian-month-return strong { font-size: 18px; }
+
+.meridian-breakdown { margin-top: 20px; border-top: 1px solid var(--mer-border); }
+.meridian-breakdown > div { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); min-height: 42px; align-items: center; border-bottom: 1px solid var(--mer-divider); font-size: 12px; }
+.meridian-breakdown > div span:not(:first-child) { text-align: right; }
+.meridian-breakdown-head { color: var(--mer-secondary); background: var(--mer-sunken); font-size: 10px !important; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.meridian-breakdown-total { font-weight: 600; }
+.meridian-breakdown > div span { padding: 0 12px; }
+
+.meridian-index-section, .meridian-ledger { margin-top: 32px; }
+.meridian-section-heading { min-height: 64px; padding-bottom: 12px; border-bottom: 1px solid var(--mer-border); }
+.meridian-index { overflow-x: auto; background: var(--mer-surface); }
+.meridian-index-head, .meridian-index-row { display: grid; grid-template-columns: 14% 14% 13% 13% 15% 13% 14% 4%; align-items: center; min-width: 1040px; }
+.meridian-index-head { position: sticky; top: 0; z-index: 1; min-height: 42px; color: var(--mer-secondary); background: var(--mer-sunken); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.meridian-index-row { position: relative; min-height: 44px; border-bottom: 1px solid var(--mer-divider); font-size: 12px; cursor: pointer; }
+.meridian-index-row.is-active { background: var(--mer-sunken); }
+.meridian-index-row.is-active::before { position: absolute; inset: 0 auto 0 0; width: 2px; content: ''; background: var(--mer-ink); }
+.meridian-index-head span, .meridian-index-row > span { padding: 0 12px; text-align: right; }
+.meridian-index-head span:first-child, .meridian-index-row > span:first-child { text-align: left; }
+.meridian-index-row button { min-width: 36px; min-height: 36px; margin: 4px; border: 0; color: var(--mer-ink); background: transparent; font-size: 17px; }
+.meridian-index-row button:disabled { color: var(--mer-muted); cursor: default; }
+.meridian-index-detail { display: flex; justify-content: space-between; gap: 20px; min-width: 1040px; padding: 14px 20px; border-bottom: 1px solid var(--mer-border); background: var(--mer-surface); color: var(--mer-secondary); font-size: 12px; }
+
+.meridian-ledger-head, .meridian-ledger-row { display: grid; grid-template-columns: 140px minmax(180px, 1fr) 180px 190px; align-items: center; }
+.meridian-ledger-head { min-height: 40px; color: var(--mer-secondary); background: var(--mer-sunken); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.meridian-ledger-row { min-height: 44px; border-bottom: 1px solid var(--mer-divider); background: var(--mer-surface); font-size: 12px; }
+.meridian-ledger-row.is-pending { background: rgba(138, 115, 64, .055); }
+.meridian-ledger-head > *, .meridian-ledger-row > * { padding: 0 14px; }
+.meridian-ledger-head > :nth-child(n+3), .meridian-ledger-row > :nth-child(n+3) { text-align: right; }
+.meridian-ledger-row small { display: inline-block; margin-left: 7px; color: var(--mer-pending); font-size: 9px; }
+.meridian-empty-row { margin: 0; padding: 24px; color: var(--mer-secondary); text-align: center; background: var(--mer-surface); }
+
+.meridian-seal { min-height: 88px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 28px; margin-top: 32px; padding: 16px 20px; border-top: 1px solid var(--mer-ink); border-bottom: 1px solid var(--mer-border); }
+.meridian-seal > span { margin: 0; }
+.meridian-seal div { grid-row: 1 / span 2; grid-column: 2; display: flex; align-items: center; gap: 14px; }
+.meridian-seal div strong { font-family: Newsreader, Georgia, serif; font-size: 22px; font-weight: 500; }
+.meridian-seal div b { color: var(--mer-pending); font-size: 22px; font-weight: 400; }
+.meridian-seal p { margin: 0; color: var(--mer-secondary); font-size: 11px; }
+
+.meridian-tooltip {
+  position: fixed;
+  z-index: 5000;
+  width: 270px;
+  display: grid;
+  gap: 5px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: var(--mer-paper);
+  background: var(--mer-ink);
+  box-shadow: 0 12px 28px rgba(28, 30, 34, .2);
+  pointer-events: none;
+  font-size: 11px;
+}
+.meridian-tooltip > strong { margin-bottom: 2px; font-family: Newsreader, Georgia, serif; font-size: 16px; font-weight: 500; }
+.meridian-tooltip span { display: flex; justify-content: space-between; gap: 16px; }
+.meridian-tooltip b { font-weight: 600; }
+
+.meridian-dialog {
+  width: calc(100vw - 32px);
+  max-width: none;
+  height: calc(100vh - 32px);
+  max-height: none;
+  margin: auto;
+  padding: 22px 24px 24px;
+  border: 1px solid var(--mer-border);
+  border-radius: 8px;
+  color: var(--mer-ink);
+  background: var(--mer-paper);
+  font-family: Inter, system-ui, sans-serif;
+}
+.meridian-dialog::backdrop { background: rgba(28, 30, 34, .58); backdrop-filter: blur(4px); }
+.meridian-dialog-head { height: 72px; }
+.meridian-dialog-head span { color: var(--mer-pending); font-size: 10px; font-weight: 600; letter-spacing: .12em; }
+.meridian-dialog-chart { height: calc(100% - 72px); overflow: auto; background: var(--mer-surface); }
+.meridian-dialog-chart .meridian-staff-svg { width: auto; min-width: 100%; height: max(520px, calc(100vh - 150px)); }
+
+.demo-report-page-switcher.has-sixteen-pages > div { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; }
+.demo-report-page-switcher.has-sixteen-pages button { width: auto; min-width: 0; }
+
+@keyframes meridian-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+@media (max-width: 1439px) {
+  .meridian-report { padding-inline: 32px; }
+  .meridian-main-balance strong { font-size: clamp(40px, 8cqw, 48px); }
+}
+
+@media (max-width: 1100px) {
+  .meridian-report { padding-inline: 24px; }
+  .meridian-identity { grid-template-columns: 1fr; gap: 24px; }
+  .meridian-identity-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .meridian-chart-head { align-items: flex-start; flex-direction: column; }
+  .meridian-chart-controls { width: 100%; justify-content: space-between; }
+  .meridian-month-equation { grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: stretch; }
+  .meridian-month-equation b { display: none; }
+  .meridian-pending { grid-template-columns: 1fr; }
+  .meridian-seal { grid-template-columns: 1fr; }
+  .meridian-seal div { grid-row: auto; grid-column: auto; }
+  .demo-report-page-switcher.has-sixteen-pages { align-items: stretch; flex-direction: column; }
+  .demo-report-page-switcher.has-sixteen-pages > div { width: 100%; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 767px) {
+  .meridian-report { padding: 28px 16px 64px; }
+  .meridian-mast { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .meridian-mast-actions { width: 100%; justify-content: space-between; }
+  .meridian-main-balance strong { font-size: clamp(30px, 10cqw, 36px); }
+  .meridian-identity-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; }
+  .meridian-identity-metrics strong { font-size: 17px; line-height: 22px; }
+  .meridian-pending-list > div { grid-template-columns: 78px 1fr auto; gap: 8px; }
+  .meridian-chart-controls { align-items: stretch; flex-direction: column; }
+  .meridian-periods { width: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .meridian-periods button { padding-inline: 4px; font-size: 10px; }
+  .meridian-custom-period { justify-content: stretch; flex-direction: column; }
+  .meridian-custom-period label { justify-content: space-between; }
+  .meridian-custom-period select { min-width: 190px; }
+  .meridian-staff-scroll { height: 440px; }
+  .meridian-staff-svg { height: 440px; }
+  .meridian-legend { display: grid; grid-template-columns: 1fr 1fr; }
+  .meridian-legend-note { margin-left: 0; }
+  .meridian-month-panel { padding: 18px 16px; }
+  .meridian-month-panel header { align-items: flex-start; }
+  .meridian-month-equation { grid-template-columns: 1fr 1fr; gap: 16px 12px; }
+  .meridian-month-equation > div:last-child { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid var(--mer-divider); }
+  .meridian-breakdown { overflow-x: auto; }
+  .meridian-breakdown > div { min-width: 680px; }
+  .meridian-index-head { display: none; }
+  .meridian-index-row { min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-top: 10px; padding: 16px; border: 1px solid var(--mer-border); border-radius: 8px; }
+  .meridian-index-row > span { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 0; text-align: right !important; }
+  .meridian-index-row > span::before { content: attr(data-label); color: var(--mer-secondary); text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+  .meridian-index-row > span:first-child { grid-column: 1 / -1; padding-bottom: 10px; border-bottom: 1px solid var(--mer-divider); font-weight: 600; }
+  .meridian-index-row button { grid-column: 1 / -1; width: 100%; margin: 0; border: 1px solid var(--mer-border); border-radius: 6px; }
+  .meridian-index-detail { min-width: 0; align-items: flex-start; flex-direction: column; gap: 5px; margin: -1px 8px 0; border: 1px solid var(--mer-border); }
+  .meridian-ledger-head { display: none; }
+  .meridian-ledger-row { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; min-height: 84px; padding: 14px 0; }
+  .meridian-ledger-row > * { padding: 0 12px; }
+  .meridian-ledger-row > :nth-child(n+3) { text-align: right; }
+  .meridian-ledger-row > :nth-child(4) { grid-column: 1 / -1; color: var(--mer-secondary); }
+  .meridian-seal div { flex-wrap: wrap; gap: 8px; }
+  .meridian-seal div strong { font-size: 18px; }
+  .meridian-tooltip { display: none; }
+  .meridian-dialog { width: 100vw; height: 100vh; padding: 14px; border: 0; border-radius: 0; }
+  .demo-report-page-switcher.has-sixteen-pages > div { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 430px) {
+  .meridian-mast-actions button { min-width: 108px; padding-inline: 12px; }
+  .meridian-periods { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .meridian-periods button:last-child { grid-column: 1 / -1; }
+  .meridian-legend { grid-template-columns: 1fr; }
+  .meridian-month-panel header, .meridian-section-heading { align-items: flex-start; flex-direction: column; }
+  .meridian-month-panel header button, .meridian-section-heading button { width: 100%; }
+  .meridian-index-row { grid-template-columns: 1fr; }
+  .meridian-index-row > span, .meridian-index-row > span:first-child, .meridian-index-row button { grid-column: auto; }
+  .demo-report-page-switcher.has-sixteen-pages > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  .meridian-report { padding-top: 20px; }
+  .meridian-identity { grid-template-columns: minmax(260px, .7fr) minmax(0, 1.3fr); gap: 20px; }
+  .meridian-main-balance strong { font-size: 28px; }
+  .meridian-identity-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .meridian-staff-scroll, .meridian-staff-svg { height: 240px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meridian-report *, .meridian-report *::before, .meridian-report *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
+}
