@@ -34,6 +34,20 @@ test('renders Gemini 3.8 Chronos Orbit for Demo1 with real reconciled data', asy
   await expect(page.locator('.chronos-tranches')).toContainText('Aportación incorporada');
   await expect(page.locator('.chronos-tranches')).toContainText('Posición retirada');
 
+  await expect(page.locator('.chronos-focus-hud')).toContainText('Marzo 2026');
+  await expect(page.locator('.chronos-focus-hud')).toContainText('112.548,34');
+  await expect(page.locator('.chronos-velocity-strip button')).toHaveCount(13);
+  await page.locator('.chronos-velocity-strip button').filter({ hasText: 'Feb 26' }).click();
+  await expect(page.locator('.chronos-probe')).toContainText('Febrero 2026');
+  await expect(page.locator('.chronos-focus-hud')).toContainText('Febrero 2026');
+
+  const expandButton = page.locator('.chronos-expand');
+  await expandButton.click();
+  await expect(page.locator('.chronos-orbit-panel')).toHaveClass(/is-expanded/);
+  await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.chronos-orbit-panel')).not.toHaveClass(/is-expanded/);
+
   await page.getByRole('button', { name: /Enero 2026\. Saldo/ }).locator('.chronos-station-node').click();
   await expect(page.locator('.chronos-probe')).toContainText('Enero 2026');
   await expect(page.locator('.chronos-dial-controls')).toContainText('Enero 2026');

@@ -180,6 +180,7 @@ export const ChronosOrbitReportPage: React.FC<ChronosOrbitReportPageProps> = ({
   const [activeMonthKey, setActiveMonthKey] = useState(latestKey);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isTableView, setIsTableView] = useState(false);
+  const [isOrbitExpanded, setIsOrbitExpanded] = useState(false);
   const dragState = useRef<{ angle: number; index: number } | null>(null);
 
   useEffect(() => {
@@ -187,7 +188,22 @@ export const ChronosOrbitReportPage: React.FC<ChronosOrbitReportPageProps> = ({
     setActiveMonthKey(latestKey);
     setZoomLevel(1);
     setIsTableView(false);
+    setIsOrbitExpanded(false);
   }, [latestKey, report.clientId, report.createdAt]);
+
+  useEffect(() => {
+    if (!isOrbitExpanded) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOrbitExpanded(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isOrbitExpanded]);
 
   const visibleMonths = useMemo(() => {
     if (period === 'all') return months;
@@ -217,6 +233,7 @@ export const ChronosOrbitReportPage: React.FC<ChronosOrbitReportPageProps> = ({
     return { ...month, ...polarPoint(radius, angle), radius, angle, index };
   }), [balanceSpan, minBalance, visibleMonths]);
   const orbitPath = smoothPath(coordinates);
+  const maxAbsoluteReturn = Math.max(0.01, ...visibleMonths.map((month) => Math.abs(month.returnPct)));
 
   const setFocusedMonth = useCallback((key: string, source: string) => {
     setActiveMonthKey(key);
@@ -279,7 +296,7 @@ export const ChronosOrbitReportPage: React.FC<ChronosOrbitReportPageProps> = ({
   const totalEvents = allPublishedMovements.length + pendingMovements.length;
 
   return (
-    <article className="chronos-report" ref={rootRef}>
+    <article className={`chronos-report ${isOrbitExpanded ? 'has-expanded-orbit' : ''}`} ref={rootRef}>
       <header className="chronos-header">
         <div className="chronos-brand">
           <span className="chronos-brand-mark" aria-hidden="true"><i /><b>CO</b></span>
@@ -307,10 +324,10 @@ export const ChronosOrbitReportPage: React.FC<ChronosOrbitReportPageProps> = ({
       </section>
 
       <section className="chronos-hero" aria-label="Cámara temporal del patrimonio">
-        <div className="chronos-orbit-panel">
+        <div className={`chronos-orbit-panel ${isOrbitExpanded ? 'is-expanded' : ''}`}>
           <div className="chronos-panel-heading">
             <div><small>Cámara temporal</small><h2>Órbita patrimonial</h2><p>Cada estación representa un cierre mensual. La distancia recorrida muestra cuánto tiempo lleva madurando el patrimonio.</p></div>
-            <div className="chronos-zoom" role="group" aria-label="Zoom orbital"><button type="button" onClick={() => setZoomLevel((value) => Math.max(0.8, value - 0.05))} aria-label="Alejar órbita">−</button><span>{Math.round(zoomLevel * 100)}%</span><button type="button" onClick={() => setZoomLevel((value) => Math.min(1.25, value + 0.05))} aria-label="Acercar órbita">+</button></div>
+            <div className="chronos-panel-tools"><div className="chronos-zoom" role="group" aria-label="Zoom orbital"><button type="button" onClick={() => setZoomLevel((value) => Math.max(0.8, value - 0.05))} aria-label="Alejar órbita">−</button><span>{Math.round(zoomLevel * 100)}%</span><button type="button" onClick={() => setZoomLevel((value) => Math.min(1.25, value + 0.05))} aria-label="Acercar órbita">+</button></div><button type="button" className="chronos-expand" aria-label={isOrbitExpanded ? 'Cerrar órbita ampliada' : 'Ampliar órbita a pantalla completa'} aria-pressed={isOrbitExpanded} onClick={() => { setIsOrbitExpanded((value) => !value); onAnalyticsEvent?.({ type: 'chronos_fullscreen_toggle', label: isOrbitExpanded ? 'Cerrar órbita ampliada' : 'Ampliar órbita' }); }}>{isOrbitExpanded ? '✕ Cerrar' : '⛶ Ampliar'}</button></div>
           </div>
 
           {isTableView ? (
@@ -320,6 +337,7 @@ export const ChronosOrbitReportPage: React.FC<ChronosOrbitReportPageProps> = ({
             </div>
           ) : (
             <div className="chronos-orbit-stage">
+              {activeMonth ? <div className="chronos-focus-hud" aria-live="polite"><span><small>Estación enfocada</small><strong>{activeMonth.label}</strong></span><span><small>Saldo de cierre</small><strong>{formatCurrency(activeMonth.balance)}</strong></span><span><small>Resultado</small><strong className={activeMonth.profit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(activeMonth.profit)}</strong></span><span><small>TWR mensual</small><strong className={activeMonth.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(activeMonth.returnPct)}</strong></span></div> : null}
               <svg className="chronos-orbit-svg" viewBox="0 0 760 760" role="application" aria-label="Órbita patrimonial interactiva. Usa las flechas izquierda y derecha para cambiar de mes, y arriba o abajo para controlar el zoom." tabIndex={0} onKeyDown={onOrbitKeyDown} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={stopPointerDrag} onPointerCancel={stopPointerDrag}>
                 <defs>
                   <radialGradient id="chronos-core-gradient"><stop offset="0" stopColor="#e2b714" stopOpacity="0.34" /><stop offset="0.52" stopColor="#e2b714" stopOpacity="0.08" /><stop offset="1" stopColor="#06080b" stopOpacity="0" /></radialGradient>
@@ -359,6 +377,7 @@ export const ChronosOrbitReportPage: React.FC<ChronosOrbitReportPageProps> = ({
                 {pendingMovements.length ? <g className="chronos-pending-orbit" aria-hidden="true"><circle cx={CENTER} cy={CENTER} r="331" /><text x={CENTER} y="34" textAnchor="middle">ÓRBITA PROVISIONAL · {signedMoney(pendingIncrements - pendingDecrements)}</text></g> : null}
               </svg>
               <div className="chronos-orbit-legend"><span><i className="is-route" /> Trayectoria patrimonial</span><span><i className="is-injection" /> Aportación</span><span><i className="is-extraction" /> Retirada</span><span><i className="is-pending" /> Movimiento posterior al cierre</span></div>
+              <div className="chronos-velocity-strip" aria-label="Velocidad mensual de la cartera"><span className="chronos-velocity-title">Velocidad mensual · TWR</span><div style={{ gridTemplateColumns: `repeat(${visibleMonths.length}, minmax(39px, 1fr))` }}>{visibleMonths.map((month) => <button type="button" key={month.key} className={month.key === activeMonth?.key ? 'is-active' : ''} onClick={() => setFocusedMonth(month.key, 'velocity-strip')} aria-label={`${month.label}: ${signedPercent(month.returnPct)}`} aria-pressed={month.key === activeMonth?.key}><i className={month.returnPct >= 0 ? 'is-positive' : 'is-negative'} style={{ height: `${Math.max(8, Math.abs(month.returnPct) / maxAbsoluteReturn * 100)}%` }} /><small>{month.shortLabel}</small><strong className={month.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(month.returnPct)}</strong></button>)}</div></div>
               <div className="chronos-dial-controls"><button type="button" onClick={() => stepMonth(-1)} disabled={activeIndex <= 0}>← Mes anterior</button><span><small>Estación activa</small><strong>{activeMonth?.label ?? 'Sin datos'}</strong></span><button type="button" onClick={() => stepMonth(1)} disabled={activeIndex >= visibleMonths.length - 1}>Mes siguiente →</button></div>
             </div>
           )}

@@ -33,6 +33,8 @@
   font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
 }
 
+.chronos-report.has-expanded-orbit { z-index: 2147483600; overflow: visible; }
+
 .chronos-report::before,
 .chronos-report::after {
   position: absolute;
@@ -144,12 +146,28 @@
 .chronos-panel-heading p,
 .chronos-probe header p,
 .chronos-flow-chronicle header p { margin: 8px 0 0; color: var(--chronos-muted); font-size: 0.66rem; line-height: 1.65; }
+.chronos-panel-tools { display: flex; flex: 0 0 auto; gap: 8px; align-items: center; }
 .chronos-zoom { display: flex; flex: 0 0 auto; align-items: center; overflow: hidden; border: 1px solid var(--chronos-line-strong); border-radius: 11px; background: #090e13; }
 .chronos-zoom button { width: 34px; height: 34px; border: 0; background: transparent; color: #aab7c4; cursor: pointer; font-size: 1rem; }
 .chronos-zoom button:hover { background: #16202a; color: white; }
 .chronos-zoom span { min-width: 52px; color: #7f8e9c; font-size: 0.57rem; font-weight: 800; text-align: center; }
+.chronos-expand { min-height: 36px; padding: 7px 11px; border: 1px solid rgba(226, 183, 20, 0.24); border-radius: 10px; background: rgba(226, 183, 20, 0.055); color: #cbb968; cursor: pointer; font-size: 0.56rem; font-weight: 800; white-space: nowrap; }
+.chronos-expand:hover { border-color: rgba(226, 183, 20, 0.5); color: var(--chronos-gold-soft); }
+
+.chronos-orbit-panel.is-expanded { position: fixed; z-index: 10000; inset: 0; width: 100vw; height: 100dvh; overflow: auto; padding: clamp(20px, 3vw, 44px); border: 0; background: radial-gradient(circle at 50% 46%, rgba(0, 245, 212, 0.06), transparent 31%), #06090d; }
+.chronos-orbit-panel.is-expanded .chronos-panel-heading { position: sticky; z-index: 5; top: 0; padding: 4px 0 14px; background: linear-gradient(#06090d 78%, transparent); }
+.chronos-orbit-panel.is-expanded .chronos-orbit-stage { min-height: calc(100dvh - 155px); }
+.chronos-orbit-panel.is-expanded .chronos-orbit-svg { width: min(78vh, 880px); max-height: none; }
+.chronos-orbit-panel.is-expanded .chronos-focus-hud { right: clamp(0px, 4vw, 52px); }
 
 .chronos-orbit-stage { position: relative; min-height: 660px; margin-top: 12px; }
+.chronos-focus-hud { position: absolute; z-index: 4; top: 20px; right: 0; display: grid; width: min(230px, 31%); overflow: hidden; border: 1px solid rgba(138, 161, 184, 0.2); border-radius: 14px; background: rgba(8, 13, 18, 0.84); box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28); pointer-events: none; backdrop-filter: blur(14px); }
+.chronos-focus-hud span { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 9px 11px; border-bottom: 1px solid rgba(138, 161, 184, 0.1); }
+.chronos-focus-hud span:last-child { border-bottom: 0; }
+.chronos-focus-hud small { overflow: hidden; color: #667686; font-size: 0.47rem; font-weight: 800; letter-spacing: 0.06em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.chronos-focus-hud strong { color: #cdd6de; font-size: 0.59rem; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.chronos-focus-hud span:first-child { background: rgba(226, 183, 20, 0.055); }
+.chronos-focus-hud span:first-child strong { color: var(--chronos-gold-soft); }
 .chronos-orbit-svg { display: block; width: min(100%, 760px); max-height: 650px; margin: 0 auto; overflow: visible; cursor: grab; touch-action: none; user-select: none; }
 .chronos-orbit-svg:active { cursor: grabbing; }
 .chronos-grid,
@@ -170,6 +188,8 @@
 .chronos-station-node.is-negative { fill: var(--chronos-negative); }
 .chronos-station.is-active .chronos-station-halo { fill: rgba(226, 183, 20, 0.13); stroke: rgba(226, 183, 20, 0.8); filter: url(#chronos-glow); }
 .chronos-station.is-active .chronos-station-node { fill: var(--chronos-gold-soft); }
+.chronos-station:has(.chronos-vector) .chronos-station-halo { animation: chronos-event-pulse 4s ease-out infinite; }
+.chronos-station:hover .chronos-station-halo { fill: rgba(0, 245, 212, 0.1); stroke: rgba(0, 245, 212, 0.66); }
 .chronos-station-label { fill: #8294a4; font-size: 10px; font-weight: 800; letter-spacing: 0.03em; paint-order: stroke; stroke: #080c11; stroke-width: 3px; }
 .chronos-station.is-active .chronos-station-label { fill: #fff0ac; font-size: 11.5px; }
 .chronos-station-event { fill: var(--chronos-gold-soft); font-size: 8px; font-weight: 900; paint-order: stroke; stroke: #080c11; stroke-width: 3px; }
@@ -183,6 +203,10 @@
 .chronos-pending-orbit circle { fill: none; stroke: rgba(226, 183, 20, 0.38); stroke-width: 1.5; stroke-dasharray: 3 8; animation: chronos-dash 18s linear infinite; }
 .chronos-pending-orbit text { fill: rgba(240, 214, 110, 0.82); font-size: 8px; font-weight: 800; letter-spacing: 0.12em; }
 @keyframes chronos-dash { to { stroke-dashoffset: -150; } }
+@keyframes chronos-event-pulse {
+  0%, 68%, 100% { opacity: 0.62; stroke-width: 1; }
+  78% { opacity: 1; stroke-width: 3; }
+}
 
 .chronos-orbit-legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; margin-top: -18px; color: #6f7f8f; font-size: 0.55rem; }
 .chronos-orbit-legend span { display: inline-flex; gap: 7px; align-items: center; }
@@ -191,6 +215,16 @@
 .chronos-orbit-legend i.is-injection { background: var(--chronos-cyan); }
 .chronos-orbit-legend i.is-extraction { background: var(--chronos-magenta); }
 .chronos-orbit-legend i.is-pending { height: 1px; border-top: 1px dashed var(--chronos-gold); }
+.chronos-velocity-strip { max-width: 760px; margin: 19px auto 0; padding-top: 13px; border-top: 1px solid rgba(128, 153, 175, 0.1); }
+.chronos-velocity-title { display: block; margin-bottom: 9px; color: #596a7a; font-size: 0.47rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.chronos-velocity-strip > div { display: grid; min-height: 70px; gap: 4px; overflow-x: auto; padding-bottom: 4px; scrollbar-color: rgba(226, 183, 20, 0.3) transparent; scrollbar-width: thin; }
+.chronos-velocity-strip button { position: relative; display: grid; min-width: 39px; height: 66px; grid-template-rows: 28px auto auto; gap: 2px; align-items: end; overflow: hidden; padding: 5px 3px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #5d6d7c; cursor: pointer; }
+.chronos-velocity-strip button:hover,
+.chronos-velocity-strip button.is-active { border-color: rgba(226, 183, 20, 0.2); background: rgba(226, 183, 20, 0.045); }
+.chronos-velocity-strip button > i { width: 4px; max-height: 26px; justify-self: center; border-radius: 4px 4px 0 0; background: var(--chronos-cyan); box-shadow: 0 0 8px rgba(0, 245, 212, 0.25); }
+.chronos-velocity-strip button > i.is-negative { align-self: start; border-radius: 0 0 4px 4px; background: var(--chronos-negative); }
+.chronos-velocity-strip button small { overflow: hidden; font-size: 0.44rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.chronos-velocity-strip button strong { font-size: 0.44rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .chronos-dial-controls { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(150px, 0.9fr) minmax(100px, 1fr); gap: 14px; align-items: center; max-width: 620px; margin: 24px auto 0; }
 .chronos-dial-controls button { min-height: 40px; border: 1px solid var(--chronos-line-strong); border-radius: 11px; background: rgba(16, 24, 32, 0.9); color: #98a8b7; cursor: pointer; font-size: 0.59rem; font-weight: 800; }
 .chronos-dial-controls button:disabled { cursor: not-allowed; opacity: 0.3; }
@@ -322,6 +356,7 @@ button.chronos-linear-row { cursor: pointer; }
   .chronos-orbit-panel { border-right: 0; border-bottom: 1px solid var(--chronos-line); }
   .chronos-orbit-stage { min-height: 610px; }
   .chronos-orbit-svg { max-height: 575px; }
+  .chronos-focus-hud { width: 220px; }
   .chronos-telemetry { display: grid; grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr); gap: 12px; }
   .chronos-core-card { grid-row: span 2; }
   .chronos-kpi-grid { margin-top: 0; }
@@ -349,9 +384,20 @@ button.chronos-linear-row { cursor: pointer; }
   .chronos-panel-heading { align-items: center; }
   .chronos-panel-heading p { max-width: 270px; }
   .chronos-zoom { display: none; }
+  .chronos-expand { min-height: 38px; padding-inline: 10px; }
+  .chronos-orbit-panel.is-expanded { padding: 16px; }
+  .chronos-orbit-panel.is-expanded .chronos-panel-heading { padding-top: 2px; }
+  .chronos-orbit-panel.is-expanded .chronos-orbit-stage { min-height: calc(100dvh - 125px); }
   .chronos-orbit-stage { min-height: 480px; margin-top: 8px; }
+  .chronos-focus-hud { position: relative; top: auto; right: auto; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 14px 0 2px; border-radius: 12px; }
+  .chronos-focus-hud span:nth-child(2) { border-right: 0; }
+  .chronos-focus-hud span:nth-last-child(-n + 2) { border-bottom: 0; }
+  .chronos-focus-hud span { display: block; border-right: 1px solid rgba(138, 161, 184, 0.1); }
+  .chronos-focus-hud strong { display: block; overflow: hidden; margin-top: 4px; text-align: left; text-overflow: ellipsis; }
   .chronos-orbit-svg { width: 100%; min-height: 390px; max-height: 420px; }
   .chronos-orbit-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 12px; margin-top: -7px; }
+  .chronos-velocity-strip { margin-top: 16px; }
+  .chronos-velocity-strip > div { padding-bottom: 8px; }
   .chronos-dial-controls { grid-template-columns: 1fr 1.1fr 1fr; gap: 6px; margin-top: 20px; }
   .chronos-dial-controls button { min-height: 44px; padding: 5px; font-size: 0.51rem; }
   .chronos-dial-controls strong { font-size: 0.61rem; }
@@ -393,6 +439,9 @@ button.chronos-linear-row { cursor: pointer; }
   .chronos-flow-chronicle h2 { font-size: 1.5rem; }
   .chronos-orbit-stage { min-height: 450px; }
   .chronos-orbit-svg { min-height: 365px; }
+  .chronos-panel-tools { gap: 5px; }
+  .chronos-expand { padding-inline: 8px; font-size: 0.52rem; }
+  .chronos-orbit-panel.is-expanded .chronos-orbit-svg { width: 100%; min-height: min(430px, 56dvh); }
   .chronos-orbit-legend { font-size: 0.51rem; }
   .chronos-dial-controls { grid-template-columns: 1fr 1fr; }
   .chronos-dial-controls > span { grid-column: 1 / -1; grid-row: 1; }
