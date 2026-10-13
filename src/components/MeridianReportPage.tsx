@@ -264,7 +264,7 @@ export const MeridianReportPage: React.FC<MeridianReportPageProps> = ({
     const count = chartMonths.length;
     const chartWidth = Math.max(expanded ? 1320 : 1180, count * 82 + 170 + (pending.length ? 82 : 0));
     const plotLeft = 132;
-    const plotRight = pending.length ? 92 : 36;
+    const plotRight = pending.length ? 124 : 36;
     const plotWidth = chartWidth - plotLeft - plotRight;
     const step = count > 1 ? plotWidth / (count - 1) : 0;
     const pointX = (index: number) => count === 1 ? plotLeft + plotWidth / 2 : plotLeft + index * step;
@@ -500,9 +500,19 @@ export const MeridianReportPage: React.FC<MeridianReportPageProps> = ({
             <label>Hasta<select value={customEnd} onChange={(event) => setCustomEnd(event.target.value)}>{months.map((month) => <option key={month.key} value={month.key}>{month.label}</option>)}</select></label>
           </div>
         ) : null}
-        <div className="meridian-staff-scroll" ref={staffScrollRef} tabIndex={0}>
-          {renderStaff()}
+        <div className="meridian-staff-frame">
+          <div className="meridian-staff-fixed-labels" aria-hidden="true">
+            <span>Saldo</span><span>Beneficio</span><span>Rentabilidad</span><span>Aportaciones</span><span>Retiradas</span>
+          </div>
+          <div className="meridian-staff-scroll" ref={staffScrollRef} tabIndex={0}>
+            {renderStaff()}
+          </div>
         </div>
+        <table className="sr-only">
+          <caption>Datos mensuales de la carta patrimonial</caption>
+          <thead><tr><th>Mes</th><th>Saldo final</th><th>Beneficio</th><th>Rentabilidad</th><th>Aportaciones</th><th>Retiradas</th></tr></thead>
+          <tbody>{visibleMonths.map((month) => <tr key={month.key}><td>{month.label}</td><td>{formatCurrency(month.balance)}</td><td>{signedMoney(month.profit)}</td><td>{signedPercent(month.returnPct)}</td><td>{formatCurrency(month.increments)}</td><td>{formatCurrency(month.decrements)}</td></tr>)}</tbody>
+        </table>
         <div className="meridian-live sr-only" aria-live="polite">
           {focusedMonth ? `${focusedMonth.label}. Beneficio ${signedMoney(focusedMonth.profit)}. Rentabilidad ${signedPercent(focusedMonth.returnPct)}.` : 'Sin cierres publicados'}
         </div>
