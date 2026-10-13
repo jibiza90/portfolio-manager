@@ -37,6 +37,12 @@ interface VaultMonth {
   breakdown?: NonNullable<ReportData['contributionBreakdowns']>[number];
 }
 
+interface VaultTooltipState {
+  month: VaultMonth;
+  left: number;
+  top: number;
+}
+
 type VaultPeriod = '3m' | '6m' | '12m' | 'all' | 'custom';
 
 const monthNumbers: Record<string, number> = {
@@ -140,8 +146,10 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
   const [customEnd, setCustomEnd] = useState(latestKey);
   const [focusedKey, setFocusedKey] = useState(latestKey);
   const [isTrayOpen, setIsTrayOpen] = useState(false);
+  const [tooltip, setTooltip] = useState<VaultTooltipState | null>(null);
   const aisleScrollRef = useRef<HTMLDivElement>(null);
   const trayRef = useRef<HTMLElement>(null);
+  const dialDraggingRef = useRef(false);
 
   useEffect(() => {
     setPeriod('all');
@@ -149,6 +157,7 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
     setCustomEnd(latestKey);
     setFocusedKey(latestKey);
     setIsTrayOpen(false);
+    setTooltip(null);
   }, [latestKey, months, report.clientId, report.createdAt]);
 
   const visibleMonths = useMemo(() => {
@@ -208,6 +217,36 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
     if (month) focusMonth(month.key, 'keyboard');
   };
 
+  const focusDialPointer = (event: React.PointerEvent<SVGSVGElement>) => {
+    if (!visibleMonths.length) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const centerX = bounds.left + bounds.width / 2;
+    const centerY = bounds.top + bounds.height / 2;
+    const angle = Math.atan2(event.clientY - centerY, event.clientX - centerX) + Math.PI / 2;
+    const normalized = (angle + Math.PI * 2) % (Math.PI * 2);
+    const index = Math.round(normalized / (Math.PI * 2) * visibleMonths.length) % visibleMonths.length;
+    const month = visibleMonths[index];
+    if (month && month.key !== focusedMonth?.key) focusMonth(month.key, 'dial-pointer');
+  };
+
+  const showFrameTooltip = (event: React.PointerEvent<SVGGElement>, month: VaultMonth) => {
+    const width = 248;
+    const height = month.movements.length ? 146 : 118;
+    const gap = 14;
+    const left = Math.max(10, Math.min(window.innerWidth - width - 10, event.clientX + gap));
+    const top = Math.max(10, Math.min(window.innerHeight - height - 10, event.clientY + gap));
+    setTooltip({ month, left, top });
+  };
+
+  const showFrameFocusTooltip = (event: React.FocusEvent<SVGGElement>, month: VaultMonth) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const width = 248;
+    const height = month.movements.length ? 146 : 118;
+    const left = Math.max(10, Math.min(window.innerWidth - width - 10, bounds.left + bounds.width / 2 + 14));
+    const top = Math.max(10, Math.min(window.innerHeight - height - 10, bounds.top + bounds.height / 2));
+    setTooltip({ month, left, top });
+  };
+
   const aisle = useMemo(() => {
     const width = Math.max(1080, visibleMonths.length * 82);
     const baseline = 255;
@@ -225,6 +264,16 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
     });
     return { width, baseline, frames };
   }, [visibleMonths]);
+
+  useEffect(() => {
+    const container = aisleScrollRef.current;
+    if (!container || !focusedMonth || visibleMonths.length <= 1) return undefined;
+    const focusedAisleFrame = aisle.frames.find((frame) => frame.month.key === focusedMonth.key);
+    if (!focusedAisleFrame) return undefined;
+    const left = Math.max(0, Math.min(container.scrollWidth - container.clientWidth, focusedAisleFrame.x - container.clientWidth / 2));
+    container.scrollTo({ left, behavior: 'smooth' });
+    return undefined;
+  }, [aisle.frames, focusedMonth, visibleMonths.length]);
 
   const dialRotation = visibleMonths.length > 0 ? focusedIndex / visibleMonths.length * 360 : 0;
   const dialTicks = visibleMonths.map((month, index) => {
@@ -245,14 +294,25 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
 
   return (
     <div className="vault-report" ref={rootRef} role="document">
-      <header className="vault-header"><div><small>JIGSA CAPITAL · PRIVATE RECORD</small><h1>BÓVEDA</h1><p>Registro patrimonial privado</p></div><div className="vault-header-actions"><span><small>CHAPA DE ACCESO</small><strong>{report.clientCode}</strong></span><button type="button" onClick={() => { onAnalyticsEvent?.({ type: 'vault_pdf_download', label: periodLabel }); void onDownload?.(); }}>Descargar PDF <b>↓</b></button></div></header>
+      <header className="vault-header"><div><small>JIGSA CAPITAL · REGISTRO PRIVADO</small><h1>BÓVEDA</h1><p>Arquitectura patrimonial verificable</p></div><div className="vault-header-actions"><span><small>CHAPA DE ACCESO</small><strong>{report.clientCode}</strong></span><button type="button" onClick={() => { onAnalyticsEvent?.({ type: 'vault_pdf_download', label: periodLabel }); void onDownload?.(); }}>Descargar PDF <b>↓</b></button></div></header>
 
       {pending.length ? <aside className="vault-transit" role="status"><span className="vault-led" /><div><small>CAPITAL EN TRÁNSITO</small><strong>{pending.length} movimiento{pending.length === 1 ? '' : 's'} incorporado{pending.length === 1 ? '' : 's'} al saldo actual</strong></div><div>{pending.map((movement, index) => <span key={`${movement.iso}-${index}`}><small>{formatDate(movement.iso)} · {movement.type === 'increment' ? 'Aportación' : 'Retirada'}</small><strong>{movement.type === 'increment' ? '+' : '−'}{formatCurrency(movement.amount)}</strong></span>)}</div></aside> : null}
 
       <section className="vault-door" aria-label="Puerta de registro y posición principal">
         <div className="vault-dial-zone">
           <div className="vault-dial-wrap">
-            <svg className="vault-dial" viewBox="0 0 320 320" role="application" tabIndex={0} aria-label={`Dial temporal. Mes enfocado: ${focusedMonth?.label ?? 'sin cierres'}`} onKeyDown={(event) => { if (event.key === 'ArrowLeft') { event.preventDefault(); stepFocus(-1); } else if (event.key === 'ArrowRight') { event.preventDefault(); stepFocus(1); } else if (event.key === 'Enter' && focusedMonth) { setIsTrayOpen(true); } }}>
+            <svg
+              className="vault-dial"
+              viewBox="0 0 320 320"
+              role="application"
+              tabIndex={0}
+              aria-label={`Dial temporal. Mes enfocado: ${focusedMonth?.label ?? 'sin cierres'}. Arrastra o utiliza las flechas para cambiar de mes.`}
+              onKeyDown={(event) => { if (event.key === 'ArrowLeft') { event.preventDefault(); stepFocus(-1); } else if (event.key === 'ArrowRight') { event.preventDefault(); stepFocus(1); } else if (event.key === 'Enter' && focusedMonth) { setIsTrayOpen(true); } }}
+              onPointerDown={(event) => { dialDraggingRef.current = true; event.currentTarget.setPointerCapture(event.pointerId); focusDialPointer(event); }}
+              onPointerMove={(event) => { if (dialDraggingRef.current) focusDialPointer(event); }}
+              onPointerUp={(event) => { dialDraggingRef.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }}
+              onPointerCancel={() => { dialDraggingRef.current = false; }}
+            >
               <circle className="vault-dial-outer" cx="160" cy="160" r="151" />
               {dialTicks.map((tick) => <line key={tick.month.key} className={tick.month.key === focusedMonth?.key ? 'vault-dial-tick is-active' : 'vault-dial-tick'} x1={tick.x1} y1={tick.y1} x2={tick.x2} y2={tick.y2} />)}
               <circle className="vault-dial-brass" cx="160" cy="160" r="108" />
@@ -262,6 +322,7 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
               <text className="vault-dial-period" x="160" y="194" textAnchor="middle">{focusedMonth?.label ?? 'Sin cierres'}</text>
             </svg>
           </div>
+          <p className="vault-dial-hint">Gira el dial o utiliza ← → para recorrer los cierres</p>
           <div className="vault-period-controls" role="group" aria-label="Seleccionar periodo">{([['3m', '3M'], ['6m', '6M'], ['12m', '12M'], ['all', 'TODO'], ['custom', 'RANGO']] as Array<[VaultPeriod, string]>).map(([value, label]) => <button type="button" key={value} className={period === value ? 'is-active' : ''} aria-pressed={period === value} onClick={() => setPeriod(value)}><i />{label}</button>)}</div>
           {period === 'custom' ? <div className="vault-custom-period"><label>Desde<select value={customStart} onChange={(event) => { const value = event.target.value; setCustomStart(value); if (value > customEnd) setCustomEnd(value); }}>{months.map((month) => <option key={month.key} value={month.key}>{month.shortLabel}</option>)}</select></label><label>Hasta<select value={customEnd} onChange={(event) => { const value = event.target.value; setCustomEnd(value); if (value < customStart) setCustomStart(value); }}>{months.map((month) => <option key={month.key} value={month.key}>{month.shortLabel}</option>)}</select></label></div> : null}
         </div>
@@ -310,6 +371,11 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
                     tabIndex={0}
                     aria-label={frameLabel}
                     onClick={() => focusMonth(frame.month.key, 'aisle', true)}
+                    onPointerEnter={(event) => showFrameTooltip(event, frame.month)}
+                    onPointerMove={(event) => showFrameTooltip(event, frame.month)}
+                    onPointerLeave={() => setTooltip(null)}
+                    onFocus={(event) => showFrameFocusTooltip(event, frame.month)}
+                    onBlur={() => setTooltip(null)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
@@ -357,6 +423,8 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
           {focusedMonth.breakdown ? <div className="vault-tranches"><article><small>Posición inicial del mes</small><strong>{formatCurrency(focusedMonth.breakdown.initialCapital)}</strong><p>{signedPercent(focusedMonth.breakdown.initialReturnPct * 100)} · {signedMoney(focusedMonth.breakdown.initialProfit)}</p></article>{focusedMonth.breakdown.contributions.map((contribution, index) => <article className="is-increment" key={`${contribution.iso}-${index}`}><small>Aportación · {formatDate(contribution.iso)}</small><strong>+{formatCurrency(contribution.amount)}</strong><p>{signedPercent(contribution.returnPct * 100)} · {signedMoney(contribution.profit)}</p></article>)}{(focusedMonth.breakdown.withdrawals ?? []).map((withdrawal, index) => <article className="is-decrement" key={`${withdrawal.iso}-${index}`}><small>Retirada · {formatDate(withdrawal.iso)}</small><strong>−{formatCurrency(withdrawal.amount)}</strong><p>{withdrawal.returnPct === undefined ? 'Sin rentabilidad específica' : `${signedPercent(withdrawal.returnPct * 100)} · ${signedMoney(withdrawal.profit)}`}</p></article>)}</div> : null}
         </section>
       ) : null}
+
+      {tooltip ? <aside className="vault-frame-tooltip" role="status" style={{ left: tooltip.left, top: tooltip.top }}><small>{tooltip.month.label}</small><strong>{formatCurrency(tooltip.month.balance)}</strong><div><span>Rentabilidad <b className={tooltip.month.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(tooltip.month.returnPct)}</b></span><span>Beneficio <b className={tooltip.month.profit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(tooltip.month.profit)}</b></span></div>{tooltip.month.movements.length ? <p>{tooltip.month.movements.map((movement) => `${movement.type === 'increment' ? 'Aportación' : 'Retirada'} ${movement.type === 'increment' ? '+' : '−'}${formatCurrency(movement.amount)}`).join(' · ')}</p> : <p>Sin movimientos de capital en el mes.</p>}</aside> : null}
 
       <footer className="vault-footer"><div><span>Capital neto <strong>{formatCurrency(visibleNetCapital)}</strong></span><b>+</b><span>Beneficio acumulado <strong>{signedMoney(report.beneficioTotal)}</strong></span><b>=</b><span>Saldo actual <strong>{formatCurrency(visibleBalance)}</strong></span></div><p>Registro visual del patrimonio con conciliación mensual auditable. Diseño: <strong>GLM 5.3MAX</strong>.</p></footer>
     </div>

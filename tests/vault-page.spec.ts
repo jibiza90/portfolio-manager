@@ -31,6 +31,11 @@ test('renders GLM 5.3MAX BOVEDA as an auditable portfolio record', async ({ page
   await expect(page.locator('.vault-frame')).toHaveCount(13);
   await expect(page.locator('.vault-frame-flow.is-increment')).toHaveCount(2);
   await expect(page.locator('.vault-frame-flow.is-decrement')).toHaveCount(2);
+  await expect(page.locator('.vault-dial-hint')).toContainText('Gira el dial');
+
+  await page.locator('.vault-frame').first().focus();
+  await expect(page.locator('.vault-frame-tooltip')).toHaveCount(1);
+  await expect(page.locator('.vault-frame-tooltip')).toContainText('Rentabilidad');
 
   await page.getByRole('button', { name: '6M', exact: true }).click();
   await expect(page.locator('.vault-frame')).toHaveCount(6);
