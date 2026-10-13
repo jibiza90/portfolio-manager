@@ -17,6 +17,7 @@ import { AuraQuantumReportPage } from './AuraQuantumReportPage';
 import { AuraStrataReportPage } from './AuraStrataReportPage';
 import { ChronosOrbitReportPage } from './ChronosOrbitReportPage';
 import { StrataAtlasReportPage } from './StrataAtlasReportPage';
+import { HeliosDeskReportPage } from './HeliosDeskReportPage';
 
 interface ReportViewProps {
   token?: string;
@@ -307,7 +308,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -2232,7 +2233,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isStrataDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page10';
   const isChronosDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page11';
   const isAtlasDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page12';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage;
+  const isHeliosDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page13';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}`}>
@@ -2244,7 +2246,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-twelve-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-thirteen-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2400,6 +2402,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="demo-report-page-label">Página 12</span>
               <small className="demo-report-page-author">Gemini 3.8</small>
             </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page13' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page13'}
+              aria-label="Página 13"
+              onClick={() => {
+                setDemoReportPage('page13');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 13 HELIOS mesa de gestion' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 13</span>
+              <small className="demo-report-page-author">GLM 5.3MAX</small>
+            </button>
           </div>
         </nav>
       ) : null}
@@ -2484,6 +2499,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : isAtlasDemoPage ? (
         <StrataAtlasReportPage
+          report={report}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
+          onDownload={handleDownloadModernReport}
+        />
+      ) : isHeliosDemoPage ? (
+        <HeliosDeskReportPage
           report={report}
           pendingCashMovements={visiblePendingCashMovements}
           rootRef={reportRef}
