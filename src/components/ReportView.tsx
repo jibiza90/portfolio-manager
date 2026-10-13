@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getReportByToken, isValidReportToken, ReportData } from '../services/reportLinks';
 import { formatCurrency } from '../utils/format';
@@ -18,6 +18,7 @@ import { AuraStrataReportPage } from './AuraStrataReportPage';
 import { ChronosOrbitReportPage } from './ChronosOrbitReportPage';
 import { StrataAtlasReportPage } from './StrataAtlasReportPage';
 import { HeliosDeskReportPage } from './HeliosDeskReportPage';
+import { PulseReportPage } from './PulseReportPage';
 
 interface ReportViewProps {
   token?: string;
@@ -308,7 +309,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -317,6 +318,17 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
   const lastInteractionAtRef = useRef(Date.now());
   const lastTrackedChartPointRef = useRef<{ key: string; at: number } | null>(null);
+  const syncImmersiveReportPeriod = useCallback((startMonth: string, endMonth: string, isAll: boolean) => {
+    if (isAll) {
+      setPeriodPreset('all');
+      setPeriodStartMonth('');
+      setPeriodEndMonth('');
+      return;
+    }
+    setPeriodPreset('custom');
+    setPeriodStartMonth(startMonth);
+    setPeriodEndMonth(endMonth);
+  }, []);
   const twrExplanation = 'Mide la evolución de la cartera aislando el efecto de las aportaciones y retiradas de dinero. Permite conocer cómo se han comportado las inversiones durante un periodo determinado, independientemente de cuándo el cliente haya ingresado o retirado capital.';
   const totalReturnExplanation = 'Mide el resultado acumulado de la inversión en relación con el capital neto aportado por el cliente. Por este motivo, puede variar cuando se realizan nuevas aportaciones o retiradas de dinero.';
 
@@ -2234,7 +2246,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isChronosDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page11';
   const isAtlasDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page12';
   const isHeliosDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page13';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage;
+  const isPulseDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page14';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}`}>
@@ -2246,7 +2259,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-thirteen-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-fourteen-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2415,6 +2428,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="demo-report-page-label">Página 13</span>
               <small className="demo-report-page-author">GLM 5.3MAX</small>
             </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page14' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page14'}
+              aria-label="Página 14"
+              onClick={() => {
+                setDemoReportPage('page14');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 14 PULSO sismografo patrimonial' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 14</span>
+              <small className="demo-report-page-author">GLM 5.3MAX</small>
+            </button>
           </div>
         </nav>
       ) : null}
@@ -2512,6 +2538,16 @@ export const ReportView: React.FC<ReportViewProps> = ({
           rootRef={reportRef}
           onAnalyticsEvent={onAnalyticsEvent}
           onDownload={handleDownloadModernReport}
+          onPeriodChange={syncImmersiveReportPeriod}
+        />
+      ) : isPulseDemoPage ? (
+        <PulseReportPage
+          report={report}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
+          onDownload={handleDownloadModernReport}
+          onPeriodChange={syncImmersiveReportPeriod}
         />
       ) : (
       <article className="informe-preview glass-card report-pro-sheet report-pro-demo-sheet" ref={reportRef}>

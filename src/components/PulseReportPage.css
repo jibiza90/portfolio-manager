@@ -1,0 +1,286 @@
+.pulse-report {
+  --pulse-bg: #0b0e12;
+  --pulse-panel: #10141a;
+  --pulse-panel-2: #151b23;
+  --pulse-line: #26303b;
+  --pulse-text: #e8edf2;
+  --pulse-secondary: #8b95a3;
+  --pulse-muted: #566070;
+  --pulse-positive: #3ddc97;
+  --pulse-negative: #ff6b6b;
+  --pulse-contribution: #4cc9f0;
+  --pulse-withdrawal: #e9a319;
+  --pulse-pending: #e9c46a;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #242c36;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 72% 8%, rgba(76, 201, 240, 0.075), transparent 24rem),
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    var(--pulse-bg);
+  background-size: auto, 26px 26px, 26px 26px, auto;
+  box-shadow: 0 32px 90px rgba(3, 5, 8, 0.42);
+  color: var(--pulse-text);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+.demo-report-page-switcher.has-fourteen-pages > div { display: grid; width: min(100%, 980px); grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.demo-report-page-switcher.has-fourteen-pages button { width: auto; min-width: 0; }
+
+.pulse-report *, .pulse-report *::before, .pulse-report *::after { box-sizing: border-box; }
+.pulse-report button, .pulse-report select { font: inherit; }
+.pulse-report .is-positive { color: var(--pulse-positive); }
+.pulse-report .is-negative { color: var(--pulse-negative); }
+.pulse-report .is-contribution { color: var(--pulse-contribution); }
+.pulse-report .is-withdrawal { color: var(--pulse-withdrawal); }
+
+.pulse-header { display: flex; min-height: 112px; gap: 30px; align-items: center; justify-content: space-between; padding: 22px 34px; border-bottom: 1px solid var(--pulse-line); background: rgba(11, 14, 18, 0.92); }
+.pulse-wordmark { display: flex; gap: 16px; align-items: flex-start; }
+.pulse-wordmark > div { display: grid; gap: 2px; }
+.pulse-record-dot { display: inline-block; width: 9px; height: 9px; margin-top: 5px; flex: 0 0 auto; border-radius: 50%; background: var(--pulse-negative); box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.12), 0 0 18px rgba(255, 107, 107, 0.55); animation: pulse-live 1.7s ease-in-out infinite; }
+.pulse-wordmark small { color: var(--pulse-secondary); font-family: "IBM Plex Mono", Consolas, monospace; font-size: 0.55rem; letter-spacing: 0.16em; }
+.pulse-wordmark h1 { margin: 2px 0 0; font-family: "Space Grotesk", sans-serif; font-size: clamp(2.1rem, 4.4vw, 3.75rem); font-weight: 500; letter-spacing: 0.15em; line-height: 0.92; }
+.pulse-wordmark p { margin: 3px 0 0; color: var(--pulse-secondary); font-size: 0.67rem; letter-spacing: 0.05em; }
+.pulse-header-actions { display: flex; gap: 10px; align-items: center; }
+.pulse-header-actions > span { display: grid; gap: 2px; padding: 9px 13px; border: 1px solid var(--pulse-line); border-radius: 4px; background: var(--pulse-panel); }
+.pulse-header-actions small { color: var(--pulse-muted); font-family: "IBM Plex Mono", monospace; font-size: 0.48rem; letter-spacing: 0.12em; }
+.pulse-header-actions strong { color: var(--pulse-positive); font-family: "IBM Plex Mono", monospace; font-size: 0.61rem; }
+.pulse-header-actions button { min-height: 42px; padding: 0 15px; border: 1px solid var(--pulse-contribution); border-radius: 4px; background: rgba(76, 201, 240, 0.08); color: var(--pulse-text); cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 0.59rem; font-weight: 600; letter-spacing: 0.04em; }
+.pulse-header-actions button:hover { background: var(--pulse-contribution); color: var(--pulse-bg); }
+.pulse-header-actions b { margin-left: 7px; color: var(--pulse-contribution); }
+.pulse-header-actions button:hover b { color: inherit; }
+
+.pulse-pending { display: flex; gap: 24px; align-items: center; justify-content: space-between; padding: 13px 34px; border-bottom: 1px solid rgba(233, 196, 106, 0.35); background: repeating-linear-gradient(135deg, rgba(233, 196, 106, 0.07) 0 8px, rgba(233, 196, 106, 0.025) 8px 16px); }
+.pulse-pending > div { display: flex; gap: 11px; align-items: center; }
+.pulse-pending p { display: grid; gap: 2px; margin: 0; }
+.pulse-pending small { color: var(--pulse-pending); font-family: "IBM Plex Mono", monospace; font-size: 0.49rem; letter-spacing: 0.1em; }
+.pulse-pending strong { font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; }
+.pulse-pending > div:last-child { flex-wrap: wrap; justify-content: flex-end; }
+.pulse-pending > div:last-child > span { display: grid; gap: 2px; padding-left: 11px; border-left: 1px solid rgba(233, 196, 106, 0.35); }
+.pulse-pending-light { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: var(--pulse-pending); box-shadow: 0 0 12px var(--pulse-pending); }
+
+.pulse-console { display: grid; min-width: 0; grid-template-columns: minmax(220px, 0.72fr) minmax(520px, 2.2fr) minmax(205px, 0.66fr); border-bottom: 1px solid var(--pulse-line); }
+.pulse-instruments, .pulse-monitor, .pulse-control-bank { min-width: 0; padding: 24px; }
+.pulse-instruments { display: grid; align-content: start; gap: 14px; border-right: 1px solid var(--pulse-line); background: rgba(16, 20, 26, 0.82); }
+.pulse-odometer { display: grid; gap: 7px; padding: 18px 16px; border: 1px solid #2d3844; border-radius: 5px; background: linear-gradient(145deg, #171d24, #0d1116); box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.34); }
+.pulse-odometer small, .pulse-status-grid small { color: var(--pulse-secondary); font-family: "IBM Plex Mono", monospace; font-size: 0.5rem; letter-spacing: 0.1em; }
+.pulse-odometer strong { overflow-wrap: anywhere; font-family: "IBM Plex Mono", monospace; font-size: clamp(1.22rem, 2.05vw, 1.75rem); font-variant-numeric: tabular-nums; letter-spacing: -0.04em; text-shadow: 0 0 16px rgba(76, 201, 240, 0.2); }
+.pulse-odometer span { color: var(--pulse-muted); font-size: 0.52rem; line-height: 1.4; }
+.pulse-gauge { position: relative; min-height: 132px; padding: 8px 6px 2px; border: 1px solid var(--pulse-line); border-radius: 5px; background: var(--pulse-panel-2); }
+.pulse-gauge svg { display: block; width: 100%; height: 108px; }
+.pulse-gauge-track, .pulse-gauge-value { fill: none; stroke-linecap: round; stroke-width: 9; }
+.pulse-gauge-track { stroke: #27313c; }
+.pulse-gauge-value { stroke: var(--pulse-positive); filter: drop-shadow(0 0 5px rgba(61, 220, 151, 0.48)); animation: pulse-gauge-fill 720ms ease-out both; }
+.pulse-gauge.is-negative .pulse-gauge-value { stroke: var(--pulse-negative); }
+.pulse-gauge-tick { stroke: #5a6573; stroke-width: 1.4; }
+.pulse-gauge > div { position: absolute; right: 10px; bottom: 13px; left: 10px; display: grid; justify-items: center; }
+.pulse-gauge small { color: var(--pulse-secondary); font-family: "IBM Plex Mono", monospace; font-size: 0.47rem; letter-spacing: 0.09em; }
+.pulse-gauge strong { font-family: "IBM Plex Mono", monospace; font-size: 0.88rem; }
+.pulse-status-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.pulse-status-grid span { display: grid; gap: 4px; padding: 11px 12px; border-left: 2px solid var(--pulse-positive); background: #12171d; }
+.pulse-status-grid strong { overflow-wrap: anywhere; font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; }
+
+.pulse-monitor { display: grid; align-content: start; gap: 16px; background: radial-gradient(circle at 50% 35%, rgba(61, 220, 151, 0.035), transparent 56%); }
+.pulse-monitor-title { display: flex; gap: 20px; align-items: center; justify-content: space-between; color: var(--pulse-secondary); font-family: "IBM Plex Mono", monospace; font-size: 0.54rem; letter-spacing: 0.09em; }
+.pulse-monitor-title > div { display: flex; gap: 8px; align-items: center; }
+.pulse-live-signal { width: 18px; height: 7px; border-left: 2px solid var(--pulse-positive); border-right: 2px solid var(--pulse-positive); background: linear-gradient(90deg, transparent 0 18%, var(--pulse-positive) 18% 26%, transparent 26% 42%, var(--pulse-positive) 42% 58%, transparent 58% 74%, var(--pulse-positive) 74% 82%, transparent 82%); }
+.pulse-monitor-title strong { color: var(--pulse-text); font-size: 0.58rem; }
+.pulse-seismograph, .pulse-barogram-shell { min-width: 0; overflow: hidden; border: 1px solid #2a3541; border-radius: 5px; background: linear-gradient(rgba(61, 220, 151, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(61, 220, 151, 0.035) 1px, transparent 1px), #0d1217; background-size: 18px 18px; box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.34); }
+.pulse-seismograph > header, .pulse-barogram-shell > header { display: flex; gap: 16px; align-items: center; justify-content: space-between; min-height: 42px; padding: 0 13px; border-bottom: 1px solid var(--pulse-line); background: rgba(21, 27, 35, 0.93); font-family: "IBM Plex Mono", monospace; font-size: 0.51rem; }
+.pulse-seismograph header > span, .pulse-barogram-shell header span { color: var(--pulse-positive); letter-spacing: 0.09em; }
+.pulse-seismograph header strong, .pulse-barogram-shell header strong { color: var(--pulse-text); font-size: 0.55rem; }
+.pulse-barogram-shell header > div { display: flex; gap: 16px; align-items: center; }
+.pulse-barogram-shell header button { min-height: 30px; padding: 0 10px; border: 1px solid var(--pulse-line); border-radius: 3px; background: #0f141a; color: var(--pulse-secondary); cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 0.49rem; }
+.pulse-barogram-shell header button:hover { border-color: var(--pulse-contribution); color: var(--pulse-contribution); }
+.pulse-monitor-scroll { min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-color: #34414e transparent; scrollbar-width: thin; }
+.pulse-monitor-scroll svg { display: block; width: 100%; }
+.pulse-seismo-baseline { stroke: #506071; stroke-dasharray: 3 4; stroke-width: 1; }
+.pulse-spike { cursor: pointer; }
+.pulse-spike line { stroke: var(--pulse-positive); stroke-width: 2; transition: 160ms ease; }
+.pulse-spike circle { fill: var(--pulse-bg); stroke: var(--pulse-positive); stroke-width: 2; }
+.pulse-spike text { fill: var(--pulse-secondary); font-family: "IBM Plex Mono", monospace; font-size: 9px; }
+.pulse-spike.is-negative line { stroke: var(--pulse-negative); }
+.pulse-spike.is-negative circle { stroke: var(--pulse-negative); }
+.pulse-spike.is-active line { stroke-width: 4; filter: drop-shadow(0 0 5px var(--pulse-positive)); }
+.pulse-spike.is-active circle { fill: var(--pulse-positive); stroke: #fff; }
+.pulse-spike.is-active text { fill: var(--pulse-text); font-weight: 600; }
+.pulse-axis-month { fill: #657181 !important; font-size: 9px !important; }
+.pulse-barogram { height: 286px; }
+.pulse-bar-grid line { stroke: #25303a; stroke-width: 1; }
+.pulse-bar-grid text { fill: #687483; font-family: "IBM Plex Mono", monospace; font-size: 8px; }
+.pulse-balance-area { fill: url(#pulse-balance-area); }
+.pulse-balance-line { fill: none; stroke: var(--pulse-contribution); stroke-linejoin: round; stroke-width: 2.3; filter: drop-shadow(0 0 4px rgba(76, 201, 240, 0.25)); stroke-dasharray: 2800; animation: pulse-trace 850ms ease-out both; }
+.pulse-balance-point { cursor: pointer; }
+.pulse-balance-point circle { fill: var(--pulse-bg); stroke: var(--pulse-contribution); stroke-width: 2; }
+.pulse-balance-point text { fill: var(--pulse-text); font-family: "IBM Plex Mono", monospace; font-size: 8px; }
+.pulse-balance-point.is-active circle { fill: var(--pulse-contribution); stroke: #fff; }
+.pulse-balance-point.is-active text { font-weight: 600; }
+.pulse-flow line { stroke-width: 1.5; }
+.pulse-flow path { stroke: none; }
+.pulse-flow.is-increment line { stroke: var(--pulse-contribution); }.pulse-flow.is-increment path { fill: var(--pulse-contribution); }
+.pulse-flow.is-decrement line { stroke: var(--pulse-withdrawal); }.pulse-flow.is-decrement path { fill: var(--pulse-withdrawal); }
+.pulse-fullscreen-hint { margin: 0; padding: 9px; border-top: 1px solid var(--pulse-line); color: var(--pulse-secondary); font-family: "IBM Plex Mono", monospace; font-size: 0.52rem; text-align: center; }
+.pulse-barogram-shell.is-fullscreen { position: fixed; z-index: 2147483600; inset: 12px; display: flex; flex-direction: column; margin: 0; border-color: #435263; border-radius: 8px; box-shadow: 0 32px 100px #000; }
+.pulse-barogram-shell.is-fullscreen .pulse-monitor-scroll { display: flex; min-height: 0; flex: 1; align-items: stretch; }
+.pulse-barogram-shell.is-fullscreen .pulse-barogram { height: 100%; min-height: 520px; }
+.pulse-no-signal { display: grid; min-height: 440px; place-content: center; justify-items: center; color: var(--pulse-muted); font-family: "IBM Plex Mono", monospace; }
+.pulse-no-signal span { font-size: 2rem; letter-spacing: 0.18em; }
+.pulse-no-signal strong { margin-top: 8px; font-size: 0.62rem; }
+
+.pulse-control-bank { display: grid; align-content: start; gap: 16px; border-left: 1px solid var(--pulse-line); background: rgba(16, 20, 26, 0.82); }
+.pulse-control-bank > header { display: grid; gap: 3px; padding-bottom: 12px; border-bottom: 1px solid var(--pulse-line); }
+.pulse-control-bank > header small { color: var(--pulse-muted); font-family: "IBM Plex Mono", monospace; font-size: 0.49rem; letter-spacing: 0.1em; }
+.pulse-control-bank > header strong { font-family: "Space Grotesk", sans-serif; font-size: 1.15rem; letter-spacing: 0.08em; }
+.pulse-period-dial { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; padding: 9px; border: 1px solid var(--pulse-line); border-radius: 50%; aspect-ratio: 1; align-content: center; background: radial-gradient(circle, #1c242d 0 28%, #0d1116 29% 58%, #222c36 59% 61%, #10151b 62%); }
+.pulse-period-dial button { min-height: 48px; border: 1px solid #33404c; border-radius: 50%; background: #121820; color: var(--pulse-secondary); cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 0.57rem; }
+.pulse-period-dial button:hover { border-color: var(--pulse-contribution); color: var(--pulse-text); }
+.pulse-period-dial button.is-active { border-color: var(--pulse-positive); background: rgba(61, 220, 151, 0.13); box-shadow: 0 0 16px rgba(61, 220, 151, 0.16), inset 0 0 0 1px rgba(61, 220, 151, 0.32); color: var(--pulse-positive); }
+.pulse-custom-period { display: grid; gap: 8px; }
+.pulse-custom-period label { display: grid; gap: 4px; color: var(--pulse-muted); font-family: "IBM Plex Mono", monospace; font-size: 0.46rem; }
+.pulse-custom-period select { width: 100%; min-height: 36px; padding: 0 8px; border: 1px solid var(--pulse-line); border-radius: 3px; background: #0e1318; color: var(--pulse-text); font-size: 0.57rem; }
+.pulse-readouts { display: grid; gap: 0; border-top: 1px solid var(--pulse-line); }
+.pulse-readouts span { display: grid; gap: 4px; padding: 11px 2px; border-bottom: 1px solid var(--pulse-line); }
+.pulse-readouts small { color: var(--pulse-muted); font-family: "IBM Plex Mono", monospace; font-size: 0.46rem; letter-spacing: 0.08em; }
+.pulse-readouts strong { overflow-wrap: anywhere; font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; font-variant-numeric: tabular-nums; }
+
+.pulse-tape-section, .pulse-receipt, .pulse-ledger { margin: 0 34px; }
+.pulse-tape-section { padding: 34px 0 30px; border-bottom: 1px solid var(--pulse-line); }
+.pulse-tape-section > header, .pulse-ledger > header, .pulse-receipt > header { display: flex; gap: 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 18px; }
+.pulse-tape-section header small, .pulse-ledger header small, .pulse-receipt header small { color: var(--pulse-contribution); font-family: "IBM Plex Mono", monospace; font-size: 0.52rem; letter-spacing: 0.11em; }
+.pulse-tape-section h2, .pulse-ledger h2, .pulse-receipt h2 { margin: 4px 0 0; font-family: "Space Grotesk", sans-serif; font-size: clamp(1.35rem, 2.4vw, 2rem); font-weight: 500; letter-spacing: -0.03em; }
+.pulse-tape-section header p { margin: 0; color: var(--pulse-secondary); font-size: 0.63rem; }
+.pulse-tape { display: flex; overflow-x: auto; padding: 3px 0 13px; scroll-snap-type: x proximity; scrollbar-color: #34414e transparent; scrollbar-width: thin; }
+.pulse-tape button { position: relative; display: grid; min-width: 154px; min-height: 92px; gap: 5px; align-content: center; padding: 14px 15px; scroll-snap-align: start; border: 0; border-top: 1px solid var(--pulse-line); border-right: 1px solid var(--pulse-line); border-bottom: 1px solid var(--pulse-line); background: var(--pulse-panel); color: var(--pulse-text); cursor: pointer; text-align: left; }
+.pulse-tape button:first-child { border-left: 1px solid var(--pulse-line); }
+.pulse-tape button::before { position: absolute; top: -4px; left: 14px; width: 7px; height: 7px; border-radius: 50%; background: var(--pulse-muted); content: ""; }
+.pulse-tape button:hover { background: var(--pulse-panel-2); }
+.pulse-tape button.is-active { z-index: 1; border-color: var(--pulse-positive); background: rgba(61, 220, 151, 0.07); box-shadow: inset 0 -2px var(--pulse-positive); }
+.pulse-tape button.is-active::before { background: var(--pulse-positive); box-shadow: 0 0 10px var(--pulse-positive); }
+.pulse-tape small, .pulse-tape span, .pulse-tape i { font-family: "IBM Plex Mono", monospace; font-size: 0.51rem; }
+.pulse-tape small { color: var(--pulse-secondary); }.pulse-tape strong { font-family: "IBM Plex Mono", monospace; font-size: 0.69rem; }.pulse-tape i { color: var(--pulse-withdrawal); font-style: normal; }
+
+.pulse-receipt { padding: 34px 0; border-bottom: 1px solid var(--pulse-line); }
+.pulse-receipt > header > strong { padding: 7px 10px; border: 1px solid currentColor; border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 0.54rem; }
+.pulse-equation { display: grid; grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr) auto minmax(120px, 1fr) auto minmax(120px, 1fr) auto minmax(140px, 1.15fr); gap: 10px; align-items: center; padding: 18px; border: 1px solid var(--pulse-line); background: var(--pulse-panel); }
+.pulse-equation span { display: grid; min-width: 0; gap: 6px; }
+.pulse-equation small { color: var(--pulse-muted); font-family: "IBM Plex Mono", monospace; font-size: 0.47rem; }
+.pulse-equation strong { overflow-wrap: anywhere; font-family: "IBM Plex Mono", monospace; font-size: 0.66rem; }
+.pulse-equation > b { color: var(--pulse-secondary); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; }
+.pulse-equation .is-final { padding: 12px; border: 1px solid var(--pulse-positive); background: rgba(61, 220, 151, 0.06); }
+.pulse-tranches { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 9px; margin-top: 9px; }
+.pulse-tranches article { display: grid; gap: 6px; padding: 14px; border: 1px solid var(--pulse-line); border-left: 3px solid var(--pulse-secondary); background: var(--pulse-panel-2); }
+.pulse-tranches article.is-contribution { border-left-color: var(--pulse-contribution); }.pulse-tranches article.is-withdrawal { border-left-color: var(--pulse-withdrawal); }
+.pulse-tranches small { color: var(--pulse-secondary); font-family: "IBM Plex Mono", monospace; font-size: 0.48rem; }.pulse-tranches strong { color: var(--pulse-text); font-family: "IBM Plex Mono", monospace; font-size: 0.73rem; }.pulse-tranches p { margin: 0; color: var(--pulse-secondary); font-family: "IBM Plex Mono", monospace; font-size: 0.55rem; }
+
+.pulse-ledger { padding: 34px 0 42px; }
+.pulse-ledger > header > strong { color: var(--pulse-secondary); font-family: "IBM Plex Mono", monospace; font-size: 0.58rem; }
+.pulse-ledger-table { overflow: hidden; border: 1px solid var(--pulse-line); }
+.pulse-ledger-head, .pulse-ledger-row { display: grid; grid-template-columns: minmax(100px, .8fr) minmax(130px, 1.2fr) minmax(120px, 1fr) minmax(150px, 1.2fr) minmax(120px, .9fr); align-items: center; }
+.pulse-ledger-head { min-height: 39px; background: #171d24; color: var(--pulse-muted); font-family: "IBM Plex Mono", monospace; font-size: 0.47rem; letter-spacing: 0.07em; }
+.pulse-ledger-head span, .pulse-ledger-row > * { min-width: 0; padding: 0 13px; }
+.pulse-ledger-row { min-height: 50px; border-top: 1px solid var(--pulse-line); background: rgba(16, 20, 26, 0.75); color: var(--pulse-secondary); font-family: "IBM Plex Mono", monospace; font-size: 0.56rem; }
+.pulse-ledger-row:hover { background: var(--pulse-panel-2); color: var(--pulse-text); }
+.pulse-ledger-row > span:nth-child(2) { display: flex; gap: 8px; align-items: center; }
+.pulse-ledger-row i { width: 7px; height: 7px; border-radius: 50%; background: var(--pulse-secondary); }.pulse-ledger-row i.is-increment { background: var(--pulse-contribution); }.pulse-ledger-row i.is-decrement { background: var(--pulse-withdrawal); }
+.pulse-ledger-row > span:last-child { width: fit-content; padding: 6px 8px; border: 1px solid var(--pulse-line); border-radius: 2px; font-size: 0.46rem; }.pulse-ledger-row > span.is-pending { border-color: rgba(233, 196, 106, 0.55); color: var(--pulse-pending); }.pulse-ledger-row > span.is-recorded { color: var(--pulse-positive); }
+
+.pulse-footer { display: flex; gap: 30px; align-items: center; justify-content: space-between; padding: 22px 34px; border-top: 1px solid var(--pulse-line); background: #080a0d; }
+.pulse-footer > div { display: flex; gap: 10px; align-items: center; }
+.pulse-footer strong, .pulse-footer small { font-family: "IBM Plex Mono", monospace; font-size: 0.51rem; }.pulse-footer > div > strong { color: var(--pulse-positive); }.pulse-footer small { color: var(--pulse-muted); }
+.pulse-footer p { max-width: 600px; margin: 0; color: var(--pulse-secondary); font-size: 0.58rem; line-height: 1.55; text-align: right; }.pulse-footer p strong { color: var(--pulse-text); }
+
+@keyframes pulse-live { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes pulse-gauge-fill { from { stroke-dasharray: 0 236; } }
+@keyframes pulse-trace { from { stroke-dashoffset: 2800; } to { stroke-dashoffset: 0; } }
+
+@media (max-width: 1220px) {
+  .pulse-console { grid-template-columns: 230px minmax(460px, 1fr); }
+  .pulse-control-bank { grid-column: 1 / -1; grid-template-columns: minmax(170px, .5fr) minmax(220px, .6fr) minmax(0, 2fr); align-items: center; border-top: 1px solid var(--pulse-line); border-left: 0; }
+  .pulse-control-bank > header { border-bottom: 0; }
+  .pulse-period-dial { max-width: 190px; }
+  .pulse-readouts { grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--pulse-line); }
+  .pulse-readouts span { padding: 11px; border-right: 1px solid var(--pulse-line); border-bottom: 0; }
+  .pulse-readouts span:last-child { border-right: 0; }
+}
+
+@media (max-width: 1023px) {
+  .demo-report-page-switcher.has-fourteen-pages { align-items: stretch; flex-direction: column; }
+  .demo-report-page-switcher.has-fourteen-pages > div { width: 100%; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .pulse-header, .pulse-pending, .pulse-footer { padding-right: 22px; padding-left: 22px; }
+  .pulse-console { grid-template-columns: 1fr; }
+  .pulse-instruments { grid-template-columns: repeat(2, minmax(0, 1fr)); border-right: 0; border-bottom: 1px solid var(--pulse-line); }
+  .pulse-odometer, .pulse-status-grid { grid-column: 1 / -1; }
+  .pulse-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pulse-control-bank { grid-template-columns: minmax(150px, .5fr) minmax(190px, .6fr) minmax(0, 1.5fr); }
+  .pulse-tape-section, .pulse-receipt, .pulse-ledger { margin-right: 22px; margin-left: 22px; }
+  .pulse-equation { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pulse-equation > b { display: none; }
+  .pulse-equation .is-final { grid-column: span 2; }
+  .pulse-ledger-table { overflow-x: auto; }
+  .pulse-ledger-head, .pulse-ledger-row { min-width: 720px; }
+}
+
+@media (max-width: 767px) {
+  .demo-report-page-switcher.has-fourteen-pages > div { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pulse-report { border-right: 0; border-left: 0; border-radius: 0; }
+  .pulse-header { min-height: 0; align-items: flex-start; padding: 18px 15px; }
+  .pulse-wordmark h1 { font-size: 2.2rem; }
+  .pulse-wordmark small { font-size: 0.45rem; }
+  .pulse-header-actions > span { display: none; }
+  .pulse-header-actions button { width: 44px; padding: 0; overflow: hidden; color: transparent; font-size: 0; white-space: nowrap; }
+  .pulse-header-actions b { display: block; margin: 0; color: var(--pulse-contribution); font-size: 1.05rem; }
+  .pulse-pending { display: grid; padding: 13px 15px; }
+  .pulse-pending > div:last-child { justify-content: flex-start; }
+  .pulse-instruments, .pulse-monitor, .pulse-control-bank { padding: 16px 15px; }
+  .pulse-instruments { gap: 9px; }
+  .pulse-gauge { min-height: 116px; }.pulse-gauge svg { height: 94px; }.pulse-gauge > div { bottom: 8px; }
+  .pulse-monitor { gap: 12px; }
+  .pulse-monitor-title { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .pulse-seismograph > header, .pulse-barogram-shell > header { align-items: flex-start; flex-direction: column; gap: 3px; padding: 9px 11px; }
+  .pulse-barogram-shell header > div { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .pulse-barogram-shell > header { position: relative; padding-right: 86px; }
+  .pulse-barogram-shell header button { position: absolute; top: 8px; right: 8px; }
+  .pulse-barogram-shell.is-fullscreen { inset: 0; border-radius: 0; }
+  .pulse-barogram-shell.is-fullscreen .pulse-barogram { min-height: 430px; }
+  .pulse-control-bank { grid-template-columns: 1fr; }
+  .pulse-control-bank > header { padding-bottom: 5px; }
+  .pulse-period-dial { width: min(220px, 76vw); justify-self: center; }
+  .pulse-readouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pulse-readouts span { border-right: 1px solid var(--pulse-line); border-bottom: 1px solid var(--pulse-line); }
+  .pulse-readouts span:nth-child(2n) { border-right: 0; }
+  .pulse-readouts span:last-child { grid-column: 1 / -1; border-bottom: 0; }
+  .pulse-tape-section, .pulse-receipt, .pulse-ledger { margin-right: 15px; margin-left: 15px; }
+  .pulse-tape-section { padding-top: 26px; }
+  .pulse-tape-section > header, .pulse-ledger > header, .pulse-receipt > header { align-items: flex-start; flex-direction: column; gap: 9px; }
+  .pulse-tape-section header p { line-height: 1.45; }
+  .pulse-tape button { min-width: 142px; }
+  .pulse-equation { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 13px; }
+  .pulse-equation .is-final { grid-column: 1 / -1; }
+  .pulse-tranches { grid-template-columns: 1fr; }
+  .pulse-ledger-table { overflow: visible; border: 0; }
+  .pulse-ledger-head { display: none; }
+  .pulse-ledger-row { display: grid; min-width: 0; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 8px; padding: 13px; border: 1px solid var(--pulse-line); }
+  .pulse-ledger-row > * { padding: 0; }
+  .pulse-ledger-row > span:last-child { justify-self: end; }
+  .pulse-footer { align-items: flex-start; flex-direction: column; padding: 20px 15px; }
+  .pulse-footer p { text-align: left; }
+}
+
+@media (max-width: 420px) {
+  .demo-report-page-switcher.has-fourteen-pages > div { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pulse-wordmark { gap: 10px; }
+  .pulse-wordmark p { display: none; }
+  .pulse-instruments { grid-template-columns: 1fr; }
+  .pulse-odometer, .pulse-status-grid { grid-column: auto; }
+  .pulse-status-grid { grid-template-columns: 1fr; }
+  .pulse-equation { grid-template-columns: 1fr; }
+  .pulse-equation .is-final { grid-column: auto; }
+  .pulse-ledger-row { grid-template-columns: 1fr; }
+  .pulse-ledger-row > span:last-child { justify-self: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-report *, .pulse-report *::before, .pulse-report *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}

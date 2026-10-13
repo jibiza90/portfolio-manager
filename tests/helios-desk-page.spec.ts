@@ -21,6 +21,8 @@ test('renders GLM 5.3MAX HELIOS with real reconciled portfolio data', async ({ p
   await expect(page.locator('.helios-rail')).toContainText('+22.548,34');
   await expect(page.locator('.helios-rail')).toContainText('+18,34 %');
   await expect(page.locator('.helios-pending')).toContainText('+15.000,00');
+  await page.locator('.helios-kpi').first().hover();
+  await expect(page.locator('.helios-help-tooltip')).toBeVisible();
 
   await expect(page.locator('.helios-chart-line')).toHaveAttribute('d', /M/);
   await expect(page.locator('.helios-point')).toHaveCount(13);
@@ -30,6 +32,12 @@ test('renders GLM 5.3MAX HELIOS with real reconciled portfolio data', async ({ p
   await expect(page.locator('.helios-chart-hud')).toContainText('112.548,34');
   await expect(page.locator('.helios-histogram button')).toHaveCount(13);
   await expect(page.locator('.helios-table-row')).toHaveCount(13);
+  const mobileHistoryToggle = page.locator('.helios-mobile-history-toggle');
+  await expect(mobileHistoryToggle).toContainText('13 cierres');
+  if (await mobileHistoryToggle.isVisible()) {
+    await mobileHistoryToggle.click();
+    await expect(mobileHistoryToggle).toHaveAttribute('aria-expanded', 'true');
+  }
 
   await page.getByRole('button', { name: '6 meses', exact: true }).click();
   await expect(page.locator('.helios-point')).toHaveCount(6);

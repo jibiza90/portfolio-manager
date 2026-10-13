@@ -14,6 +14,7 @@ interface HeliosDeskReportPageProps {
   pendingCashMovements?: HeliosPendingMovement[];
   rootRef?: React.RefObject<HTMLDivElement>;
   onDownload?: () => void | Promise<void>;
+  onPeriodChange?: (startMonth: string, endMonth: string, isAll: boolean) => void;
   onAnalyticsEvent?: (event: {
     type: string;
     label: string;
@@ -107,6 +108,7 @@ export const HeliosDeskReportPage: React.FC<HeliosDeskReportPageProps> = ({
   pendingCashMovements = [],
   rootRef,
   onDownload,
+  onPeriodChange,
   onAnalyticsEvent
 }) => {
   const pending = useMemo(() => pendingCashMovements
@@ -164,6 +166,8 @@ export const HeliosDeskReportPage: React.FC<HeliosDeskReportPageProps> = ({
   const [focusedKey, setFocusedKey] = useState(latestKey);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showAllMobileRows, setShowAllMobileRows] = useState(false);
+  const [helpTooltip, setHelpTooltip] = useState<{ text: string; left: number; top: number; below: boolean } | null>(null);
   const chartScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -173,6 +177,7 @@ export const HeliosDeskReportPage: React.FC<HeliosDeskReportPageProps> = ({
     setFocusedKey(latestKey);
     setExpandedMonths(new Set());
     setIsFullscreen(false);
+    setShowAllMobileRows(false);
   }, [latestKey, months, report.clientId, report.createdAt]);
 
   const visibleMonths = useMemo(() => {
@@ -219,6 +224,13 @@ export const HeliosDeskReportPage: React.FC<HeliosDeskReportPageProps> = ({
   const periodLabel = visibleMonths.length
     ? `${visibleMonths[0].shortLabel} — ${visibleMonths[visibleMonths.length - 1].shortLabel}`
     : 'Sin cierres publicados';
+  const tableMonths = [...visibleMonths].reverse();
+
+  useEffect(() => {
+    const start = visibleMonths[0]?.key ?? '';
+    const end = visibleMonths[visibleMonths.length - 1]?.key ?? '';
+    onPeriodChange?.(start, end, period === 'all');
+  }, [onPeriodChange, period, visibleMonths]);
 
   const chart = useMemo(() => {
     const width = Math.max(960, visibleMonths.length * 76);
@@ -264,8 +276,16 @@ export const HeliosDeskReportPage: React.FC<HeliosDeskReportPageProps> = ({
     focusMonth(key, 'monthly-ledger');
   };
 
+  const showHelp = (target: HTMLElement, text: string) => {
+    const rect = target.getBoundingClientRect();
+    const halfWidth = Math.min(154, Math.max(110, (window.innerWidth - 24) / 2));
+    const left = Math.max(halfWidth + 12, Math.min(window.innerWidth - halfWidth - 12, rect.left + rect.width / 2));
+    const below = rect.top < 115;
+    setHelpTooltip({ text, left, top: below ? rect.bottom + 10 : rect.top - 10, below });
+  };
+
   const kpis = [
-    { label: 'Saldo disponible', value: formatCurrency(visibleBalance), tone: 'hero', help: pending.length ? `${pending.length} movimiento${pending.length === 1 ? '' : 's'} posterior${pending.length === 1 ? '' : 'es'} al cierre incluido${pending.length === 1 ? '' : 's'}.` : 'Valor actual de la cartera.' },
+    { label: 'Saldo actual', value: formatCurrency(visibleBalance), tone: 'hero', help: pending.length ? `${pending.length} movimiento${pending.length === 1 ? '' : 's'} posterior${pending.length === 1 ? '' : 'es'} al cierre incluido${pending.length === 1 ? '' : 's'}.` : 'Valor actual de la cartera.' },
     { label: `Beneficio ${months[months.length - 1]?.label ?? 'último mes'}`, value: signedMoney(report.beneficioUltimoMes), tone: report.beneficioUltimoMes >= 0 ? 'positive' : 'negative', help: 'Resultado generado durante el último mes publicado.' },
     { label: `Rentabilidad ${months[months.length - 1]?.label ?? 'último mes'}`, value: signedPercent(report.rentabilidadUltimoMes), tone: report.rentabilidadUltimoMes >= 0 ? 'positive' : 'negative', help: 'Rentabilidad TWR del último cierre mensual.' },
     { label: 'Beneficio acumulado', value: signedMoney(report.beneficioTotal), tone: report.beneficioTotal >= 0 ? 'positive' : 'negative', help: 'Resultado total generado desde el inicio.' },
@@ -277,6 +297,7 @@ export const HeliosDeskReportPage: React.FC<HeliosDeskReportPageProps> = ({
 
   return (
     <div className={`helios-report ${isFullscreen ? 'has-fullscreen-chart' : ''}`} ref={rootRef} role="document">
+      {helpTooltip ? <div className={`helios-help-tooltip ${helpTooltip.below ? 'is-below' : ''}`} style={{ left: helpTooltip.left, top: helpTooltip.top }} role="tooltip">{helpTooltip.text}</div> : null}
       <header className="helios-header">
         <div>
           <small>JIGSA CAPITAL · PRIVATE OFFICE</small>
@@ -291,7 +312,7 @@ export const HeliosDeskReportPage: React.FC<HeliosDeskReportPageProps> = ({
 
       <div className="helios-layout">
         <aside className="helios-rail" aria-label="Posición patrimonial">
-          {kpis.map((kpi) => <article className={`helios-kpi is-${kpi.tone}`} key={kpi.label} tabIndex={0} title={kpi.help}><small>{kpi.label}</small><strong>{kpi.value}</strong><p>{kpi.help}</p></article>)}
+          {kpis.map((kpi) => <article className={`helios-kpi is-${kpi.tone}`} key={kpi.label} tabIndex={0} onMouseEnter={(event) => showHelp(event.currentTarget, kpi.help)} onMouseLeave={() => setHelpTooltip(null)} onFocus={(event) => showHelp(event.currentTarget, kpi.help)} onBlur={() => setHelpTooltip(null)} onPointerDown={(event) => showHelp(event.currentTarget, kpi.help)}><small>{kpi.label}</small><strong>{kpi.value}</strong><p>{kpi.help}</p></article>)}
         </aside>
 
         <main className="helios-main">
@@ -303,10 +324,10 @@ export const HeliosDeskReportPage: React.FC<HeliosDeskReportPageProps> = ({
           <section className="helios-period" aria-label="Periodo del informe">
             <div><small>Periodo de lectura</small><strong>{periodLabel}</strong><p>{visibleMonths.length} cierres mensuales auditables</p></div>
             <div className="helios-period-controls" role="group" aria-label="Seleccionar periodo">
-              {([['3m', '3 meses'], ['6m', '6 meses'], ['12m', '12 meses'], ['all', 'Todo']] as Array<[PeriodPreset, string]>).map(([value, label]) => <button type="button" key={value} className={period === value ? 'is-active' : ''} aria-pressed={period === value} onClick={() => setPeriod(value)}>{label}</button>)}
+              {([['3m', '3 meses'], ['6m', '6 meses'], ['12m', '12 meses'], ['all', 'Todo']] as Array<[PeriodPreset, string]>).map(([value, label]) => <button type="button" key={value} className={period === value ? 'is-active' : ''} aria-pressed={period === value} onClick={() => { setPeriod(value); setShowAllMobileRows(false); }}>{label}</button>)}
               <button type="button" className={period === 'custom' ? 'is-active' : ''} aria-pressed={period === 'custom'} onClick={() => setPeriod('custom')}>Personalizado</button>
             </div>
-            {period === 'custom' ? <div className="helios-custom-period"><label>Desde<select value={customStart} onChange={(event) => setCustomStart(event.target.value)}>{months.map((month) => <option key={month.key} value={month.key}>{month.label}</option>)}</select></label><label>Hasta<select value={customEnd} onChange={(event) => setCustomEnd(event.target.value)}>{months.map((month) => <option key={month.key} value={month.key}>{month.label}</option>)}</select></label></div> : null}
+            {period === 'custom' ? <div className="helios-custom-period"><label>Desde<select value={customStart} onChange={(event) => { const value = event.target.value; setCustomStart(value); if (value > customEnd) setCustomEnd(value); setShowAllMobileRows(false); }}>{months.map((month) => <option key={month.key} value={month.key}>{month.label}</option>)}</select></label><label>Hasta<select value={customEnd} onChange={(event) => { const value = event.target.value; setCustomEnd(value); if (value < customStart) setCustomStart(value); setShowAllMobileRows(false); }}>{months.map((month) => <option key={month.key} value={month.key}>{month.label}</option>)}</select></label></div> : null}
           </section>
 
           <section className={`helios-custody ${isFullscreen ? 'is-fullscreen' : ''}`} aria-label="Línea de custodia patrimonial">
@@ -323,7 +344,7 @@ export const HeliosDeskReportPage: React.FC<HeliosDeskReportPageProps> = ({
                     <path className="helios-chart-line" d={chart.line} />
                     {chart.points.flatMap((point) => point.month.movements.map((movement, index) => { const offset = (index - (point.month.movements.length - 1) / 2) * 24; return <g key={`${movement.iso}-${index}`} className={`helios-flow ${movement.type === 'increment' ? 'is-increment' : 'is-decrement'}`} transform={`translate(${point.x + offset} ${point.y})`}><line y1="-8" y2="-38" /><path d={movement.type === 'increment' ? 'M -6 -31 L 0 -42 L 6 -31 Z' : 'M -6 -42 L 0 -31 L 6 -42 Z'} /><text y="-49" textAnchor="middle">{movement.type === 'increment' ? '+' : '−'}{compactMoney(movement.amount)}</text></g>; }))}
                     {focusedGeometry ? <g className="helios-crosshair" transform={`translate(${focusedGeometry.x} 0)`}><line y1={chart.top} y2={chart.bottom} /></g> : null}
-                    {chart.points.map((point) => <g key={point.month.key} role="button" tabIndex={0} aria-label={`${point.month.label}: saldo ${formatCurrency(point.month.balance)}`} onClick={() => focusMonth(point.month.key, 'chart-point')} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); focusMonth(point.month.key, 'chart-keyboard'); } }}><circle className={point.month.key === focusedMonth?.key ? 'helios-point is-active' : 'helios-point'} cx={point.x} cy={point.y} r={point.month.key === focusedMonth?.key ? 6 : 4} /><text className="helios-value-label" x={point.x} y={point.y + (chart.points.indexOf(point) % 2 ? 24 : -15)} textAnchor="middle">{compactMoney(point.month.balance)}</text><text className="helios-month-label" x={point.x} y={chart.bottom + 34} textAnchor="middle">{point.month.shortLabel}</text></g>)}
+                    {chart.points.map((point, index) => { const labelBelow = point.month.movements.length > 0 || index % 2 === 1; const labelShift = point.month.movements.length > 1 ? 30 : 22; return <g key={point.month.key} role="button" tabIndex={0} aria-label={`${point.month.label}: saldo ${formatCurrency(point.month.balance)}`} onClick={() => focusMonth(point.month.key, 'chart-point')} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); focusMonth(point.month.key, 'chart-keyboard'); } }}><circle className={point.month.key === focusedMonth?.key ? 'helios-point is-active' : 'helios-point'} cx={point.x} cy={point.y} r={point.month.key === focusedMonth?.key ? 6 : 4} /><text className="helios-value-label" x={point.x} y={point.y + (labelBelow ? labelShift : -15)} textAnchor="middle">{compactMoney(point.month.balance)}</text><text className="helios-month-label" x={point.x} y={chart.bottom + 34} textAnchor="middle">{point.month.shortLabel}</text></g>; })}
                   </svg>
                 </div>
                 <div className="helios-chart-legend"><span><i className="is-balance" />Saldo de cierre</span><span><i className="is-increment" />▲ Aportación</span><span><i className="is-decrement" />▼ Retirada</span>{pending.length ? <span><i className="is-pending" />Capital en tránsito</span> : null}</div>
@@ -343,13 +364,15 @@ export const HeliosDeskReportPage: React.FC<HeliosDeskReportPageProps> = ({
             <header className="helios-section-heading"><div><small>Registro mensual</small><h2>Cierres conciliados</h2><p>Saldo inicial, movimientos, beneficio y posición final de cada periodo.</p></div></header>
             <div className="helios-table" role="table">
               <div className="helios-table-head" role="row"><span role="columnheader">Mes</span><span role="columnheader">Saldo inicial</span><span role="columnheader">Aportaciones</span><span role="columnheader">Retiradas</span><span role="columnheader">Beneficio</span><span role="columnheader">TWR mes</span><span role="columnheader">Saldo final</span><span role="columnheader">Detalle</span></div>
-              <div role="rowgroup">{[...visibleMonths].reverse().map((month) => {
+              <div role="rowgroup">{tableMonths.map((month, rowIndex) => {
                 const canExpand = Boolean(month.breakdown || month.movements.length);
                 const isExpanded = expandedMonths.has(month.key);
                 const reconciled = Math.abs(month.opening + month.increments - month.decrements + month.profit - month.balance) <= 0.02;
-                return <React.Fragment key={month.key}><button type="button" role="row" className={`helios-table-row ${month.key === focusedMonth?.key ? 'is-active' : ''}`} onClick={() => canExpand ? toggleMonth(month.key) : focusMonth(month.key, 'ledger-row')} aria-expanded={canExpand ? isExpanded : undefined}><span role="cell" data-label="Mes"><strong>{month.label}</strong>{month.movements.length ? <small>{month.movements.length} movimiento{month.movements.length === 1 ? '' : 's'}</small> : null}</span><span role="cell" data-label="Saldo inicial">{formatCurrency(month.opening)}</span><span role="cell" data-label="Aportaciones" className="is-increment">{month.increments ? `+${formatCurrency(month.increments)}` : '—'}</span><span role="cell" data-label="Retiradas" className="is-decrement">{month.decrements ? `−${formatCurrency(month.decrements)}` : '—'}</span><span role="cell" data-label="Beneficio" className={month.profit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(month.profit)}</span><span role="cell" data-label="TWR mes" className={month.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(month.returnPct)}</span><span role="cell" data-label="Saldo final"><strong>{formatCurrency(month.balance)}</strong></span><span role="cell" data-label="Detalle" className="helios-detail-toggle">{canExpand ? (isExpanded ? '−' : '+') : '·'}</span></button>{isExpanded ? <div className="helios-breakdown" role="row"><div><small>Conciliación del cierre</small><strong className={reconciled ? 'is-positive' : 'is-negative'}>{reconciled ? 'Conciliado ✓' : 'Revisar cierre'}</strong></div><div className="helios-breakdown-equation"><span>Inicial <b>{formatCurrency(month.opening)}</b></span><i>+</i><span>Aportaciones <b>{formatCurrency(month.increments)}</b></span><i>−</i><span>Retiradas <b>{formatCurrency(month.decrements)}</b></span><i>+</i><span>Beneficio <b>{signedMoney(month.profit)}</b></span><i>=</i><span>Final <b>{formatCurrency(month.balance)}</b></span></div>{month.breakdown ? <div className="helios-tranches"><article><small>Posición inicial del mes</small><strong>{formatCurrency(month.breakdown.initialCapital)}</strong><span>{signedPercent(month.breakdown.initialReturnPct * 100)} · {signedMoney(month.breakdown.initialProfit)}</span></article>{month.breakdown.contributions.map((contribution, index) => <article key={`${contribution.iso}-${index}`}><small>Aportación incorporada el {formatDate(contribution.iso)}</small><strong>+{formatCurrency(contribution.amount)}</strong><span>{signedPercent(contribution.returnPct * 100)} · {signedMoney(contribution.profit)}</span></article>)}{(month.breakdown.withdrawals ?? []).map((withdrawal, index) => <article key={`${withdrawal.iso}-${index}`}><small>Posición retirada el {formatDate(withdrawal.iso)}</small><strong>−{formatCurrency(withdrawal.amount)}</strong><span>{withdrawal.returnPct === undefined ? 'Sin rentabilidad específica' : `${signedPercent(withdrawal.returnPct * 100)} · ${signedMoney(withdrawal.profit)}`}</span></article>)}</div> : <div className="helios-tranches">{month.movements.map((movement, index) => <article key={`${movement.iso}-${index}`}><small>{movement.type === 'increment' ? 'Aportación' : 'Retirada'} · {formatDate(movement.iso)}</small><strong>{movement.type === 'increment' ? '+' : '−'}{formatCurrency(movement.amount)}</strong><span>Movimiento consolidado</span></article>)}</div>}</div> : null}</React.Fragment>;
+                const mobileVisibility = rowIndex >= 6 && !showAllMobileRows ? ' is-mobile-extra' : '';
+                return <React.Fragment key={month.key}><button type="button" role="row" className={`helios-table-row ${month.key === focusedMonth?.key ? 'is-active' : ''}${mobileVisibility}`} onClick={() => canExpand ? toggleMonth(month.key) : focusMonth(month.key, 'ledger-row')} aria-expanded={canExpand ? isExpanded : undefined}><span role="cell" data-label="Mes"><strong>{month.label}</strong>{month.movements.length ? <small>{month.movements.length} movimiento{month.movements.length === 1 ? '' : 's'}</small> : null}</span><span role="cell" data-label="Saldo inicial">{formatCurrency(month.opening)}</span><span role="cell" data-label="Aportaciones" className="is-increment">{month.increments ? `+${formatCurrency(month.increments)}` : '—'}</span><span role="cell" data-label="Retiradas" className="is-decrement">{month.decrements ? `−${formatCurrency(month.decrements)}` : '—'}</span><span role="cell" data-label="Beneficio" className={month.profit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(month.profit)}</span><span role="cell" data-label="TWR mes" className={month.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(month.returnPct)}</span><span role="cell" data-label="Saldo final"><strong>{formatCurrency(month.balance)}</strong></span><span role="cell" data-label="Detalle" className="helios-detail-toggle">{canExpand ? (isExpanded ? '−' : '+') : '·'}</span></button>{isExpanded ? <div className={`helios-breakdown${mobileVisibility}`} role="row"><div><small>Conciliación del cierre</small><strong className={reconciled ? 'is-positive' : 'is-negative'}>{reconciled ? 'Conciliado ✓' : 'Revisar cierre'}</strong></div><div className="helios-breakdown-equation"><span>Inicial <b>{formatCurrency(month.opening)}</b></span><i>+</i><span>Aportaciones <b>{formatCurrency(month.increments)}</b></span><i>−</i><span>Retiradas <b>{formatCurrency(month.decrements)}</b></span><i>+</i><span>Beneficio <b>{signedMoney(month.profit)}</b></span><i>=</i><span>Final <b>{formatCurrency(month.balance)}</b></span></div>{month.breakdown ? <div className="helios-tranches"><article><small>Posición inicial del mes</small><strong>{formatCurrency(month.breakdown.initialCapital)}</strong><span>{signedPercent(month.breakdown.initialReturnPct * 100)} · {signedMoney(month.breakdown.initialProfit)}</span></article>{month.breakdown.contributions.map((contribution, index) => <article key={`${contribution.iso}-${index}`}><small>Aportación incorporada el {formatDate(contribution.iso)}</small><strong>+{formatCurrency(contribution.amount)}</strong><span>{signedPercent(contribution.returnPct * 100)} · {signedMoney(contribution.profit)}</span></article>)}{(month.breakdown.withdrawals ?? []).map((withdrawal, index) => <article key={`${withdrawal.iso}-${index}`}><small>Posición retirada el {formatDate(withdrawal.iso)}</small><strong>−{formatCurrency(withdrawal.amount)}</strong><span>{withdrawal.returnPct === undefined ? 'Sin rentabilidad específica' : `${signedPercent(withdrawal.returnPct * 100)} · ${signedMoney(withdrawal.profit)}`}</span></article>)}</div> : <div className="helios-tranches">{month.movements.map((movement, index) => <article key={`${movement.iso}-${index}`}><small>{movement.type === 'increment' ? 'Aportación' : 'Retirada'} · {formatDate(movement.iso)}</small><strong>{movement.type === 'increment' ? '+' : '−'}{formatCurrency(movement.amount)}</strong><span>Movimiento consolidado</span></article>)}</div>}</div> : null}</React.Fragment>;
               })}</div>
             </div>
+            {tableMonths.length > 6 ? <button type="button" className="helios-mobile-history-toggle" aria-expanded={showAllMobileRows} onClick={() => setShowAllMobileRows((value) => !value)}>{showAllMobileRows ? 'Mostrar solo los últimos 6 cierres' : `Ver histórico completo · ${tableMonths.length} cierres`}</button> : null}
           </section>
         </main>
       </div>
