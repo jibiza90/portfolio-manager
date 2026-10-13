@@ -141,6 +141,7 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
   const [focusedKey, setFocusedKey] = useState(latestKey);
   const [isTrayOpen, setIsTrayOpen] = useState(false);
   const aisleScrollRef = useRef<HTMLDivElement>(null);
+  const trayRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setPeriod('all');
@@ -187,6 +188,14 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
   }, []);
+
+  useEffect(() => {
+    if (!isTrayOpen) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      trayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusedKey, isTrayOpen]);
 
   const focusMonth = useCallback((key: string, source: string, openTray = false) => {
     setFocusedKey(key);
@@ -236,11 +245,11 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
 
   return (
     <div className="vault-report" ref={rootRef} role="document">
-      <header className="vault-header"><div><small>JIGSA CAPITAL · PRIVATE CUSTODY</small><h1>BÓVEDA</h1><p>Cámara de custodia patrimonial</p></div><div className="vault-header-actions"><span><small>CHAPA DE ACCESO</small><strong>{report.clientCode}</strong></span><button type="button" onClick={() => { onAnalyticsEvent?.({ type: 'vault_pdf_download', label: periodLabel }); void onDownload?.(); }}>Descargar PDF <b>↓</b></button></div></header>
+      <header className="vault-header"><div><small>JIGSA CAPITAL · PRIVATE RECORD</small><h1>BÓVEDA</h1><p>Registro patrimonial privado</p></div><div className="vault-header-actions"><span><small>CHAPA DE ACCESO</small><strong>{report.clientCode}</strong></span><button type="button" onClick={() => { onAnalyticsEvent?.({ type: 'vault_pdf_download', label: periodLabel }); void onDownload?.(); }}>Descargar PDF <b>↓</b></button></div></header>
 
       {pending.length ? <aside className="vault-transit" role="status"><span className="vault-led" /><div><small>CAPITAL EN TRÁNSITO</small><strong>{pending.length} movimiento{pending.length === 1 ? '' : 's'} incorporado{pending.length === 1 ? '' : 's'} al saldo actual</strong></div><div>{pending.map((movement, index) => <span key={`${movement.iso}-${index}`}><small>{formatDate(movement.iso)} · {movement.type === 'increment' ? 'Aportación' : 'Retirada'}</small><strong>{movement.type === 'increment' ? '+' : '−'}{formatCurrency(movement.amount)}</strong></span>)}</div></aside> : null}
 
-      <section className="vault-door" aria-label="Puerta de custodia y posición principal">
+      <section className="vault-door" aria-label="Puerta de registro y posición principal">
         <div className="vault-dial-zone">
           <div className="vault-dial-wrap">
             <svg className="vault-dial" viewBox="0 0 320 320" role="application" tabIndex={0} aria-label={`Dial temporal. Mes enfocado: ${focusedMonth?.label ?? 'sin cierres'}`} onKeyDown={(event) => { if (event.key === 'ArrowLeft') { event.preventDefault(); stepFocus(-1); } else if (event.key === 'ArrowRight') { event.preventDefault(); stepFocus(1); } else if (event.key === 'Enter' && focusedMonth) { setIsTrayOpen(true); } }}>
@@ -248,36 +257,108 @@ export const VaultReportPage: React.FC<VaultReportPageProps> = ({
               {dialTicks.map((tick) => <line key={tick.month.key} className={tick.month.key === focusedMonth?.key ? 'vault-dial-tick is-active' : 'vault-dial-tick'} x1={tick.x1} y1={tick.y1} x2={tick.x2} y2={tick.y2} />)}
               <circle className="vault-dial-brass" cx="160" cy="160" r="108" />
               <g className="vault-dial-knob" style={{ transform: `rotate(${dialRotation}deg)`, transformOrigin: '160px 160px' }}><circle cx="160" cy="160" r="94" /><line x1="160" y1="65" x2="160" y2="89" /></g>
-              <text className="vault-dial-label" x="160" y="137" textAnchor="middle">SALDO ACTUAL</text>
-              <text className="vault-dial-value" x="160" y="170" textAnchor="middle">{formatCurrency(visibleBalance)}</text>
-              <text className="vault-dial-period" x="160" y="194" textAnchor="middle">{periodLabel}</text>
+              <text className="vault-dial-label" x="160" y="137" textAnchor="middle">SALDO DEL CIERRE</text>
+              <text className="vault-dial-value" x="160" y="170" textAnchor="middle">{formatCurrency(focusedMonth?.balance ?? 0)}</text>
+              <text className="vault-dial-period" x="160" y="194" textAnchor="middle">{focusedMonth?.label ?? 'Sin cierres'}</text>
             </svg>
           </div>
           <div className="vault-period-controls" role="group" aria-label="Seleccionar periodo">{([['3m', '3M'], ['6m', '6M'], ['12m', '12M'], ['all', 'TODO'], ['custom', 'RANGO']] as Array<[VaultPeriod, string]>).map(([value, label]) => <button type="button" key={value} className={period === value ? 'is-active' : ''} aria-pressed={period === value} onClick={() => setPeriod(value)}><i />{label}</button>)}</div>
           {period === 'custom' ? <div className="vault-custom-period"><label>Desde<select value={customStart} onChange={(event) => { const value = event.target.value; setCustomStart(value); if (value > customEnd) setCustomEnd(value); }}>{months.map((month) => <option key={month.key} value={month.key}>{month.shortLabel}</option>)}</select></label><label>Hasta<select value={customEnd} onChange={(event) => { const value = event.target.value; setCustomEnd(value); if (value < customStart) setCustomStart(value); }}>{months.map((month) => <option key={month.key} value={month.key}>{month.shortLabel}</option>)}</select></label></div> : null}
         </div>
 
-        <aside className="vault-access-plate">
-          <header><small>LECTURA CERTIFICADA</small><strong>{focusedMonth?.label ?? 'Sin cierre'}</strong></header>
-          <div>
-            <article><small>Beneficio del cierre</small><strong className={(focusedMonth?.profit ?? 0) >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(focusedMonth?.profit ?? 0)}</strong></article>
-            <article><small>Rentabilidad del cierre</small><strong className={(focusedMonth?.returnPct ?? 0) >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(focusedMonth?.returnPct ?? 0)}</strong></article>
-            <article><small>Beneficio acumulado</small><strong className={report.beneficioTotal >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(report.beneficioTotal)}</strong></article>
-            <article><small>TWR acumulado</small><strong>{signedPercent((report.twrYtd ?? 0) * 100)}</strong></article>
-            <article><small>Rentabilidad total</small><strong>{report.rentabilidadDisponible === false ? 'No aplicable' : signedPercent(report.rentabilidad)}</strong></article>
-            <article><small>Capital neto custodiado</small><strong>{formatCurrency(visibleNetCapital)}</strong></article>
-          </div>
-          <button type="button" disabled={!focusedMonth} onClick={() => setIsTrayOpen(true)}>Abrir inspección del mes</button>
-        </aside>
+        <div className="vault-door-side">
+          <aside className="vault-access-plate">
+            <header><small>CIERRE SELECCIONADO</small><strong>{focusedMonth?.label ?? 'Sin cierre'}</strong></header>
+            <div>
+              <article><small>Beneficio del cierre</small><strong className={(focusedMonth?.profit ?? 0) >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(focusedMonth?.profit ?? 0)}</strong></article>
+              <article><small>Rentabilidad del cierre</small><strong className={(focusedMonth?.returnPct ?? 0) >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(focusedMonth?.returnPct ?? 0)}</strong></article>
+              <article><small>Saldo inicial</small><strong>{formatCurrency(focusedMonth?.opening ?? 0)}</strong></article>
+              <article><small>Movimientos netos</small><strong>{signedMoney((focusedMonth?.increments ?? 0) - (focusedMonth?.decrements ?? 0))}</strong></article>
+              <article className="is-closing-balance"><small>Saldo del cierre</small><strong>{formatCurrency(focusedMonth?.balance ?? 0)}</strong></article>
+            </div>
+            <button type="button" disabled={!focusedMonth} onClick={() => setIsTrayOpen(true)}>Abrir inspección del mes</button>
+          </aside>
+
+          <aside className="vault-current-plate" aria-label="Posición acumulada actual">
+            <header><div><small>POSICIÓN ACUMULADA ACTUAL</small><strong>{formatCurrency(visibleBalance)}</strong></div>{pending.length ? <span>Incluye {pending.length} movimiento{pending.length === 1 ? '' : 's'} posterior{pending.length === 1 ? '' : 'es'} al último cierre</span> : <span>Actualizada al último cierre publicado</span>}</header>
+            <div><span><small>Beneficio acumulado</small><strong className={report.beneficioTotal >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(report.beneficioTotal)}</strong></span><span><small>TWR acumulado</small><strong>{signedPercent((report.twrYtd ?? 0) * 100)}</strong></span><span><small>Rentabilidad total</small><strong>{report.rentabilidadDisponible === false ? 'No aplicable' : signedPercent(report.rentabilidad)}</strong></span><span><small>Capital neto registrado</small><strong>{formatCurrency(visibleNetCapital)}</strong></span></div>
+          </aside>
+        </div>
       </section>
 
-      <section className="vault-aisle-section"><header><div><small>PASILLO DE CUSTODIA</small><h2>Cada cierre, una cámara verificable</h2></div><p>La altura de cada marco representa el saldo custodiado al cierre del mes.</p></header>{visibleMonths.length ? <div className="vault-aisle-scroll" ref={aisleScrollRef}><svg className="vault-aisle" viewBox={`0 0 ${aisle.width} 300`} style={{ minWidth: `${aisle.width}px` }} role="application" tabIndex={0} aria-label={`Pasillo patrimonial de ${periodLabel}`} onKeyDown={(event) => { if (event.key === 'ArrowLeft') { event.preventDefault(); stepFocus(-1); } else if (event.key === 'ArrowRight') { event.preventDefault(); stepFocus(1); } }}><defs><linearGradient id="vault-floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#1a1f26" /><stop offset="1" stopColor="#11151a" /></linearGradient></defs><path className="vault-floor" d={`M ${aisle.width * .36} 34 L ${aisle.width * .64} 34 L ${aisle.width - 18} 282 L 18 282 Z`} />{[0, .25, .5, .75, 1].map((ratio) => <line className="vault-floor-line" key={ratio} x1={aisle.width * (.36 - ratio * .34)} y1="34" x2={aisle.width * (.64 + ratio * .34)} y2="282" />)}{aisle.frames.map((frame) => { const active = frame.month.key === focusedMonth?.key; const fillHeight = Math.max(4, frame.height * Math.min(.82, Math.abs(frame.month.profit) / Math.max(Math.abs(frame.month.balance), 1) * 10)); return <g key={frame.month.key} className={`vault-frame ${active ? 'is-active' : ''}`} role="button" tabIndex={0} onClick={() => focusMonth(frame.month.key, 'aisle', true)}><rect className="vault-frame-body" x={frame.x - frame.width / 2} y={frame.y} width={frame.width} height={frame.height} /><rect className={frame.month.profit >= 0 ? 'vault-frame-profit is-positive' : 'vault-frame-profit is-negative'} x={frame.x - frame.width / 2 + 5} y={aisle.baseline - fillHeight - 5} width={frame.width - 10} height={fillHeight} style={{ opacity: frame.profitOpacity }} />{frame.month.profit > 0 ? <line className="vault-frame-lintel" x1={frame.x - frame.width / 2} x2={frame.x + frame.width / 2} y1={frame.y} y2={frame.y} /> : null}{frame.month.movements.map((movement, index) => <g className={`vault-frame-flow is-${movement.type}`} key={`${movement.iso}-${index}`} transform={`translate(${frame.x + (index - (frame.month.movements.length - 1) / 2) * 18} ${frame.y - 8})`}><path d={movement.type === 'increment' ? 'M -5 0 L 0 -9 L 5 0 Z' : 'M -5 -9 L 0 0 L 5 -9 Z'} /></g>)}{(active || frame === aisle.frames[0] || frame === aisle.frames[aisle.frames.length - 1]) ? <><text className="vault-frame-balance" x={frame.x} y={frame.y - 17} textAnchor="middle">{formatCurrency(frame.month.balance)}</text><text className="vault-frame-month" x={frame.x} y="276" textAnchor="middle">{frame.month.shortLabel}</text></> : null}</g>; })}</svg></div> : <div className="vault-empty">La cámara se activará con el primer cierre mensual.</div>}<div className="vault-aisle-legend"><span><i className="is-balance" />Marco = saldo final</span><span><i className="is-profit" />Interior = beneficio</span><span><i className="is-increment" />▲ Aportación</span><span><i className="is-decrement" />▼ Retirada</span></div></section>
+      <section className="vault-aisle-section">
+        <header>
+          <div><small>PASILLO PATRIMONIAL</small><h2>Cada cierre, una cámara verificable</h2></div>
+          <p>La altura de cada marco representa el valor de la cartera al cierre del mes.</p>
+        </header>
+        <p className="vault-aisle-instruction">Selecciona una cámara para consultar el saldo, la rentabilidad y la conciliación completa del cierre.</p>
+        {visibleMonths.length ? (
+          <div className="vault-aisle-scroll" ref={aisleScrollRef}>
+            <svg className="vault-aisle" viewBox={`0 0 ${aisle.width} 300`} style={{ minWidth: `${aisle.width}px` }} role="application" tabIndex={0} aria-label={`Pasillo patrimonial de ${periodLabel}`} onKeyDown={(event) => { if (event.key === 'ArrowLeft') { event.preventDefault(); stepFocus(-1); } else if (event.key === 'ArrowRight') { event.preventDefault(); stepFocus(1); } }}>
+              <defs><linearGradient id="vault-floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#1a1f26" /><stop offset="1" stopColor="#11151a" /></linearGradient></defs>
+              <path className="vault-floor" d={`M ${aisle.width * .36} 34 L ${aisle.width * .64} 34 L ${aisle.width - 18} 282 L 18 282 Z`} />
+              {[0, .5, 1].map((ratio) => <line className="vault-floor-line" key={ratio} x1={aisle.width * (.36 - ratio * .34)} y1="34" x2={aisle.width * (.64 + ratio * .34)} y2="282" />)}
+              {aisle.frames.map((frame) => {
+                const active = frame.month.key === focusedMonth?.key;
+                const fillHeight = Math.max(4, frame.height * Math.min(.82, Math.abs(frame.month.profit) / Math.max(Math.abs(frame.month.balance), 1) * 10));
+                const frameLabel = `${frame.month.label}: saldo ${formatCurrency(frame.month.balance)}, rentabilidad ${signedPercent(frame.month.returnPct)}, beneficio ${signedMoney(frame.month.profit)}`;
+                return (
+                  <g
+                    key={frame.month.key}
+                    className={`vault-frame ${active ? 'is-active' : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={frameLabel}
+                    onClick={() => focusMonth(frame.month.key, 'aisle', true)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        focusMonth(frame.month.key, 'aisle-keyboard', true);
+                      }
+                    }}
+                  >
+                    <title>{frameLabel}</title>
+                    <rect className="vault-frame-body" x={frame.x - frame.width / 2} y={frame.y} width={frame.width} height={frame.height} />
+                    <rect className={frame.month.profit >= 0 ? 'vault-frame-profit is-positive' : 'vault-frame-profit is-negative'} x={frame.x - frame.width / 2 + 5} y={aisle.baseline - fillHeight - 5} width={frame.width - 10} height={fillHeight} style={{ opacity: frame.profitOpacity }} />
+                    {frame.month.profit > 0 ? <line className="vault-frame-lintel" x1={frame.x - frame.width / 2} x2={frame.x + frame.width / 2} y1={frame.y} y2={frame.y} /> : null}
+                    {frame.month.movements.map((movement, index) => <g className={`vault-frame-flow is-${movement.type}`} key={`${movement.iso}-${index}`} transform={`translate(${frame.x + (index - (frame.month.movements.length - 1) / 2) * 18} ${frame.y - 8})`}><path d={movement.type === 'increment' ? 'M -5 0 L 0 -9 L 5 0 Z' : 'M -5 -9 L 0 0 L 5 -9 Z'} /></g>)}
+                    {(active || frame === aisle.frames[0] || frame === aisle.frames[aisle.frames.length - 1]) ? <text className="vault-frame-balance" x={frame.x} y={frame.y - 17} textAnchor="middle">{formatCurrency(frame.month.balance)}</text> : null}
+                    <text className="vault-frame-month" x={frame.x} y="276" textAnchor="middle">{frame.month.shortLabel}</text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        ) : <div className="vault-empty">El registro se activará con el primer cierre mensual.</div>}
+        {focusedMonth ? <button type="button" className="vault-aisle-focus" onClick={() => setIsTrayOpen(true)}><span><small>CIERRE EN FOCO</small><strong>{focusedMonth.label}</strong></span><span><small>Saldo</small><strong>{formatCurrency(focusedMonth.balance)}</strong></span><span><small>Rentabilidad</small><strong className={focusedMonth.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{signedPercent(focusedMonth.returnPct)}</strong></span><span><small>Beneficio</small><strong className={focusedMonth.profit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(focusedMonth.profit)}</strong></span><b>Inspeccionar →</b></button> : null}
+        <div className="vault-aisle-legend"><span><i className="is-balance" />Marco = saldo final</span><span><i className="is-profit" />Interior = beneficio</span><span><i className="is-increment" />▲ Aportación</span><span><i className="is-decrement" />▼ Retirada</span></div>
+      </section>
 
-      <section className="vault-walls"><article className="vault-wall"><header><small>PARED I</small><h2>Estructura del capital</h2></header><div className="vault-tiles"><span><i /><small>Capital aportado</small><strong>{formatCurrency(visibleContributed)}</strong></span><span><i /><small>Capital retirado</small><strong>{formatCurrency(visibleWithdrawn)}</strong></span><span><i /><small>Capital neto</small><strong>{formatCurrency(visibleNetCapital)}</strong></span></div><p>Capital incorporado menos retiradas registradas. El beneficio se conserva separado para no confundir rendimiento con movimientos de dinero.</p></article><article className="vault-wall"><header><small>PARED II</small><h2>Lectura del rendimiento</h2></header><div className="vault-performance"><span><small>TWR</small><p>Mide la evolución de la estrategia aislando aportaciones y retiradas.</p></span><span><small>Rentabilidad total</small><p>Relaciona el beneficio acumulado con el capital neto aportado.</p></span></div></article><article className="vault-wall is-movements"><header><small>PARED III</small><h2>Movimientos custodiados</h2></header><div className="vault-wall-movements">{allMovements.length ? allMovements.map((movement, index) => <div key={`${movement.iso}-${index}`} className={`${movement.pending ? 'is-pending' : ''}`}><time>{formatDate(movement.iso)}</time><span>{movement.type === 'increment' ? 'Aportación' : 'Retirada'}{movement.pending ? <em>En tránsito</em> : null}</span><strong className={movement.type === 'increment' ? 'is-increment' : 'is-decrement'}>{movement.type === 'increment' ? '+' : '−'}{formatCurrency(movement.amount)}</strong></div>) : <p className="vault-no-movements">Sin movimientos de capital registrados.</p>}</div></article></section>
+      <section className="vault-walls">
+        <article className="vault-wall">
+          <header><small>PARED I</small><h2>Estructura del capital</h2></header>
+          <div className="vault-tiles"><span><i /><small>Capital aportado</small><strong>{formatCurrency(visibleContributed)}</strong></span><span><i /><small>Capital retirado</small><strong>{formatCurrency(visibleWithdrawn)}</strong></span><span><i /><small>Capital neto</small><strong>{formatCurrency(visibleNetCapital)}</strong></span></div>
+          <p>Capital incorporado menos retiradas registradas. El beneficio se conserva separado para no confundir rendimiento con movimientos de dinero.</p>
+        </article>
+        <article className="vault-wall">
+          <header><small>PARED II</small><h2>Lectura del rendimiento</h2></header>
+          <div className="vault-performance"><span><small>TWR</small><p>Mide la evolución de la estrategia aislando aportaciones y retiradas.</p></span><span><small>Rentabilidad total</small><p>Relaciona el beneficio acumulado con el capital neto aportado.</p></span></div>
+        </article>
+        <article className="vault-wall is-movements">
+          <header><small>PARED III</small><h2>Movimientos registrados</h2></header>
+          <div className="vault-wall-movements">{allMovements.length ? allMovements.map((movement, index) => <div key={`${movement.iso}-${index}`} className={`${movement.pending ? 'is-pending' : ''}`}><time>{formatDate(movement.iso)}</time><span>{movement.type === 'increment' ? 'Aportación' : 'Retirada'}{movement.pending ? <em>En tránsito</em> : null}</span><strong className={movement.type === 'increment' ? 'is-increment' : 'is-decrement'}>{movement.type === 'increment' ? '+' : '−'}{formatCurrency(movement.amount)}</strong></div>) : <p className="vault-no-movements">Sin movimientos de capital registrados.</p>}</div>
+        </article>
+      </section>
 
-      {isTrayOpen && focusedMonth ? <section className="vault-tray" aria-live="polite"><header><div><small>BANDEJA DE INSPECCIÓN · {focusedMonth.key}</small><h2>{focusedMonth.label}</h2></div><div><strong className={Math.abs(reconciliation - focusedMonth.balance) <= .02 ? 'is-positive' : 'is-negative'}>{Math.abs(reconciliation - focusedMonth.balance) <= .02 ? 'CONCILIADO ✓' : 'REVISAR'}</strong><button type="button" aria-label="Cerrar inspección" onClick={() => setIsTrayOpen(false)}>×</button></div></header><div className="vault-equation"><span><small>Saldo inicial</small><strong>{formatCurrency(focusedMonth.opening)}</strong></span><b>+</b><span><small>Aportaciones</small><strong className="is-increment">{focusedMonth.increments ? `+${formatCurrency(focusedMonth.increments)}` : '—'}</strong></span><b>−</b><span><small>Retiradas</small><strong className="is-decrement">{focusedMonth.decrements ? formatCurrency(focusedMonth.decrements) : '—'}</strong></span><b>+</b><span><small>Beneficio</small><strong className={focusedMonth.profit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(focusedMonth.profit)}</strong></span><b>=</b><span className="is-final"><small>Saldo final</small><strong>{formatCurrency(focusedMonth.balance)}</strong></span></div>{focusedMonth.breakdown ? <div className="vault-tranches"><article><small>Posición inicial del mes</small><strong>{formatCurrency(focusedMonth.breakdown.initialCapital)}</strong><p>{signedPercent(focusedMonth.breakdown.initialReturnPct * 100)} · {signedMoney(focusedMonth.breakdown.initialProfit)}</p></article>{focusedMonth.breakdown.contributions.map((contribution, index) => <article className="is-increment" key={`${contribution.iso}-${index}`}><small>Aportación · {formatDate(contribution.iso)}</small><strong>+{formatCurrency(contribution.amount)}</strong><p>{signedPercent(contribution.returnPct * 100)} · {signedMoney(contribution.profit)}</p></article>)}{(focusedMonth.breakdown.withdrawals ?? []).map((withdrawal, index) => <article className="is-decrement" key={`${withdrawal.iso}-${index}`}><small>Retirada · {formatDate(withdrawal.iso)}</small><strong>−{formatCurrency(withdrawal.amount)}</strong><p>{withdrawal.returnPct === undefined ? 'Sin rentabilidad específica' : `${signedPercent(withdrawal.returnPct * 100)} · ${signedMoney(withdrawal.profit)}`}</p></article>)}</div> : null}</section> : null}
+      {isTrayOpen && focusedMonth ? (
+        <section className="vault-tray" ref={trayRef} aria-live="polite">
+          <header><div><small>BANDEJA DE INSPECCIÓN · {focusedMonth.key}</small><h2>{focusedMonth.label}</h2><p className="vault-tray-guide">Comprobación completa del cierre seleccionado.</p></div><div><strong className={Math.abs(reconciliation - focusedMonth.balance) <= .02 ? 'is-positive' : 'is-negative'}>{Math.abs(reconciliation - focusedMonth.balance) <= .02 ? 'CONCILIADO ✓' : 'REVISAR'}</strong><button type="button" aria-label="Cerrar inspección" onClick={() => setIsTrayOpen(false)}>×</button></div></header>
+          <div className="vault-equation"><span><small>Saldo inicial</small><strong>{formatCurrency(focusedMonth.opening)}</strong></span><b>+</b><span><small>Aportaciones</small><strong className="is-increment">{focusedMonth.increments ? `+${formatCurrency(focusedMonth.increments)}` : '—'}</strong></span><b>−</b><span><small>Retiradas</small><strong className="is-decrement">{focusedMonth.decrements ? formatCurrency(focusedMonth.decrements) : '—'}</strong></span><b>+</b><span><small>Beneficio</small><strong className={focusedMonth.profit >= 0 ? 'is-positive' : 'is-negative'}>{signedMoney(focusedMonth.profit)}</strong></span><b>=</b><span className="is-final"><small>Saldo final</small><strong>{formatCurrency(focusedMonth.balance)}</strong></span></div>
+          {focusedMonth.breakdown ? <div className="vault-tranches"><article><small>Posición inicial del mes</small><strong>{formatCurrency(focusedMonth.breakdown.initialCapital)}</strong><p>{signedPercent(focusedMonth.breakdown.initialReturnPct * 100)} · {signedMoney(focusedMonth.breakdown.initialProfit)}</p></article>{focusedMonth.breakdown.contributions.map((contribution, index) => <article className="is-increment" key={`${contribution.iso}-${index}`}><small>Aportación · {formatDate(contribution.iso)}</small><strong>+{formatCurrency(contribution.amount)}</strong><p>{signedPercent(contribution.returnPct * 100)} · {signedMoney(contribution.profit)}</p></article>)}{(focusedMonth.breakdown.withdrawals ?? []).map((withdrawal, index) => <article className="is-decrement" key={`${withdrawal.iso}-${index}`}><small>Retirada · {formatDate(withdrawal.iso)}</small><strong>−{formatCurrency(withdrawal.amount)}</strong><p>{withdrawal.returnPct === undefined ? 'Sin rentabilidad específica' : `${signedPercent(withdrawal.returnPct * 100)} · ${signedMoney(withdrawal.profit)}`}</p></article>)}</div> : null}
+        </section>
+      ) : null}
 
-      <footer className="vault-footer"><div><span>Capital neto <strong>{formatCurrency(visibleNetCapital)}</strong></span><b>+</b><span>Beneficio acumulado <strong>{signedMoney(report.beneficioTotal)}</strong></span><b>=</b><span>Saldo actual <strong>{formatCurrency(visibleBalance)}</strong></span></div><p>Custodia visual del patrimonio con conciliación mensual auditable. Diseño: <strong>GLM 5.3MAX</strong>.</p></footer>
+      <footer className="vault-footer"><div><span>Capital neto <strong>{formatCurrency(visibleNetCapital)}</strong></span><b>+</b><span>Beneficio acumulado <strong>{signedMoney(report.beneficioTotal)}</strong></span><b>=</b><span>Saldo actual <strong>{formatCurrency(visibleBalance)}</strong></span></div><p>Registro visual del patrimonio con conciliación mensual auditable. Diseño: <strong>GLM 5.3MAX</strong>.</p></footer>
     </div>
   );
 };
