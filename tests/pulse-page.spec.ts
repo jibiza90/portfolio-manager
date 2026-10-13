@@ -31,6 +31,8 @@ test('renders GLM 5.3MAX PULSO as an interactive patrimonial instrument', async 
   await expect(page.locator('.pulse-receipt')).toContainText('CONCILIADO');
   await expect(page.locator('.pulse-receipt')).toContainText('APORTACIÓN');
   await expect(page.locator('.pulse-receipt')).toContainText('RETIRADA');
+  await expect(page.locator('.pulse-auto-summary')).toContainText('Marzo 2026');
+  await expect(page.locator('.pulse-auto-summary')).toContainText('4673,31');
 
   await page.getByRole('button', { name: '6M', exact: true }).click();
   await expect(page.locator('.pulse-spike')).toHaveCount(6);
@@ -41,9 +43,14 @@ test('renders GLM 5.3MAX PULSO as an interactive patrimonial instrument', async 
   await page.keyboard.press('ArrowLeft');
   await expect(page.locator('.pulse-seismograph > header')).toContainText('Febrero 2026');
 
-  await page.getByRole('button', { name: 'AMPLIAR ⛶' }).click();
+  await page.getByRole('button', { name: /AMPLIAR/ }).click();
   await expect(page.locator('.pulse-barogram-shell')).toHaveClass(/is-fullscreen/);
   await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+  await expect(page.locator('.pulse-fullscreen-switch')).toBeVisible();
+  await page.getByRole('button', { name: 'TWR', exact: true }).click();
+  await expect(page.locator('.pulse-fullscreen-chart.is-return')).toBeVisible();
+  await page.getByRole('button', { name: 'AMBOS', exact: true }).click();
+  await expect(page.locator('.pulse-fullscreen-chart')).toHaveCount(2);
   await page.keyboard.press('Escape');
   await expect(page.locator('.pulse-barogram-shell')).not.toHaveClass(/is-fullscreen/);
 

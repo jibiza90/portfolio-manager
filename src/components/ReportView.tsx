@@ -19,6 +19,7 @@ import { ChronosOrbitReportPage } from './ChronosOrbitReportPage';
 import { StrataAtlasReportPage } from './StrataAtlasReportPage';
 import { HeliosDeskReportPage } from './HeliosDeskReportPage';
 import { PulseReportPage } from './PulseReportPage';
+import { VaultReportPage } from './VaultReportPage';
 
 interface ReportViewProps {
   token?: string;
@@ -309,7 +310,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -2247,7 +2248,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isAtlasDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page12';
   const isHeliosDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page13';
   const isPulseDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page14';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage;
+  const isVaultDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page15';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}`}>
@@ -2259,7 +2261,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-fourteen-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-fifteen-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2441,6 +2443,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="demo-report-page-label">Página 14</span>
               <small className="demo-report-page-author">GLM 5.3MAX</small>
             </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page15' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page15'}
+              aria-label="Página 15"
+              onClick={() => {
+                setDemoReportPage('page15');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 15 BOVEDA camara de custodia' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 15</span>
+              <small className="demo-report-page-author">GLM 5.3MAX</small>
+            </button>
           </div>
         </nav>
       ) : null}
@@ -2542,6 +2557,15 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : isPulseDemoPage ? (
         <PulseReportPage
+          report={report}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
+          onDownload={handleDownloadModernReport}
+          onPeriodChange={syncImmersiveReportPeriod}
+        />
+      ) : isVaultDemoPage ? (
+        <VaultReportPage
           report={report}
           pendingCashMovements={visiblePendingCashMovements}
           rootRef={reportRef}

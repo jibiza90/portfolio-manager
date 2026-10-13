@@ -38,6 +38,7 @@ interface PulseMonth {
 }
 
 type PeriodPreset = '6m' | '12m' | 'all' | 'custom';
+type FullscreenView = 'balance' | 'return' | 'both';
 
 const monthNumbers: Record<string, number> = {
   ene: 0, enero: 0, feb: 1, febrero: 1, mar: 2, marzo: 2,
@@ -112,7 +113,7 @@ const Gauge: React.FC<{ label: string; value: number; scale: number }> = ({ labe
           return <line key={tick} className="pulse-gauge-tick" x1={x1} y1={y1} x2={x2} y2={y2} />;
         })}
       </svg>
-      <div><small>{label}</small><strong>{signedPercent(value)}</strong></div>
+      <div><small>{label}</small><strong>{signedPercent(value)}</strong><span>−{scale}% · 0 · +{scale}%</span></div>
     </article>
   );
 };
@@ -173,6 +174,7 @@ export const PulseReportPage: React.FC<PulseReportPageProps> = ({
   const [customEnd, setCustomEnd] = useState(latestKey);
   const [focusedKey, setFocusedKey] = useState(latestKey);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenView, setFullscreenView] = useState<FullscreenView>('balance');
   const monitorScrollRef = useRef<HTMLDivElement>(null);
   const barogramScrollRef = useRef<HTMLDivElement>(null);
   const tapeRef = useRef<HTMLDivElement>(null);
@@ -183,6 +185,7 @@ export const PulseReportPage: React.FC<PulseReportPageProps> = ({
     setCustomEnd(latestKey);
     setFocusedKey(latestKey);
     setIsFullscreen(false);
+    setFullscreenView('balance');
   }, [latestKey, months, report.clientId, report.createdAt]);
 
   const visibleMonths = useMemo(() => {
@@ -270,6 +273,12 @@ export const PulseReportPage: React.FC<PulseReportPageProps> = ({
     return { width, left, right, chartTop, chartBottom, maxBalance, seismoBaseline, points, balanceLine, balanceArea };
   }, [visibleMonths]);
 
+  const focusedGraphPoint = graph.points.find((point) => point.month.key === focusedMonth?.key);
+  const focusedMovementCount = focusedMonth?.movements.length ?? 0;
+  const monthNarrative = focusedMonth
+    ? `En ${focusedMonth.label}, la cartera ${focusedMonth.profit >= 0 ? 'generó' : 'registró'} ${formatCurrency(Math.abs(focusedMonth.profit))} ${focusedMonth.profit >= 0 ? 'de beneficio' : 'de resultado negativo'}, con una rentabilidad TWR de ${signedPercent(focusedMonth.returnPct)}${focusedMovementCount ? ` y ${focusedMovementCount} movimiento${focusedMovementCount === 1 ? '' : 's'} de capital` : ''}.`
+    : 'La lectura mensual aparecerá tras el primer cierre publicado.';
+
   const gaugeScale = Math.max(8, Math.ceil(Math.abs(report.rentabilidadUltimoMes)), Math.ceil(Math.abs((report.twrYtd ?? 0) * 100)));
   const allMovements = useMemo(() => [
     ...(report.movements ?? []).map((movement) => ({ ...movement, pending: false })),
@@ -278,6 +287,30 @@ export const PulseReportPage: React.FC<PulseReportPageProps> = ({
   const reconciliation = focusedMonth
     ? focusedMonth.opening + focusedMonth.increments - focusedMonth.decrements + focusedMonth.profit
     : 0;
+
+  const renderSeismographGraphic = (attachScrollRef = false) => (
+    <div className="pulse-monitor-scroll" ref={attachScrollRef ? monitorScrollRef : undefined}>
+      <svg className="pulse-seismograph-graphic" viewBox={`0 0 ${graph.width} 164`} style={{ minWidth: `${graph.width}px` }} role="application" tabIndex={0} aria-label={`Sismógrafo de rentabilidad de ${periodLabel}`} onKeyDown={(event) => { if (event.key === 'ArrowLeft') { event.preventDefault(); stepFocus(-1); } else if (event.key === 'ArrowRight') { event.preventDefault(); stepFocus(1); } }}>
+        <line className="pulse-seismo-baseline" x1={graph.left} x2={graph.right} y1={graph.seismoBaseline} y2={graph.seismoBaseline} />
+        {focusedGraphPoint ? <line className="pulse-scan-line" x1={focusedGraphPoint.x} x2={focusedGraphPoint.x} y1="16" y2="132" /> : null}
+        {graph.points.map((point) => <g key={point.month.key} className={`pulse-spike${point.month.returnPct < 0 ? ' is-negative' : ''}${point.month.key === focusedMonth?.key ? ' is-active' : ''}`} role="button" tabIndex={0} onClick={() => focusMonth(point.month.key, 'seismograph')}><line x1={point.x} x2={point.x} y1={graph.seismoBaseline} y2={point.returnY} /><circle cx={point.x} cy={point.returnY} r="4" /><text x={point.x} y={point.returnY + (point.month.returnPct >= 0 ? -10 : 16)} textAnchor="middle">{signedPercent(point.month.returnPct)}</text><text className="pulse-axis-month" x={point.x} y="147" textAnchor="middle">{point.month.shortLabel}</text></g>)}
+      </svg>
+    </div>
+  );
+
+  const renderBarogramGraphic = (attachScrollRef = false) => (
+    <div className="pulse-monitor-scroll" ref={attachScrollRef ? barogramScrollRef : undefined}>
+      <svg className="pulse-barogram" viewBox={`0 0 ${graph.width} 286`} style={{ minWidth: `${graph.width}px` }} role="application" tabIndex={0} aria-label={`Evolución del saldo de ${periodLabel}`} onKeyDown={(event) => { if (event.key === 'ArrowLeft') { event.preventDefault(); stepFocus(-1); } else if (event.key === 'ArrowRight') { event.preventDefault(); stepFocus(1); } }}>
+        <defs><linearGradient id="pulse-balance-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4cc9f0" stopOpacity=".28" /><stop offset="1" stopColor="#4cc9f0" stopOpacity="0" /></linearGradient></defs>
+        {[0, .25, .5, .75, 1].map((ratio) => { const y = graph.chartBottom - ratio * (graph.chartBottom - graph.chartTop); return <g className="pulse-bar-grid" key={ratio}><line x1={graph.left} x2={graph.right} y1={y} y2={y} /><text x={graph.left - 9} y={y + 4} textAnchor="end">{compactMoney(graph.maxBalance * ratio)}</text></g>; })}
+        <path className="pulse-balance-area" d={graph.balanceArea} />
+        <path className="pulse-balance-line" d={graph.balanceLine} />
+        {focusedGraphPoint ? <line className="pulse-scan-line" x1={focusedGraphPoint.x} x2={focusedGraphPoint.x} y1={graph.chartTop} y2={graph.chartBottom} /> : null}
+        {graph.points.flatMap((point) => point.month.movements.map((movement, index) => { const offset = (index - (point.month.movements.length - 1) / 2) * 18; return <g key={`${movement.iso}-${index}`} className={`pulse-flow is-${movement.type}`} transform={`translate(${point.x + offset} ${point.balanceY})`}><line y1="-6" y2="-30" /><path d={movement.type === 'increment' ? 'M -5 -25 L 0 -34 L 5 -25 Z' : 'M -5 -34 L 0 -25 L 5 -34 Z'} /></g>; }))}
+        {graph.points.map((point) => <g key={point.month.key} className={point.month.key === focusedMonth?.key ? 'pulse-balance-point is-active' : 'pulse-balance-point'} role="button" tabIndex={0} onClick={() => focusMonth(point.month.key, 'barogram')}><circle cx={point.x} cy={point.balanceY} r={point.month.key === focusedMonth?.key ? 6 : 4} /><text x={point.x} y={point.balanceY + (graph.points.indexOf(point) % 2 ? 21 : -12)} textAnchor="middle">{compactMoney(point.month.balance)}</text><text className="pulse-axis-month" x={point.x} y="267" textAnchor="middle">{point.month.shortLabel}</text></g>)}
+      </svg>
+    </div>
+  );
 
   return (
     <div className={`pulse-report ${isFullscreen ? 'has-fullscreen' : ''}`} ref={rootRef} role="document">
@@ -298,9 +331,44 @@ export const PulseReportPage: React.FC<PulseReportPageProps> = ({
 
         <section className="pulse-monitor" aria-label="Monitor patrimonial">
           <div className="pulse-monitor-title"><div><span className="pulse-live-signal" />SEÑAL FINANCIERA</div><strong>{periodLabel}</strong></div>
+          <p className="pulse-auto-summary" aria-live="polite">{monthNarrative}</p>
           {visibleMonths.length ? <>
-            <div className="pulse-seismograph"><header><span>TWR MENSUAL</span><strong>{focusedMonth?.label} · {signedPercent(focusedMonth?.returnPct ?? 0)}</strong></header><div className="pulse-monitor-scroll" ref={monitorScrollRef}><svg viewBox={`0 0 ${graph.width} 164`} style={{ minWidth: `${graph.width}px` }} role="application" tabIndex={0} aria-label={`Sismógrafo de rentabilidad de ${periodLabel}`} onKeyDown={(event) => { if (event.key === 'ArrowLeft') { event.preventDefault(); stepFocus(-1); } else if (event.key === 'ArrowRight') { event.preventDefault(); stepFocus(1); } }}><line className="pulse-seismo-baseline" x1={graph.left} x2={graph.right} y1={graph.seismoBaseline} y2={graph.seismoBaseline} />{graph.points.map((point) => <g key={point.month.key} className={`pulse-spike${point.month.returnPct < 0 ? ' is-negative' : ''}${point.month.key === focusedMonth?.key ? ' is-active' : ''}`} role="button" tabIndex={0} onClick={() => focusMonth(point.month.key, 'seismograph')}><line x1={point.x} x2={point.x} y1={graph.seismoBaseline} y2={point.returnY} /><circle cx={point.x} cy={point.returnY} r="4" /><text x={point.x} y={point.returnY + (point.month.returnPct >= 0 ? -10 : 16)} textAnchor="middle">{signedPercent(point.month.returnPct)}</text><text className="pulse-axis-month" x={point.x} y="147" textAnchor="middle">{point.month.shortLabel}</text></g>)}</svg></div></div>
-            <section className={`pulse-barogram-shell ${isFullscreen ? 'is-fullscreen' : ''}`}><header><div><span>BAROGRAMA DE SALDO</span><strong>{focusedMonth?.label} · {formatCurrency(focusedMonth?.balance ?? 0)}</strong></div><button type="button" onClick={() => { setIsFullscreen((value) => !value); onAnalyticsEvent?.({ type: 'chart_expand_request', label: 'PULSO barograma' }); }}>{isFullscreen ? 'CERRAR ×' : 'AMPLIAR ⛶'}</button></header><div className="pulse-monitor-scroll" ref={barogramScrollRef}><svg className="pulse-barogram" viewBox={`0 0 ${graph.width} 286`} style={{ minWidth: `${graph.width}px` }} role="application" tabIndex={0} aria-label={`Evolución del saldo de ${periodLabel}`} onKeyDown={(event) => { if (event.key === 'ArrowLeft') { event.preventDefault(); stepFocus(-1); } else if (event.key === 'ArrowRight') { event.preventDefault(); stepFocus(1); } }}><defs><linearGradient id="pulse-balance-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#4cc9f0" stopOpacity=".28" /><stop offset="1" stopColor="#4cc9f0" stopOpacity="0" /></linearGradient></defs>{[0, .25, .5, .75, 1].map((ratio) => { const y = graph.chartBottom - ratio * (graph.chartBottom - graph.chartTop); return <g className="pulse-bar-grid" key={ratio}><line x1={graph.left} x2={graph.right} y1={y} y2={y} /><text x={graph.left - 9} y={y + 4} textAnchor="end">{compactMoney(graph.maxBalance * ratio)}</text></g>; })}<path className="pulse-balance-area" d={graph.balanceArea} /><path className="pulse-balance-line" d={graph.balanceLine} />{graph.points.flatMap((point) => point.month.movements.map((movement, index) => { const offset = (index - (point.month.movements.length - 1) / 2) * 18; return <g key={`${movement.iso}-${index}`} className={`pulse-flow is-${movement.type}`} transform={`translate(${point.x + offset} ${point.balanceY})`}><line y1="-6" y2="-30" /><path d={movement.type === 'increment' ? 'M -5 -25 L 0 -34 L 5 -25 Z' : 'M -5 -34 L 0 -25 L 5 -34 Z'} /></g>; }))}{graph.points.map((point) => <g key={point.month.key} className={point.month.key === focusedMonth?.key ? 'pulse-balance-point is-active' : 'pulse-balance-point'} role="button" tabIndex={0} onClick={() => focusMonth(point.month.key, 'barogram')}><circle cx={point.x} cy={point.balanceY} r={point.month.key === focusedMonth?.key ? 6 : 4} /><text x={point.x} y={point.balanceY + (graph.points.indexOf(point) % 2 ? 21 : -12)} textAnchor="middle">{compactMoney(point.month.balance)}</text><text className="pulse-axis-month" x={point.x} y="267" textAnchor="middle">{point.month.shortLabel}</text></g>)}</svg></div>{isFullscreen ? <p className="pulse-fullscreen-hint">Flechas para recorrer el registro · ESC para salir</p> : null}</section>
+            <div className="pulse-seismograph">
+              <header><span>TWR MENSUAL</span><strong>{focusedMonth?.label} ? {signedPercent(focusedMonth?.returnPct ?? 0)}</strong></header>
+              {renderSeismographGraphic(true)}
+            </div>
+            <section className={`pulse-barogram-shell ${isFullscreen ? 'is-fullscreen' : ''}`}>
+              <header>
+                <div><span>BAROGRAMA DE SALDO</span><strong>{focusedMonth?.label} ? {formatCurrency(focusedMonth?.balance ?? 0)}</strong></div>
+                <div className="pulse-barogram-actions">
+                  {isFullscreen ? (
+                    <div className="pulse-fullscreen-switch" role="group" aria-label="Vista del gr?fico ampliado">
+                      {([['balance', 'SALDO'], ['return', 'TWR'], ['both', 'AMBOS']] as Array<[FullscreenView, string]>).map(([value, label]) => (
+                        <button type="button" key={value} className={fullscreenView === value ? 'is-active' : ''} aria-pressed={fullscreenView === value} onClick={() => setFullscreenView(value)}>{label}</button>
+                      ))}
+                    </div>
+                  ) : null}
+                  <button type="button" onClick={() => { setIsFullscreen((value) => !value); onAnalyticsEvent?.({ type: 'chart_expand_request', label: 'PULSO barograma' }); }}>{isFullscreen ? 'CERRAR ?' : 'AMPLIAR ?'}</button>
+                </div>
+              </header>
+              {isFullscreen ? (
+                <div className={`pulse-fullscreen-graphs ${fullscreenView === 'both' ? 'is-both' : ''}`}>
+                  {fullscreenView === 'return' || fullscreenView === 'both' ? (
+                    <div className="pulse-fullscreen-chart is-return">
+                      <div className="pulse-fullscreen-chart-label"><span>TWR mensual</span><strong>{focusedMonth?.label} ? {signedPercent(focusedMonth?.returnPct ?? 0)}</strong></div>
+                      {renderSeismographGraphic(false)}
+                    </div>
+                  ) : null}
+                  {fullscreenView === 'balance' || fullscreenView === 'both' ? (
+                    <div className="pulse-fullscreen-chart is-balance">
+                      <div className="pulse-fullscreen-chart-label"><span>Saldo de cierre</span><strong>{focusedMonth?.label} ? {formatCurrency(focusedMonth?.balance ?? 0)}</strong></div>
+                      {renderBarogramGraphic(true)}
+                    </div>
+                  ) : null}
+                </div>
+              ) : renderBarogramGraphic(true)}
+              {isFullscreen ? <p className="pulse-fullscreen-hint">Flechas para recorrer el registro ? ESC para salir</p> : null}
+            </section>
           </> : <div className="pulse-no-signal"><span>NO SIGNAL</span><strong>Esperando el primer cierre mensual</strong></div>}
         </section>
 
