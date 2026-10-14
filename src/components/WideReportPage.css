@@ -228,7 +228,7 @@
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-patrimony-frame {
-  grid-template-columns: 104px minmax(0, 1fr);
+  grid-template-columns: 112px minmax(0, 1fr);
   margin-top: 20px;
 }
 
@@ -236,7 +236,10 @@
   margin-top: 0;
   border-color: rgba(13, 81, 103, 0.14);
   border-radius: 18px 0 0 18px;
-  background: linear-gradient(180deg, #f6fbfc, #edf5f7);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(239, 247, 248, 0.96)),
+    linear-gradient(180deg, #f6fbfc, #edf5f7);
+  box-shadow: inset -1px 0 rgba(14, 103, 115, 0.08);
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-fixed-y-axis-chart,
@@ -244,51 +247,106 @@
   height: 500px;
 }
 
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-wide-axis-scale {
+  position: absolute;
+  inset: 18px 0 auto;
+  height: 500px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-wide-axis-scale span {
+  position: absolute;
+  right: 14px;
+  transform: translateY(-50%);
+  color: #385b6d;
+  font-size: 13px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-line-wrap {
   margin-top: 0;
-  padding: 18px 14px 13px;
+  padding: 18px 14px 12px;
+  overflow: hidden;
   border-color: rgba(13, 81, 103, 0.14);
   border-radius: 0 18px 18px 0;
   background:
-    linear-gradient(rgba(15, 95, 117, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 95, 117, 0.04) 1px, transparent 1px),
     radial-gradient(720px 260px at 80% 0%, rgba(46, 196, 189, 0.14), transparent 68%),
     linear-gradient(180deg, #fbfefe, #eff7f8);
-  background-size: 100% 25%, 8.333% 100%, auto, auto;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-plot-stage {
+  height: 500px;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-grid-line {
-  stroke: rgba(17, 79, 101, 0.16);
-  stroke-dasharray: 3 5;
+  stroke: rgba(17, 79, 101, 0.18);
+  stroke-width: 1.1;
+  stroke-dasharray: 5 7;
+  vector-effect: non-scaling-stroke;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-month-guide {
+  stroke: rgba(9, 107, 117, 0.075);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-label-guide {
+  stroke: rgba(7, 102, 112, 0.36);
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-area {
-  opacity: 0.78;
+  opacity: 0.88;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-line {
-  stroke: #087e88;
-  stroke-width: 3.8;
-  filter: drop-shadow(0 7px 9px rgba(8, 126, 136, 0.2));
+  stroke-width: 4.2;
+  filter: drop-shadow(0 8px 10px rgba(8, 126, 136, 0.2));
+  vector-effect: non-scaling-stroke;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-dot {
-  fill: #0a6e77;
-  stroke: #e9fffc;
-  stroke-width: 2.7;
-  filter: drop-shadow(0 4px 7px rgba(8, 110, 119, 0.32));
+  fill: #087b83;
+  stroke: #f2fffd;
+  stroke-width: 3;
+  filter: drop-shadow(0 5px 8px rgba(8, 110, 119, 0.34));
+  vector-effect: non-scaling-stroke;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-dot-halo {
+  fill: rgba(30, 190, 168, 0.18);
+  stroke: rgba(17, 150, 137, 0.34);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  animation: widePatrimonyPulse 2.6s ease-out infinite;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-point-label rect {
-  fill: rgba(255, 255, 255, 0.97);
-  stroke: rgba(8, 123, 131, 0.36);
-  stroke-width: 1.3;
+  fill: rgba(255, 255, 255, 0.98);
+  stroke: rgba(8, 123, 131, 0.32);
+  stroke-width: 1.15;
+  filter: drop-shadow(0 5px 7px rgba(12, 70, 82, 0.12));
+  vector-effect: non-scaling-stroke;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-point-label text {
   fill: #082d3d;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 950;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-point-label.is-latest rect {
+  fill: #076f78;
+  stroke: #076f78;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-point-label.is-latest text {
+  fill: #ffffff;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-y-label {
@@ -299,15 +357,98 @@
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-month-row {
   min-height: 34px;
-  margin-top: 8px;
+  margin-top: 10px;
+  gap: 3px;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-month-row span {
-  padding: 6px 4px;
+  padding: 7px 4px;
   color: #284d62;
-  background: rgba(8, 123, 131, 0.075);
+  border: 1px solid rgba(8, 123, 131, 0.08);
+  border-radius: 8px;
+  background: rgba(8, 123, 131, 0.065);
   font-size: 12px;
   font-weight: 850;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-patrimony-scroll-hint {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 4px 0 116px;
+  color: #5a7482;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-patrimony-scroll-hint span:last-child {
+  color: #087b83;
+}
+
+@keyframes widePatrimonyPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.report-pro-chart-overlay .is-wide-patrimony .report-pro-month-guide {
+  stroke: rgba(9, 107, 117, 0.07);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.report-pro-chart-overlay .is-wide-patrimony .report-pro-label-guide {
+  stroke: rgba(7, 102, 112, 0.34);
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.report-pro-chart-overlay .is-wide-patrimony .report-pro-grid-line {
+  stroke: rgba(17, 79, 101, 0.17);
+  stroke-dasharray: 5 7;
+  vector-effect: non-scaling-stroke;
+}
+
+.report-pro-chart-overlay .is-wide-patrimony .report-pro-line {
+  stroke-width: 4.2;
+  filter: drop-shadow(0 8px 10px rgba(8, 126, 136, 0.18));
+  vector-effect: non-scaling-stroke;
+}
+
+.report-pro-chart-overlay .is-wide-patrimony .report-pro-dot {
+  fill: #087b83;
+  stroke: #f2fffd;
+  stroke-width: 3;
+  filter: drop-shadow(0 5px 8px rgba(8, 110, 119, 0.34));
+  vector-effect: non-scaling-stroke;
+}
+
+.report-pro-chart-overlay .is-wide-patrimony .report-pro-dot-halo {
+  fill: rgba(30, 190, 168, 0.18);
+  stroke: rgba(17, 150, 137, 0.34);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  animation: widePatrimonyPulse 2.6s ease-out infinite;
+}
+
+.report-pro-chart-overlay .is-wide-patrimony .report-pro-point-label.is-latest rect {
+  fill: #076f78;
+  stroke: #076f78;
+}
+
+.report-pro-chart-overlay .is-wide-patrimony .report-pro-point-label.is-latest text {
+  fill: #ffffff;
+}
+
+.report-pro-chart-overlay .report-pro-patrimony-scroll.is-expanded {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.report-pro-chart-overlay .report-pro-patrimony-scroll.is-expanded .report-pro-patrimony-scroll-inner,
+.report-pro-chart-overlay .report-pro-patrimony-scroll.is-expanded .report-pro-line-wrap-expanded {
+  height: 100%;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-expand-chart-button,
@@ -360,7 +501,9 @@
   }
 
   .report-pro-page-wide .report-pro-wide-sheet .report-pro-fixed-y-axis-chart,
-  .report-pro-page-wide .report-pro-wide-sheet .report-pro-line-chart {
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-line-chart,
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-plot-stage,
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-wide-axis-scale {
     height: 430px;
   }
 
@@ -440,7 +583,9 @@
   }
 
   .report-pro-page-wide .report-pro-wide-sheet .report-pro-fixed-y-axis-chart,
-  .report-pro-page-wide .report-pro-wide-sheet .report-pro-line-chart {
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-line-chart,
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-plot-stage,
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-wide-axis-scale {
     height: 350px;
   }
 
@@ -450,6 +595,44 @@
 
   .report-pro-page-wide .report-pro-wide-sheet .report-pro-month-row span {
     font-size: 11px;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-patrimony-scroll-hint {
+    display: grid;
+    gap: 3px;
+    padding-left: 72px;
+    font-size: 11px;
+  }
+
+  .report-pro-chart-overlay .is-wide-patrimony .report-pro-point-label.is-odd:not(.is-latest),
+  .report-pro-chart-overlay .is-wide-patrimony .report-pro-label-guide.is-odd {
+    display: none !important;
+  }
+
+  .report-pro-chart-overlay .is-wide-patrimony .report-pro-point-label,
+  .report-pro-chart-overlay .is-wide-patrimony .report-pro-y-label-expanded,
+  .report-pro-chart-overlay .is-wide-patrimony .report-pro-dot,
+  .report-pro-chart-overlay .is-wide-patrimony .report-pro-dot-halo {
+    transform: scaleX(2.4) !important;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .report-pro-chart-overlay .is-wide-patrimony .report-pro-dot {
+    opacity: 1;
+    animation: none;
+  }
+
+  .report-pro-chart-overlay .is-wide-patrimony .report-pro-month-row-expanded span:nth-child(even) {
+    visibility: hidden;
+  }
+
+  .report-pro-chart-overlay .is-wide-patrimony .report-pro-month-row-expanded span {
+    overflow: visible;
+    padding-inline: 0;
+    background: transparent;
+    font-size: 10px;
+    text-overflow: clip;
   }
 }
 

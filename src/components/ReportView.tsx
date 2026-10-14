@@ -194,6 +194,19 @@ const buildNiceAxis = (values: number[], approxTickCount = 6) => {
   return { min, max, ticks: buildAxisTicks(min, max, step) };
 };
 
+const buildRefinedZeroAxis = (values: number[], approxTickCount = 6) => {
+  const maxValue = Math.max(0, ...values.filter(Number.isFinite));
+  if (maxValue <= 0) return { min: 0, max: 100000, ticks: [100000, 75000, 50000, 25000, 0] };
+
+  const rawStep = maxValue / Math.max(1, approxTickCount - 1);
+  const power = 10 ** Math.floor(Math.log10(rawStep));
+  const fraction = rawStep / power;
+  const niceFraction = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 2.5 ? 2.5 : fraction <= 5 ? 5 : 10;
+  const step = niceFraction * power;
+  const max = Math.ceil(maxValue / step) * step;
+  return { min: 0, max, ticks: buildAxisTicks(0, max, step) };
+};
+
 const monthIndexByLabel: Record<string, number> = {
   ene: 0,
   enero: 0,
@@ -501,6 +514,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   useLayoutEffect(() => {
     if (!report) return undefined;
     let settledFrame = 0;
+    let settledTimer = 0;
     const scrollToLatestMonth = () => {
       const scroller = patrimonyScrollRef.current;
       if (!scroller) return;
@@ -509,12 +523,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const frame = window.requestAnimationFrame(() => {
       scrollToLatestMonth();
       settledFrame = window.requestAnimationFrame(scrollToLatestMonth);
+      settledTimer = window.setTimeout(scrollToLatestMonth, 120);
     });
     return () => {
       window.cancelAnimationFrame(frame);
       window.cancelAnimationFrame(settledFrame);
+      window.clearTimeout(settledTimer);
     };
-  }, [report?.clientId, report?.createdAt, report?.patrimonioEvolution.length, periodPreset, periodStartMonth, periodEndMonth]);
+  }, [report?.clientId, report?.createdAt, report?.patrimonioEvolution.length, periodPreset, periodStartMonth, periodEndMonth, demoReportPage]);
 
   useEffect(() => {
     if (!analyticsEnabled) return undefined;
@@ -879,6 +895,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   }
 
   if (!report) return null;
+  const isWideDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page20';
 
   const visiblePendingCashMovements = report.clientId === DEMO_CLIENT_ID
     ? [...pendingCashMovements]
@@ -1027,13 +1044,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
     data: typeof patrimonioWithData,
     width: number,
     height: number,
-    pads: { left: number; right: number; top: number; bottom: number }
+    pads: { left: number; right: number; top: number; bottom: number },
+    useRefinedAxis = false
   ) => {
     const plotW = width - pads.left - pads.right;
     const plotH = height - pads.top - pads.bottom;
     const plotBottom = pads.top + plotH;
     const values = data.map((p) => p.balance as number);
-    const axis = buildNiceAxis([0, ...values]);
+    const axis = useRefinedAxis ? buildRefinedZeroAxis(values) : buildNiceAxis([0, ...values]);
     const min = 0;
     const max = axis.max;
     const ticks = axis.ticks.includes(0) ? axis.ticks : [...axis.ticks, 0];
@@ -1058,13 +1076,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
     return { width, height, ...pads, plotBottom, points, linePoints, areaPath, yTicks };
   };
   const chartW = 1000;
-  const chartH = 360;
+  const chartH = isWideDemoPage ? 500 : 360;
   const patrimonyGeometry = buildPatrimonyGeometry(effectivePatrimonioData, chartW, chartH, {
-    left: 78,
-    right: 24,
-    top: 20,
-    bottom: 18
-  });
+    left: isWideDemoPage ? 0 : 78,
+    right: isWideDemoPage ? 0 : 24,
+    top: isWideDemoPage ? 54 : 20,
+    bottom: isWideDemoPage ? 34 : 18
+  }, isWideDemoPage);
   const expandedSelectedStart = expandedStartMonth || rangeStart || firstPeriodKey;
   const expandedSelectedEnd = expandedEndMonth || rangeEnd || lastPeriodKey;
   const expandedRangeStart = expandedSelectedStart <= expandedSelectedEnd ? expandedSelectedStart : expandedSelectedEnd;
@@ -1083,7 +1101,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     right: 60,
     top: 42,
     bottom: 28
-  });
+  }, isWideDemoPage);
   const movementCapitalSeries = (report.movements ?? []).reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
     const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
     acc.push({
@@ -2043,7 +2061,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const isScrollable = !expanded && chartData.length > 10;
     const plotWidth = geometry.width - geometry.left - geometry.right;
     const chartWidth = isScrollable
-      ? `calc(${(chartData.length / 10) * (geometry.width / plotWidth) * 100}% + 22px)`
+      ? isWideDemoPage
+        ? `max(calc(${(chartData.length / 10) * 100}% + 28px), ${chartData.length * 92 + 28}px)`
+        : `calc(${(chartData.length / 10) * (geometry.width / plotWidth) * 100}% + 22px)`
       : '100%';
     const showPointTooltip = (anchor: Element, point: PatrimonyTooltipState) => {
       showViewportTooltip(
@@ -2055,20 +2075,52 @@ export const ReportView: React.FC<ReportViewProps> = ({
         { tone: 'dark', preferredPlacement: 'top', maxWidth: 220 }
       );
     };
+    const getPointLabelLayout = (point: PatrimonyTooltipState & { x: number; y: number }, index: number) => {
+      const label = formatCurrencyNoCents(point.value);
+      const approxWidth = expanded
+        ? Math.min(154, Math.max(86, label.length * 7.1))
+        : isWideDemoPage
+          ? Math.min(98, Math.max(66, label.length * 5.8))
+          : Math.min(110, Math.max(56, label.length * 5.4));
+      const labelX = Math.max(geometry.left + approxWidth / 2, Math.min(point.x, geometry.width - geometry.right - approxWidth / 2));
+      const isAbove = index % 2 === 0;
+      const preferredY = point.y + (isAbove ? (expanded ? -24 : -22) : (expanded ? 30 : 26));
+      const labelY = Math.max(geometry.top + (expanded ? 14 : 12), Math.min(preferredY, geometry.plotBottom - (expanded ? 14 : 12)));
+      return { label, approxWidth, labelX, labelY, isAbove };
+    };
+    const gradientSuffix = expanded ? 'Expanded' : 'Shared';
     const chart = (
       <div
         ref={expanded ? undefined : patrimonyScrollRef}
-        className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${isScrollable ? 'is-scrollable' : ''}`}
+        className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${isScrollable ? 'is-scrollable' : ''}${isWideDemoPage ? ' is-wide-patrimony' : ''}`}
       >
         <div className="report-pro-patrimony-scroll-inner" style={{ width: chartWidth, minWidth: chartWidth }}>
           <div className={`report-pro-line-wrap ${expanded ? 'report-pro-line-wrap-expanded' : ''}`}>
-          <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" className={`report-pro-line-chart ${expanded ? 'report-pro-line-chart-expanded' : ''}`}>
+          <div className="report-pro-plot-stage">
+          <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" className={`report-pro-line-chart ${expanded ? 'report-pro-line-chart-expanded' : ''}${isWideDemoPage ? ' report-pro-line-chart-wide' : ''}`}>
             <defs>
-              <linearGradient id={expanded ? 'patrimonyAreaExpanded' : 'patrimonyAreaShared'} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(14,165,233,0.30)" />
-                <stop offset="100%" stopColor="rgba(14,165,233,0.03)" />
+              <linearGradient id={`patrimonyArea${gradientSuffix}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={isWideDemoPage ? 'rgba(11, 139, 143, 0.34)' : 'rgba(14,165,233,0.30)'} />
+                <stop offset="100%" stopColor={isWideDemoPage ? 'rgba(31, 179, 166, 0.025)' : 'rgba(14,165,233,0.03)'} />
               </linearGradient>
+              {isWideDemoPage ? (
+                <linearGradient id={`patrimonyLine${gradientSuffix}`} x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#185b76" />
+                  <stop offset="58%" stopColor="#087f86" />
+                  <stop offset="100%" stopColor="#12a68f" />
+                </linearGradient>
+              ) : null}
             </defs>
+            {isWideDemoPage ? geometry.points.map((point, idx) => (
+              <line
+                key={`${point.month}-${idx}-vertical-guide`}
+                className="report-pro-month-guide"
+                x1={point.x}
+                y1={geometry.top}
+                x2={point.x}
+                y2={geometry.plotBottom}
+              />
+            )) : null}
             {geometry.yTicks.map((tick, idx) => (
               <g key={`tick-${idx}`}>
                 <line className="report-pro-grid-line" x1={geometry.left} y1={tick.y} x2={geometry.width - geometry.right} y2={tick.y} />
@@ -2079,11 +2131,33 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 ) : null}
               </g>
             ))}
-            {geometry.areaPath && <path d={geometry.areaPath} className="report-pro-area" fill={`url(#${expanded ? 'patrimonyAreaExpanded' : 'patrimonyAreaShared'})`} />}
-            {geometry.points.length > 1 && <polyline className={`report-pro-line ${expanded ? 'report-pro-line-expanded' : ''}`} points={geometry.linePoints} />}
+            {geometry.areaPath && <path d={geometry.areaPath} className="report-pro-area" fill={`url(#patrimonyArea${gradientSuffix})`} />}
+            {geometry.points.length > 1 && (
+              <polyline
+                className={`report-pro-line ${expanded ? 'report-pro-line-expanded' : ''}${isWideDemoPage ? ' report-pro-line-wide' : ''}`}
+                points={geometry.linePoints}
+                style={isWideDemoPage ? { stroke: `url(#patrimonyLine${gradientSuffix})` } : undefined}
+              />
+            )}
+            {isWideDemoPage ? geometry.points.map((point, idx) => {
+              const layout = getPointLabelLayout(point, idx);
+              return (
+                <line
+                  key={`${point.month}-${idx}-label-guide`}
+                  className={`report-pro-label-guide ${idx % 2 === 0 ? 'is-even' : 'is-odd'}`}
+                  x1={point.x}
+                  y1={point.y + (layout.isAbove ? -7 : 7)}
+                  x2={layout.labelX}
+                  y2={layout.labelY + (layout.isAbove ? 11 : -14)}
+                />
+              );
+            }) : null}
             {geometry.points.map((pt, idx) => (
-              <g key={`${pt.month}-${idx}`}>
-                <circle cx={pt.x} cy={pt.y} r={expanded ? '6.2' : '4.2'} className={`report-pro-dot ${expanded ? 'report-pro-dot-expanded' : ''}`} pointerEvents="none" />
+                <g key={`${pt.month}-${idx}`} className={idx % 2 === 0 ? 'is-even' : 'is-odd'}>
+                {isWideDemoPage && idx === geometry.points.length - 1 ? (
+                  <circle cx={pt.x} cy={pt.y} r={expanded ? '13' : '10'} className="report-pro-dot-halo" pointerEvents="none" />
+                ) : null}
+                <circle cx={pt.x} cy={pt.y} r={expanded ? '6.2' : isWideDemoPage ? '5.2' : '4.2'} className={`report-pro-dot ${expanded ? 'report-pro-dot-expanded' : ''}`} pointerEvents="none" />
                 <circle
                   cx={pt.x}
                   cy={pt.y}
@@ -2116,21 +2190,17 @@ export const ReportView: React.FC<ReportViewProps> = ({
               </g>
             ))}
             {geometry.points.map((pt, idx) => {
-              const label = formatCurrencyNoCents(pt.value);
-              const approxWidth = expanded
-                ? Math.min(154, Math.max(86, label.length * 7.1))
-                : Math.min(110, Math.max(56, label.length * 5.4));
-              const labelX = Math.max(geometry.left + approxWidth / 2, Math.min(pt.x, geometry.width - geometry.right - approxWidth / 2));
-              const preferredY = pt.y + (idx % 2 === 0 ? (expanded ? -24 : -18) : (expanded ? 30 : 22));
-              const labelY = Math.max(geometry.top + (expanded ? 14 : 10), Math.min(preferredY, geometry.plotBottom - (expanded ? 14 : 10)));
+              const { label, approxWidth, labelX, labelY } = getPointLabelLayout(pt, idx);
+              const isLatest = isWideDemoPage && idx === geometry.points.length - 1;
               return (
-                <g key={`${pt.month}-${idx}-label`} className={`report-pro-point-label ${expanded ? 'report-pro-point-label-expanded' : ''}`} pointerEvents="none">
+                <g key={`${pt.month}-${idx}-label`} className={`report-pro-point-label ${expanded ? 'report-pro-point-label-expanded' : ''} ${idx % 2 === 0 ? 'is-even' : 'is-odd'}${isLatest ? ' is-latest' : ''}`} pointerEvents="none">
                   <rect x={labelX - approxWidth / 2} y={labelY - (expanded ? 18 : 14)} width={approxWidth} height={expanded ? '26' : '20'} rx={expanded ? '9' : '7'} />
                   <text x={labelX} y={labelY} textAnchor="middle">{label}</text>
                 </g>
               );
             })}
           </svg>
+          </div>
           <div
             className={`report-pro-month-row ${expanded ? 'report-pro-month-row-expanded' : ''}`}
             style={{
@@ -2149,17 +2219,35 @@ export const ReportView: React.FC<ReportViewProps> = ({
     );
     if (expanded) return chart;
     return (
-      <div className="report-pro-patrimony-frame">
-        <div className="report-pro-fixed-y-axis" aria-hidden="true">
-          <svg viewBox={`0 0 88 ${geometry.height}`} preserveAspectRatio="none" className="report-pro-fixed-y-axis-chart">
-            {geometry.yTicks.map((tick, idx) => (
-              <text key={`fixed-tick-${idx}`} className="report-pro-y-label" x="80" y={tick.y + 4} textAnchor="end">
-                {formatAxisCurrency(tick.value)}
-              </text>
-            ))}
-          </svg>
+      <div className={`report-pro-patrimony-chart-shell${isWideDemoPage ? ' is-wide' : ''}`}>
+        <div className="report-pro-patrimony-frame">
+          <div className="report-pro-fixed-y-axis" aria-hidden="true">
+            {isWideDemoPage ? (
+              <div className="report-pro-wide-axis-scale">
+                {geometry.yTicks.map((tick, idx) => (
+                  <span key={`fixed-tick-${idx}`} style={{ top: `${(tick.y / geometry.height) * 100}%` }}>
+                    {formatAxisCurrency(tick.value)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <svg viewBox={`0 0 88 ${geometry.height}`} preserveAspectRatio="none" className="report-pro-fixed-y-axis-chart">
+                {geometry.yTicks.map((tick, idx) => (
+                  <text key={`fixed-tick-${idx}`} className="report-pro-y-label" x="80" y={tick.y + 4} textAnchor="end">
+                    {formatAxisCurrency(tick.value)}
+                  </text>
+                ))}
+              </svg>
+            )}
+          </div>
+          {chart}
         </div>
-        {chart}
+        {isWideDemoPage && isScrollable ? (
+          <div className="report-pro-patrimony-scroll-hint" aria-hidden="true">
+            <span>Vista inicial: meses recientes</span>
+            <span>Desliza para consultar meses anteriores</span>
+          </div>
+        ) : null}
       </div>
     );
   };
@@ -2258,7 +2346,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isActaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page17';
   const isTrazaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page18';
   const isContinuumDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page19';
-  const isWideDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page20';
   const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage;
 
   return (

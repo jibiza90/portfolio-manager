@@ -3869,6 +3869,16 @@ input[type='number'] {
   min-height: 0;
 }
 
+.report-pro-chart-overlay .report-pro-patrimony-section.is-expanded .report-pro-line-wrap-expanded {
+  flex: 1 1 0;
+  height: auto;
+  min-height: 0;
+}
+
+.report-pro-chart-overlay .report-pro-patrimony-scroll.is-expanded.is-wide-patrimony .report-pro-line-wrap-expanded {
+  height: calc(100% - 14px);
+}
+
 .report-pro-chart-overlay .report-pro-line-chart.report-pro-line-chart-expanded {
   display: block;
   height: 100%;
@@ -4077,6 +4087,20 @@ input[type='number'] {
   display: none;
 }
 
+.report-pro-plot-stage {
+  position: relative;
+  min-width: 0;
+}
+
+.report-pro-line-wrap-expanded {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.report-pro-line-wrap-expanded .report-pro-plot-stage {
+  min-height: 0;
+}
+
 .report-pro-line-chart {
   width: 100%;
   height: 360px;
@@ -4259,6 +4283,8 @@ input[type='number'] {
 
 .report-pro-dot {
   opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
   animation: reportDotIn 260ms ease forwards;
 }
 
