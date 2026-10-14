@@ -897,11 +897,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
   if (!report) return null;
   const isWideDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page20';
 
-  const visiblePendingCashMovements = report.clientId === DEMO_CLIENT_ID
-    ? [...pendingCashMovements]
-        .filter((movement) => Number.isFinite(movement.amount) && movement.amount > 0)
-        .sort((left, right) => left.iso.localeCompare(right.iso))
-    : [];
+  const visiblePendingCashMovements = [...pendingCashMovements]
+    .filter((movement) => Number.isFinite(movement.amount) && movement.amount > 0)
+    .sort((left, right) => left.iso.localeCompare(right.iso));
   const pendingIncrements = visiblePendingCashMovements
     .filter((movement) => movement.type === 'increment')
     .reduce((sum, movement) => sum + movement.amount, 0);

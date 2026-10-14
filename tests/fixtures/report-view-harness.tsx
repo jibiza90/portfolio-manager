@@ -66,14 +66,15 @@ const buildReportData = (monthCount: number): ReportData => {
   };
 };
 
-export const mountReportView = (monthCount = 12) => {
+export const mountReportView = (monthCount = 12, clientId = 'client-001') => {
   const root = document.getElementById('root');
   if (!root) throw new Error('Missing root element');
   root.innerHTML = '';
   root.className = 'client-portal-page';
+  const reportData = buildReportData(monthCount);
   createRoot(root).render(
     <ReportView
-      reportData={buildReportData(monthCount)}
+      reportData={{ ...reportData, clientId }}
       pendingCashMovements={[{ iso: '2026-04-10', type: 'increment', amount: 15000 }]}
     />
   );

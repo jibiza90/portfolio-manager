@@ -493,11 +493,8 @@ const getInitialPositionFromOverview = (overview: ClientOverview | null) =>
     ? overview.initialPosition
     : null;
 
-const getDemoPendingCashMovements = (
-  overview: ClientOverview | null,
-  clientId: string
-): PendingCashMovement[] => {
-  if (clientId !== DEMO_CLIENT_ID || !overview?.pendingCashMovements?.length) return [];
+const getPendingCashMovements = (overview: ClientOverview | null): PendingCashMovement[] => {
+  if (!overview?.pendingCashMovements?.length) return [];
   return overview.pendingCashMovements.filter((movement) =>
     (movement.type === 'increment' || movement.type === 'decrement') &&
     typeof movement.iso === 'string' &&
@@ -1518,8 +1515,8 @@ const ClientPortal = ({
   const report = overview?.report ?? null;
   const initialPosition = getInitialPositionFromOverview(overview);
   const pendingCashMovements = useMemo(
-    () => getDemoPendingCashMovements(overview, clientId),
-    [clientId, overview]
+    () => getPendingCashMovements(overview),
+    [overview]
   );
   const clientName = useMemo(
     () => report?.clientName ?? overview?.clientName ?? CLIENTS.find((client) => client.id === clientId)?.name ?? clientId,
@@ -2644,8 +2641,8 @@ const AdminClientReportPreview = ({
 
   const initialPosition = getInitialPositionFromOverview(overview);
   const pendingCashMovements = useMemo(
-    () => getDemoPendingCashMovements(overview, clientId),
-    [clientId, overview]
+    () => getPendingCashMovements(overview),
+    [overview]
   );
   const reportData = useMemo(
     () => buildPublishedClientReport(overview, clientId, loginId),

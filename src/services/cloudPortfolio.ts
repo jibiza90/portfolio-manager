@@ -1,5 +1,5 @@
 import { Movement, MonthlyHistoryEntry, PersistedState, PortfolioSnapshot } from '../types';
-import { DEMO_CLIENT_ID, isDemoClient } from '../constants/clients';
+import { isDemoClient } from '../constants/clients';
 import { auth, db, firebase, firebaseConfig, functions } from './firebaseApp';
 import { buildClientReportData, toClientReportPayload, type ClientContactInfo } from '../utils/clientReport';
 import { getDominantMonthlyReturn } from '../utils/monthlyHistory';
@@ -250,16 +250,18 @@ export const syncInitialClientOverviews = async (
 ) => {
   const publishedAt = Date.now();
   const clientIds = new Set(clients.map((client) => client.id));
-  const [provisionalDocs, accessProfiles, demoOverviewDoc] = await Promise.all([
-    db
-      .collection(CLIENT_OVERVIEW_COLLECTION)
-      .where('publicationMode', '==', INITIAL_CLIENT_PUBLICATION_MODE)
-      .get(),
+  const [overviewDocs, accessProfiles] = await Promise.all([
+    db.collection(CLIENT_OVERVIEW_COLLECTION).get(),
     db.collection('access_profiles').where('role', '==', 'client').get(),
-    db.collection(CLIENT_OVERVIEW_COLLECTION).doc(DEMO_CLIENT_ID).get()
   ]);
+  const provisionalDocs = overviewDocs.docs.filter(
+    (overviewDoc) => overviewDoc.data().publicationMode === INITIAL_CLIENT_PUBLICATION_MODE
+  );
   const provisionalByClientId = new Map(
-    provisionalDocs.docs.map((provisionalDoc) => [provisionalDoc.id, provisionalDoc.data()])
+    provisionalDocs.map((provisionalDoc) => [provisionalDoc.id, provisionalDoc.data()])
+  );
+  const overviewByClientId = new Map(
+    overviewDocs.docs.map((overviewDoc) => [overviewDoc.id, overviewDoc])
   );
   const profileNameByClientId = new Map<string, string>();
   accessProfiles.docs.forEach((profileDoc) => {
@@ -337,7 +339,7 @@ export const syncInitialClientOverviews = async (
     operationCount += 1;
   });
 
-  provisionalDocs.docs.forEach((provisionalDoc) => {
+  provisionalDocs.forEach((provisionalDoc) => {
     const clientId = provisionalDoc.id;
     const history = monthlyHistoryByClient[clientId] ?? {};
     const movements = movementsByClient[clientId] ?? {};
@@ -350,32 +352,34 @@ export const syncInitialClientOverviews = async (
     }
   });
 
-  if (demoOverviewDoc.exists) {
-    const demoOverview = demoOverviewDoc.data() as {
+  clients.forEach((client) => {
+    const overviewDoc = overviewByClientId.get(client.id);
+    if (!overviewDoc) return;
+    const overview = overviewDoc.data() as {
       report?: { movements?: Array<{ iso: string; type: string; amount: number }> } | null;
       pendingCashMovements?: Array<{ iso: string; type: string; amount: number }>;
     };
-    const publishedMovements = demoOverview.report?.movements;
-    if (publishedMovements) {
-      const pendingCashMovements = buildPendingCashMovements(
-        movementsByClient[DEMO_CLIENT_ID] ?? {},
-        publishedMovements
-      );
-      const existingPending = demoOverview.pendingCashMovements ?? [];
-      if (JSON.stringify(existingPending) !== JSON.stringify(pendingCashMovements)) {
-        batch.set(demoOverviewDoc.ref, pendingCashMovements.length > 0
-          ? {
-              pendingCashMovements,
-              pendingCashUpdatedAt: publishedAt
-            }
-          : {
-              pendingCashMovements: firebase.firestore.FieldValue.delete(),
-              pendingCashUpdatedAt: firebase.firestore.FieldValue.delete()
-            }, { merge: true });
-        operationCount += 1;
-      }
+    const publishedMovements = overview.report?.movements;
+    if (!publishedMovements) return;
+
+    const pendingCashMovements = buildPendingCashMovements(
+      movementsByClient[client.id] ?? {},
+      publishedMovements
+    );
+    const existingPending = overview.pendingCashMovements ?? [];
+    if (JSON.stringify(existingPending) !== JSON.stringify(pendingCashMovements)) {
+      batch.set(overviewDoc.ref, pendingCashMovements.length > 0
+        ? {
+            pendingCashMovements,
+            pendingCashUpdatedAt: publishedAt
+          }
+        : {
+            pendingCashMovements: firebase.firestore.FieldValue.delete(),
+            pendingCashUpdatedAt: firebase.firestore.FieldValue.delete()
+          }, { merge: true });
+      operationCount += 1;
     }
-  }
+  });
 
   if (operationCount > 0) await batch.commit();
   return operationCount;
