@@ -22,6 +22,7 @@ import { PulseReportPage } from './PulseReportPage';
 import { VaultReportPage } from './VaultReportPage';
 import { MeridianReportPage } from './MeridianReportPage';
 import { ActaReportPage } from './ActaReportPage';
+import { TrazaReportPage } from './TrazaReportPage';
 
 interface ReportViewProps {
   token?: string;
@@ -312,7 +313,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -2253,7 +2254,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isVaultDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page15';
   const isMeridianDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page16';
   const isActaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page17';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage;
+  const isTrazaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page18';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}`}>
@@ -2265,7 +2267,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-seventeen-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-eighteen-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2486,6 +2488,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="demo-report-page-label">Página 17</span>
               <small className="demo-report-page-author">GROK 4.7</small>
             </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page18' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page18'}
+              aria-label="Página 18"
+              onClick={() => {
+                setDemoReportPage('page18');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 18 TRAZA — GROK 4.7' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 18</span>
+              <small className="demo-report-page-author">GROK 4.7</small>
+            </button>
           </div>
         </nav>
       ) : null}
@@ -2614,6 +2629,15 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : isActaDemoPage ? (
         <ActaReportPage
+          report={report}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
+          onDownload={handleDownloadModernReport}
+          onPeriodChange={syncImmersiveReportPeriod}
+        />
+      ) : isTrazaDemoPage ? (
+        <TrazaReportPage
           report={report}
           pendingCashMovements={visiblePendingCashMovements}
           rootRef={reportRef}

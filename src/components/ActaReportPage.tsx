@@ -156,6 +156,7 @@ export const ActaReportPage: React.FC<ActaReportPageProps> = ({
   }, [customEnd, customStart, months, period]);
 
   const focusedMonth = visibleMonths.find((month) => month.key === focusedKey) ?? visibleMonths[visibleMonths.length - 1];
+  const focusedIndex = focusedMonth ? visibleMonths.findIndex((month) => month.key === focusedMonth.key) : -1;
   const years = useMemo(() => Array.from(new Set(visibleMonths.map((month) => month.key.slice(0, 4)))), [visibleMonths]);
   const periodStart = visibleMonths[0]?.key ?? '';
   const periodEnd = visibleMonths[visibleMonths.length - 1]?.key ?? '';
@@ -279,6 +280,7 @@ export const ActaReportPage: React.FC<ActaReportPageProps> = ({
             <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-labelledby="acta-chart-svg-title">
               <title id="acta-chart-svg-title">Evolución del saldo final por cierre mensual</title>
               <line x1="24" y1="136" x2="736" y2="136" className="acta-chart-axis" />
+              {focusedIndex >= 0 ? <line x1={pointX(focusedIndex)} y1="18" x2={pointX(focusedIndex)} y2="136" className="acta-chart-focus-guide" /> : null}
               {linePath ? <path d={linePath} className="acta-chart-line" /> : null}
               {visibleMonths.map((month, index) => {
                 const x = pointX(index);
@@ -346,6 +348,19 @@ export const ActaReportPage: React.FC<ActaReportPageProps> = ({
           <div><small>TWR acumulado</small><strong>{signedPercent(twrPct)}</strong></div>
           <div><small>Rentabilidad total</small><strong>{hasTotalReturn ? signedPercent(report.rentabilidad) : 'No aplicable'}</strong></div>
           <p>Estas cifras corresponden a la cartera completa y no cambian al filtrar el libro.</p>
+          {focusedMonth ? (
+            <section className="acta-margin-focus" aria-live="polite">
+              <span>ASIENTO CONSULTADO</span>
+              <strong>{focusedMonth.label}</strong>
+              <small>Asiento {String(focusedMonth.ordinal).padStart(2, '0')} de {visibleMonths.length}</small>
+              <dl>
+                <div><dt>Saldo inicial</dt><dd>{formatCurrency(focusedMonth.opening)}</dd></div>
+                <div><dt>Beneficio</dt><dd className={toneClass(focusedMonth.profit)}>{signedMoney(focusedMonth.profit)}</dd></div>
+                <div><dt>Rentabilidad</dt><dd className={toneClass(focusedMonth.returnPct)}>{signedPercent(focusedMonth.returnPct)}</dd></div>
+                <div><dt>Saldo final</dt><dd>{formatCurrency(focusedMonth.balance)}</dd></div>
+              </dl>
+            </section>
+          ) : null}
         </aside>
       </div>
 

@@ -79,6 +79,14 @@
 .acta-margin small { display: block; color: var(--acta-secondary); font-size: 10px; line-height: 15px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
 .acta-margin strong { display: block; margin-top: 4px; overflow-wrap: anywhere; font-size: 20px; line-height: 26px; }
 .acta-margin p { margin: 16px 0 0; color: var(--acta-secondary); font-size: 11px; line-height: 17px; }
+.acta-margin-focus { margin-top: 22px; padding-top: 18px; border-top: 1.5px solid var(--acta-ink); }
+.acta-margin-focus > span { display: block; color: var(--acta-secondary); font-size: 9px; line-height: 14px; font-weight: 700; letter-spacing: .12em; }
+.acta-margin-focus > strong { margin-top: 6px; font-family: 'Source Serif 4', Georgia, serif; font-size: 18px; line-height: 23px; font-weight: 500; }
+.acta-margin-focus > small { margin-top: 2px; color: var(--acta-muted); font-size: 9px; letter-spacing: .06em; }
+.acta-margin-focus dl { margin: 14px 0 0; }
+.acta-margin-focus dl div { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 7px 0; border-top: 1px solid rgba(200, 191, 174, .7); }
+.acta-margin-focus dt { color: var(--acta-secondary); font-size: 10px; }
+.acta-margin-focus dd { margin: 0; font-size: 11px; font-weight: 650; text-align: right; }
 
 .acta-equation {
   position: relative;
@@ -126,6 +134,7 @@
 .acta-chart header p { margin: 0; color: var(--acta-secondary); font-size: 11px; }
 .acta-chart svg { display: block; width: 100%; height: 160px; margin-top: 5px; overflow: visible; }
 .acta-chart-axis { stroke: var(--acta-rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.acta-chart-focus-guide { stroke: var(--acta-pending); stroke-width: 1; stroke-dasharray: 3 4; opacity: .5; vector-effect: non-scaling-stroke; }
 .acta-chart-line { fill: none; stroke: var(--acta-ink); stroke-width: 1.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .acta-chart g { cursor: pointer; }
 .acta-chart-hit { fill: transparent; }
