@@ -23,7 +23,7 @@ import { VaultReportPage } from './VaultReportPage';
 import { MeridianReportPage } from './MeridianReportPage';
 import { ActaReportPage } from './ActaReportPage';
 import { TrazaReportPage } from './TrazaReportPage';
-import { SingularReportPage } from './SingularReportPage';
+import { ContinuumReportPage } from './ContinuumReportPage';
 
 interface ReportViewProps {
   token?: string;
@@ -2256,8 +2256,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isMeridianDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page16';
   const isActaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page17';
   const isTrazaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page18';
-  const isSingularDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page19';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isSingularDemoPage;
+  const isContinuumDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page19';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}`}>
@@ -2510,7 +2510,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               aria-label="Página 19"
               onClick={() => {
                 setDemoReportPage('page19');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 19 SINGULAR — CODEX' });
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 19 CONTINUUM — CODEX' });
               }}
             >
               <span className="demo-report-page-label">Página 19</span>
@@ -2660,8 +2660,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
           onDownload={handleDownloadModernReport}
           onPeriodChange={syncImmersiveReportPeriod}
         />
-      ) : isSingularDemoPage ? (
-        <SingularReportPage
+      ) : isContinuumDemoPage ? (
+        <ContinuumReportPage
           report={report}
           pendingCashMovements={visiblePendingCashMovements}
           rootRef={reportRef}
