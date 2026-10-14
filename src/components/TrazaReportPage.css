@@ -69,17 +69,23 @@
 
 .traza-split { min-height: 560px; display: grid; grid-template-columns: 320px 1px minmax(0, 1fr); gap: 24px; margin-top: 28px; }
 .traza-split-rule { display: block; width: 1px; background: var(--traza-border); }
-.traza-docket { min-width: 0; padding: 18px; border-radius: 6px; background: var(--traza-list); }
+.traza-docket { position: sticky; top: 20px; min-width: 0; padding: 18px; border-radius: 6px; background: var(--traza-list); }
 .traza-docket header { position: relative; padding-bottom: 14px; border-bottom: 1px solid var(--traza-border); }
 .traza-docket header small { position: absolute; right: 0; bottom: 17px; color: var(--traza-muted); font-size: 10px; }
-.traza-docket > div { max-height: 640px; display: grid; gap: 8px; margin: 12px -6px 0; padding: 0 6px 6px; overflow-y: auto; overscroll-behavior: contain; }
-.traza-docket > div > button { min-width: 0; height: 82px; display: grid; grid-template-columns: 1fr auto; align-content: center; gap: 3px 8px; padding: 12px 14px; border: 1px solid transparent; border-left: 3px solid transparent; border-radius: 6px; color: var(--traza-text); background: transparent; text-align: left; transition: background-color 140ms ease, box-shadow 140ms ease; }
-.traza-docket > div > button:hover { background: #e7eef5; }
-.traza-docket > div > button.is-active { border-color: var(--traza-border); border-left-color: var(--traza-contribution); background: var(--traza-surface); box-shadow: 0 1px 2px rgba(26, 29, 33, .05), 0 8px 20px rgba(26, 29, 33, .05); }
+.traza-docket-status { display: flex; gap: 14px; margin: 11px 0 0; color: var(--traza-secondary); font-size: 9px; text-transform: uppercase; }
+.traza-docket-status span { display: flex; align-items: center; gap: 4px; }
+.traza-docket-status b { color: var(--traza-text); font-size: 11px; }
+.traza-docket-list { max-height: 570px; display: grid; gap: 8px; margin: 10px -6px 0; padding: 0 6px 6px; overflow-y: auto; overscroll-behavior: contain; }
+.traza-docket-list > button { min-width: 0; min-height: 94px; display: grid; grid-template-columns: 1fr auto; align-content: center; gap: 3px 8px; padding: 12px 14px; border: 1px solid transparent; border-left: 3px solid transparent; border-radius: 6px; color: var(--traza-text); background: transparent; text-align: left; transition: background-color 140ms ease, box-shadow 140ms ease; }
+.traza-docket-list > button:hover { background: #e7eef5; }
+.traza-docket-list > button.is-active { border-color: var(--traza-border); border-left-color: var(--traza-contribution); background: var(--traza-surface); box-shadow: 0 1px 2px rgba(26, 29, 33, .05), 0 8px 20px rgba(26, 29, 33, .05); }
 .traza-docket button > span { color: var(--traza-contribution); font-size: 10px; font-weight: 600; letter-spacing: .08em; }
 .traza-docket button > strong { justify-self: end; font-size: 16px; line-height: 20px; }
-.traza-docket button > small { grid-column: 1 / -1; min-width: 0; overflow: hidden; color: var(--traza-secondary); font-size: 10px; line-height: 15px; text-overflow: ellipsis; white-space: nowrap; }
-.traza-docket > div > p { margin: 28px 8px; color: var(--traza-secondary); font-size: 13px; text-align: center; }
+.traza-docket button > small { min-width: 0; overflow: hidden; color: var(--traza-secondary); font-size: 10px; line-height: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.traza-docket button > em { justify-self: end; align-self: center; padding: 2px 6px; border-radius: 999px; font-size: 8px; line-height: 13px; font-style: normal; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.traza-docket button > em.is-closed { color: var(--traza-positive); background: #e8f4ed; }
+.traza-docket button > em.is-pending { color: var(--traza-pending); background: #f4efe3; }
+.traza-docket-list > p { margin: 28px 8px; color: var(--traza-secondary); font-size: 13px; text-align: center; }
 
 .traza-file { min-width: 0; min-height: 560px; padding: 32px; border: 1px solid var(--traza-border); border-radius: 6px; background: var(--traza-surface); box-shadow: 0 1px 2px rgba(26, 29, 33, .04); animation: traza-file-in 160ms ease both; }
 .traza-file > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--traza-divider); }
@@ -89,11 +95,23 @@
 .traza-file > header > small { padding: 5px 9px; border-radius: 999px; color: var(--traza-contribution); background: #e7eef5; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .traza-file-amount { padding: 24px 0 20px; }
 .traza-file-amount strong { display: block; margin-top: 5px; overflow-wrap: anywhere; font-size: 40px; line-height: 44px; font-weight: 560; letter-spacing: -.035em; }
+.traza-journey { display: grid; grid-template-columns: 1fr 38px 1fr 38px 1fr; align-items: center; margin-bottom: 20px; padding: 16px 18px; border: 1px solid var(--traza-border); border-radius: 6px; background: #f8fafc; }
+.traza-journey > div { min-width: 0; display: grid; grid-template-columns: 24px 1fr; gap: 0 8px; align-items: center; }
+.traza-journey i { grid-row: 1 / span 2; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--traza-contribution); font-size: 10px; font-style: normal; font-weight: 700; }
+.traza-journey span { color: var(--traza-secondary); font-size: 9px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.traza-journey strong { min-width: 0; overflow-wrap: anywhere; font-size: 12px; line-height: 17px; }
+.traza-journey > b { height: 1px; background: var(--traza-border); }
+.traza-journey.is-pending > div:nth-of-type(n+2) i { color: var(--traza-pending); border: 1px dashed var(--traza-pending); background: transparent; }
+.traza-journey.is-pending > b { border-top: 1px dashed var(--traza-pending); background: transparent; }
 .traza-file-yield { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--traza-border); border-bottom: 1px solid var(--traza-border); }
 .traza-file-yield > div { min-width: 0; padding: 17px 20px 17px 0; }
 .traza-file-yield > div + div { padding-left: 20px; border-left: 1px solid var(--traza-border); }
 .traza-file-yield strong { display: block; margin-top: 6px; overflow-wrap: anywhere; font-size: 20px; line-height: 25px; }
 .traza-file-yield strong.is-pending { color: var(--traza-pending); font-size: 15px; }
+.traza-tranche-equation { display: grid; grid-template-columns: auto 20px auto 20px auto 1fr; align-items: center; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--traza-border); font-size: 12px; }
+.traza-tranche-equation > b { color: var(--traza-contribution); text-align: center; }
+.traza-tranche-equation > strong { font-size: 14px; }
+.traza-tranche-equation > small { color: var(--traza-secondary); font-size: 10px; text-align: right; }
 
 .traza-month-context { margin-top: 24px; }
 .traza-month-context h3 { margin: 1px 0 0; font-size: 18px; line-height: 24px; }
@@ -170,9 +188,10 @@
 @media (max-width: 1099px) {
   .traza-split { grid-template-columns: 1fr; min-height: 0; }
   .traza-split-rule { display: none; }
-  .traza-docket > div { max-height: none; display: flex; margin-right: -18px; padding-right: 24px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
-  .traza-docket > div::after { position: sticky; right: -1px; min-width: 24px; content: ''; background: linear-gradient(90deg, transparent, var(--traza-list)); pointer-events: none; }
-  .traza-docket > div > button { min-width: 200px; height: 88px; scroll-snap-align: start; }
+  .traza-docket { position: static; }
+  .traza-docket-list { max-height: none; display: flex; margin-right: -18px; padding-right: 24px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
+  .traza-docket-list::after { position: sticky; right: -1px; min-width: 24px; content: ''; background: linear-gradient(90deg, transparent, var(--traza-list)); pointer-events: none; }
+  .traza-docket-list > button { min-width: 200px; min-height: 94px; scroll-snap-align: start; }
   .traza-file { min-height: 520px; }
   .traza-rest-grid { grid-template-columns: 1fr; }
   .traza-portfolio-close { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -199,13 +218,18 @@
   .traza-custom label { justify-content: space-between; }
   .traza-custom select { min-width: 190px; }
   .traza-docket { padding-inline: 14px; }
-  .traza-docket > div > button { min-width: 180px; }
+  .traza-docket-list > button { min-width: 190px; }
   .traza-file { min-height: 0; padding: 20px; }
   .traza-file > header { align-items: flex-start; flex-direction: column; gap: 9px; }
   .traza-file-amount strong { font-size: 32px; line-height: 36px; }
+  .traza-journey { grid-template-columns: 1fr; gap: 9px; }
+  .traza-journey > b { width: 1px; height: 12px; margin-left: 12px; }
+  .traza-journey.is-pending > b { border-top: 0; border-left: 1px dashed var(--traza-pending); }
   .traza-file-yield { grid-template-columns: 1fr; }
   .traza-file-yield > div { padding: 15px 0; }
   .traza-file-yield > div + div { padding-left: 0; border-top: 1px solid var(--traza-border); border-left: 0; }
+  .traza-tranche-equation { grid-template-columns: auto 18px auto 18px auto; }
+  .traza-tranche-equation > small { grid-column: 1 / -1; text-align: left; }
   .traza-month-context svg { display: none; }
   .traza-bars-mobile { display: grid; gap: 18px; margin-top: 18px; }
   .traza-bars-mobile > div header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -251,9 +275,9 @@
 
 @media (max-height: 500px) and (orientation: landscape) and (min-width: 700px) and (max-width: 1099px) {
   .traza-split { grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
-  .traza-docket > div { max-height: 430px; display: grid; margin-right: -6px; padding-right: 6px; overflow-x: hidden; overflow-y: auto; }
-  .traza-docket > div::after { display: none; }
-  .traza-docket > div > button { min-width: 0; height: 76px; }
+  .traza-docket-list { max-height: 430px; display: grid; margin-right: -6px; padding-right: 6px; overflow-x: hidden; overflow-y: auto; }
+  .traza-docket-list::after { display: none; }
+  .traza-docket-list > button { min-width: 0; min-height: 86px; }
   .traza-file { min-height: 430px; padding: 20px; }
 }
 

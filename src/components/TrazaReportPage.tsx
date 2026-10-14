@@ -208,6 +208,7 @@ export const TrazaReportPage: React.FC<TrazaReportPageProps> = ({
   const periodEnd = visibleMonths[visibleMonths.length - 1]?.key ?? '';
   const visibleDockets = useMemo(() => dockets.filter((docket) => !periodStart || (docket.monthKey >= periodStart && docket.monthKey <= periodEnd)), [dockets, periodEnd, periodStart]);
   const activeDocket = visibleDockets.find((docket) => docket.key === activeKey) ?? visibleDockets[visibleDockets.length - 1];
+  const closedDocketCount = visibleDockets.filter((docket) => docket.returnPct !== undefined && docket.profit !== undefined).length;
 
   useEffect(() => {
     setPeriod('all');
@@ -310,7 +311,8 @@ export const TrazaReportPage: React.FC<TrazaReportPageProps> = ({
       <div className="traza-split">
         <section className="traza-docket" aria-labelledby="traza-docket-title">
           <header><span>ARCHIVO</span><h2 id="traza-docket-title">Aportaciones</h2><small>{visibleDockets.length} de {dockets.length}</small></header>
-          <div role="listbox" aria-label="Expedientes de aportaciones" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Enter">
+          <p className="traza-docket-status"><span><b>{closedDocketCount}</b> {closedDocketCount === 1 ? 'cerrado' : 'cerrados'}</span><span><b>{visibleDockets.length - closedDocketCount}</b> {visibleDockets.length - closedDocketCount === 1 ? 'pendiente' : 'pendientes'}</span></p>
+          <div className="traza-docket-list" role="listbox" aria-label="Expedientes de aportaciones" aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Enter">
             {visibleDockets.map((docket) => (
               <button
                 key={docket.key}
@@ -329,7 +331,8 @@ export const TrazaReportPage: React.FC<TrazaReportPageProps> = ({
               >
                 <span>EXPEDIENTE {String(docket.ordinal).padStart(2, '0')}</span>
                 <strong>{formatCurrency(docket.amount)}</strong>
-                <small>{formatDate(docket.iso)} · {docket.returnPct === undefined ? 'Pendiente de cierre' : signedMoney(docket.profit ?? 0)}</small>
+                <small>{formatDate(docket.iso)} · {docket.returnPct === undefined ? 'Resultado por publicar' : signedMoney(docket.profit ?? 0)}</small>
+                <em className={docket.returnPct === undefined ? 'is-pending' : 'is-closed'}>{docket.returnPct === undefined ? 'Pendiente' : 'Cerrado'}</em>
               </button>
             ))}
             {!visibleDockets.length ? <p>No hay aportaciones publicadas</p> : null}
@@ -354,10 +357,18 @@ export const TrazaReportPage: React.FC<TrazaReportPageProps> = ({
                 <small>{activeDocket.month?.label ?? monthLabel(activeDocket.monthKey)}</small>
               </header>
               <div className="traza-file-amount"><span>Importe aportado</span><strong>{formatCurrency(activeDocket.amount)}</strong></div>
+              <div className={`traza-journey${activeDocket.returnPct === undefined ? ' is-pending' : ''}`} aria-label="Recorrido de la aportación seleccionada">
+                <div><i>1</i><span>Entrada</span><strong>{formatDate(activeDocket.iso)}</strong></div>
+                <b aria-hidden="true" />
+                <div><i>2</i><span>Cierre del mes</span><strong>{activeDocket.returnPct === undefined ? 'Por publicar' : activeDocket.month?.label ?? monthLabel(activeDocket.monthKey)}</strong></div>
+                <b aria-hidden="true" />
+                <div><i>3</i><span>Valor del tramo</span><strong>{activeDocket.profit === undefined ? 'Por determinar' : formatCurrency(activeDocket.amount + activeDocket.profit)}</strong></div>
+              </div>
               <div className="traza-file-yield" id="traza-yield-details" aria-describedby="traza-yield-note">
                 <div><span>Rentabilidad aplicada</span><strong className={activeDocket.returnPct === undefined ? 'is-pending' : toneClass(activeDocket.returnPct)}>{activeDocket.returnPct === undefined ? 'Pendiente de cierre' : signedPercent(activeDocket.returnPct * 100)}</strong></div>
                 <div><span>Beneficio de esta aportación</span><strong className={activeDocket.profit === undefined ? 'is-pending' : toneClass(activeDocket.profit)}>{activeDocket.profit === undefined ? 'Pendiente de cierre' : signedMoney(activeDocket.profit)}</strong></div>
               </div>
+              {activeDocket.profit !== undefined ? <div className="traza-tranche-equation" aria-label="Conciliación del expediente"><span>{formatCurrency(activeDocket.amount)}</span><b>+</b><span className={toneClass(activeDocket.profit)}>{signedMoney(activeDocket.profit)}</span><b>=</b><strong>{formatCurrency(activeDocket.amount + activeDocket.profit)}</strong><small>Aportación + beneficio = valor del tramo al cierre del mes</small></div> : null}
 
               <section className="traza-month-context" aria-labelledby="traza-month-context-title">
                 <div><span>CONTEXTO</span><h3 id="traza-month-context-title">Mes de entrada</h3></div>

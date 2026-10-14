@@ -25,13 +25,22 @@ test('renders GROK 4.7 TRAZA without inventing contribution returns', async ({ p
   const dockets = page.locator('.traza-docket [role="option"]');
   await expect(dockets).toHaveCount(2);
   await expect(dockets.last()).toHaveAttribute('aria-selected', 'true');
+  await expect(dockets.last()).toContainText('Cerrado');
+  await expect(page.locator('.traza-docket-status')).toContainText('1 cerrado');
+  await expect(page.locator('.traza-docket-status')).toContainText('1 pendiente');
+  await expect(page.locator('.traza-journey')).toContainText('Valor del tramo');
+  await expect(page.locator('.traza-journey')).toContainText('52.040,00');
   await expect(page.locator('.traza-file-yield')).toContainText('+4,08 %');
   await expect(page.locator('.traza-file-yield')).toContainText('+2040,00');
+  await expect(page.locator('.traza-tranche-equation')).toContainText('Aportación + beneficio');
   await expect(page.locator('.traza-file-note')).toContainText('No es la rentabilidad del mes ni el TWR');
 
   await dockets.first().click();
+  await expect(dockets.first()).toContainText('Pendiente');
+  await expect(page.locator('.traza-journey')).toContainText('Por determinar');
   await expect(page.locator('.traza-file-yield')).toContainText('Pendiente de cierre');
   await expect(page.locator('.traza-file-yield')).not.toContainText('%');
+  await expect(page.locator('.traza-tranche-equation')).toHaveCount(0);
 
   await dockets.first().focus();
   await page.keyboard.press('ArrowRight');
