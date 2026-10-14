@@ -78,3 +78,49 @@ export const mountReportView = (monthCount = 12) => {
     />
   );
 };
+
+export const mountContinuumStressReport = () => {
+  const root = document.getElementById('root');
+  if (!root) throw new Error('Missing root element');
+  const monthlyStats = Array.from({ length: 48 }, (_, index) => {
+    const date = new Date(2023, index, 1);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const profitPct = index % 9 === 4 ? -2.65 : 1.8 + (index % 6) * 0.57;
+    const profit = (index % 9 === 4 ? -1 : 1) * (18_000 + index * 950);
+    return {
+      month: key,
+      profit,
+      profitPct,
+      endBalance: 1_050_000 + index * 27_500 + profit,
+      hasData: true
+    };
+  });
+  const latest = monthlyStats[monthlyStats.length - 1];
+  const report: ReportData = {
+    clientId: 'client-001',
+    clientName: 'Cliente Demo',
+    clientCode: 'demo1',
+    incrementos: 1_750_000,
+    decrementos: 200_000,
+    saldo: latest.endBalance,
+    beneficioTotal: latest.endBalance - 1_550_000,
+    rentabilidad: 38.42,
+    beneficioUltimoMes: latest.profit,
+    rentabilidadUltimoMes: latest.profitPct,
+    twrYtd: 0.2147,
+    monthlyStats,
+    patrimonioEvolution: monthlyStats.map((month) => ({ month: month.month, balance: month.endBalance, hasData: true })),
+    movements: [
+      { iso: '2023-01-05', type: 'increment', amount: 1_000_000, balance: 1_000_000 },
+      { iso: '2024-06-14', type: 'increment', amount: 500_000, balance: 1_862_000 },
+      { iso: '2025-09-09', type: 'decrement', amount: 200_000, balance: 1_774_000 },
+      { iso: '2026-12-03', type: 'increment', amount: 250_000, balance: latest.endBalance }
+    ],
+    contributionBreakdowns: [],
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 86400000
+  };
+  root.innerHTML = '';
+  root.className = 'client-portal-page';
+  createRoot(root).render(<ReportView reportData={report} />);
+};
