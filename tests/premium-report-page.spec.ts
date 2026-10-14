@@ -12,7 +12,7 @@ test('keeps page 1 intact and renders the premium demo report with real data', a
   await mountDemoReport(page);
 
   const pageOneButton = page.getByRole('button', { name: 'Página 1', exact: true });
-  const pageTwoButton = page.getByRole('button', { name: 'Página 2' });
+  const pageTwoButton = page.getByRole('button', { name: 'Página 2', exact: true });
   await expect(pageOneButton).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
 

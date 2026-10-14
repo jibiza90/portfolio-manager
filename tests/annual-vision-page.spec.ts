@@ -59,6 +59,6 @@ test('renders the annual vision for Demo1 and keeps its controls coherent', asyn
 
   await page.getByRole('button', { name: 'Página 1', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
-  await page.getByRole('button', { name: 'Página 2' }).click();
+  await page.getByRole('button', { name: 'Página 2', exact: true }).click();
   await expect(page.getByRole('heading', { name: /Patrimonio.*en perspectiva/i })).toBeVisible();
 });

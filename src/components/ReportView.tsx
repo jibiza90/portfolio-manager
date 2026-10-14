@@ -24,6 +24,7 @@ import { MeridianReportPage } from './MeridianReportPage';
 import { ActaReportPage } from './ActaReportPage';
 import { TrazaReportPage } from './TrazaReportPage';
 import { ContinuumReportPage } from './ContinuumReportPage';
+import './WideReportPage.css';
 
 interface ReportViewProps {
   token?: string;
@@ -314,7 +315,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19' | 'page20'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -2257,10 +2258,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isActaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page17';
   const isTrazaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page18';
   const isContinuumDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page19';
+  const isWideDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page20';
   const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage;
 
   return (
-    <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}`}>
+    <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}${isWideDemoPage ? ' report-pro-page-wide' : ''}`}>
       {viewportTooltip ? (
         <ViewportTooltip
           tooltip={viewportTooltip}
@@ -2269,7 +2271,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-nineteen-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-nineteen-pages has-twenty-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2516,6 +2518,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="demo-report-page-label">Página 19</span>
               <small className="demo-report-page-author">CODEX</small>
             </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page20' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page20'}
+              aria-label="Página 20"
+              onClick={() => {
+                setDemoReportPage('page20');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 20 informe original ampliado — CODEX' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 20</span>
+              <small className="demo-report-page-author">CODEX</small>
+            </button>
           </div>
         </nav>
       ) : null}
@@ -2670,7 +2685,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           onPeriodChange={syncImmersiveReportPeriod}
         />
       ) : (
-      <article className="informe-preview glass-card report-pro-sheet report-pro-demo-sheet" ref={reportRef}>
+      <article className={`informe-preview glass-card report-pro-sheet report-pro-demo-sheet${isWideDemoPage ? ' report-pro-wide-sheet' : ''}`} ref={reportRef}>
         <header className="report-pro-header">
           <div>
             <p className="report-pro-kicker">Portfolio Manager</p>
