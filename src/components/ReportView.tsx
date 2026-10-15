@@ -30,6 +30,7 @@ import { ConsultaReportPage } from './ConsultaReportPage';
 import { EstacionesReportPage } from './EstacionesReportPage';
 import { PrismaOriginReportPage } from './PrismaOriginReportPage';
 import { NexusReportPage } from './NexusReportPage';
+import { AionReportPage } from './AionReportPage';
 import './WideReportPage.css';
 
 interface ReportViewProps {
@@ -334,7 +335,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19' | 'page20' | 'page21' | 'page22' | 'page23' | 'page24' | 'page25' | 'page26'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19' | 'page20' | 'page21' | 'page22' | 'page23' | 'page24' | 'page25' | 'page26' | 'page27'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -2356,7 +2357,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isEstacionesDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page24';
   const isPrismaOriginDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page25';
   const isNexusDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page26';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage;
+  const isAionDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page27';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage || isAionDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}${isWideDemoPage ? ' report-pro-page-wide' : ''}`}>
@@ -2368,7 +2370,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-nineteen-pages has-twenty-pages has-twenty-one-pages has-twenty-two-pages has-twenty-three-pages has-twenty-four-pages has-twenty-five-pages has-twenty-six-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-nineteen-pages has-twenty-pages has-twenty-one-pages has-twenty-two-pages has-twenty-three-pages has-twenty-four-pages has-twenty-five-pages has-twenty-six-pages has-twenty-seven-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2706,6 +2708,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="demo-report-page-label">Página 26</span>
               <small className="demo-report-page-author">CODEX</small>
             </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page27' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page27'}
+              aria-label="Página 27"
+              onClick={() => {
+                setDemoReportPage('page27');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 27 AION — CODEX' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 27</span>
+              <small className="demo-report-page-author">CODEX</small>
+            </button>
           </div>
         </nav>
       ) : null}
@@ -2906,6 +2921,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : isNexusDemoPage ? (
         <NexusReportPage
+          report={report}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
+          onDownload={handleDownloadModernReport}
+        />
+      ) : isAionDemoPage ? (
+        <AionReportPage
           report={report}
           pendingCashMovements={visiblePendingCashMovements}
           rootRef={reportRef}
