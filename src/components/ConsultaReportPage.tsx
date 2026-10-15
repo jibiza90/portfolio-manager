@@ -89,6 +89,14 @@ const compactMoney = (value: number) => {
   return `${Math.round(value).toLocaleString('es-ES')} €`;
 };
 
+const niceAxisMaximum = (value: number) => {
+  const safe = Math.max(1, value);
+  const magnitude = 10 ** Math.floor(Math.log10(safe));
+  const normalized = safe / magnitude;
+  const step = normalized <= 1 ? 1 : normalized <= 1.5 ? 1.5 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return step * magnitude;
+};
+
 const tone = (value: number) => value > 0.005 ? 'is-positive' : value < -0.005 ? 'is-negative' : 'is-neutral';
 const sumByType = (movements: Array<{ type: string; amount: number }>, type: 'increment' | 'decrement') =>
   movements.filter((movement) => movement.type === type).reduce((sum, movement) => sum + movement.amount, 0);
@@ -121,6 +129,7 @@ export const ConsultaReportPage: React.FC<ConsultaReportPageProps> = ({
   onAnalyticsEvent
 }) => {
   const questionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const monthButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const pending = useMemo(() => pendingCashMovements
     .filter((movement) => Number.isFinite(movement.amount) && movement.amount > 0)
     .sort((left, right) => left.iso.localeCompare(right.iso)), [pendingCashMovements]);
@@ -188,6 +197,11 @@ export const ConsultaReportPage: React.FC<ConsultaReportPageProps> = ({
     }
     setEvolutionFocus(Math.max(0, visibleMonths.length - 1));
   }, [selectedMonthKey, visibleMonths]);
+
+  useEffect(() => {
+    if (activeQuestion !== 'month' || !selectedMonthKey) return;
+    monthButtonRefs.current[selectedMonthKey]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [activeQuestion, selectedMonthKey]);
 
   const selectedMonth = visibleMonths.find((month) => month.key === selectedMonthKey) ?? visibleMonths[visibleMonths.length - 1] ?? months[months.length - 1];
   const lastMonth = months[months.length - 1];
@@ -272,20 +286,20 @@ export const ConsultaReportPage: React.FC<ConsultaReportPageProps> = ({
 
   const evolution = useMemo(() => {
     if (!visibleMonths.length) return null;
-    const width = 760;
-    const height = 240;
-    const left = 68;
-    const right = 24;
-    const top = 26;
-    const bottom = 42;
-    const maximum = Math.max(1, ...visibleMonths.map((month) => month.balance));
-    const minimumRaw = Math.min(...visibleMonths.map((month) => month.balance));
-    const minimum = maximum / Math.max(1, minimumRaw) > 3 ? 0 : minimumRaw * .94;
+    const width = Math.max(720, 56 + visibleMonths.length * 96);
+    const height = 300;
+    const left = 28;
+    const right = 28;
+    const top = 42;
+    const bottom = 58;
+    const maximum = niceAxisMaximum(Math.max(1, ...visibleMonths.map((month) => month.balance)) * 1.08);
+    const minimum = 0;
     const x = (index: number) => left + index * ((width - left - right) / Math.max(1, visibleMonths.length - 1));
     const y = (value: number) => top + ((maximum - value) / Math.max(1, maximum - minimum)) * (height - top - bottom);
     const points = visibleMonths.map((month, index) => ({ x: x(index), y: y(month.balance) }));
     const path = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
-    return { width, height, left, right, top, bottom, minimum, maximum, x, y, points, path };
+    const ticks = Array.from({ length: 5 }, (_, index) => maximum - index * (maximum / 4));
+    return { width, height, left, right, top, bottom, minimum, maximum, x, y, points, path, ticks };
   }, [visibleMonths]);
 
   const renderAnswer = () => {
@@ -335,10 +349,19 @@ export const ConsultaReportPage: React.FC<ConsultaReportPageProps> = ({
       <Calculation note={lastMonth?.breakdown ? 'Si hubo movimientos durante el mes, el detalle de cada tramo aparece en la pregunta del mes concreto.' : 'Rentabilidad TWR oficial publicada para el último mes.'}><span>Resultado publicado</span><i>=</i><strong>{signedMoney(report.beneficioUltimoMes)}</strong><span>Rentabilidad publicada</span><i>=</i><strong>{signedPercent(report.rentabilidadUltimoMes)}</strong></Calculation>
     </>;
 
-    if (activeQuestion === 'month') return <>
-      <div className="consulta-answer-kicker">DEL PERIODO SELECCIONADO</div><div className="consulta-title-with-select"><h2>¿Qué ocurrió en un mes concreto?</h2><select aria-label="Seleccionar mes" value={selectedMonth?.key ?? ''} onChange={(event) => setSelectedMonthKey(event.target.value)}>{visibleMonths.map((month) => <option key={month.key} value={month.key}>{month.label}</option>)}</select></div>
+    if (activeQuestion === 'month') {
+      const selectedIndex = Math.max(0, visibleMonths.findIndex((month) => month.key === selectedMonth?.key));
+      return <>
+      <div className="consulta-answer-kicker">DEL PERIODO SELECCIONADO</div><h2>¿Qué ocurrió en un mes concreto?</h2>
+      <div className="consulta-month-picker">
+        <button type="button" disabled={selectedIndex <= 0} aria-label="Mes anterior" onClick={() => setSelectedMonthKey(visibleMonths[selectedIndex - 1]?.key ?? selectedMonthKey)}>←</button>
+        <label><span>Mes analizado</span><select aria-label="Mes analizado" value={selectedMonth?.key ?? ''} onChange={(event) => setSelectedMonthKey(event.target.value)}>{visibleMonths.map((month) => <option key={month.key} value={month.key}>{month.label}</option>)}</select></label>
+        <button type="button" disabled={selectedIndex >= visibleMonths.length - 1} aria-label="Mes siguiente" onClick={() => setSelectedMonthKey(visibleMonths[selectedIndex + 1]?.key ?? selectedMonthKey)}>→</button>
+      </div>
+      <div className="consulta-month-timeline" aria-label="Meses disponibles">{visibleMonths.map((month) => <button type="button" key={month.key} ref={(element) => { monthButtonRefs.current[month.key] = element; }} className={month.key === selectedMonth?.key ? 'is-active' : ''} aria-pressed={month.key === selectedMonth?.key} onClick={() => setSelectedMonthKey(month.key)}><span>{month.shortLabel}</span><strong className={tone(month.returnPct)}>{signedPercent(month.returnPct)}</strong></button>)}</div>
       {selectedMonth ? renderMonthBreakdown(selectedMonth) : <p className="consulta-empty-note">No hay cierres publicados en este periodo.</p>}
     </>;
+    }
 
     if (activeQuestion === 'contributions') return <>
       <div className="consulta-answer-kicker">DEL PERIODO SELECCIONADO</div><h2>¿Qué pasó con cada aportación que hice?</h2>
@@ -357,7 +380,8 @@ export const ConsultaReportPage: React.FC<ConsultaReportPageProps> = ({
     if (activeQuestion === 'evolution') return <>
       <div className="consulta-answer-kicker">DEL PERIODO SELECCIONADO</div><h2>¿Cómo ha evolucionado mi patrimonio?</h2>
       {visibleMonths.length && evolution ? <><p className="consulta-answer-sentence">Pasó de <b>{formatCurrency(visibleMonths[0].balance)}</b> en {visibleMonths[0].label} a <b>{formatCurrency(visibleMonths[visibleMonths.length - 1].balance)}</b> en {visibleMonths[visibleMonths.length - 1].label}.</p>
-        <div className="consulta-evolution-wrap"><svg viewBox={`0 0 ${evolution.width} ${evolution.height}`} role="img" aria-label="Evolución del patrimonio" tabIndex={0} onKeyDown={(event) => { if (event.key === 'ArrowLeft') setEvolutionFocus((value) => Math.max(0, value - 1)); if (event.key === 'ArrowRight') setEvolutionFocus((value) => Math.min(visibleMonths.length - 1, value + 1)); }}><line x1={evolution.left} x2={evolution.width - evolution.right} y1={evolution.y(evolution.minimum)} y2={evolution.y(evolution.minimum)} className="consulta-evolution-axis" /><path d={evolution.path} className="consulta-evolution-line" />{evolution.points.map((point, index) => <g key={visibleMonths[index].key} className={evolutionFocus === index ? 'is-focused' : ''} onMouseEnter={() => setEvolutionFocus(index)}><line x1={point.x} x2={point.x} y1={point.y} y2={evolution.height - evolution.bottom} className="consulta-evolution-guide" /><circle cx={point.x} cy={point.y} r={evolutionFocus === index ? 6 : 3} /><text x={point.x} y={evolution.height - 15} textAnchor="middle">{index === 0 || index === visibleMonths.length - 1 || visibleMonths[index].key.endsWith('-12') ? visibleMonths[index].shortLabel : ''}</text></g>)}</svg><div className="consulta-evolution-focus"><span>{visibleMonths[evolutionFocus]?.label}</span><strong>{formatCurrency(visibleMonths[evolutionFocus]?.balance ?? 0)}</strong></div></div>
+        <p className="consulta-chart-help">Cada punto muestra el saldo publicado. Púlselo para abrir directamente el detalle de ese mes.</p>
+        <div className="consulta-evolution-wrap"><div className="consulta-evolution-chart"><div className="consulta-evolution-y-axis" aria-hidden="true">{evolution.ticks.map((tick) => <span key={tick} style={{ top: `${evolution.y(tick)}px` }}>{compactMoney(tick)}</span>)}</div><div className="consulta-evolution-scroll"><svg viewBox={`0 0 ${evolution.width} ${evolution.height}`} width={evolution.width} height={evolution.height} role="img" aria-label="Evolución del patrimonio" tabIndex={0} onKeyDown={(event) => { if (event.key === 'ArrowLeft') setEvolutionFocus((value) => Math.max(0, value - 1)); if (event.key === 'ArrowRight') setEvolutionFocus((value) => Math.min(visibleMonths.length - 1, value + 1)); }}>{evolution.ticks.map((tick) => <line key={tick} x1={0} x2={evolution.width} y1={evolution.y(tick)} y2={evolution.y(tick)} className="consulta-evolution-grid" />)}<path d={evolution.path} className="consulta-evolution-line" />{evolution.points.map((point, index) => <g key={visibleMonths[index].key} role="button" tabIndex={0} aria-label={`Abrir ${visibleMonths[index].label}: ${formatCurrency(visibleMonths[index].balance)}`} className={evolutionFocus === index ? 'is-focused' : ''} onMouseEnter={() => setEvolutionFocus(index)} onFocus={() => setEvolutionFocus(index)} onClick={() => { setSelectedMonthKey(visibleMonths[index].key); selectQuestion('month'); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedMonthKey(visibleMonths[index].key); selectQuestion('month'); } }}><line x1={point.x} x2={point.x} y1={point.y} y2={evolution.height - evolution.bottom} className="consulta-evolution-guide" /><circle cx={point.x} cy={point.y} r={evolutionFocus === index ? 6 : 4} /><text className="consulta-evolution-value" x={point.x} y={Math.max(18, point.y + (index % 2 === 0 ? -15 : 22))} textAnchor="middle">{compactMoney(visibleMonths[index].balance)}</text><text className="consulta-evolution-month" x={point.x} y={evolution.height - 18} textAnchor="middle">{visibleMonths[index].shortLabel}</text></g>)}</svg></div></div><div className="consulta-evolution-focus"><span>{visibleMonths[evolutionFocus]?.label}</span><strong>{formatCurrency(visibleMonths[evolutionFocus]?.balance ?? 0)}</strong></div></div>
       </> : <p className="consulta-empty-note">No hay cierres publicados en este periodo.</p>}
       <Calculation note="La línea utiliza exclusivamente los saldos de cierre publicados."><span>Primer cierre</span><i>→</i><strong>{visibleMonths[0] ? formatCurrency(visibleMonths[0].balance) : '—'}</strong><span>Último cierre</span><i>→</i><strong>{visibleMonths[visibleMonths.length - 1] ? formatCurrency(visibleMonths[visibleMonths.length - 1].balance) : '—'}</strong></Calculation>
     </>;

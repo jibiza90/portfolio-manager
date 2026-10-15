@@ -32,6 +32,8 @@ test('renders CONSULTA as a guided, traceable financial report', async ({ page }
   await expect(page.locator('.consulta-answer')).toContainText('valor oficial publicado');
 
   await page.getByRole('tab', { name: /¿Qué ocurrió en un mes concreto/ }).click();
+  await expect(page.locator('.consulta-month-timeline button')).toHaveCount(13);
+  await expect(page.getByLabel('Mes analizado')).toHaveValue('2026-03');
   await expect(page.locator('.consulta-tranche-list')).toContainText('Aportación del 6/3/2026');
   await expect(page.locator('.consulta-tranche-list')).toContainText('+4,08 %');
   await page.locator('.consulta-calculation summary').click();
@@ -45,6 +47,9 @@ test('renders CONSULTA as a guided, traceable financial report', async ({ page }
   await expect(page.getByRole('tab', { name: /¿Cómo ha evolucionado/ })).toContainText('6 cierres');
   await page.getByRole('tab', { name: /¿Cómo ha evolucionado/ }).click();
   await expect(page.locator('.consulta-evolution-wrap')).toBeVisible();
+  await expect(page.locator('.consulta-evolution-value')).toHaveCount(6);
+  await expect(page.locator('.consulta-evolution-month')).toHaveCount(6);
+  await expect(page.locator('.consulta-evolution-y-axis span')).toHaveCount(5);
 
   const activeTab = page.getByRole('tab', { selected: true });
   await activeTab.press('ArrowLeft');

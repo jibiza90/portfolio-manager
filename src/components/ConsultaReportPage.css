@@ -522,6 +522,65 @@
 .consulta-title-with-select h2 { flex: 1 1 auto; }
 .consulta-title-with-select select { flex: 0 0 auto; margin-top: 7px; }
 
+.consulta-month-picker {
+  display: grid;
+  grid-template-columns: 44px minmax(220px, 360px) 44px;
+  align-items: end;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.consulta-month-picker > button {
+  height: 42px;
+  border: 1px solid var(--consulta-line);
+  color: var(--consulta-green);
+  background: var(--consulta-paper);
+  font: 700 18px/1 inherit;
+  cursor: pointer;
+}
+
+.consulta-month-picker > button:hover:not(:disabled),
+.consulta-month-picker > button:focus-visible {
+  color: #fff;
+  background: var(--consulta-green);
+  outline: none;
+}
+
+.consulta-month-picker > button:disabled { opacity: .32; cursor: default; }
+.consulta-month-picker label span { display: block; margin-bottom: 5px; color: var(--consulta-muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.consulta-month-picker select { width: 100%; height: 42px; padding-inline: 12px 34px; border: 1px solid var(--consulta-green); color: var(--consulta-ink); background: var(--consulta-surface); font: 700 13px/1 inherit; }
+
+.consulta-month-timeline {
+  display: flex;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 4px 0 10px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #aaa497 transparent;
+}
+
+.consulta-month-timeline button {
+  flex: 0 0 92px;
+  min-height: 58px;
+  padding: 8px 9px;
+  border: 1px solid var(--consulta-line);
+  border-radius: 2px;
+  color: var(--consulta-ink);
+  background: var(--consulta-paper);
+  text-align: left;
+  cursor: pointer;
+}
+
+.consulta-month-timeline button:hover,
+.consulta-month-timeline button:focus-visible { border-color: var(--consulta-green); outline: none; }
+.consulta-month-timeline button.is-active { color: #fff; border-color: var(--consulta-green); background: var(--consulta-green); }
+.consulta-month-timeline button span,
+.consulta-month-timeline button strong { display: block; }
+.consulta-month-timeline button span { font: 400 12px/1.2 Georgia, "Times New Roman", serif; }
+.consulta-month-timeline button strong { margin-top: 7px; font-size: 11px; }
+.consulta-month-timeline button.is-active strong { color: #fff; }
+
 .consulta-month-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -593,21 +652,24 @@
   background: var(--consulta-paper);
 }
 
-.consulta-evolution-wrap svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  min-height: 250px;
-  overflow: visible;
-}
+.consulta-chart-help { max-width: 920px; margin: 13px 0 0; color: var(--consulta-muted); font-size: 11px; }
+.consulta-evolution-chart { display: grid; grid-template-columns: 68px minmax(0, 1fr); align-items: stretch; }
+.consulta-evolution-y-axis { position: relative; height: 300px; border-right: 1px solid #c7c1b5; }
+.consulta-evolution-y-axis span { position: absolute; right: 10px; transform: translateY(-50%); color: var(--consulta-muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
+.consulta-evolution-scroll { min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; scrollbar-color: #aaa497 transparent; }
+.consulta-evolution-wrap svg { display: block; max-width: none; height: 300px; overflow: visible; }
 
 .consulta-evolution-wrap svg:focus-visible { outline: 2px solid var(--consulta-green); outline-offset: 4px; }
 .consulta-evolution-axis { stroke: #c7c1b5; stroke-width: 1; }
+.consulta-evolution-grid { stroke: #ded8cc; stroke-width: 1; stroke-dasharray: 3 7; opacity: .7; }
 .consulta-evolution-line { fill: none; stroke: var(--consulta-green); stroke-width: 3; vector-effect: non-scaling-stroke; }
 .consulta-evolution-guide { stroke: #c5bfb3; stroke-width: 1; stroke-dasharray: 2 5; opacity: .55; }
 .consulta-evolution-wrap circle { fill: var(--consulta-paper); stroke: var(--consulta-green); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .consulta-evolution-wrap g.is-focused circle { fill: var(--consulta-green); }
-.consulta-evolution-wrap text { fill: var(--consulta-muted); font-size: 10px; }
+.consulta-evolution-wrap g[role="button"] { cursor: pointer; }
+.consulta-evolution-wrap g[role="button"]:focus { outline: none; }
+.consulta-evolution-value { fill: var(--consulta-ink); font-size: 10px; font-weight: 800; paint-order: stroke; stroke: var(--consulta-paper); stroke-width: 5px; stroke-linejoin: round; }
+.consulta-evolution-month { fill: var(--consulta-muted); font-size: 10px; font-weight: 700; }
 
 .consulta-evolution-focus {
   display: flex;
@@ -731,9 +793,10 @@
   .consulta-month-metrics > div { padding: 13px; }
   .consulta-capital-bars > div { grid-template-columns: 100px minmax(55px, 1fr); gap: 8px; }
   .consulta-capital-bars strong { grid-column: 2; }
-  .consulta-evolution-wrap { padding-inline: 4px; overflow-x: auto; }
-  .consulta-evolution-wrap svg { width: 720px; max-width: none; }
-  .consulta-evolution-focus { position: sticky; left: 0; width: calc(100vw - 68px); }
+  .consulta-month-picker { grid-template-columns: 40px minmax(0, 1fr) 40px; }
+  .consulta-evolution-wrap { padding-inline: 4px; }
+  .consulta-evolution-chart { grid-template-columns: 58px minmax(0, 1fr); }
+  .consulta-evolution-focus { width: 100%; }
   .consulta-pending-list > div { grid-template-columns: 80px 1fr; gap: 8px; }
   .consulta-pending-list strong { grid-column: 2; }
   .consulta-footer { display: block; }
