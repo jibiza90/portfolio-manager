@@ -214,7 +214,8 @@ export const HorizonApexReportPage: React.FC<HorizonApexReportPageProps> = ({
   const handleChartPointer = (event: React.PointerEvent<SVGSVGElement>) => {
     if (!visibleMonths.length) return;
     const rect = event.currentTarget.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(rect.width, 1)));
+    const svgX = ((event.clientX - rect.left) / Math.max(rect.width, 1)) * 1440;
+    const ratio = Math.max(0, Math.min(1, (svgX - 72) / 1296));
     const index = visibleMonths.length === 1 ? 0 : Math.round(ratio * (visibleMonths.length - 1));
     setHoveredKey(visibleMonths[index].key);
   };
@@ -265,6 +266,8 @@ export const HorizonApexReportPage: React.FC<HorizonApexReportPageProps> = ({
 
   const firstMonth = visibleMonths[0];
   const lastMonth = visibleMonths[visibleMonths.length - 1];
+  const activePoint = activeIndex >= 0 ? chart.points[activeIndex] : undefined;
+  const chartLabelStep = Math.max(1, Math.ceil(visibleMonths.length / 10));
   const reconciled = firstMonth && lastMonth
     ? firstMonth.opening + periodIncrements - periodDecrements + periodProfit
     : 0;
@@ -325,6 +328,18 @@ export const HorizonApexReportPage: React.FC<HorizonApexReportPageProps> = ({
         </div>
       </section>
 
+      <section className="apex-capital-rack" aria-label="Composición financiera actual">
+        <header>
+          <span>Arquitectura de la posición</span>
+          <strong>Composición financiera actual</strong>
+        </header>
+        <article><span>Capital aportado</span><strong className="is-inflow">{formatCurrency(visibleContributed)}</strong></article>
+        <article><span>Capital retirado</span><strong className="is-outflow">{formatCurrency(visibleWithdrawn)}</strong></article>
+        <article><span>Capital neto</span><strong>{formatCurrency(netCapital)}</strong></article>
+        <article><span>Beneficio · {lastMonth?.shortLabel ?? 'último cierre'}</span><strong className={tone(report.beneficioUltimoMes)}>{signedCurrency(report.beneficioUltimoMes)}</strong></article>
+        <article><span>Rentabilidad · {lastMonth?.shortLabel ?? 'último cierre'}</span><strong className={tone(report.rentabilidadUltimoMes)}>{signedPercent(report.rentabilidadUltimoMes)}</strong></article>
+      </section>
+
       {pending.length ? (
         <section className="apex-vector-strip" aria-label="Movimientos posteriores al último cierre">
           <div>
@@ -358,8 +373,8 @@ export const HorizonApexReportPage: React.FC<HorizonApexReportPageProps> = ({
         </div>
         {period === 'custom' ? (
           <div className="apex-custom-period">
-            <label>Desde<select value={customStart} onChange={(event) => setCustomStart(event.target.value)}>{months.map((month) => <option value={month.key} key={month.key}>{month.label}</option>)}</select></label>
-            <label>Hasta<select value={customEnd} onChange={(event) => setCustomEnd(event.target.value)}>{months.map((month) => <option value={month.key} key={month.key}>{month.label}</option>)}</select></label>
+            <label>Desde<select value={customStart} onChange={(event) => { const value = event.target.value; setCustomStart(value); if (value > customEnd) setCustomEnd(value); }}>{months.map((month) => <option value={month.key} key={month.key}>{month.label}</option>)}</select></label>
+            <label>Hasta<select value={customEnd} onChange={(event) => { const value = event.target.value; setCustomEnd(value); if (value < customStart) setCustomStart(value); }}>{months.map((month) => <option value={month.key} key={month.key}>{month.label}</option>)}</select></label>
           </div>
         ) : null}
       </section>
@@ -371,6 +386,15 @@ export const HorizonApexReportPage: React.FC<HorizonApexReportPageProps> = ({
             <h2>Topografía cuantitativa del patrimonio</h2>
             <p>Resultado puro y masa de capital conviven en escalas independientes para preservar la lectura real.</p>
           </div>
+          {activeMonth ? (
+            <aside className="apex-focus-hud" aria-live="polite">
+              <span>Lectura óptica · {String(activeIndex + 1).padStart(2, '0')}/{String(visibleMonths.length).padStart(2, '0')}</span>
+              <strong>{activeMonth.label}</strong>
+              <div><small>Saldo de cierre</small><b>{formatCurrency(activeMonth.balance)}</b></div>
+              <div><small>Beneficio</small><b className={tone(activeMonth.profit)}>{signedCurrency(activeMonth.profit)}</b></div>
+              <div><small>Rentabilidad</small><b className={tone(activeMonth.returnPct)}>{signedPercent(activeMonth.returnPct)}</b></div>
+            </aside>
+          ) : null}
           <div className="apex-chart-legend" aria-label="Leyenda del gráfico">
             <span><i className="is-profit" /> Beneficio mensual</span>
             <span><i className="is-balance" /> Saldo de cierre</span>
@@ -415,11 +439,11 @@ export const HorizonApexReportPage: React.FC<HorizonApexReportPageProps> = ({
                     <circle cx={point.x} cy={point.balanceY} r={selected ? 7 : 4} className="apex-balance-node" />
                     {point.month.increments > 0 ? <><line x1={point.x} x2={point.x} y1={point.balanceY + 8} y2={point.balanceY + 39} className="apex-flow-in" /><path d={`M ${point.x} ${point.balanceY + 34} l 5 5 l -5 5 l -5 -5 Z`} className="apex-flow-in-marker" /></> : null}
                     {point.month.decrements > 0 ? <><line x1={point.x + 9} x2={point.x + 9} y1={point.balanceY + 8} y2={point.balanceY + 39} className="apex-flow-out" /><path d={`M ${point.x + 4} ${point.balanceY + 34} l 10 0 l -5 8 Z`} className="apex-flow-out-marker" /></> : null}
-                    {(visibleMonths.length <= 12 || index === 0 || index === visibleMonths.length - 1 || selected) ? <text x={point.x} y="522" textAnchor="middle" className="apex-month-label">{point.month.shortLabel}</text> : null}
+                    {(index % chartLabelStep === 0 || index === visibleMonths.length - 1 || selected) ? <text x={point.x} y="522" textAnchor="middle" className="apex-month-label">{point.month.shortLabel}</text> : null}
                   </g>
                 );
               })}
-              {activeMonth && chart.points[activeIndex] ? <line x1={chart.points[activeIndex].x} x2={chart.points[activeIndex].x} y1="38" y2="500" className="apex-crosshair" /> : null}
+              {activePoint ? <line x1={activePoint.x} x2={activePoint.x} y1="38" y2="500" className="apex-crosshair" /> : null}
             </svg>
           ) : <div className="apex-empty">Aún no existen cierres mensuales para representar.</div>}
         </div>
@@ -492,7 +516,7 @@ export const HorizonApexReportPage: React.FC<HorizonApexReportPageProps> = ({
         <div><span>Discrepancia</span><strong>{formatCurrency(Math.abs(discrepancy))}</strong><small>{reconciliationOk ? 'Conciliación verificada' : 'Revisión documental requerida'}</small></div>
       </footer>
 
-      <p className="apex-authorship">Diseño conceptual: GROK 4.7 · Implementación fiel HORIZONTE APEX</p>
+      <p className="apex-authorship">Diseño conceptual: Gemini 3.8 Flash · Implementación fiel HORIZONTE APEX</p>
     </div>
   );
 };

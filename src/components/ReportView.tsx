@@ -2625,11 +2625,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
               aria-label="Página 21"
               onClick={() => {
                 setDemoReportPage('page21');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 21 HORIZONTE APEX — GROK 4.7' });
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 21 HORIZONTE APEX — Gemini 3.8 Flash' });
               }}
             >
               <span className="demo-report-page-label">Página 21</span>
-              <small className="demo-report-page-author">GROK 4.7</small>
+              <small className="demo-report-page-author">Gemini 3.8 Flash</small>
             </button>
           </div>
         </nav>

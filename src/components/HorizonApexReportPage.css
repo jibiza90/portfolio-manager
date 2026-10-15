@@ -284,6 +284,65 @@
   box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
 }
 
+.apex-capital-rack {
+  min-height: 88px;
+  display: grid;
+  grid-template-columns: minmax(220px, 1.25fr) repeat(5, minmax(145px, 1fr));
+  align-items: stretch;
+  border-bottom: 1px solid var(--apex-border-subtle);
+  background: #0a0f17;
+}
+
+.apex-capital-rack header,
+.apex-capital-rack article {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 16px 20px;
+  border-right: 1px solid var(--apex-border-subtle);
+}
+
+.apex-capital-rack article:last-child { border-right: 0; }
+
+.apex-capital-rack header {
+  position: relative;
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.055), transparent);
+}
+
+.apex-capital-rack header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 17px;
+  bottom: 17px;
+  width: 2px;
+  background: var(--apex-cyan);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.45);
+}
+
+.apex-capital-rack span {
+  color: var(--apex-text-ghost);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.075em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.apex-capital-rack header span { color: var(--apex-cyan); }
+.apex-capital-rack header strong { margin-top: 6px; font-size: 14px; line-height: 1.25; }
+
+.apex-capital-rack article strong {
+  margin-top: 8px;
+  font-family: "JetBrains Mono", "IBM Plex Mono", Consolas, monospace;
+  font-size: clamp(12px, 1.08vw, 16px);
+  font-weight: 550;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
 .apex-vector-strip {
   min-height: 76px;
   display: grid;
@@ -404,9 +463,9 @@
 
 .apex-viewport-shell > header {
   min-height: 92px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) 248px minmax(300px, 1fr);
   align-items: flex-end;
-  justify-content: space-between;
   gap: 28px;
   padding: 22px 30px 17px;
 }
@@ -446,9 +505,46 @@
 .apex-chart-legend i.is-outflow { color: var(--apex-outflow); }
 
 .apex-viewport {
+  position: relative;
   height: 540px;
   padding: 0 18px 10px;
 }
+
+.apex-focus-hud {
+  width: 248px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  border-radius: 5px;
+  background: rgba(7, 12, 19, 0.92);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  pointer-events: none;
+}
+
+.apex-focus-hud > span {
+  grid-column: 1 / -1;
+  color: var(--apex-cyan);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.apex-focus-hud > strong {
+  grid-column: 1 / -1;
+  margin-top: -3px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--apex-border-subtle);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.apex-focus-hud > div:first-of-type { grid-column: 1 / -1; }
+.apex-focus-hud div { min-width: 0; }
+.apex-focus-hud small { display: block; color: var(--apex-text-ghost); font-size: 7px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+.apex-focus-hud b { display: block; margin-top: 4px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; font-weight: 550; white-space: nowrap; }
 
 .apex-canvas {
   width: 100%;
@@ -710,6 +806,8 @@
   .apex-ratio { grid-column: 1 / -1; min-height: 86px; display: grid; grid-template-columns: 130px 170px minmax(160px, 1fr) minmax(190px, 1fr); gap: 16px; align-items: center; border-top: 1px solid var(--apex-border-subtle); border-left: 0; }
   .apex-ratio > strong { margin: 0; }
   .apex-ratio > div { margin: 0; }
+  .apex-capital-rack { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .apex-capital-rack header { grid-column: 1 / -1; min-height: 62px; border-right: 0; border-bottom: 1px solid var(--apex-border-subtle); }
   .apex-control-deck { grid-template-columns: 180px minmax(0, 1fr); }
   .apex-custom-period { grid-column: 1 / -1; justify-content: flex-end; }
   .apex-dock-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -726,10 +824,16 @@
   .apex-primary-vectors { min-height: 125px; }
   .apex-ratio { grid-template-columns: 110px 150px minmax(130px, 1fr); }
   .apex-ratio small { display: none; }
+  .apex-capital-rack { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .apex-capital-rack header { grid-column: 1 / -1; }
+  .apex-capital-rack article { min-height: 78px; border-bottom: 1px solid var(--apex-border-subtle); }
+  .apex-capital-rack article:nth-of-type(3) { border-right: 0; }
+  .apex-capital-rack article:nth-last-child(-n+2) { border-bottom: 0; }
   .apex-vector-strip { grid-template-columns: 1fr; gap: 10px; }
   .apex-pending-list { justify-content: flex-start; }
   .apex-viewport { height: 430px; padding-left: 8px; padding-right: 8px; }
-  .apex-viewport-shell > header { align-items: flex-start; flex-direction: column; }
+  .apex-viewport-shell > header { display: flex; align-items: flex-start; flex-direction: column; }
+  .apex-focus-hud { width: min(100%, 420px); }
   .apex-chart-legend { justify-content: flex-start; }
   .apex-tactical-dock { grid-template-columns: 150px minmax(0, 1fr) 70px; }
   .apex-audit-matrix { overflow: hidden; }
@@ -757,6 +861,12 @@
   .apex-ratio { min-height: 106px; grid-template-columns: 1fr auto; gap: 7px 15px; padding: 18px; }
   .apex-ratio > div { grid-column: 1 / -1; }
   .apex-ratio small { display: block; grid-column: 1 / -1; }
+  .apex-capital-rack { grid-template-columns: 1fr 1fr; }
+  .apex-capital-rack header { grid-column: 1 / -1; min-height: 68px; padding: 14px 18px; }
+  .apex-capital-rack article { min-height: 78px; padding: 13px 15px; border-right: 1px solid var(--apex-border-subtle); border-bottom: 1px solid var(--apex-border-subtle) !important; }
+  .apex-capital-rack article:nth-of-type(even) { border-right: 0; }
+  .apex-capital-rack article:last-child { grid-column: 1 / -1; border-bottom: 0 !important; }
+  .apex-capital-rack article strong { font-size: 13px; }
   .apex-vector-strip { padding: 16px 18px; }
   .apex-pending-list article { min-width: 164px; }
   .apex-control-deck { grid-template-columns: 1fr; padding: 17px 18px; }
@@ -772,6 +882,7 @@
   .apex-chart-legend { gap: 7px 12px; }
   .apex-viewport { height: 340px; padding: 0 1px 4px; overflow-x: auto; }
   .apex-canvas { min-width: 740px; }
+  .apex-focus-hud { display: none; }
   .apex-tactical-dock { grid-template-columns: 1fr 66px; }
   .apex-focus-period { min-height: 92px; padding: 17px 18px; }
   .apex-dock-metrics { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); }
