@@ -26,6 +26,7 @@ import { TrazaReportPage } from './TrazaReportPage';
 import { ContinuumReportPage } from './ContinuumReportPage';
 import { HorizonApexReportPage } from './HorizonApexReportPage';
 import { PrismaBridgeReportPage } from './PrismaBridgeReportPage';
+import { ConsultaReportPage } from './ConsultaReportPage';
 import './WideReportPage.css';
 
 interface ReportViewProps {
@@ -330,7 +331,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19' | 'page20' | 'page21' | 'page22'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19' | 'page20' | 'page21' | 'page22' | 'page23'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -2348,7 +2349,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isContinuumDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page19';
   const isApexDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page21';
   const isPrismaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page22';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage;
+  const isConsultaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page23';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}${isWideDemoPage ? ' report-pro-page-wide' : ''}`}>
@@ -2360,7 +2362,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-nineteen-pages has-twenty-pages has-twenty-one-pages has-twenty-two-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-nineteen-pages has-twenty-pages has-twenty-one-pages has-twenty-two-pages has-twenty-three-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2646,6 +2648,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="demo-report-page-label">Página 22</span>
               <small className="demo-report-page-author">Claude Fable 5.1</small>
             </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page23' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page23'}
+              aria-label="Página 23"
+              onClick={() => {
+                setDemoReportPage('page23');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 23 CONSULTA — Claude Fable 5.1' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 23</span>
+              <small className="demo-report-page-author">Claude Fable 5.1</small>
+            </button>
           </div>
         </nav>
       ) : null}
@@ -2810,6 +2825,15 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : isPrismaDemoPage ? (
         <PrismaBridgeReportPage
+          report={report}
+          pendingCashMovements={visiblePendingCashMovements}
+          rootRef={reportRef}
+          onAnalyticsEvent={onAnalyticsEvent}
+          onDownload={handleDownloadModernReport}
+          onPeriodChange={syncImmersiveReportPeriod}
+        />
+      ) : isConsultaDemoPage ? (
+        <ConsultaReportPage
           report={report}
           pendingCashMovements={visiblePendingCashMovements}
           rootRef={reportRef}
