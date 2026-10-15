@@ -86,9 +86,9 @@ const signedPercent = (value: number) => {
 
 const compactMoney = (value: number) => {
   const absolute = Math.abs(value);
-  if (absolute >= 1_000_000) return `${(value / 1_000_000).toLocaleString('es-ES', { maximumFractionDigits: 1 })} M EUR`;
-  if (absolute >= 1_000) return `${(value / 1_000).toLocaleString('es-ES', { maximumFractionDigits: 0 })} k EUR`;
-  return `${Math.round(value).toLocaleString('es-ES')} EUR`;
+  if (absolute >= 1_000_000) return `${(value / 1_000_000).toLocaleString('es-ES', { maximumFractionDigits: 1 })} M €`;
+  if (absolute >= 1_000) return `${(value / 1_000).toLocaleString('es-ES', { maximumFractionDigits: 0 })} k €`;
+  return `${Math.round(value).toLocaleString('es-ES')} €`;
 };
 
 const tone = (value: number) => value > 0.005 ? 'is-positive' : value < -0.005 ? 'is-negative' : 'is-neutral';
@@ -358,29 +358,32 @@ export const PrismaBridgeReportPage: React.FC<PrismaBridgeReportPageProps> = ({
 
   const chart = useMemo(() => {
     if (visibleMonths.length === 0) return null;
-    const pendingCount = hasPending ? 1 : 0;
-    const width = Math.max(1420, (visibleMonths.length + 2 + pendingCount) * 102);
-    const height = 500;
+    const pointCount = visibleMonths.length + (hasPending ? 1 : 0);
+    const width = Math.max(1280, 150 + Math.max(1, pointCount - 1) * 88);
+    const height = 520;
     const left = 96;
-    const right = 44;
-    const top = 48;
-    const bottom = 72;
-    const plotHeight = height - top - bottom;
-    const startBalance = visibleMonths[0].opening;
-    const values = [0, startBalance, ...visibleMonths.flatMap((month) => [month.opening, month.balance])];
+    const right = 54;
+    const top = 44;
+    const balanceBottom = 318;
+    const resultBaseline = 410;
+    const resultAmplitude = 34;
+    const values = [0, ...visibleMonths.map((month) => month.balance)];
     if (hasPending) values.push(visibleBalance);
     const domain = niceDomain(values);
-    const y = (value: number) => top + ((domain.max - value) / Math.max(1, domain.max - domain.min)) * plotHeight;
-    const entryCount = visibleMonths.length + 2 + pendingCount;
-    const step = (width - left - right) / entryCount;
-    const barWidth = Math.min(54, step * 0.58);
-    const startX = left + step * 0.5;
-    const monthX = (index: number) => left + step * (index + 1.5);
-    const pendingX = left + step * (visibleMonths.length + 1.5);
-    const finalX = left + step * (visibleMonths.length + 1.5 + pendingCount);
+    const y = (value: number) => top + ((domain.max - value) / Math.max(1, domain.max - domain.min)) * (balanceBottom - top);
+    const step = (width - left - right) / Math.max(1, pointCount - 1);
+    const monthX = (index: number) => left + step * index;
+    const pendingX = left + step * visibleMonths.length;
+    const maximumProfit = Math.max(1, ...visibleMonths.map((month) => Math.abs(month.profit)));
+    const resultY = (profit: number) => resultBaseline - (profit / maximumProfit) * resultAmplitude;
     const ticks: number[] = [];
     for (let value = domain.min; value <= domain.max + domain.step / 2; value += domain.step) ticks.push(value);
-    return { width, height, top, bottom, y, ticks, startBalance, step, barWidth, startX, monthX, pendingX, finalX };
+    const points = visibleMonths.map((month, index) => ({ x: monthX(index), y: y(month.balance) }));
+    const line = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
+    const area = points.length > 0
+      ? `${line} L ${points[points.length - 1].x.toFixed(2)} ${y(0).toFixed(2)} L ${points[0].x.toFixed(2)} ${y(0).toFixed(2)} Z`
+      : '';
+    return { width, height, left, right, top, balanceBottom, resultBaseline, y, ticks, step, monthX, pendingX, resultY, points, line, area };
   }, [hasPending, visibleBalance, visibleMonths]);
 
   const years = useMemo(() => {
@@ -484,7 +487,7 @@ export const PrismaBridgeReportPage: React.FC<PrismaBridgeReportPageProps> = ({
       ) : null}
 
       <section className="prisma-controls" aria-label="Periodo del informe">
-        <div><strong>Periodo</strong><span>Afecta al puente, detalle, tabla y movimientos</span></div>
+        <div><strong>Periodo</strong><span>Afecta al gráfico, detalle, tabla y movimientos</span></div>
         <div className="prisma-period-buttons">
           {(['3m', '6m', '12m', 'all', 'custom'] as PeriodPreset[]).map((item) => (
             <button key={item} type="button" className={period === item ? 'is-active' : ''} aria-pressed={period === item} onClick={() => updatePeriod(item)}>
@@ -496,10 +499,10 @@ export const PrismaBridgeReportPage: React.FC<PrismaBridgeReportPageProps> = ({
       </section>
 
       <section className="prisma-bridge" aria-labelledby="prisma-bridge-title">
-        <div className="prisma-section-head"><div><span>IDENTIDAD CONTABLE</span><h2 id="prisma-bridge-title">El puente de su patrimonio</h2><p>Cada cierre enlaza el capital, los movimientos y el resultado de gestión.</p></div><div className="prisma-legend"><span><i className="is-positive" />Subida</span><span><i className="is-negative" />Bajada</span><span><i className="is-flow" />Movimiento</span></div></div>
+        <div className="prisma-section-head"><div><span>LECTURA PATRIMONIAL</span><h2 id="prisma-bridge-title">Evolución explicada del patrimonio</h2><p>El saldo, el resultado de inversión y los movimientos de capital se muestran por separado.</p></div><div className="prisma-legend"><span><i className="is-balance" />Saldo de cierre</span><span><i className="is-positive" />Beneficio</span><span><i className="is-negative" />Pérdida</span><span><i className="is-inflow" />Aportación</span><span><i className="is-outflow" />Retirada</span></div></div>
         <div className="prisma-chart-scroll" ref={chartScrollRef}>
           {chart ? (
-            <svg className="prisma-waterfall" width={chart.width} height={chart.height} viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Puente mensual de evolución del patrimonio" tabIndex={0} onKeyDown={(event) => {
+            <svg className="prisma-evolution-chart" width={chart.width} height={chart.height} viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Evolución mensual explicada del patrimonio" tabIndex={0} onKeyDown={(event) => {
               const index = visibleMonths.findIndex((month) => month.key === focusKey);
               if (event.key === 'ArrowLeft') setFocusKey(visibleMonths[Math.max(0, index - 1)]?.key ?? focusKey);
               if (event.key === 'ArrowRight') setFocusKey(visibleMonths[Math.min(visibleMonths.length - 1, index + 1)]?.key ?? focusKey);
@@ -507,26 +510,39 @@ export const PrismaBridgeReportPage: React.FC<PrismaBridgeReportPageProps> = ({
               if (event.key === 'End') setFocusKey(visibleMonths[visibleMonths.length - 1]?.key ?? focusKey);
               if (event.key === 'Enter') tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}>
+              <defs>
+                <linearGradient id="prisma-balance-area" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor="#3B4CF0" stopOpacity="0.18" />
+                  <stop offset="1" stopColor="#3B4CF0" stopOpacity="0.015" />
+                </linearGradient>
+              </defs>
               {chart.ticks.map((tick) => <g key={tick}><line x1="88" x2={chart.width - 34} y1={chart.y(tick)} y2={chart.y(tick)} className="prisma-gridline" /><text x="78" y={chart.y(tick) + 4} textAnchor="end" className="prisma-axis-label">{compactMoney(tick)}</text></g>)}
-              <g className="prisma-total-bar"><rect x={chart.startX - chart.barWidth / 2} y={chart.y(Math.max(0, chart.startBalance))} width={chart.barWidth} height={Math.max(2, Math.abs(chart.y(chart.startBalance) - chart.y(0)))} rx="6" /><text x={chart.startX} y={chart.y(chart.startBalance) - 12} textAnchor="middle">{compactMoney(chart.startBalance)}</text><text x={chart.startX} y={chart.height - 30} textAnchor="middle">Inicio</text></g>
+              <path d={chart.area} className="prisma-balance-area" />
+              <path d={chart.line} className="prisma-balance-line" />
+              <line x1="88" x2={chart.width - 34} y1="350" y2="350" className="prisma-chart-divider" />
+              <text x="96" y="371" className="prisma-result-caption">RESULTADO DE INVERSIÓN DEL MES</text>
+              <line x1="88" x2={chart.width - 34} y1={chart.resultBaseline} y2={chart.resultBaseline} className="prisma-result-zero" />
               {visibleMonths.map((month, index) => {
                 const x = chart.monthX(index);
-                const previous = index === 0 ? chart.startBalance : visibleMonths[index - 1].balance;
-                const topY = chart.y(Math.max(previous, month.balance));
-                const bottomY = chart.y(Math.min(previous, month.balance));
-                const delta = month.balance - previous;
-                const nextX = index === visibleMonths.length - 1 ? (hasPending ? chart.pendingX : chart.finalX) : chart.monthX(index + 1);
-                return <g key={month.key} className={`prisma-month-bar ${tone(delta)} ${focusKey === month.key ? 'is-focused' : ''}`} onMouseEnter={() => setFocusKey(month.key)} onClick={() => setFocusKey(month.key)}>
-                  <line x1={x + chart.barWidth / 2} x2={nextX - chart.barWidth / 2} y1={chart.y(month.balance)} y2={chart.y(month.balance)} className="prisma-connector" />
-                  <rect x={x - chart.barWidth / 2} y={topY} width={chart.barWidth} height={Math.max(3, bottomY - topY)} rx="5" />
-                  <circle cx={x} cy={chart.y(month.balance)} r="5" />
-                  {(month.increments > 0 || month.decrements > 0) ? <path d={`M ${x} ${chart.y(month.balance) + 11} l -6 8 h 12 z`} className="prisma-flow-marker" /> : null}
-                  <text x={x} y={topY - 11} textAnchor="middle" className="prisma-bar-value">{signedMoney(delta)}</text>
-                  <text x={x} y={chart.height - 30} textAnchor="middle" className="prisma-month-label">{month.shortLabel}</text>
+                const pointY = chart.y(month.balance);
+                const resultY = chart.resultY(month.profit);
+                const resultTop = Math.min(chart.resultBaseline, resultY);
+                const resultHeight = Math.max(2, Math.abs(chart.resultBaseline - resultY));
+                const balanceLabelY = index % 2 === 0 ? pointY - 17 : pointY + 25;
+                return <g key={month.key} className={`prisma-chart-month ${focusKey === month.key ? 'is-focused' : ''}`} onMouseEnter={() => setFocusKey(month.key)} onClick={() => setFocusKey(month.key)}>
+                  {focusKey === month.key ? <rect x={x - chart.step * .44} y="36" width={chart.step * .88} height="432" rx="8" className="prisma-focus-band" /> : null}
+                  <line x1={x} x2={x} y1={pointY} y2="468" className="prisma-point-guide" />
+                  <rect x={x - 34} y={balanceLabelY - 13} width="68" height="20" rx="10" className="prisma-balance-label-bg" />
+                  <text x={x} y={balanceLabelY + 1} textAnchor="middle" className="prisma-balance-label">{compactMoney(month.balance)}</text>
+                  <circle cx={x} cy={pointY} r={index === visibleMonths.length - 1 && !hasPending ? 7 : 5} className={index === visibleMonths.length - 1 && !hasPending ? 'prisma-balance-point is-current' : 'prisma-balance-point'} />
+                  {month.increments > 0 ? <g className="prisma-flow-event is-inflow"><title>Aportación: {formatCurrency(month.increments)}</title><line x1={x - 9} x2={x - 9} y1={pointY + 7} y2={pointY + 23} /><path d={`M ${x - 9} ${pointY + 7} l -5 6 h 10 z`} /></g> : null}
+                  {month.decrements > 0 ? <g className="prisma-flow-event is-outflow"><title>Retirada: {formatCurrency(month.decrements)}</title><line x1={x + 9} x2={x + 9} y1={pointY + 7} y2={pointY + 23} /><path d={`M ${x + 9} ${pointY + 23} l -5 -6 h 10 z`} /></g> : null}
+                  <rect x={x - 14} y={resultTop} width="28" height={resultHeight} rx="4" className={`prisma-performance-bar ${tone(month.profit)}`} />
+                  <text x={x} y={month.profit >= 0 ? resultTop - 8 : resultTop + resultHeight + 15} textAnchor="middle" className={`prisma-result-label ${tone(month.profit)}`}>{signedMoney(month.profit)}</text>
+                  <text x={x} y="494" textAnchor="middle" className="prisma-month-label">{month.shortLabel}</text>
                 </g>;
               })}
-              {hasPending ? <g className="prisma-pending-bar"><line x1={chart.pendingX + chart.barWidth / 2} x2={chart.finalX - chart.barWidth / 2} y1={chart.y(visibleBalance)} y2={chart.y(visibleBalance)} className="prisma-connector" /><rect x={chart.pendingX - chart.barWidth / 2} y={chart.y(Math.max(report.saldo, visibleBalance))} width={chart.barWidth} height={Math.max(3, Math.abs(chart.y(visibleBalance) - chart.y(report.saldo)))} rx="5" /><text x={chart.pendingX} y={chart.y(Math.max(report.saldo, visibleBalance)) - 11} textAnchor="middle">{signedMoney(visibleBalance - report.saldo)}</text><text x={chart.pendingX} y={chart.height - 30} textAnchor="middle">En tránsito</text></g> : null}
-              <g className="prisma-total-bar is-final"><rect x={chart.finalX - chart.barWidth / 2} y={chart.y(Math.max(0, visibleBalance))} width={chart.barWidth} height={Math.max(2, Math.abs(chart.y(visibleBalance) - chart.y(0)))} rx="6" /><text x={chart.finalX} y={chart.y(visibleBalance) - 12} textAnchor="middle">{compactMoney(visibleBalance)}</text><text x={chart.finalX} y={chart.height - 30} textAnchor="middle">Hoy</text></g>
+              {hasPending ? <g className="prisma-current-extension"><line x1={chart.monthX(visibleMonths.length - 1)} x2={chart.pendingX} y1={chart.y(visibleMonths[visibleMonths.length - 1].balance)} y2={chart.y(visibleBalance)} /><circle cx={chart.pendingX} cy={chart.y(visibleBalance)} r="7" /><rect x={chart.pendingX - 42} y={chart.y(visibleBalance) - 33} width="84" height="22" rx="11" /><text x={chart.pendingX} y={chart.y(visibleBalance) - 18} textAnchor="middle">{compactMoney(visibleBalance)}</text><text x={chart.pendingX} y="494" textAnchor="middle">Saldo actual</text><text x={chart.pendingX} y="430" textAnchor="middle" className="prisma-transit-label">Capital en tránsito</text></g> : null}
             </svg>
           ) : <p className="prisma-empty">Todavía no hay cierres publicados en este periodo.</p>}
         </div>

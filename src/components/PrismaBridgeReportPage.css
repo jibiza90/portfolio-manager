@@ -160,30 +160,49 @@
 .prisma-legend { display: flex; align-items: center; gap: 14px; color: var(--prisma-muted); font-size: 11px; }
 .prisma-legend span { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .prisma-legend i { width: 9px; height: 9px; display: inline-block; border-radius: 2px; background: currentColor; }
+.prisma-legend i.is-balance { width: 18px; height: 2px; border-radius: 999px; color: var(--prisma-ink); }
 .prisma-legend i.is-positive { color: var(--prisma-indigo); }
 .prisma-legend i.is-negative { color: var(--prisma-loss); }
-.prisma-legend i.is-flow { color: var(--prisma-outflow); transform: rotate(45deg); }
+.prisma-legend i.is-inflow { color: var(--prisma-inflow); transform: rotate(45deg); }
+.prisma-legend i.is-outflow { color: var(--prisma-outflow); transform: rotate(45deg); }
 
 .prisma-chart-scroll { max-width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; scrollbar-color: #aeb7c6 transparent; }
-.prisma-waterfall { display: block; max-width: none; font-family: Inter, "Segoe UI", sans-serif; }
+.prisma-evolution-chart { display: block; max-width: none; font-family: Inter, "Segoe UI", sans-serif; }
 .prisma-gridline { stroke: #e7ebf1; stroke-width: 1; }
 .prisma-axis-label { fill: var(--prisma-faint); font-size: 11px; }
-.prisma-total-bar rect { fill: var(--prisma-ink); }
-.prisma-total-bar.is-final rect { fill: var(--prisma-indigo); }
-.prisma-total-bar text { fill: var(--prisma-ink); font-size: 11px; font-weight: 700; }
-.prisma-month-bar { cursor: pointer; }
-.prisma-month-bar rect { fill: var(--prisma-indigo); opacity: .78; transition: opacity .16s ease, stroke-width .16s ease; }
-.prisma-month-bar.is-negative rect { fill: var(--prisma-loss); }
-.prisma-month-bar.is-neutral rect { fill: #94a3b8; }
-.prisma-month-bar circle { fill: #fff; stroke: var(--prisma-indigo); stroke-width: 2; }
-.prisma-month-bar.is-negative circle { stroke: var(--prisma-loss); }
-.prisma-month-bar:hover rect, .prisma-month-bar.is-focused rect { opacity: 1; stroke: var(--prisma-ink); stroke-width: 2; }
-.prisma-connector { stroke: #8d98a9; stroke-width: 1; stroke-dasharray: 3 4; }
-.prisma-flow-marker { fill: var(--prisma-outflow); }
-.prisma-bar-value { fill: var(--prisma-muted); font-size: 10px; font-weight: 700; }
+.prisma-balance-area { fill: url(#prisma-balance-area); pointer-events: none; }
+.prisma-balance-line { fill: none; stroke: var(--prisma-ink); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.prisma-chart-divider { stroke: var(--prisma-line); stroke-width: 1; }
+.prisma-result-caption { fill: var(--prisma-faint); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.prisma-result-zero { stroke: #cbd3df; stroke-width: 1; }
+.prisma-chart-month { cursor: pointer; }
+.prisma-focus-band { fill: rgba(59, 76, 240, .045); stroke: rgba(59, 76, 240, .12); stroke-width: 1; pointer-events: none; }
+.prisma-point-guide { stroke: #dfe4eb; stroke-width: 1; stroke-dasharray: 2 5; opacity: 0; transition: opacity .14s ease; pointer-events: none; }
+.prisma-chart-month:hover .prisma-point-guide, .prisma-chart-month.is-focused .prisma-point-guide { opacity: 1; }
+.prisma-balance-point { fill: #fff; stroke: var(--prisma-ink); stroke-width: 2.5; transition: r .14s ease, fill .14s ease; }
+.prisma-balance-point.is-current { fill: var(--prisma-indigo); stroke: #fff; filter: drop-shadow(0 0 0.2rem rgba(59,76,240,.45)); }
+.prisma-chart-month:hover .prisma-balance-point, .prisma-chart-month.is-focused .prisma-balance-point { r: 7px; fill: var(--prisma-indigo); stroke: #fff; }
+.prisma-balance-label-bg { fill: #fff; stroke: var(--prisma-line); stroke-width: 1; filter: drop-shadow(0 3px 6px rgba(15,23,42,.08)); }
+.prisma-balance-label { fill: var(--prisma-ink); font-size: 9px; font-weight: 800; }
+.prisma-performance-bar { fill: var(--prisma-indigo); opacity: .86; transition: opacity .14s ease, stroke-width .14s ease; }
+.prisma-performance-bar.is-negative { fill: var(--prisma-loss); }
+.prisma-performance-bar.is-neutral { fill: #94a3b8; }
+.prisma-chart-month:hover .prisma-performance-bar, .prisma-chart-month.is-focused .prisma-performance-bar { opacity: 1; stroke: var(--prisma-ink); stroke-width: 1; }
+.prisma-result-label { fill: var(--prisma-indigo); font-size: 9px; font-weight: 800; }
+.prisma-result-label.is-negative { fill: var(--prisma-loss); }
+.prisma-result-label.is-neutral { fill: var(--prisma-muted); }
 .prisma-month-label { fill: var(--prisma-ink); font-size: 11px; font-weight: 700; text-transform: capitalize; }
-.prisma-pending-bar rect { fill: rgba(180,83,9,.12); stroke: var(--prisma-outflow); stroke-width: 1.5; stroke-dasharray: 5 4; }
-.prisma-pending-bar text { fill: var(--prisma-outflow); font-size: 11px; font-weight: 750; }
+.prisma-flow-event line { stroke-width: 1.5; }
+.prisma-flow-event path { stroke: none; }
+.prisma-flow-event.is-inflow line { stroke: var(--prisma-inflow); }
+.prisma-flow-event.is-inflow path { fill: var(--prisma-inflow); }
+.prisma-flow-event.is-outflow line { stroke: var(--prisma-outflow); }
+.prisma-flow-event.is-outflow path { fill: var(--prisma-outflow); }
+.prisma-current-extension line { stroke: var(--prisma-outflow); stroke-width: 2; stroke-dasharray: 6 5; }
+.prisma-current-extension circle { fill: #fffaf0; stroke: var(--prisma-outflow); stroke-width: 2.5; }
+.prisma-current-extension rect { fill: #fffaf0; stroke: #d8c18a; stroke-width: 1; }
+.prisma-current-extension text { fill: var(--prisma-outflow); font-size: 10px; font-weight: 800; }
+.prisma-current-extension .prisma-transit-label { fill: var(--prisma-outflow); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
 .prisma-empty { min-height: 260px; display: grid; place-items: center; color: var(--prisma-muted); }
 
 .prisma-focus {

@@ -8,7 +8,7 @@ const mountDemoReport = async (page: import('@playwright/test').Page) => {
   }, '/tests/fixtures/report-view-harness.tsx');
 };
 
-test('renders PRISMA with safe published figures and a traceable bridge', async ({ page }) => {
+test('renders PRISMA with safe published figures and a traceable patrimonial evolution', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await mountDemoReport(page);
 
@@ -20,7 +20,9 @@ test('renders PRISMA with safe published figures and a traceable bridge', async 
   await expect(page.locator('.prisma-brand')).toContainText('PRISMA');
   await expect(page.locator('.prisma-balance-card')).toContainText('127.548,34');
   await expect(page.locator('.prisma-kpi-grid')).toContainText('TWR acumulado');
-  await expect(page.locator('.prisma-month-bar')).toHaveCount(13);
+  await expect(page.locator('.prisma-performance-bar')).toHaveCount(13);
+  await expect(page.locator('.prisma-total-bar')).toHaveCount(0);
+  await expect(page.locator('.prisma-current-extension')).toBeVisible();
   await expect(page.locator('.prisma-month-table > tbody > tr:not(.prisma-detail-row)')).toHaveCount(13);
 
   const howSummaries = page.locator('.prisma-hero .prisma-how summary');
@@ -39,7 +41,7 @@ test('renders PRISMA with safe published figures and a traceable bridge', async 
   await expect(page.locator('.prisma-years-note')).toContainText('dato derivado');
 
   await page.getByRole('button', { name: '6 meses', exact: true }).click();
-  await expect(page.locator('.prisma-month-bar')).toHaveCount(6);
+  await expect(page.locator('.prisma-performance-bar')).toHaveCount(6);
   await expect(page.locator('.prisma-month-table > tbody > tr:not(.prisma-detail-row)')).toHaveCount(6);
 
   const hasHorizontalPageOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
@@ -52,7 +54,7 @@ test('keeps PRISMA usable on mobile without page overflow', async ({ page }) => 
 
   await expect(page.locator('.prisma-root')).toBeVisible();
   await expect(page.locator('.prisma-controls')).toBeVisible();
-  await expect(page.locator('.prisma-waterfall')).toBeVisible();
+  await expect(page.locator('.prisma-evolution-chart')).toBeVisible();
   await expect(page.locator('.prisma-month-table')).toBeVisible();
 
   const hasHorizontalPageOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
