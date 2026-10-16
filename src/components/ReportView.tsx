@@ -30,8 +30,9 @@ import { ConsultaReportPage } from './ConsultaReportPage';
 import { EstacionesReportPage } from './EstacionesReportPage';
 import { PrismaOriginReportPage } from './PrismaOriginReportPage';
 import { NexusReportPage } from './NexusReportPage';
-import { LumenReportPage } from './LumenReportPage';
 import './WideReportPage.css';
+
+const AetherReportPage = React.lazy(() => import('./AetherReportPage').then((module) => ({ default: module.AetherReportPage })));
 
 interface ReportViewProps {
   token?: string;
@@ -2357,8 +2358,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isEstacionesDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page24';
   const isPrismaOriginDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page25';
   const isNexusDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page26';
-  const isLumenDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page27';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage || isLumenDemoPage;
+  const isAetherDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page27';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage || isAetherDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}${isWideDemoPage ? ' report-pro-page-wide' : ''}`}>
@@ -2715,7 +2716,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               aria-label="Página 27"
               onClick={() => {
                 setDemoReportPage('page27');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 27 LUMEN — CODEX' });
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 27 AETHER — CODEX' });
               }}
             >
               <span className="demo-report-page-label">Página 27</span>
@@ -2927,14 +2928,16 @@ export const ReportView: React.FC<ReportViewProps> = ({
           onAnalyticsEvent={onAnalyticsEvent}
           onDownload={handleDownloadModernReport}
         />
-      ) : isLumenDemoPage ? (
-        <LumenReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-        />
+      ) : isAetherDemoPage ? (
+        <React.Suspense fallback={<div className="aether-route-loading" role="status">Preparando experiencia tridimensional…</div>}>
+          <AetherReportPage
+            report={report}
+            pendingCashMovements={visiblePendingCashMovements}
+            rootRef={reportRef}
+            onAnalyticsEvent={onAnalyticsEvent}
+            onDownload={handleDownloadModernReport}
+          />
+        </React.Suspense>
       ) : (
       <article className={`informe-preview glass-card report-pro-sheet report-pro-demo-sheet${isWideDemoPage ? ' report-pro-wide-sheet' : ''}`} ref={reportRef}>
         <header className="report-pro-header">
