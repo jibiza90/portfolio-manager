@@ -70,6 +70,18 @@ test('switches narrative, data layers, comparison and presentation mode', async 
   await expect(page.locator('.lucent-root')).toHaveClass(/is-cinema/);
   await page.keyboard.press('Escape');
   await expect(page.locator('.lucent-root')).not.toHaveClass(/is-cinema/);
+
+  const chartPoint = page.locator('.lucent-chart-point').nth(5);
+  await chartPoint.scrollIntoViewIfNeeded();
+  await chartPoint.hover();
+  await expect(page.locator('.lucent-chart-tooltip')).toBeVisible();
+  await expect(page.locator('.lucent-chart-tooltip')).toContainText('Valor de cartera');
+  await expect(page.locator('.lucent-chart-tooltip')).toContainText('Rentabilidad');
+
+  await page.getByRole('button', { name: 'Historia Recorrido guiado' }).click();
+  await expect(page.getByRole('button', { name: 'Mes anterior' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mes siguiente' })).toBeVisible();
+  await expect(page.locator('.lucent-story-progress')).toBeVisible();
 });
 
 test('keeps LUCENT usable on a phone without page overflow', async ({ page }, testInfo) => {
@@ -108,6 +120,9 @@ test('preserves all financial information without WebGL', async ({ page }, testI
 
   await expect(page.locator('.lucent-scene-fallback')).toBeVisible();
   await expect(page.locator('.lucent-scene-fallback > button')).toHaveCount(14);
+  await page.locator('.lucent-scene-fallback > button').nth(5).hover();
+  await expect(page.locator('.lucent-fallback-tooltip').nth(5)).toBeVisible();
+  await expect(page.locator('.lucent-fallback-tooltip').nth(5)).toContainText('Valor de cartera');
   await page.locator('.lucent-scene-fallback > button').nth(12).click();
   await expect(page.locator('.lucent-focus-card')).toContainText('Marzo 2026');
   await expect(page.locator('.lucent-focus-card')).toContainText('112.548,34');

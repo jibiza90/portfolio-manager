@@ -31,6 +31,15 @@ interface LucentMonth extends LucentSceneNode {
 }
 
 type LucentMode = 'summary' | 'story' | 'explore';
+type LucentChartKind = 'balance' | 'return' | 'profit';
+
+interface LucentChartTooltip {
+  x: number;
+  y: number;
+  below: boolean;
+  title: string;
+  rows: Array<{ label: string; value: string; tone?: string }>;
+}
 
 const monthNumbers: Record<string, number> = {
   ene: 0, enero: 0, feb: 1, febrero: 1, mar: 2, marzo: 2,
@@ -98,10 +107,12 @@ const tone = (value: number) => value > 0.005 ? 'is-positive' : value < -0.005 ?
 const sumType = (rows: Array<{ type: string; amount: number }>, type: 'increment' | 'decrement') =>
   rows.filter((row) => row.type === type).reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
-const Icon: React.FC<{ name: 'play' | 'pause' | 'expand' | 'download' | 'compare' | 'spark' | 'layers' | 'close' }> = ({ name }) => {
+const Icon: React.FC<{ name: 'play' | 'pause' | 'previous' | 'next' | 'expand' | 'download' | 'compare' | 'spark' | 'layers' | 'close' }> = ({ name }) => {
   const paths: Record<string, React.ReactNode> = {
     play: <path d="M8 5v14l11-7z" />,
     pause: <><path d="M7 5h4v14H7z" /><path d="M14 5h4v14h-4z" /></>,
+    previous: <path d="m15 5-7 7 7 7" />,
+    next: <path d="m9 5 7 7-7 7" />,
     expand: <><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" /><path d="M3 8l6-6M21 8l-6-6M3 16l6 6M21 16l-6 6" /></>,
     download: <><path d="M12 3v12" /><path d="m7 10 5 5 5-5M5 21h14" /></>,
     compare: <><path d="M8 4 4 8l4 4M4 8h15M16 20l4-4-4-4M20 16H5" /></>,
@@ -131,6 +142,7 @@ export const LucentReportPage: React.FC<LucentReportPageProps> = ({
   const [compareA, setCompareA] = useState(0);
   const [compareB, setCompareB] = useState(0);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
+  const [chartTooltip, setChartTooltip] = useState<LucentChartTooltip | null>(null);
 
   const pending = useMemo(() => pendingCashMovements
     .filter((movement) => movement.amount > 0 && Number.isFinite(movement.amount))
@@ -286,6 +298,38 @@ export const LucentReportPage: React.FC<LucentReportPageProps> = ({
     setPlaying(true);
   };
 
+  const showChartTooltip = (
+    target: Element,
+    month: LucentMonth,
+    kind: LucentChartKind
+  ) => {
+    const rect = target.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const tooltipWidth = Math.min(310, viewportWidth - 24);
+    const x = Math.max(tooltipWidth / 2 + 12, Math.min(viewportWidth - tooltipWidth / 2 - 12, rect.left + rect.width / 2));
+    const y = rect.top;
+    const rows = kind === 'balance'
+      ? [
+          { label: 'Valor de cartera', value: formatCurrency(month.balance) },
+          { label: 'Beneficio del mes', value: signedMoney(month.profit), tone: tone(month.profit) },
+          { label: 'Rentabilidad', value: signedPercent(month.returnPct), tone: tone(month.returnPct) }
+        ]
+      : kind === 'return'
+        ? [
+            { label: 'Rentabilidad', value: signedPercent(month.returnPct), tone: tone(month.returnPct) },
+            { label: 'Beneficio generado', value: signedMoney(month.profit), tone: tone(month.profit) },
+            { label: 'Valor al cierre', value: formatCurrency(month.balance) }
+          ]
+        : [
+            { label: 'Beneficio generado', value: signedMoney(month.profit), tone: tone(month.profit) },
+            { label: 'Rentabilidad', value: signedPercent(month.returnPct), tone: tone(month.returnPct) },
+            { label: 'Valor al cierre', value: formatCurrency(month.balance) }
+          ];
+    setChartTooltip({ x, y: y < 210 ? rect.bottom : y, below: y < 210, title: month.label, rows });
+  };
+
+  const hideChartTooltip = () => setChartTooltip(null);
+
   const narrative = useMemo(() => {
     if (!active) return 'La historia financiera comenzará con el primer cierre publicado.';
     if (active.isPending) {
@@ -322,9 +366,9 @@ export const LucentReportPage: React.FC<LucentReportPageProps> = ({
   const balanceChart = useMemo(() => {
     const values = publishedMonths.map((month) => Math.max(0, month.balance));
     const max = Math.max(1, ...values) * 1.12;
-    const width = 1000;
+    const width = 1040;
     const height = 320;
-    const padding = { left: 50, right: 38, top: 34, bottom: 44 };
+    const padding = { left: 82, right: 48, top: 34, bottom: 44 };
     const usableWidth = width - padding.left - padding.right;
     const usableHeight = height - padding.top - padding.bottom;
     const points = publishedMonths.map((month, index) => ({
@@ -468,6 +512,10 @@ export const LucentReportPage: React.FC<LucentReportPageProps> = ({
                 <button type="button" onClick={() => setCinema(true)} aria-label="Presentar a pantalla completa"><Icon name="expand" /></button>
               </div>
             </div>
+            <div className="lucent-scene-status" aria-hidden="true">
+              <span>{mode === 'story' ? 'Recorrido guiado' : mode === 'explore' ? 'Exploración libre' : 'Panorama completo'}</span>
+              <strong>{layerLabels[layer]} · {active?.label ?? 'Sin datos'}</strong>
+            </div>
             <LucentCapitalScene
               nodes={months}
               activeIndex={activeIndex}
@@ -498,8 +546,11 @@ export const LucentReportPage: React.FC<LucentReportPageProps> = ({
             <p className="lucent-focus-narrative">{narrative}</p>
             {mode === 'story' ? (
               <div className="lucent-story-controls">
-                <button type="button" onClick={() => setPlaying((value) => !value)}><Icon name={playing ? 'pause' : 'play'} />{playing ? 'Pausar' : 'Continuar'}</button>
+                <button type="button" className="is-icon" aria-label="Mes anterior" disabled={activeIndex === 0} onClick={() => selectMonth(activeIndex - 1, 'historia anterior')}><Icon name="previous" /></button>
+                <button type="button" className="is-play" onClick={() => setPlaying((value) => !value)}><Icon name={playing ? 'pause' : 'play'} />{playing ? 'Pausar' : 'Continuar'}</button>
+                <button type="button" className="is-icon" aria-label="Mes siguiente" disabled={activeIndex === months.length - 1} onClick={() => selectMonth(activeIndex + 1, 'historia siguiente')}><Icon name="next" /></button>
                 <button type="button" onClick={replay}>Reiniciar</button>
+                <div className="lucent-story-progress" aria-label={`Progreso ${activeIndex + 1} de ${months.length}`}><span style={{ width: `${((activeIndex + 1) / Math.max(1, months.length)) * 100}%` }} /></div>
               </div>
             ) : null}
           </aside>
@@ -580,12 +631,23 @@ export const LucentReportPage: React.FC<LucentReportPageProps> = ({
               <path d={balanceChart.area} className="lucent-area-path" />
               <path d={balanceChart.path} className="lucent-line-path" filter="url(#lucent-glow)" />
               {balanceChart.points.map((point, index) => (
-                <g key={point.month.key} className={`lucent-chart-point${index === publishedMonths.length - 1 ? ' is-last' : ''}`} onClick={() => selectMonth(index, 'gráfico')}>
+                <g
+                  key={point.month.key}
+                  className={`lucent-chart-point${index === publishedMonths.length - 1 ? ' is-last' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${point.month.label}: ${formatCurrency(point.month.balance)}`}
+                  onPointerEnter={(event) => showChartTooltip(event.currentTarget, point.month, 'balance')}
+                  onPointerLeave={hideChartTooltip}
+                  onFocus={(event) => showChartTooltip(event.currentTarget, point.month, 'balance')}
+                  onBlur={hideChartTooltip}
+                  onClick={() => selectMonth(index, 'gráfico')}
+                  onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') selectMonth(index, 'gráfico'); }}
+                >
                   <line x1={point.x} x2={point.x} y1={point.y + 8} y2={balanceChart.padding.top + balanceChart.usableHeight} className="lucent-point-guide" />
                   <circle cx={point.x} cy={point.y} r="7" />
                   <text x={point.x} y={point.y + (index % 2 === 0 ? -16 : 25)} textAnchor="middle" className="lucent-point-value">{compactMoney(point.month.balance)}</text>
                   <text x={point.x} y={balanceChart.height - 12} textAnchor="middle" className="lucent-point-month">{point.month.shortLabel}</text>
-                  <title>{point.month.label}: {formatCurrency(point.month.balance)}</title>
                 </g>
               ))}
             </svg>
@@ -598,7 +660,7 @@ export const LucentReportPage: React.FC<LucentReportPageProps> = ({
             <div className="lucent-bar-chart" style={{ '--lucent-columns': publishedMonths.length } as React.CSSProperties}>
               {publishedMonths.map((month, index) => {
                 const height = Math.max(4, Math.abs(month.returnPct) / maxReturn * 74);
-                return <button type="button" key={month.key} className={`${tone(month.returnPct)}${index === publishedMonths.length - 1 ? ' is-last' : ''}`} onClick={() => selectMonth(index, 'rentabilidad')}><b>{signedPercent(month.returnPct)}</b><span className="lucent-bar-track"><i style={{ height: `${height}%` }} /></span><small>{month.shortLabel}</small><em>{month.label}: {signedPercent(month.returnPct)}</em></button>;
+                return <button type="button" key={month.key} className={`${tone(month.returnPct)}${index === publishedMonths.length - 1 ? ' is-last' : ''}`} onPointerEnter={(event) => showChartTooltip(event.currentTarget, month, 'return')} onPointerLeave={hideChartTooltip} onFocus={(event) => showChartTooltip(event.currentTarget, month, 'return')} onBlur={hideChartTooltip} onClick={() => selectMonth(index, 'rentabilidad')}><b>{signedPercent(month.returnPct)}</b><span className="lucent-bar-track"><i style={{ height: `${height}%` }} /></span><small>{month.shortLabel}</small></button>;
               })}
             </div>
           </article>
@@ -607,7 +669,7 @@ export const LucentReportPage: React.FC<LucentReportPageProps> = ({
             <div className="lucent-bar-chart is-profit" style={{ '--lucent-columns': publishedMonths.length } as React.CSSProperties}>
               {publishedMonths.map((month, index) => {
                 const height = Math.max(4, Math.abs(month.profit) / maxProfit * 74);
-                return <button type="button" key={month.key} className={`${tone(month.profit)}${index === publishedMonths.length - 1 ? ' is-last' : ''}`} onClick={() => selectMonth(index, 'beneficio')}><b>{compactMoney(month.profit)}</b><span className="lucent-bar-track"><i style={{ height: `${height}%` }} /></span><small>{month.shortLabel}</small><em>{month.label}: {signedMoney(month.profit)}</em></button>;
+                return <button type="button" key={month.key} className={`${tone(month.profit)}${index === publishedMonths.length - 1 ? ' is-last' : ''}`} onPointerEnter={(event) => showChartTooltip(event.currentTarget, month, 'profit')} onPointerLeave={hideChartTooltip} onFocus={(event) => showChartTooltip(event.currentTarget, month, 'profit')} onBlur={hideChartTooltip} onClick={() => selectMonth(index, 'beneficio')}><b>{compactMoney(month.profit)}</b><span className="lucent-bar-track"><i style={{ height: `${height}%` }} /></span><small>{month.shortLabel}</small></button>;
               })}
             </div>
           </article>
@@ -669,6 +731,18 @@ export const LucentReportPage: React.FC<LucentReportPageProps> = ({
       </main>
 
       <footer className="lucent-footer"><div className="lucent-brand"><span className="lucent-brand-mark"><i /><i /><i /></span><div><strong>LUCENT</strong><small>Private wealth intelligence</small></div></div><span>Información financiera privada · {report.clientCode}</span></footer>
+
+      {chartTooltip ? (
+        <div
+          className={`lucent-chart-tooltip${chartTooltip.below ? ' is-below' : ''}`}
+          style={{ left: chartTooltip.x, top: chartTooltip.y }}
+          role="tooltip"
+        >
+          <span>Detalle del periodo</span>
+          <strong>{chartTooltip.title}</strong>
+          <dl>{chartTooltip.rows.map((row) => <div key={row.label}><dt>{row.label}</dt><dd className={row.tone}>{row.value}</dd></div>)}</dl>
+        </div>
+      ) : null}
 
       {cinema ? (
         <div className="lucent-cinema-bar">
