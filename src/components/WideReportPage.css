@@ -21,6 +21,11 @@
   min-width: 0;
 }
 
+/* Page 29 is lazy-loaded, so its selector layout must be available up front. */
+.demo-report-page-switcher.has-twenty-seven-pages.has-twenty-nine-pages > div {
+  grid-template-columns: repeat(15, minmax(0, 1fr));
+}
+
 .report-pro-page-wide .report-pro-wide-sheet {
   --wr-ink: #0a2037;
   --wr-muted: #5a6e83;
@@ -475,6 +480,10 @@
     grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 
+  .demo-report-page-switcher.has-twenty-seven-pages.has-twenty-nine-pages > div {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
   .report-pro-page-wide .report-pro-wide-sheet .report-pro-kpis-demo,
   .report-pro-page-wide .report-pro-wide-sheet .report-pro-capital-grid {
     grid-template-columns: repeat(3, minmax(190px, 1fr));
@@ -484,6 +493,11 @@
 @media (max-width: 900px) {
   .demo-report-page-switcher.has-twenty-pages > div {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+
+  .demo-report-page-switcher.has-twenty-seven-pages.has-twenty-nine-pages > div {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .report-pro-page-wide .report-pro-wide-sheet .report-pro-header {
@@ -519,6 +533,11 @@
 
   .demo-report-page-switcher.has-twenty-pages > div {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+
+  .demo-report-page-switcher.has-twenty-seven-pages.has-twenty-nine-pages > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .report-pro-page-wide .report-pro-wide-sheet {
