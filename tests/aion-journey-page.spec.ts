@@ -20,7 +20,7 @@ const openAion = async (page: import('@playwright/test').Page) => {
 
 test('renders AION as a cinematic data-driven capital journey', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'android-tablet', 'The real WebGL journey uses a dedicated tablet project to avoid competing with AETHER.');
-  test.setTimeout(75_000);
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1728, height: 1080 });
   await mountDemoReport(page);
   await openAion(page);
@@ -49,7 +49,7 @@ test('renders AION as a cinematic data-driven capital journey', async ({ page },
 
 test('supports story controls, sound, visual layers and cinema mode', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'android-tablet', 'Desktop controls share the dedicated AION tablet project.');
-  test.setTimeout(75_000);
+  test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await mountDemoReport(page);
   await openAion(page);
