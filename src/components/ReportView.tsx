@@ -30,7 +30,7 @@ import { ConsultaReportPage } from './ConsultaReportPage';
 import { EstacionesReportPage } from './EstacionesReportPage';
 import { PrismaOriginReportPage } from './PrismaOriginReportPage';
 import { NexusReportPage } from './NexusReportPage';
-import { AionReportPage } from './AionReportPage';
+import { LumenReportPage } from './LumenReportPage';
 import './WideReportPage.css';
 
 interface ReportViewProps {
@@ -2357,8 +2357,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isEstacionesDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page24';
   const isPrismaOriginDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page25';
   const isNexusDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page26';
-  const isAionDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page27';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage || isAionDemoPage;
+  const isLumenDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page27';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage || isLumenDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}${isWideDemoPage ? ' report-pro-page-wide' : ''}`}>
@@ -2715,7 +2715,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               aria-label="Página 27"
               onClick={() => {
                 setDemoReportPage('page27');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 27 AION — CODEX' });
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 27 LUMEN — CODEX' });
               }}
             >
               <span className="demo-report-page-label">Página 27</span>
@@ -2927,8 +2927,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
           onAnalyticsEvent={onAnalyticsEvent}
           onDownload={handleDownloadModernReport}
         />
-      ) : isAionDemoPage ? (
-        <AionReportPage
+      ) : isLumenDemoPage ? (
+        <LumenReportPage
           report={report}
           pendingCashMovements={visiblePendingCashMovements}
           rootRef={reportRef}
