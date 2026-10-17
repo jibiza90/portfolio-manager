@@ -272,9 +272,29 @@
 
 .forma-footer { display: flex; padding: 22px 3px 2px; justify-content: space-between; gap: 20px; color: var(--forma-muted); font-size: 8px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
 
-.forma-precision-backdrop { position: fixed; z-index: 9998; inset: 0; visibility: hidden; background: rgba(15,36,33,.42); opacity: 0; backdrop-filter: blur(10px); transition: opacity 240ms ease, visibility 240ms ease; }
+.forma-precision-portal {
+  --forma-ink: #112724;
+  --forma-deep: #174b45;
+  --forma-green: #17695f;
+  --forma-muted: #60736f;
+  --forma-line: rgba(25, 70, 64, 0.14);
+  --forma-gold: #ad8a47;
+  --forma-coral: #aa5e58;
+  position: fixed;
+  z-index: 2147483000;
+  inset: 0;
+  pointer-events: none;
+  color: var(--forma-ink);
+  font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.forma-precision-portal * { box-sizing: border-box; }
+.forma-precision-portal button:focus-visible { outline: 3px solid rgba(173, 138, 71, 0.65); outline-offset: 3px; }
+.forma-precision-portal .is-positive { color: #147365 !important; }
+.forma-precision-portal .is-negative { color: var(--forma-coral) !important; }
+.forma-precision-backdrop { position: absolute; inset: 0; visibility: hidden; pointer-events: auto; background: rgba(15,36,33,.42); opacity: 0; backdrop-filter: blur(10px); transition: opacity 240ms ease, visibility 240ms ease; }
 .forma-precision-backdrop.is-visible { visibility: visible; opacity: 1; }
-.forma-precision-sheet { position: fixed; z-index: 9999; top: 0; right: 0; display: none; width: min(850px, 92vw); height: 100dvh; overflow-y: auto; padding: clamp(24px, 4vw, 54px); color: var(--forma-ink); background: #f8f6ef; box-shadow: -30px 0 80px rgba(15,36,33,.24); }
+.forma-precision-sheet { position: absolute; top: 0; right: 0; display: none; width: min(850px, 92vw); height: 100dvh; overflow-y: auto; overscroll-behavior: contain; pointer-events: auto; padding: clamp(24px, 4vw, 54px); color: var(--forma-ink); background: #f8f6ef; box-shadow: -30px 0 80px rgba(15,36,33,.24); }
 .forma-precision-sheet.is-open { display: block; animation: forma-sheet-in 320ms cubic-bezier(.2,.8,.2,1) both; }
 .forma-precision-sheet > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 25px; }
 .forma-precision-sheet > header h2 { margin: 7px 0 0; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(29px, 3.2vw, 48px); font-weight: 500; line-height: 1.05; }
@@ -454,7 +474,8 @@
   .forma-current-equation > div > strong { font-size: 36px; }
   .forma-current-equation .is-total { grid-column: auto; padding: 17px 0 0; border-top: 0; border-bottom: 0; }
   .forma-footer { padding: 18px 3px 4px; flex-direction: column; text-align: center; }
-  .forma-precision-sheet { width: 100vw; padding: 22px 14px; }
+  .forma-precision-sheet { top: auto; bottom: 0; width: 100vw; height: min(92dvh, 920px); padding: 32px 14px 22px; border-radius: 22px 22px 0 0; box-shadow: 0 -24px 72px rgba(15,36,33,.28); }
+  .forma-precision-sheet::before { position: absolute; top: 11px; left: 50%; width: 44px; height: 4px; border-radius: 999px; background: rgba(23,75,69,.2); content: ""; transform: translateX(-50%); }
   .forma-precision-equation { grid-template-columns: 1fr auto 1fr; }
   .forma-precision-equation > div { min-height: 58px; }
   .forma-precision-equation .is-total { grid-column: 1 / -1; padding: 14px 0 0; border-top: 1px solid var(--forma-line); border-left: 0; }

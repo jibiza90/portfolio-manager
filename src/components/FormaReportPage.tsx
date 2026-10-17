@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReportData } from '../services/reportLinks';
 import { formatCurrency } from '../utils/format';
 import { FormaPatrimonyScene, type FormaLens, type FormaMonthNode } from './FormaPatrimonyScene';
@@ -162,6 +163,8 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
   const previousIndexRef = useRef(0);
   const timelineRef = useRef<HTMLDivElement>(null);
   const precisionSheetRef = useRef<HTMLElement>(null);
+  const precisionCloseRef = useRef<HTMLButtonElement>(null);
+  const precisionTriggerRef = useRef<HTMLElement | null>(null);
   const [mode, setMode] = useState<FormaMode>('story');
   const [lens, setLens] = useState<FormaLens>('composition');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -306,6 +309,18 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
     });
   }, [months, onAnalyticsEvent]);
 
+  const openPrecision = useCallback((trigger: HTMLElement, source: string) => {
+    precisionTriggerRef.current = trigger;
+    setMode('precision');
+    setPlaying(false);
+    onAnalyticsEvent?.({ type: 'report_forma_mode', label: 'precision', metadata: { source } });
+  }, [onAnalyticsEvent]);
+
+  const closePrecision = useCallback((source: string) => {
+    setMode('explore');
+    onAnalyticsEvent?.({ type: 'report_forma_precision_close', label: source });
+  }, [onAnalyticsEvent]);
+
   useEffect(() => {
     const media = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const reduced = Boolean(media?.matches);
@@ -353,8 +368,32 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
+      if (mode === 'precision') {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closePrecision('teclado');
+          return;
+        }
+        if (event.key === 'Tab') {
+          const sheet = precisionSheetRef.current;
+          if (!sheet) return;
+          const controls = Array.from(sheet.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), select:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )).filter((control) => control.getClientRects().length > 0);
+          if (!controls.length) return;
+          const first = controls[0];
+          const last = controls[controls.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus({ preventScroll: true });
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus({ preventScroll: true });
+          }
+        }
+        return;
+      }
       if (event.key === 'Escape') {
-        if (mode === 'precision') setMode('explore');
         if (cinema) setCinema(false);
       }
       if (!cinema) return;
@@ -367,21 +406,61 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [activeIndex, cinema, mode, selectMonth]);
+  }, [activeIndex, cinema, closePrecision, mode, selectMonth]);
 
+  const overlayActive = cinema || mode === 'precision';
   useEffect(() => {
-    if (!cinema) return undefined;
-    const previous = document.body.style.overflow;
+    if (!overlayActive) return undefined;
+    const body = document.body;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const previous = {
+      overflow: body.style.overflow,
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      width: body.style.width,
+      paddingRight: body.style.paddingRight
+    };
+    const scrollbarGap = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.left = `-${scrollX}px`;
+    body.style.width = '100%';
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = previous; };
-  }, [cinema]);
+    if (scrollbarGap > 0) body.style.paddingRight = `${scrollbarGap}px`;
+    return () => {
+      body.style.overflow = previous.overflow;
+      body.style.position = previous.position;
+      body.style.top = previous.top;
+      body.style.left = previous.left;
+      body.style.width = previous.width;
+      body.style.paddingRight = previous.paddingRight;
+      window.scrollTo({ left: scrollX, top: scrollY, behavior: 'auto' });
+    };
+  }, [overlayActive]);
 
   useEffect(() => {
     const sheet = precisionSheetRef.current;
-    if (!sheet) return;
-    if (mode === 'precision') sheet.removeAttribute('inert');
-    else sheet.setAttribute('inert', '');
-  }, [mode]);
+    if (mode !== 'precision' || !sheet) return undefined;
+    const background = rootRef?.current ?? precisionTriggerRef.current?.closest<HTMLElement>('.forma-root') ?? null;
+    const hadInert = background?.hasAttribute('inert') ?? false;
+    const previousAriaHidden = background?.getAttribute('aria-hidden');
+    background?.setAttribute('inert', '');
+    background?.setAttribute('aria-hidden', 'true');
+    sheet.scrollTop = 0;
+    const focusFrame = window.requestAnimationFrame(() => precisionCloseRef.current?.focus({ preventScroll: true }));
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      if (background) {
+        if (!hadInert) background.removeAttribute('inert');
+        if (previousAriaHidden == null) background.removeAttribute('aria-hidden');
+        else background.setAttribute('aria-hidden', previousAriaHidden);
+      }
+      const trigger = precisionTriggerRef.current;
+      window.requestAnimationFrame(() => trigger?.isConnected && trigger.focus({ preventScroll: true }));
+    };
+  }, [mode, rootRef]);
 
   useEffect(() => () => { void audioContextRef.current?.close(); }, []);
 
@@ -428,7 +507,7 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
         <nav className="forma-mode-nav" aria-label="Modo de visualización">
           <button type="button" className={mode === 'story' ? 'is-active' : ''} aria-pressed={mode === 'story'} onClick={() => changeMode('story')}><span>Recorrido</span><small>Historia guiada</small></button>
           <button type="button" className={mode === 'explore' ? 'is-active' : ''} aria-pressed={mode === 'explore'} onClick={() => changeMode('explore')}><span>Explorar</span><small>Control manual</small></button>
-          <button type="button" className={mode === 'precision' ? 'is-active' : ''} aria-pressed={mode === 'precision'} onClick={() => changeMode('precision')}><span>Precisión</span><small>Cifras exactas</small></button>
+          <button type="button" className={mode === 'precision' ? 'is-active' : ''} aria-pressed={mode === 'precision'} onClick={(event) => openPrecision(event.currentTarget, 'navegacion')}><span>Precisión</span><small>Cifras exactas</small></button>
         </nav>
         <div className="forma-header-actions">
           <button type="button" className={soundEnabled ? 'is-active' : ''} onClick={toggleSound} aria-label={soundEnabled ? 'Desactivar sonido' : 'Activar sonido'} aria-pressed={soundEnabled}><Icon name={soundEnabled ? 'sound' : 'mute'} /></button>
@@ -513,7 +592,7 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
               <div className="forma-month-story"><span>{story.title}</span><p>{story.body}</p></div>
               <div className="forma-month-actions">
                 <button type="button" aria-label="Mes anterior" disabled={activeIndex <= 0} onClick={() => selectMonth(activeIndex - 1, 'anterior')}><Icon name="previous" /><span>Anterior</span></button>
-                <button type="button" className="is-precision" onClick={() => changeMode('precision')} aria-label="Abrir detalle exacto"><Icon name="precision" /><span>Ver cifras</span></button>
+                <button type="button" className="is-precision" onClick={(event) => openPrecision(event.currentTarget, 'mes')} aria-label="Abrir detalle exacto"><Icon name="precision" /><span>Ver cifras</span></button>
                 <button type="button" aria-label="Mes siguiente" disabled={activeIndex >= months.length - 1} onClick={() => selectMonth(activeIndex + 1, 'siguiente')}><span>Siguiente</span><Icon name="next" /></button>
               </div>
             </aside>
@@ -569,18 +648,19 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
         </footer>
       </main>
 
-      <div className={`forma-precision-backdrop${mode === 'precision' ? ' is-visible' : ''}`} onClick={() => changeMode('explore')} aria-hidden="true" />
-      <aside
-        ref={precisionSheetRef}
-        className={`forma-precision-sheet${mode === 'precision' ? ' is-open' : ''}`}
-        role="dialog"
-        aria-modal={mode === 'precision'}
-        aria-hidden={mode !== 'precision'}
-        aria-label="Detalle exacto del periodo"
-      >
+      {mode === 'precision' && typeof document !== 'undefined' ? createPortal(
+        <div className="forma-precision-portal">
+          <div className="forma-precision-backdrop is-visible" onClick={() => closePrecision('fondo')} aria-hidden="true" />
+          <aside
+            ref={precisionSheetRef}
+            className="forma-precision-sheet is-open"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="forma-precision-title"
+          >
         <header>
-          <div><span>Precisión · {active.label}</span><h2>{active.isPending ? 'Movimientos posteriores al cierre' : `Cierre del ${active.closeDate}`}</h2></div>
-          <button type="button" onClick={() => changeMode('explore')} aria-label="Cerrar detalle"><Icon name="close" /></button>
+          <div><span>Precisión · {active.label}</span><h2 id="forma-precision-title">{active.isPending ? 'Movimientos posteriores al cierre' : `Cierre del ${active.closeDate}`}</h2></div>
+          <button ref={precisionCloseRef} type="button" onClick={() => closePrecision('boton')} aria-label="Cerrar detalle"><Icon name="close" /></button>
         </header>
 
         <section className="forma-precision-equation" aria-label="Conciliación del periodo">
@@ -627,7 +707,10 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
           <div><span>TWR</span><p>Mide la evolución de la cartera aislando aportaciones y retiradas.</p></div>
           <div><span>Rentabilidad total</span><p>Relaciona el beneficio acumulado con el capital neto aportado.</p></div>
         </section>
-      </aside>
+          </aside>
+        </div>,
+        document.body
+      ) : null}
     </div>
   );
 };

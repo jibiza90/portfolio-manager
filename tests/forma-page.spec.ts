@@ -10,6 +10,14 @@ const mountReport = async (page: import('@playwright/test').Page, clientId = 'cl
   }, { modulePath: '/tests/fixtures/report-view-harness.tsx', requestedClientId: clientId });
 };
 
+const mountStressReport = async (page: import('@playwright/test').Page) => {
+  await page.goto('/');
+  await page.evaluate(async (modulePath) => {
+    const harness = await import(/* @vite-ignore */ modulePath);
+    harness.mountContinuumStressReport();
+  }, '/tests/fixtures/report-view-harness.tsx');
+};
+
 const openForma = async (page: import('@playwright/test').Page) => {
   const pageThirty = page.locator('.demo-report-page-switcher button[aria-label$="30"]');
   await expect(pageThirty).toContainText('CODEX');
@@ -71,19 +79,31 @@ test('renders FORMA as an isolated data-driven patrimony construction', async ({
   await page.locator('.forma-timeline').evaluate((timeline) => { timeline.scrollLeft = timeline.scrollWidth; });
   await page.locator('.forma-timeline button').nth(12).click();
   await expect(page.locator('.forma-active-reading')).toContainText('112.548,34');
-  await page.getByRole('button', { name: 'Abrir detalle exacto' }).click();
+  const precisionTrigger = page.getByRole('button', { name: 'Abrir detalle exacto' });
+  await precisionTrigger.scrollIntoViewIfNeeded();
+  const scrollBeforePrecision = await page.evaluate(() => window.scrollY);
+  await precisionTrigger.click();
+  await expect(page.locator('.forma-precision-portal')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cerrar detalle' })).toBeFocused();
+  const precisionBox = await page.locator('.forma-precision-sheet').boundingBox();
+  expect(precisionBox?.y).toBeGreaterThanOrEqual(0);
+  expect(precisionBox?.y).toBeLessThan(2);
   await expect(page.locator('.forma-precision-sheet')).toHaveClass(/is-open/);
   await expect(page.locator('.forma-tranches')).toContainText('Aportación incorporada');
   await expect(page.locator('.forma-tranches')).toContainText('Capital invertido hasta su retirada');
   await expect(page.locator('.forma-tranches .is-total')).toContainText('4673,31');
 
   await page.getByRole('button', { name: 'Cerrar detalle' }).click();
+  await expect(page.locator('.forma-precision-portal')).toHaveCount(0);
+  await expect.poll(async () => page.evaluate(() => window.scrollY)).toBe(scrollBeforePrecision);
+  await expect(precisionTrigger).toBeFocused();
   await page.locator('.forma-timeline button').nth(13).click();
   await expect(page.locator('.forma-active-reading')).toContainText('127.548,34');
   await page.getByRole('button', { name: 'Abrir detalle exacto' }).click();
   await expect(page.locator('.forma-movement-ledger')).toContainText('15.000,00');
   await expect(page.locator('.forma-movement-ledger')).toContainText('último cierre publicado');
-  await page.getByRole('button', { name: 'Cerrar detalle' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.forma-precision-portal')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Activar sonido' }).click();
   await expect(page.getByRole('button', { name: 'Desactivar sonido' })).toHaveAttribute('aria-pressed', 'true');
@@ -100,7 +120,8 @@ test('renders FORMA as an isolated data-driven patrimony construction', async ({
   await page.getByRole('button', { name: 'Página 1', exact: true }).click();
   await expect(page.locator('.forma-root')).toHaveCount(0);
   await expect(page.locator('.forma-scene-canvas')).toHaveCount(0);
-  expect(pageErrors).toEqual([]);
+  await page.waitForTimeout(150);
+  expect(pageErrors.map((error) => error.stack ?? error.message)).toEqual([]);
 });
 
 test('keeps FORMA legible and contained on iPhone', async ({ page }, testInfo) => {
@@ -127,6 +148,9 @@ test('keeps FORMA legible and contained on iPhone', async ({ page }, testInfo) =
   await page.getByRole('button', { name: 'Abrir detalle exacto' }).click();
   const sheetBox = await page.locator('.forma-precision-sheet').boundingBox();
   expect(sheetBox?.width).toBeLessThanOrEqual(391);
+  expect(sheetBox?.y).toBeGreaterThanOrEqual(0);
+  expect((sheetBox?.y ?? 0) + (sheetBox?.height ?? 0)).toBeLessThanOrEqual(845);
+  await expect(page.getByRole('button', { name: 'Cerrar detalle' })).toBeInViewport();
   await expect(page.locator('.forma-precision-facts article')).toHaveCount(4);
 
   const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
@@ -175,4 +199,27 @@ test('respects reduced motion without removing manual controls', async ({ page }
   await expect(page.getByRole('button', { name: 'Reproducir recorrido' })).toBeVisible();
   await page.getByRole('button', { name: 'Mes siguiente' }).click();
   await expect(page.locator('.forma-timeline button.is-active')).toHaveAttribute('data-index', '1');
+});
+
+test('keeps 48 high-value periods, losses and movements fully explorable', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'The long-history stress case runs on one representative tablet.');
+  test.setTimeout(90_000);
+  await mountStressReport(page);
+  await openForma(page);
+
+  await expect(page.locator('.forma-timeline button')).toHaveCount(48);
+  await expect(page.locator('#forma-month-select option')).toHaveCount(48);
+  await page.locator('#forma-month-select').selectOption('47');
+  await expect(page.locator('.forma-timeline button.is-active')).toHaveAttribute('data-index', '47');
+  await expect(page.locator('.forma-active-reading')).toContainText('2.405.150');
+
+  await page.locator('#forma-month-select').selectOption('4');
+  await expect(page.locator('.forma-month-facts .is-negative').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Abrir detalle exacto' }).click();
+  await expect(page.getByRole('dialog')).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Cerrar detalle' })).toBeFocused();
+  await page.keyboard.press('Escape');
+
+  const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  expect(hasHorizontalOverflow).toBe(false);
 });
