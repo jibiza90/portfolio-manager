@@ -19,7 +19,8 @@ test('renders CONSULTA as a guided, traceable financial report', async ({ page }
   await expect(page.locator('.consulta-root')).toBeVisible();
   await expect(page.locator('.consulta-head')).toContainText('CONSULTA');
   await expect(page.locator('.consulta-main-number')).toContainText('127.548,34');
-  await expect(page.getByRole('tab')).toHaveCount(10);
+  const consultaTabs = page.locator('.consulta-questions');
+  await expect(consultaTabs.getByRole('tab')).toHaveCount(10);
   await expect(page.locator('.consulta-root')).not.toContainText('Cliente Demo');
 
   await page.getByRole('tab', { name: /¿Cuánto he ganado en total/ }).click();
@@ -51,9 +52,9 @@ test('renders CONSULTA as a guided, traceable financial report', async ({ page }
   await expect(page.locator('.consulta-evolution-month')).toHaveCount(6);
   await expect(page.locator('.consulta-evolution-y-axis span')).toHaveCount(5);
 
-  const activeTab = page.getByRole('tab', { selected: true });
+  const activeTab = consultaTabs.getByRole('tab', { selected: true });
   await activeTab.press('ArrowLeft');
-  await expect(page.getByRole('tab', { selected: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(consultaTabs.getByRole('tab', { selected: true })).toHaveAttribute('aria-selected', 'true');
 
   const hasHorizontalPageOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   expect(hasHorizontalPageOverflow).toBe(false);

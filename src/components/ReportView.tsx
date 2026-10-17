@@ -30,6 +30,7 @@ import { ConsultaReportPage } from './ConsultaReportPage';
 import { EstacionesReportPage } from './EstacionesReportPage';
 import { PrismaOriginReportPage } from './PrismaOriginReportPage';
 import { NexusReportPage } from './NexusReportPage';
+import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio';
 import './WideReportPage.css';
 
 const AetherReportPage = React.lazy(() => import('./AetherReportPage').then((module) => ({ default: module.AetherReportPage })));
@@ -340,6 +341,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
   const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19' | 'page20' | 'page21' | 'page22' | 'page23' | 'page24' | 'page25' | 'page26' | 'page27' | 'page28' | 'page29' | 'page30'>('page1');
+  const [demoViewMode, setDemoViewMode] = useState<'pages' | 'pdfs'>('pages');
+  const [demoPdfDesign, setDemoPdfDesign] = useState<PdfDesignId>('pdf2');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -348,6 +351,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
   const lastInteractionAtRef = useRef(Date.now());
   const lastTrackedChartPointRef = useRef<{ key: string; at: number } | null>(null);
+  const pdf2DownloaderRef = useRef<(() => Promise<void>) | null>(null);
+  const registerPdf2Downloader = useCallback((download: (() => Promise<void>) | null) => {
+    pdf2DownloaderRef.current = download;
+  }, []);
   const syncImmersiveReportPeriod = useCallback((startMonth: string, endMonth: string, isAll: boolean) => {
     if (isAll) {
       setPeriodPreset('all');
@@ -520,6 +527,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (!report) return;
     setPeriodPreset('all');
     setDemoReportPage('page1');
+    setDemoViewMode('pages');
+    setDemoPdfDesign('pdf2');
   }, [report?.clientId]);
 
   useLayoutEffect(() => {
@@ -865,6 +874,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
   const handleDownload = async () => {
     if (!report) return;
+    if (report.clientId === DEMO_CLIENT_ID && demoViewMode === 'pdfs' && demoPdfDesign === 'pdf2' && pdf2DownloaderRef.current) {
+      await pdf2DownloaderRef.current();
+      return;
+    }
     if (report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page5') {
       await handleDownloadNarrativeReport();
       return;
@@ -1187,6 +1200,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
     (factor, month) => factor * (1 + getDisplayedMonthReturnPct(month) / 100),
     1
   ) - 1;
+  const selectedPeriodLabel = firstMonth && lastMonth
+    ? `${firstMonth.month} - ${lastMonth.month}`
+    : 'Todo el periodo';
   const accumulatedNetCapital = visibleIncrements - visibleDecrements;
   const firstMovementIso = (report.movements ?? [])
     .map((movement) => movement.iso)
@@ -1649,9 +1665,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
     });
   }
 
-  async function handleDownloadModernReport() {
+  async function buildModernReportPdf() {
     const currentReport = report;
-    if (!currentReport) return;
+    if (!currentReport) throw new Error('No hay un informe disponible para generar el PDF.');
     const isDemoPdf = currentReport.clientId === DEMO_CLIENT_ID;
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
@@ -1679,9 +1695,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const money = (value: number) => formatCurrency(Number.isFinite(value) ? value : 0);
     const money0 = (value: number) => `${Math.round(Number.isFinite(value) ? value : 0).toLocaleString('es-ES')} \u20ac`;
     const pct = (value: number) => `${(Number.isFinite(value) ? value : 0).toFixed(2)}%`;
-    const selectedMonthLabel = firstMonth && lastMonth
-      ? `${firstMonth.month} - ${lastMonth.month}`
-      : 'Todo el periodo';
+    const selectedMonthLabel = selectedPeriodLabel;
 
     const addPage = () => {
       doc.addPage();
@@ -2053,7 +2067,22 @@ export const ReportView: React.FC<ReportViewProps> = ({
     }
 
     const filename = `informe-${currentReport.clientCode}-${rangeStart || 'todo'}-${rangeEnd || 'todo'}.pdf`;
-    doc.save(filename);
+    return { blob: doc.output('blob'), filename };
+  }
+
+  async function handleDownloadModernReport() {
+    const currentReport = report;
+    if (!currentReport) return;
+    const { blob, filename } = await buildModernReportPdf();
+    const pdfUrl = URL.createObjectURL(blob);
+    const downloadLink = document.createElement('a');
+    downloadLink.href = pdfUrl;
+    downloadLink.download = filename;
+    downloadLink.style.display = 'none';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    downloadLink.remove();
+    window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 30_000);
     onDownloaded?.({
       reportClientId: currentReport.clientId,
       reportLabel: currentReport.clientCode,
@@ -2365,7 +2394,20 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isLucentDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page28';
   const isAionDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page29';
   const isFormaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page30';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage || isAetherDemoPage || isLucentDemoPage || isAionDemoPage || isFormaDemoPage;
+  const isPdfStudio = report.clientId === DEMO_CLIENT_ID && demoViewMode === 'pdfs';
+  const isImmersiveDemoPage = isPdfStudio || isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage || isAetherDemoPage || isLucentDemoPage || isAionDemoPage || isFormaDemoPage;
+  const pdfStudioMonths: PdfStudioMonth[] = effectiveMonthlyWithData.map((month) => ({
+    key: reportMonthToKey(month.month),
+    label: month.month,
+    closeLabel: getMonthEndLabel(month.month),
+    profit: month.profit ?? 0,
+    returnPct: getDisplayedMonthReturnPct(month),
+    endBalance: month.endBalance ?? 0
+  }));
+  const pdfStudioBreakdowns = tableContributionBreakdowns.filter((item) => {
+    const key = reportMonthToKey(item.month);
+    return (!rangeStart || key >= rangeStart) && (!rangeEnd || key <= rangeEnd);
+  });
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}${isWideDemoPage ? ' report-pro-page-wide' : ''}`}>
@@ -2377,6 +2419,18 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
+        <nav className="demo-report-mode-switcher" aria-label="Seleccionar area de diseno">
+          <div>
+            <span>Espacio de pruebas</span>
+            <strong>{demoViewMode === 'pages' ? 'Experiencias web' : 'Documentos PDF'}</strong>
+          </div>
+          <div role="tablist" aria-label="Cambiar entre paginas y PDF">
+            <button type="button" role="tab" aria-selected={demoViewMode === 'pages'} className={demoViewMode === 'pages' ? 'is-active' : ''} onClick={() => setDemoViewMode('pages')}><span>01</span>P&aacute;ginas del portal</button>
+            <button type="button" role="tab" aria-selected={demoViewMode === 'pdfs'} className={demoViewMode === 'pdfs' ? 'is-active' : ''} onClick={() => setDemoViewMode('pdfs')}><span>02</span>Dise&ntilde;os PDF</button>
+          </div>
+        </nav>
+      ) : null}
+      {report.clientId === DEMO_CLIENT_ID && demoViewMode === 'pages' ? (
         <nav className="demo-report-page-switcher has-nineteen-pages has-twenty-pages has-twenty-one-pages has-twenty-two-pages has-twenty-three-pages has-twenty-four-pages has-twenty-five-pages has-twenty-six-pages has-twenty-seven-pages has-twenty-eight-pages has-twenty-nine-pages has-thirty-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
@@ -2771,7 +2825,30 @@ export const ReportView: React.FC<ReportViewProps> = ({
         </nav>
       ) : null}
       {isImmersiveDemoPage ? null : expandedPatrimonyOverlay}
-      {isPremiumDemoPage ? (
+      {isPdfStudio ? (
+        <PdfDesignStudio
+          report={report}
+          months={pdfStudioMonths}
+          movements={periodMovements}
+          breakdowns={pdfStudioBreakdowns}
+          summary={{
+            periodLabel: selectedPeriodLabel,
+            startBalance: periodStartBalance,
+            endBalance: periodEndBalance,
+            profit: periodProfit,
+            returnPct: periodReturnPct,
+            increments: periodIncrements,
+            decrements: periodDecrements
+          }}
+          selectedDesign={demoPdfDesign}
+          onDesignChange={setDemoPdfDesign}
+          loadCurrentPdf={buildModernReportPdf}
+          onPdf2DownloaderReady={registerPdf2Downloader}
+          onDownloaded={onDownloaded}
+          periodStart={rangeStart}
+          periodEnd={rangeEnd}
+        />
+      ) : isPremiumDemoPage ? (
         <PremiumReportPage
           report={report}
           generalReferenceMonthly={generalReferenceMonthly}
