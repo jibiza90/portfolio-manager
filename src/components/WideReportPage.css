@@ -21,7 +21,7 @@
   min-width: 0;
 }
 
-/* Page 29 is lazy-loaded, so its selector layout must be available up front. */
+/* Lazy immersive pages keep all 30 demo selectors in two balanced rows. */
 .demo-report-page-switcher.has-twenty-seven-pages.has-twenty-nine-pages > div {
   grid-template-columns: repeat(15, minmax(0, 1fr));
 }

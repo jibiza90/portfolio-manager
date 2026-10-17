@@ -11,7 +11,7 @@ const mountDemoReport = async (page: import('@playwright/test').Page) => {
 test('renders the annual vision for Demo1 and keeps its controls coherent', async ({ page }) => {
   await mountDemoReport(page);
 
-  const pageThreeButton = page.getByRole('button', { name: 'Página 3' });
+  const pageThreeButton = page.getByRole('button', { name: 'Página 3', exact: true });
   await expect(pageThreeButton).toBeVisible();
   await pageThreeButton.click();
 

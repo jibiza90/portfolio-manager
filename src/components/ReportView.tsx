@@ -35,6 +35,7 @@ import './WideReportPage.css';
 const AetherReportPage = React.lazy(() => import('./AetherReportPage').then((module) => ({ default: module.AetherReportPage })));
 const LucentReportPage = React.lazy(() => import('./LucentReportPage').then((module) => ({ default: module.LucentReportPage })));
 const AionJourneyReportPage = React.lazy(() => import('./AionJourneyReportPage').then((module) => ({ default: module.AionJourneyReportPage })));
+const FormaReportPage = React.lazy(() => import('./FormaReportPage').then((module) => ({ default: module.FormaReportPage })));
 
 interface ReportViewProps {
   token?: string;
@@ -338,7 +339,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19' | 'page20' | 'page21' | 'page22' | 'page23' | 'page24' | 'page25' | 'page26' | 'page27' | 'page28' | 'page29'>('page1');
+  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19' | 'page20' | 'page21' | 'page22' | 'page23' | 'page24' | 'page25' | 'page26' | 'page27' | 'page28' | 'page29' | 'page30'>('page1');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -2363,7 +2364,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const isAetherDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page27';
   const isLucentDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page28';
   const isAionDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page29';
-  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage || isAetherDemoPage || isLucentDemoPage || isAionDemoPage;
+  const isFormaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page30';
+  const isImmersiveDemoPage = isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage || isAetherDemoPage || isLucentDemoPage || isAionDemoPage || isFormaDemoPage;
 
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}${isWideDemoPage ? ' report-pro-page-wide' : ''}`}>
@@ -2375,7 +2377,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-page-switcher has-nineteen-pages has-twenty-pages has-twenty-one-pages has-twenty-two-pages has-twenty-three-pages has-twenty-four-pages has-twenty-five-pages has-twenty-six-pages has-twenty-seven-pages has-twenty-eight-pages has-twenty-nine-pages" aria-label="Seleccionar pagina del informe">
+        <nav className="demo-report-page-switcher has-nineteen-pages has-twenty-pages has-twenty-one-pages has-twenty-two-pages has-twenty-three-pages has-twenty-four-pages has-twenty-five-pages has-twenty-six-pages has-twenty-seven-pages has-twenty-eight-pages has-twenty-nine-pages has-thirty-pages" aria-label="Seleccionar pagina del informe">
           <span>Vista del informe</span>
           <div>
             <button
@@ -2752,6 +2754,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="demo-report-page-label">Página 29</span>
               <small className="demo-report-page-author">CODEX</small>
             </button>
+            <button
+              type="button"
+              className={demoReportPage === 'page30' ? 'is-active' : ''}
+              aria-pressed={demoReportPage === 'page30'}
+              aria-label="Página 30"
+              onClick={() => {
+                setDemoReportPage('page30');
+                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 30 FORMA - CODEX' });
+              }}
+            >
+              <span className="demo-report-page-label">Página 30</span>
+              <small className="demo-report-page-author">CODEX</small>
+            </button>
           </div>
         </nav>
       ) : null}
@@ -2981,6 +2996,16 @@ export const ReportView: React.FC<ReportViewProps> = ({
       ) : isAionDemoPage ? (
         <React.Suspense fallback={<div className="aion-route-loading" role="status">Reconstruyendo tu trayectoria patrimonial…</div>}>
           <AionJourneyReportPage
+            report={report}
+            pendingCashMovements={visiblePendingCashMovements}
+            rootRef={reportRef}
+            onAnalyticsEvent={onAnalyticsEvent}
+            onDownload={handleDownloadModernReport}
+          />
+        </React.Suspense>
+      ) : isFormaDemoPage ? (
+        <React.Suspense fallback={<div className="forma-route-loading" role="status">Construyendo tu arquitectura patrimonial...</div>}>
+          <FormaReportPage
             report={report}
             pendingCashMovements={visiblePendingCashMovements}
             rootRef={reportRef}

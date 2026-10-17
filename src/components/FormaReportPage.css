@@ -1,0 +1,570 @@
+.forma-root {
+  --forma-ink: #142624;
+  --forma-muted: #61716d;
+  --forma-paper: #f4f0e7;
+  --forma-paper-bright: #fbfaf5;
+  --forma-line: rgba(29, 57, 53, 0.14);
+  --forma-green: #244d49;
+  --forma-green-soft: #86a49d;
+  --forma-gold: #b89350;
+  --forma-gold-light: #d8c18f;
+  --forma-coral: #a95650;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(36, 77, 73, 0.15);
+  border-radius: 34px;
+  color: var(--forma-ink);
+  background:
+    radial-gradient(circle at 82% 5%, rgba(184, 147, 80, 0.13), transparent 30%),
+    radial-gradient(circle at 10% 28%, rgba(74, 130, 120, 0.09), transparent 28%),
+    var(--forma-paper);
+  box-shadow: 0 42px 110px rgba(32, 55, 51, 0.16);
+  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.forma-root * { box-sizing: border-box; }
+.forma-root button { font: inherit; }
+.forma-root button:focus-visible { outline: 2px solid var(--forma-gold); outline-offset: 3px; }
+.forma-root svg { display: block; }
+.forma-root .is-positive { color: #176e60 !important; }
+.forma-root .is-negative { color: var(--forma-coral) !important; }
+.forma-root.has-precision { z-index: 40; }
+
+.forma-header {
+  position: relative;
+  z-index: 30;
+  display: grid;
+  min-height: 98px;
+  padding: 18px clamp(24px, 3vw, 54px);
+  grid-template-columns: minmax(230px, 1fr) auto minmax(230px, 1fr);
+  align-items: center;
+  gap: 28px;
+  border-bottom: 1px solid var(--forma-line);
+  background: rgba(250, 248, 241, 0.78);
+  backdrop-filter: blur(24px) saturate(1.12);
+}
+
+.forma-brand { display: flex; align-items: center; gap: 14px; }
+.forma-brand-mark { position: relative; display: block; width: 43px; height: 43px; }
+.forma-brand-mark::before,
+.forma-brand-mark i { position: absolute; content: ""; }
+.forma-brand-mark::before { inset: 2px; border: 1px solid rgba(36,77,73,.42); transform: rotate(45deg); }
+.forma-brand-mark i:first-child { inset: 9px; background: var(--forma-green); transform: rotate(45deg); }
+.forma-brand-mark i:last-child { top: 18px; left: 18px; width: 7px; height: 7px; background: var(--forma-gold-light); transform: rotate(45deg); }
+.forma-brand > span:last-child { display: flex; flex-direction: column; gap: 3px; }
+.forma-brand strong { font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 22px; font-weight: 500; letter-spacing: .2em; line-height: 1; }
+.forma-brand small { color: var(--forma-muted); font-size: 8px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+
+.forma-mode-nav {
+  display: grid;
+  min-width: 480px;
+  padding: 4px;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--forma-line);
+  border-radius: 999px;
+  background: rgba(255,255,255,.42);
+}
+.forma-mode-nav button {
+  min-height: 50px;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--forma-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: background 220ms ease, color 220ms ease, box-shadow 220ms ease;
+}
+.forma-mode-nav button span,
+.forma-mode-nav button small { display: block; }
+.forma-mode-nav button span { font-size: 10px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.forma-mode-nav button small { margin-top: 3px; font-size: 8px; }
+.forma-mode-nav button.is-active { color: #f9f7f0; background: var(--forma-green); box-shadow: 0 11px 24px rgba(36,77,73,.2); }
+.forma-mode-nav button.is-active small { color: rgba(255,255,255,.68); }
+
+.forma-header-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.forma-header-actions button,
+.forma-precision-sheet header button {
+  display: grid;
+  width: 43px;
+  height: 43px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--forma-line);
+  border-radius: 50%;
+  color: var(--forma-ink);
+  background: rgba(255,255,255,.48);
+  cursor: pointer;
+  transition: transform 170ms ease, border-color 170ms ease, background 170ms ease;
+}
+.forma-header-actions button:hover,
+.forma-precision-sheet header button:hover { border-color: rgba(36,77,73,.4); background: #fff; transform: translateY(-2px); }
+.forma-header-actions button.is-active { color: #fff; background: var(--forma-green); }
+.forma-header-actions svg,
+.forma-precision-sheet header button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+.forma-theatre { position: relative; padding: 20px clamp(18px, 2.2vw, 42px) 28px; }
+.forma-stage {
+  position: relative;
+  min-height: min(910px, calc(100dvh - 145px));
+  overflow: hidden;
+  border: 1px solid rgba(31,67,62,.13);
+  border-radius: 28px 28px 10px 10px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.7), rgba(245,241,232,.25) 52%, rgba(218,212,199,.42)),
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(8.333% - 1px), rgba(36,77,73,.035) calc(8.333% - 1px), rgba(36,77,73,.035) 8.333%);
+}
+.forma-stage::before {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(244,240,231,.92), transparent 25%, transparent 74%, rgba(244,240,231,.78)),
+    linear-gradient(180deg, rgba(244,240,231,.74), transparent 24%, transparent 68%, rgba(244,240,231,.56));
+  content: "";
+  pointer-events: none;
+}
+
+.forma-stage-meta {
+  position: absolute;
+  z-index: 14;
+  top: 25px;
+  right: 28px;
+  left: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.forma-stage-meta > span { display: flex; align-items: center; gap: 9px; color: var(--forma-muted); font-size: 8px; font-weight: 850; letter-spacing: .15em; text-transform: uppercase; }
+.forma-stage-meta > span i { width: 6px; height: 6px; border-radius: 50%; background: var(--forma-gold); box-shadow: 0 0 0 5px rgba(184,147,80,.1); }
+.forma-lenses { display: flex; padding: 3px; border: 1px solid var(--forma-line); border-radius: 999px; background: rgba(252,250,244,.72); backdrop-filter: blur(12px); }
+.forma-lenses button { min-height: 34px; padding: 0 15px; border: 0; border-radius: 999px; color: var(--forma-muted); background: transparent; font-size: 8px; font-weight: 850; letter-spacing: .08em; cursor: pointer; }
+.forma-lenses button.is-active { color: #fff; background: var(--forma-green); }
+
+.forma-active-reading {
+  position: absolute;
+  z-index: 12;
+  top: 96px;
+  left: clamp(30px, 4vw, 74px);
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  pointer-events: none;
+}
+.forma-active-reading > span { color: var(--forma-green); font-size: 9px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+.forma-active-reading > strong { margin-top: 12px; color: var(--forma-ink); font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(54px, 6vw, 108px); font-weight: 400; letter-spacing: -.055em; line-height: .84; text-shadow: 0 18px 38px rgba(30,52,49,.08); }
+.forma-active-reading > small { margin-top: 14px; color: var(--forma-muted); font-size: 10px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+
+.forma-scene-shell,
+.forma-scene-fallback { position: absolute; z-index: 2; inset: 0; }
+.forma-scene-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.forma-scene-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--forma-muted); background: rgba(244,240,231,.8); font-size: 9px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
+.forma-scene-loading i { width: 23px; height: 23px; border: 1px solid rgba(36,77,73,.2); border-top-color: var(--forma-green); border-radius: 50%; animation: formaSpin 900ms linear infinite; }
+
+.forma-scene-zoom {
+  position: absolute;
+  z-index: 15;
+  top: 78px;
+  right: 29px;
+  display: grid;
+  padding: 3px;
+  grid-template-columns: 34px 48px 34px;
+  border: 1px solid var(--forma-line);
+  border-radius: 999px;
+  background: rgba(252,250,244,.78);
+  box-shadow: 0 12px 28px rgba(35,57,53,.08);
+  backdrop-filter: blur(14px);
+}
+.forma-scene-zoom button { display: grid; min-width: 0; height: 34px; padding: 0; place-items: center; border: 0; border-radius: 999px; color: var(--forma-green); background: transparent; font-size: 16px; cursor: pointer; }
+.forma-scene-zoom button:nth-child(2) { color: var(--forma-muted); background: rgba(255,255,255,.58); }
+.forma-scene-zoom button span { font-size: 8px; font-weight: 850; letter-spacing: .03em; }
+.forma-scene-zoom button:hover { color: #fff; background: var(--forma-green); }
+
+.forma-scene-tooltip {
+  position: absolute;
+  z-index: 30;
+  display: flex;
+  width: 244px;
+  min-height: 128px;
+  padding: 18px 20px;
+  align-items: flex-start;
+  flex-direction: column;
+  border: 1px solid rgba(255,255,255,.36);
+  border-radius: 3px 20px 20px 20px;
+  color: #fff;
+  background: rgba(24,47,44,.93);
+  box-shadow: 0 24px 60px rgba(26,48,44,.24);
+  backdrop-filter: blur(18px);
+  pointer-events: none;
+}
+.forma-scene-tooltip span { color: var(--forma-gold-light); font-size: 8px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
+.forma-scene-tooltip strong { margin-top: 7px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 27px; font-weight: 400; line-height: 1; }
+.forma-scene-tooltip small { margin-top: 9px; color: rgba(255,255,255,.74); font-size: 10px; }
+.forma-scene-tooltip em { margin-top: 5px; color: rgba(255,255,255,.58); font-size: 8px; font-style: normal; }
+
+.forma-narrative {
+  position: absolute;
+  z-index: 12;
+  right: clamp(30px, 4vw, 74px);
+  bottom: 77px;
+  width: min(430px, 34vw);
+  padding: 27px 30px 29px;
+  border-top: 1px solid rgba(36,77,73,.3);
+  border-bottom: 1px solid rgba(36,77,73,.14);
+  background: linear-gradient(90deg, rgba(250,248,241,.82), rgba(250,248,241,.5));
+  backdrop-filter: blur(14px);
+}
+.forma-narrative > span { color: var(--forma-gold); font-size: 9px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+.forma-narrative h1 { margin: 14px 0 0; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(31px, 2.65vw, 48px); font-weight: 400; letter-spacing: -.035em; line-height: .98; text-wrap: balance; }
+.forma-narrative > p { margin: 18px 0 0; color: #52645f; font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif; font-size: 15px; line-height: 1.55; }
+.forma-narrative > div { display: grid; margin-top: 22px; padding-top: 17px; grid-template-columns: 1fr 1fr; gap: 18px; border-top: 1px solid var(--forma-line); }
+.forma-narrative > div span { display: flex; flex-direction: column; gap: 6px; }
+.forma-narrative small { color: var(--forma-muted); font-size: 7px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.forma-narrative strong { font-size: 13px; font-weight: 750; }
+
+.forma-key { position: absolute; z-index: 12; bottom: 25px; left: 30px; display: flex; align-items: center; gap: 18px; color: var(--forma-muted); font-size: 7px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.forma-key span { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.forma-key i { width: 12px; height: 5px; border-radius: 1px; }
+.forma-key i.is-capital { background: var(--forma-green); }
+.forma-key i.is-result { background: rgba(184,147,80,.75); box-shadow: 0 0 8px rgba(184,147,80,.3); }
+.forma-key i.is-in { width: 3px; height: 10px; background: var(--forma-gold); }
+.forma-key i.is-out { width: 3px; height: 10px; background: var(--forma-coral); }
+
+.forma-console {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  min-height: 142px;
+  padding: 23px 28px 19px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  border: 1px solid rgba(31,67,62,.16);
+  border-top: 0;
+  border-radius: 0 0 28px 28px;
+  background: rgba(251,249,243,.88);
+  box-shadow: 0 24px 50px rgba(36,57,53,.08);
+  backdrop-filter: blur(22px);
+}
+.forma-playback { display: flex; align-items: center; gap: 7px; }
+.forma-playback button,
+.forma-precision-shortcut {
+  display: flex;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 11px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--forma-line);
+  border-radius: 999px;
+  color: var(--forma-ink);
+  background: rgba(255,255,255,.58);
+  cursor: pointer;
+}
+.forma-playback button:disabled { opacity: .28; cursor: default; }
+.forma-playback button.is-main { min-width: 112px; color: #fff; border-color: var(--forma-green); background: var(--forma-green); }
+.forma-playback button span,
+.forma-precision-shortcut span { font-size: 8px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+.forma-playback svg,
+.forma-precision-shortcut svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.forma-playback button.is-main svg { fill: currentColor; }
+
+.forma-timeline { position: relative; display: flex; min-width: 0; padding: 18px 0 2px; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: rgba(36,77,73,.22) transparent; }
+.forma-timeline-line { position: absolute; top: 23px; right: 0; left: 0; height: 1px; background: linear-gradient(90deg, rgba(36,77,73,.06), rgba(36,77,73,.28), rgba(36,77,73,.06)); }
+.forma-timeline button { position: relative; display: flex; min-width: 87px; padding: 18px 7px 7px; align-items: center; flex: 1 0 87px; flex-direction: column; gap: 5px; border: 0; color: #72817d; background: transparent; cursor: pointer; }
+.forma-timeline button > i { position: absolute; top: 1px; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(36,77,73,.38); border-radius: 50%; background: #f7f4ec; transform: translateX(-50%); transition: 180ms ease; }
+.forma-timeline button > span { font-size: 8px; font-weight: 850; white-space: nowrap; }
+.forma-timeline button > small { color: #85928f; font-size: 7px; white-space: nowrap; }
+.forma-timeline button.is-active { color: var(--forma-ink); }
+.forma-timeline button.is-active > i { border-color: var(--forma-gold); background: var(--forma-gold); box-shadow: 0 0 0 6px rgba(184,147,80,.12); transform: translateX(-50%) scale(1.15); }
+.forma-timeline button.has-in::after,
+.forma-timeline button.has-out::before { position: absolute; top: 4px; width: 3px; height: 7px; content: ""; }
+.forma-timeline button.has-in::after { left: calc(50% - 10px); background: var(--forma-gold); }
+.forma-timeline button.has-out::before { left: calc(50% + 7px); background: var(--forma-coral); }
+.forma-timeline button.is-pending > i { border-style: dashed; border-color: var(--forma-green-soft); background: #fff; }
+.forma-precision-shortcut { min-width: 150px; height: 42px; border-color: rgba(184,147,80,.34); color: var(--forma-green); }
+
+.forma-current-equation {
+  display: grid;
+  margin-top: 20px;
+  min-height: 205px;
+  padding: 32px clamp(25px, 3.5vw, 58px);
+  grid-template-columns: 1fr auto 1fr auto 1.15fr;
+  align-items: center;
+  gap: clamp(18px, 2.4vw, 46px);
+  border-top: 1px solid var(--forma-line);
+  border-bottom: 1px solid var(--forma-line);
+  background: rgba(255,255,255,.28);
+}
+.forma-current-equation > div { display: flex; min-width: 0; flex-direction: column; gap: 9px; }
+.forma-current-equation > div > span { color: var(--forma-muted); font-size: 8px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
+.forma-current-equation > div > strong { font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(31px, 3vw, 52px); font-weight: 400; letter-spacing: -.035em; line-height: 1; white-space: nowrap; }
+.forma-current-equation > div > small { color: var(--forma-muted); font-size: 9px; line-height: 1.4; }
+.forma-current-equation > i { color: var(--forma-gold); font-family: Georgia, serif; font-size: 29px; font-style: normal; }
+.forma-current-equation > div.is-total { padding-left: clamp(20px, 3vw, 48px); border-left: 1px solid rgba(184,147,80,.4); }
+.forma-current-equation > div.is-total strong { color: var(--forma-green); font-size: clamp(38px, 3.8vw, 65px); }
+
+.forma-footer { display: flex; min-height: 70px; padding: 20px 4px 0; align-items: flex-start; justify-content: space-between; gap: 24px; color: var(--forma-muted); font-size: 8px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.forma-footer span:last-child { color: var(--forma-green); }
+
+.forma-intro {
+  position: absolute;
+  z-index: 120;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  color: var(--forma-ink);
+  background:
+    linear-gradient(110deg, transparent 0 48%, rgba(184,147,80,.12) 48% 49%, transparent 49%),
+    radial-gradient(circle at 50% 50%, #fff 0, #f4f0e7 62%, #e6dfd2 100%);
+  animation: formaIntroOut 700ms 1.75s cubic-bezier(.7,0,.2,1) both;
+}
+.forma-intro::before,
+.forma-intro::after { position: absolute; top: 50%; width: 34%; height: 1px; background: linear-gradient(90deg, transparent, rgba(36,77,73,.28)); content: ""; animation: formaIntroLine 1.1s cubic-bezier(.2,.8,.2,1) both; }
+.forma-intro::before { left: 0; }
+.forma-intro::after { right: 0; transform: scaleX(-1); }
+.forma-intro > button { position: absolute; top: 24px; right: 26px; min-height: 38px; padding: 0 15px; border: 1px solid var(--forma-line); border-radius: 999px; color: var(--forma-muted); background: rgba(255,255,255,.46); font-size: 8px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.forma-intro-signature { position: relative; width: 90px; height: 90px; margin-bottom: 28px; }
+.forma-intro-signature::before,
+.forma-intro-signature i { position: absolute; inset: 0; border: 1px solid rgba(36,77,73,.28); content: ""; transform: rotate(45deg) scale(.68); animation: formaBuild 1.15s cubic-bezier(.2,.8,.2,1) both; }
+.forma-intro-signature i:nth-child(1) { inset: 15px; border-color: rgba(36,77,73,.5); animation-delay: .13s; }
+.forma-intro-signature i:nth-child(2) { inset: 29px; border: 0; background: var(--forma-green); animation-delay: .25s; }
+.forma-intro-signature i:nth-child(3) { inset: 40px; border: 0; background: var(--forma-gold-light); animation-delay: .36s; }
+.forma-intro > span { color: var(--forma-muted); font-size: 9px; font-weight: 900; letter-spacing: .23em; text-transform: uppercase; }
+.forma-intro > strong { margin-top: 15px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(70px, 10vw, 150px); font-weight: 400; letter-spacing: .13em; line-height: .8; }
+.forma-intro > small { margin-top: 24px; color: var(--forma-green); font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+
+.forma-precision-backdrop { position: fixed; z-index: 1094; inset: 0; visibility: hidden; opacity: 0; background: rgba(20,38,36,.2); backdrop-filter: blur(6px); transition: 260ms ease; }
+.forma-precision-backdrop.is-visible { visibility: visible; opacity: 1; }
+.forma-precision-sheet {
+  position: fixed;
+  z-index: 1095;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(880px, 94vw);
+  padding: 36px clamp(24px, 4vw, 58px) 60px;
+  overflow-y: auto;
+  visibility: hidden;
+  opacity: 0;
+  color: var(--forma-ink);
+  background:
+    radial-gradient(circle at 100% 0, rgba(184,147,80,.13), transparent 32%),
+    #f8f5ed;
+  box-shadow: -40px 0 100px rgba(25,47,43,.18);
+  clip-path: inset(0 0 0 100%);
+  transform: translateX(0);
+  transition: clip-path 460ms cubic-bezier(.22,.8,.22,1), opacity 260ms ease, visibility 460ms;
+}
+.forma-precision-sheet.is-open { visibility: visible; opacity: 1; clip-path: inset(0); }
+.forma-precision-sheet > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding-bottom: 29px; border-bottom: 1px solid var(--forma-line); }
+.forma-precision-sheet > header span { color: var(--forma-gold); font-size: 9px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+.forma-precision-sheet > header h2 { margin: 12px 0 0; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(38px, 4.2vw, 64px); font-weight: 400; letter-spacing: -.04em; line-height: .92; }
+
+.forma-precision-equation { display: grid; margin-top: 28px; padding: 25px 0; grid-template-columns: repeat(5, minmax(0,1fr) auto) minmax(0,1.1fr); align-items: center; gap: 9px; border-bottom: 1px solid var(--forma-line); }
+.forma-precision-equation > div { display: flex; min-width: 0; flex-direction: column; gap: 8px; }
+.forma-precision-equation span { color: var(--forma-muted); font-size: 7px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.forma-precision-equation strong { font-size: clamp(13px, 1.35vw, 20px); white-space: nowrap; }
+.forma-precision-equation > i { color: var(--forma-gold); font-style: normal; }
+.forma-precision-equation .is-total { padding-left: 11px; border-left: 1px solid rgba(184,147,80,.45); }
+.forma-precision-equation .is-total strong { color: var(--forma-green); }
+
+.forma-precision-facts { display: grid; margin-top: 26px; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--forma-line); }
+.forma-precision-facts article { display: flex; min-height: 146px; padding: 21px 17px; flex-direction: column; justify-content: space-between; border-right: 1px solid var(--forma-line); }
+.forma-precision-facts article:last-child { border-right: 0; }
+.forma-precision-facts span { color: var(--forma-muted); font-size: 7px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.forma-precision-facts strong { font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 24px; font-weight: 400; letter-spacing: -.025em; }
+.forma-precision-facts small { color: var(--forma-muted); font-size: 8px; line-height: 1.4; }
+
+.forma-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 17px; }
+.forma-section-heading span { color: var(--forma-green); font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 29px; }
+.forma-section-heading p { max-width: 400px; margin: 0; color: var(--forma-muted); font-size: 9px; line-height: 1.5; text-align: right; }
+.forma-tranches,
+.forma-movement-ledger,
+.forma-linear-period { margin-top: 32px; }
+.forma-tranche-head,
+.forma-tranches > div:not(.forma-section-heading) { display: grid; min-width: 690px; padding: 14px 12px; grid-template-columns: minmax(260px,1.4fr) repeat(3,minmax(100px,.55fr)); align-items: center; gap: 15px; border-bottom: 1px solid var(--forma-line); }
+.forma-tranche-head { color: var(--forma-muted); background: rgba(36,77,73,.04); font-size: 7px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.forma-tranche-head span:not(:first-child),
+.forma-tranches > div:not(.forma-section-heading) > strong { text-align: right; }
+.forma-tranches > div:not(.forma-section-heading) > span { font-size: 10px; }
+.forma-tranches > div:not(.forma-section-heading) > strong { font-size: 10px; }
+.forma-tranches > div.is-reconciliation { color: var(--forma-muted); font-style: italic; }
+.forma-tranches > div.is-total { color: #fff; background: var(--forma-green); }
+.forma-movement-ledger > div:not(.forma-section-heading) { display: grid; padding: 15px 12px; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--forma-line); font-size: 10px; }
+.forma-movement-ledger b { text-align: right; }
+.forma-linear-period { padding: 27px; border: 1px solid var(--forma-line); }
+.forma-linear-period span { color: var(--forma-green); font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 27px; }
+.forma-linear-period p { margin: 9px 0 0; color: var(--forma-muted); font-size: 10px; }
+.forma-method-note { display: grid; margin-top: 32px; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--forma-line); border-bottom: 1px solid var(--forma-line); }
+.forma-method-note > div { display: grid; padding: 23px 0; grid-template-columns: 80px 1fr; gap: 20px; }
+.forma-method-note > div:first-child { padding-right: 25px; border-right: 1px solid var(--forma-line); }
+.forma-method-note > div:last-child { padding-left: 25px; }
+.forma-method-note span { color: var(--forma-gold); font-size: 9px; font-weight: 900; letter-spacing: .12em; }
+.forma-method-note p { margin: 0; color: var(--forma-muted); font-family: Georgia, serif; font-size: 11px; line-height: 1.5; }
+
+.forma-scene-fallback svg { width: 100%; height: 100%; }
+.forma-fallback-grid { stroke: rgba(36,77,73,.08); stroke-width: 1; }
+.forma-fallback-capital { fill: none; stroke: var(--forma-green); stroke-width: 4; }
+.forma-fallback-wealth { fill: none; stroke: var(--forma-gold); stroke-width: 5; }
+.forma-fallback-stem { stroke: rgba(36,77,73,.15); stroke-width: 1; }
+.forma-fallback-node { fill: #f7f4ec; stroke: var(--forma-green); stroke-width: 3; }
+.forma-scene-fallback g.is-active .forma-fallback-node { fill: var(--forma-gold); stroke: #fff; stroke-width: 4; }
+.forma-scene-fallback g.is-muted { opacity: .2; }
+.forma-fallback-in { stroke: var(--forma-gold); stroke-width: 7; }
+.forma-fallback-out { stroke: var(--forma-coral); stroke-width: 7; }
+.forma-scene-fallback text { fill: var(--forma-muted); font-size: 13px; font-weight: 750; }
+.forma-fallback-hits { position: absolute; inset: 7% 4% 13% 6%; display: grid; grid-template-columns: repeat(var(--forma-count), 1fr); }
+.forma-fallback-hits button { border: 0; background: transparent; cursor: pointer; }
+.forma-compatible-note { position: absolute; right: 24px; bottom: 22px; color: var(--forma-muted); font-size: 7px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.forma-empty { min-height: 420px; padding: 60px; color: #56645f; background: #f4f0e7; }
+
+.forma-root.is-cinema { position: fixed; z-index: 1080; inset: 0; width: 100vw; min-height: 100dvh; overflow-y: auto; border: 0; border-radius: 0; }
+.forma-root.is-cinema .forma-header { position: sticky; top: 0; }
+.forma-root.is-cinema .forma-theatre { padding: 10px; }
+.forma-root.is-cinema .forma-stage { min-height: calc(100dvh - 244px); }
+.forma-root.is-cinema .forma-current-equation,
+.forma-root.is-cinema .forma-footer { display: none; }
+
+@keyframes formaSpin { to { transform: rotate(360deg); } }
+@keyframes formaBuild { from { opacity: 0; transform: rotate(45deg) scale(.08); } to { opacity: 1; transform: rotate(45deg) scale(.68); } }
+@keyframes formaIntroLine { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes formaIntroOut { to { opacity: 0; visibility: hidden; transform: scale(1.025); } }
+
+@media (min-width: 1900px) {
+  .forma-stage { min-height: 980px; }
+  .forma-narrative { width: 490px; }
+  .forma-current-equation { min-height: 230px; }
+}
+
+@media (max-width: 1380px) {
+  .forma-header { grid-template-columns: 220px 1fr auto; }
+  .forma-mode-nav { min-width: 430px; }
+  .forma-stage { min-height: 830px; }
+  .forma-narrative { width: 390px; }
+  .forma-key { gap: 12px; }
+  .forma-console { grid-template-columns: auto minmax(0,1fr); }
+  .forma-precision-shortcut { grid-column: 1 / -1; justify-self: end; margin-top: -7px; }
+}
+
+@media (max-width: 1050px) {
+  .forma-header { min-height: 154px; grid-template-columns: 1fr auto; }
+  .forma-mode-nav { grid-row: 2; grid-column: 1 / -1; width: 100%; min-width: 0; }
+  .forma-stage { min-height: 820px; }
+  .forma-active-reading > strong { font-size: clamp(50px, 9vw, 82px); }
+  .forma-narrative { right: 28px; width: min(410px, 48vw); }
+  .forma-current-equation { grid-template-columns: 1fr auto 1fr; }
+  .forma-current-equation > i:nth-of-type(2),
+  .forma-current-equation > div.is-total { grid-row: 2; }
+  .forma-current-equation > i:nth-of-type(2) { display: none; }
+  .forma-current-equation > div.is-total { grid-column: 1 / -1; padding: 27px 0 0; border-top: 1px solid rgba(184,147,80,.36); border-left: 0; }
+  .forma-precision-equation { grid-template-columns: 1fr auto 1fr auto 1fr; }
+  .forma-precision-equation > i:nth-of-type(n+3),
+  .forma-precision-equation > div:nth-of-type(n+4) { margin-top: 15px; }
+  .forma-precision-equation > div.is-total { grid-column: 4 / 6; }
+  .forma-precision-facts { grid-template-columns: 1fr 1fr; }
+  .forma-precision-facts article:nth-child(2) { border-right: 0; }
+  .forma-precision-facts article:nth-child(-n+2) { border-bottom: 1px solid var(--forma-line); }
+}
+
+@media (max-width: 760px) {
+  .forma-root { border-radius: 22px; }
+  .forma-header { min-height: 140px; padding: 14px 15px; gap: 13px; }
+  .forma-brand-mark { width: 36px; height: 36px; }
+  .forma-brand strong { font-size: 18px; }
+  .forma-brand small { display: none; }
+  .forma-header-actions { gap: 4px; }
+  .forma-header-actions button { width: 44px; height: 44px; }
+  .forma-mode-nav button { min-height: 46px; padding: 6px; }
+  .forma-mode-nav button small { display: none; }
+  .forma-theatre { padding: 10px 8px 20px; }
+  .forma-stage { min-height: 790px; border-radius: 20px 20px 8px 8px; }
+  .forma-stage-meta { top: 15px; right: 14px; left: 14px; align-items: flex-start; flex-direction: column; gap: 9px; }
+  .forma-stage-meta > span { max-width: 130px; line-height: 1.45; }
+  .forma-lenses { display: grid; width: 100%; max-width: none; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
+  .forma-lenses button { min-width: 0; min-height: 44px; padding: 0 6px; }
+  .forma-active-reading { top: 122px; left: 18px; }
+  .forma-active-reading > span { font-size: 8px; }
+  .forma-active-reading > strong { max-width: calc(100vw - 55px); font-size: clamp(42px, 13vw, 63px); }
+  .forma-active-reading > small { margin-top: 9px; }
+  .forma-narrative { right: 13px; bottom: 66px; left: 13px; width: auto; padding: 20px 19px; }
+  .forma-narrative h1 { font-size: 32px; }
+  .forma-narrative > p { margin-top: 12px; font-size: 13px; }
+  .forma-narrative > div { margin-top: 15px; padding-top: 13px; }
+  .forma-key { bottom: 25px; left: 16px; max-width: calc(100% - 32px); gap: 9px; overflow-x: auto; }
+  .forma-key span { font-size: 8px; }
+  .forma-scene-zoom { top: 210px; right: 13px; grid-template-columns: 44px 48px 44px; }
+  .forma-scene-zoom button { height: 44px; }
+  .forma-scene-tooltip { width: 215px; min-height: 115px; padding: 15px 17px; }
+  .forma-console { min-height: 184px; padding: 15px 13px; grid-template-columns: 1fr; gap: 10px; border-radius: 0 0 20px 20px; }
+  .forma-playback { justify-content: center; }
+  .forma-playback button,
+  .forma-precision-shortcut { min-width: 44px; height: 44px; }
+  .forma-timeline { grid-row: 2; width: 100%; }
+  .forma-timeline button { min-width: 78px; flex-basis: 78px; }
+  .forma-timeline button > span { font-size: 9px; }
+  .forma-timeline button > small { font-size: 8px; }
+  .forma-precision-shortcut { grid-row: 3; grid-column: 1; justify-self: center; margin: 0; }
+  .forma-current-equation { min-height: 0; padding: 27px 18px; grid-template-columns: 1fr; gap: 19px; }
+  .forma-current-equation > i { display: none; }
+  .forma-current-equation > div { min-height: 74px; padding-bottom: 18px; border-bottom: 1px solid var(--forma-line); }
+  .forma-current-equation > div > strong { font-size: 35px; }
+  .forma-current-equation > div.is-total { grid-row: auto; padding: 0; border: 0; }
+  .forma-current-equation > div.is-total strong { font-size: 44px; }
+  .forma-footer { padding: 18px 6px 0; flex-direction: column; gap: 8px; font-size: 8px; }
+  .forma-footer span:last-child { display: none; }
+  .forma-precision-sheet { width: 100vw; padding: 24px 16px 45px; }
+  .forma-precision-sheet > header h2 { font-size: 38px; }
+  .forma-precision-equation { grid-template-columns: 1fr 1fr; gap: 0; }
+  .forma-precision-equation > i { display: none; }
+  .forma-precision-equation > div,
+  .forma-precision-equation > div.is-total { min-height: 93px; padding: 15px; border: 1px solid var(--forma-line); border-bottom: 0; }
+  .forma-precision-equation > div.is-total { grid-column: 1 / -1; border-bottom: 1px solid var(--forma-line); }
+  .forma-precision-facts { grid-template-columns: 1fr 1fr; }
+  .forma-precision-facts article { min-height: 134px; }
+  .forma-section-heading { align-items: flex-start; flex-direction: column; }
+  .forma-section-heading p { text-align: left; }
+  .forma-tranches { overflow-x: auto; }
+  .forma-method-note { grid-template-columns: 1fr; }
+  .forma-method-note > div:first-child { padding-right: 0; border-right: 0; border-bottom: 1px solid var(--forma-line); }
+  .forma-method-note > div:last-child { padding-left: 0; }
+  .forma-root.is-cinema .forma-stage { min-height: calc(100dvh - 326px); }
+  .forma-root.is-cinema .forma-header { position: sticky; top: 0; }
+}
+
+@media (max-width: 430px) {
+  .forma-stage { min-height: 750px; }
+  .forma-mode-nav button span { font-size: 8px; }
+  .forma-active-reading > strong { font-size: clamp(38px, 12.5vw, 54px); }
+  .forma-narrative h1 { font-size: 28px; }
+  .forma-narrative > p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+  .forma-narrative strong { font-size: 11px; }
+  .forma-key { display: grid; grid-template-columns: repeat(2, max-content); row-gap: 6px; overflow: visible; }
+  .forma-playback button.is-main { min-width: 102px; }
+  .forma-precision-facts { grid-template-columns: 1fr; }
+  .forma-precision-facts article { min-height: 112px; border-right: 0; border-bottom: 1px solid var(--forma-line); }
+  .forma-precision-facts article:last-child { border-bottom: 0; }
+  .forma-intro > strong { font-size: 60px; }
+}
+
+@media (max-height: 780px) and (min-width: 761px) {
+  .forma-stage { min-height: 690px; }
+  .forma-active-reading { top: 78px; }
+  .forma-active-reading > strong { font-size: 66px; }
+  .forma-narrative { bottom: 55px; padding: 20px 24px; }
+  .forma-narrative h1 { font-size: 34px; }
+  .forma-narrative > p { margin-top: 12px; font-size: 13px; }
+  .forma-key { bottom: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forma-root *,
+  .forma-root *::before,
+  .forma-root *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
