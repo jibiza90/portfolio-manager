@@ -41,6 +41,14 @@ test('renders FORMA as an isolated data-driven patrimony construction', async ({
   await expect(page.locator('.forma-timeline button')).toHaveCount(14);
   await expect(page.locator('.forma-current-equation')).toContainText('127.548,34');
   await expect(page.locator('#forma-month-select option')).toHaveCount(14);
+  await expect(page.getByRole('slider', { name: 'Recorrer meses' })).toHaveAttribute('max', '13');
+  await page.getByRole('slider', { name: 'Recorrer meses' }).fill('5');
+  await expect(page.locator('.forma-timeline button.is-active')).toHaveAttribute('data-index', '5');
+  await page.locator('.forma-scene-canvas').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.forma-timeline button.is-active')).toHaveAttribute('data-index', '6');
+  await page.keyboard.press('Home');
+  await expect(page.locator('.forma-timeline button.is-active')).toHaveAttribute('data-index', '0');
   await page.locator('#forma-month-select').selectOption('1');
   await expect(page.locator('.forma-active-reading')).toContainText('50.000,00');
   await page.locator('#forma-month-select').selectOption('0');

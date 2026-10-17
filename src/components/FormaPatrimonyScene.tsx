@@ -162,6 +162,11 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
   const hoveredMonth = hover ? months[hover.index] : null;
   const scale = useMemo(() => buildScale(months), [months]);
   const tickValues = useMemo(() => Array.from({ length: 5 }, (_, index) => scale.maximum - (scale.range * index) / 4), [scale]);
+  const adjacentPeriodIndexes = useMemo(() => Array.from(new Set([
+    Math.max(0, activeIndex - 1),
+    activeIndex,
+    Math.min(months.length - 1, activeIndex + 1)
+  ])), [activeIndex, months.length]);
 
   useEffect(() => { activeIndexRef.current = activeIndex; }, [activeIndex]);
   useEffect(() => { lensRef.current = lens; }, [lens]);
@@ -187,10 +192,11 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.12;
+    renderer.setClearColor(0xffffff, 0);
 
     const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-7, 7, 3.7, -3.7, 0.1, 40);
-    camera.position.set(0, 0, 12);
+    const camera = new THREE.PerspectiveCamera(39, 1, 0.1, 60);
+    camera.position.set(0, 0.55, 13.4);
     camera.lookAt(0, 0, 0);
 
     scene.add(new THREE.HemisphereLight(0xffffff, 0x36504d, 2.8));
@@ -215,19 +221,52 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
       roughness: 0.82,
       metalness: 0.02,
       transparent: true,
-      opacity: 0.72,
-      transmission: 0.08
+      opacity: 0.38,
+      transmission: 0.22
     });
     const panel = new THREE.Mesh(new THREE.PlaneGeometry(14.2, 6.9), panelMaterial);
-    panel.position.z = -1.25;
+    panel.position.z = -1.45;
     world.add(panel);
 
-    const gridMaterial = new THREE.MeshBasicMaterial({ color: 0x365a55, transparent: true, opacity: 0.11 });
+    const gridMaterial = new THREE.MeshBasicMaterial({ color: 0x365a55, transparent: true, opacity: 0.09 });
     for (let index = 0; index < 5; index += 1) {
       const grid = new THREE.Mesh(new THREE.BoxGeometry(chartWidth, 0.012, 0.012), gridMaterial.clone());
       grid.position.set(0, chartBottom + (chartHeight * index) / 4, -0.7);
       world.add(grid);
     }
+    months.forEach((_, index) => {
+      const guide = new THREE.Mesh(
+        new THREE.BoxGeometry(0.009, chartHeight, 0.009),
+        new THREE.MeshBasicMaterial({ color: 0x44635f, transparent: true, opacity: index % 2 ? 0.025 : 0.045 })
+      );
+      guide.position.set(xFor(index), chartBottom + chartHeight / 2, -0.9);
+      world.add(guide);
+    });
+
+    const horizon = new THREE.Mesh(
+      new THREE.RingGeometry(3.7, 3.72, 96),
+      new THREE.MeshBasicMaterial({ color: 0xb28d48, transparent: true, opacity: 0.075, side: THREE.DoubleSide })
+    );
+    horizon.scale.set(1.72, 0.42, 1);
+    horizon.position.set(0, 0.15, -1.15);
+    world.add(horizon);
+
+    const particleGeometry = new THREE.BufferGeometry();
+    const particlePositions: number[] = [];
+    for (let index = 0; index < 90; index += 1) {
+      const seed = index * 1.61803398875;
+      particlePositions.push(
+        -7 + ((seed * 3.17) % 14),
+        -3 + ((seed * 5.29) % 6),
+        -1.1 + ((seed * 2.11) % 1.6)
+      );
+    }
+    particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(particlePositions, 3));
+    const particles = new THREE.Points(
+      particleGeometry,
+      new THREE.PointsMaterial({ color: 0x6f948d, size: 0.018, transparent: true, opacity: 0.28, depthWrite: false })
+    );
+    world.add(particles);
 
     const wealthPoints = months.map((month, index) => new THREE.Vector3(xFor(index), yFor(month.balance), 0.34));
     const capitalPoints = months.map((month, index) => new THREE.Vector3(xFor(index), yFor(month.netCapital), -0.15));
@@ -237,7 +276,7 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
     const wealthGlowMaterial = new THREE.MeshBasicMaterial({ color: 0x1b786d, transparent: true, opacity: 0.13 });
     const wealthMaterial = new THREE.MeshPhysicalMaterial({ color: 0x17665e, roughness: 0.24, metalness: 0.2, clearcoat: 0.88, clearcoatRoughness: 0.16 });
     const capitalMaterial = new THREE.MeshPhysicalMaterial({ color: 0x263f3d, roughness: 0.42, metalness: 0.12, clearcoat: 0.38 });
-    const resultMaterial = new THREE.MeshPhysicalMaterial({ color: 0xc0a05e, roughness: 0.22, metalness: 0.12, transparent: true, opacity: 0.28, transmission: 0.18, side: THREE.DoubleSide });
+    const resultMaterial = new THREE.MeshPhysicalMaterial({ color: 0xc0a05e, roughness: 0.18, metalness: 0.14, transparent: true, opacity: 0.3, transmission: 0.24, clearcoat: 0.45, side: THREE.DoubleSide });
     const movementInMaterial = new THREE.MeshPhysicalMaterial({ color: 0xb28d48, roughness: 0.3, metalness: 0.38, emissive: 0x4e3712, emissiveIntensity: 0.2 });
     const movementOutMaterial = new THREE.MeshPhysicalMaterial({ color: 0xb8655e, roughness: 0.36, metalness: 0.14, emissive: 0x5b1e1a, emissiveIntensity: 0.18 });
     const pendingMaterial = new THREE.MeshPhysicalMaterial({ color: 0x759c94, roughness: 0.28, wireframe: true, transparent: true, opacity: 0.8 });
@@ -274,10 +313,22 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
       world.add(result);
     }
 
-    const focusMaterial = new THREE.MeshBasicMaterial({ color: 0xc5a45f, transparent: true, opacity: 0.13, depthWrite: false });
-    const focus = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 6.15), focusMaterial);
-    focus.position.set(xFor(activeIndex), 0, -0.48);
+    const focusMaterial = new THREE.MeshBasicMaterial({ color: 0xc5a45f, transparent: true, opacity: 0.09, depthWrite: false });
+    const focus = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 6.15), focusMaterial);
+    focus.position.set(xFor(activeIndex), 0, -0.52);
     world.add(focus);
+    const focusBeam = new THREE.Mesh(
+      new THREE.BoxGeometry(0.026, 6.05, 0.026),
+      new THREE.MeshBasicMaterial({ color: 0xc5a45f, transparent: true, opacity: 0.38, depthWrite: false })
+    );
+    focusBeam.position.set(xFor(activeIndex), 0, 0.42);
+    world.add(focusBeam);
+    const focusDisc = new THREE.Mesh(
+      new THREE.RingGeometry(0.2, 0.24, 48),
+      new THREE.MeshBasicMaterial({ color: 0x17695f, transparent: true, opacity: 0.82, side: THREE.DoubleSide })
+    );
+    focusDisc.position.set(xFor(activeIndex), chartBottom + 0.04, 0.46);
+    world.add(focusDisc);
 
     const hitTargets: THREE.Object3D[] = [];
     const nodeGroups: THREE.Group[] = [];
@@ -302,7 +353,7 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
       const connectorMaterial = resultMaterial.clone();
       connectorMaterial.opacity = 0.48;
       const connectorHeight = Math.max(0.03, Math.abs(wealthPoints[index].y - capitalPoints[index].y));
-      const connector = new THREE.Mesh(new THREE.BoxGeometry(0.026, connectorHeight, 0.026), connectorMaterial);
+      const connector = new THREE.Mesh(new THREE.BoxGeometry(0.07, connectorHeight, 0.12), connectorMaterial);
       connector.position.set(xFor(index), (wealthPoints[index].y + capitalPoints[index].y) / 2, 0.08);
       nodeGroup.add(connector);
       const halo = new THREE.Mesh(
@@ -353,20 +404,18 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
     let visible = !document.hidden;
     let lastRender = 0;
     let introProgress = reducedMotion ? 1 : 0;
+    const sceneStartedAt = performance.now();
     let mobileView = false;
+    let pointerStart: { x: number; y: number; index: number } | null = null;
     const frameInterval = 1000 / (highDensity ? 28 : 45);
 
     const resize = () => {
       const bounds = host.getBoundingClientRect();
       const width = Math.max(1, Math.round(bounds.width));
       const height = Math.max(1, Math.round(bounds.height));
-      const aspect = width / height;
       mobileView = width < 720;
-      const verticalHalf = mobileView ? 3.65 : 3.55;
-      camera.left = -verticalHalf * aspect;
-      camera.right = verticalHalf * aspect;
-      camera.top = verticalHalf;
-      camera.bottom = -verticalHalf;
+      camera.aspect = width / height;
+      camera.fov = mobileView ? 43 : 39;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
     };
@@ -388,11 +437,25 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
       canvas.style.cursor = 'pointer';
     };
 
-    const selectPointerMonth = () => {
+    const selectPointerMonth = (event: PointerEvent) => {
+      if (pointerStart) {
+        const deltaX = event.clientX - pointerStart.x;
+        const deltaY = event.clientY - pointerStart.y;
+        if (Math.abs(deltaX) > 44 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+          onSelectRef.current(clamp(pointerStart.index + (deltaX < 0 ? 1 : -1), 0, months.length - 1), 'gesto');
+          pointerStart = null;
+          return;
+        }
+      }
       raycaster.setFromCamera(pointer, camera);
       const hit = raycaster.intersectObjects(hitTargets, false)[0];
       const index = Number(hit?.object.userData.index);
       if (Number.isFinite(index)) onSelectRef.current(index, 'grafico');
+      pointerStart = null;
+    };
+    const beginPointer = (event: PointerEvent) => {
+      updatePointer(event);
+      pointerStart = { x: event.clientX, y: event.clientY, index: activeIndexRef.current };
     };
     const handlePointerLeave = () => setHover(null);
 
@@ -403,16 +466,33 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
       lastRender = time;
       const current = activeIndexRef.current;
       const currentLens = lensRef.current;
-      const targetCameraX = mobileView ? xFor(current) : 0;
+      const lensCamera = currentLens === 'composition'
+        ? { y: 0.7, z: 13.25, rotationX: -0.045, rotationY: 0.018 }
+        : currentLens === 'trajectory'
+          ? { y: 0.2, z: 14.3, rotationX: 0, rotationY: 0 }
+          : { y: -0.45, z: 12.75, rotationX: -0.105, rotationY: -0.012 };
+      const targetCameraX = mobileView ? xFor(current) : xFor(current) * 0.09;
       const smoothing = reducedMotion ? 1 : 0.1;
       camera.position.x += (targetCameraX - camera.position.x) * smoothing;
+      camera.position.y += (lensCamera.y - camera.position.y) * smoothing;
+      camera.position.z += (lensCamera.z - camera.position.z) * smoothing;
       camera.zoom += ((zoomRef.current / 100) - camera.zoom) * smoothing;
+      camera.lookAt(camera.position.x * (mobileView ? 0.93 : 0.18), currentLens === 'movements' ? -0.35 : 0, 0);
       camera.updateProjectionMatrix();
 
-      if (introProgress < 1) introProgress = Math.min(1, introProgress + 0.018);
+      if (introProgress < 1) introProgress = Math.min(1, (time - sceneStartedAt) / 1050);
       world.scale.x = introProgress;
       world.position.x = -chartWidth / 2 * (1 - introProgress);
+      world.rotation.x += (lensCamera.rotationX - world.rotation.x) * smoothing;
+      world.rotation.y += (lensCamera.rotationY - world.rotation.y) * smoothing;
       focus.position.x += (xFor(current) - focus.position.x) * smoothing;
+      focusBeam.position.x += (xFor(current) - focusBeam.position.x) * smoothing;
+      focusDisc.position.x += (xFor(current) - focusDisc.position.x) * smoothing;
+      if (!reducedMotion) {
+        const pulse = 1 + Math.sin(time * 0.0025) * 0.08;
+        focusDisc.scale.set(pulse, pulse, pulse);
+        particles.rotation.z = Math.sin(time * 0.00008) * 0.018;
+      }
 
       nodeGroups.forEach((group, index) => {
         const selected = index === current;
@@ -457,7 +537,7 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
     observer.observe(host);
     resize();
     canvas.addEventListener('pointermove', updatePointer);
-    canvas.addEventListener('pointerdown', updatePointer);
+    canvas.addEventListener('pointerdown', beginPointer);
     canvas.addEventListener('pointerup', selectPointerMonth);
     canvas.addEventListener('pointerleave', handlePointerLeave);
     document.addEventListener('visibilitychange', handleVisibility);
@@ -467,14 +547,14 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
       observer.disconnect();
       window.cancelAnimationFrame(frame);
       canvas.removeEventListener('pointermove', updatePointer);
-      canvas.removeEventListener('pointerdown', updatePointer);
+      canvas.removeEventListener('pointerdown', beginPointer);
       canvas.removeEventListener('pointerup', selectPointerMonth);
       canvas.removeEventListener('pointerleave', handlePointerLeave);
       document.removeEventListener('visibilitychange', handleVisibility);
       const geometries = new Set<THREE.BufferGeometry>();
       const materials = new Set<THREE.Material>();
       scene.traverse((object) => {
-        if (!(object instanceof THREE.Mesh)) return;
+        if (!(object instanceof THREE.Mesh) && !(object instanceof THREE.Points)) return;
         geometries.add(object.geometry);
         const meshMaterials = Array.isArray(object.material) ? object.material : [object.material];
         meshMaterials.forEach((material) => materials.add(material));
@@ -489,13 +569,52 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
 
   if (rendererState === 'fallback') return <FormaFallback {...props} />;
 
+  const handleCanvasKeyDown = (event: React.KeyboardEvent<HTMLCanvasElement>) => {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      onSelect(Math.max(0, activeIndex - 1), 'grafico-teclado');
+    }
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      onSelect(Math.min(months.length - 1, activeIndex + 1), 'grafico-teclado');
+    }
+    if (event.key === 'Home') {
+      event.preventDefault();
+      onSelect(0, 'grafico-teclado');
+    }
+    if (event.key === 'End') {
+      event.preventDefault();
+      onSelect(months.length - 1, 'grafico-teclado');
+    }
+  };
+
   return (
     <div ref={hostRef} className="forma-scene-shell">
       <div className="forma-scene-axis" aria-hidden="true">
         {tickValues.map((value) => <span key={value}>{compactCurrency(value)}</span>)}
       </div>
-      <canvas ref={canvasRef} className="forma-scene-canvas" aria-label="Trayectoria tridimensional interactiva del patrimonio" />
-      <div className="forma-scene-orientation" aria-hidden="true"><span>Capital neto</span><span>Patrimonio</span></div>
+      <canvas
+        ref={canvasRef}
+        className="forma-scene-canvas"
+        aria-label="Trayectoria tridimensional interactiva del patrimonio. Usa las flechas para cambiar de mes."
+        tabIndex={0}
+        onKeyDown={handleCanvasKeyDown}
+      />
+      <div className="forma-scene-orientation" aria-hidden="true"><span>Capital neto</span><span>Saldo de cartera</span></div>
+      <div className="forma-scene-periods" aria-label="Meses próximos al seleccionado">
+        {adjacentPeriodIndexes.map((index) => (
+          <button
+            key={months[index].key}
+            type="button"
+            className={index === activeIndex ? 'is-active' : ''}
+            aria-current={index === activeIndex ? 'true' : undefined}
+            onClick={() => onSelect(index, 'etiqueta-grafico')}
+          >
+            <span>{months[index].shortLabel}</span>
+            {index === activeIndex ? <strong>{Math.round(months[index].balance).toLocaleString('es-ES')} €</strong> : null}
+          </button>
+        ))}
+      </div>
       <div className="forma-scene-zoom" aria-label="Control de acercamiento">
         <button type="button" aria-label="Acercar visualización" onClick={() => setZoom((current) => clamp(current + 10, 80, 130))}>+</button>
         <button type="button" aria-label="Restablecer acercamiento" onClick={() => setZoom(100)}><span>{zoom}%</span></button>

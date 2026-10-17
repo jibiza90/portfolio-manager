@@ -518,8 +518,13 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
 
       <main className="forma-theatre">
         <section className="forma-position" aria-label="Posición patrimonial actual">
+          <div className="forma-position-context">
+            <span><i /> Capital intelligence · actualizado</span>
+            <h1>Tu patrimonio,<br /><em>en movimiento.</em></h1>
+            <p>Cada cierre, aportación y retirada queda situado en el tiempo para mostrar con precisión cómo se ha construido la posición actual.</p>
+          </div>
           <div className="forma-position-primary">
-            <span>Posición actual</span>
+            <span>Saldo actual</span>
             <strong>{formatCurrency(visibleBalance)}</strong>
             <small>{pending.length ? 'Incluye movimientos posteriores al último cierre publicado' : `Último cierre publicado · ${latestPublishedMonth.closeDate}`}</small>
           </div>
@@ -533,9 +538,9 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
         <section className="forma-stage" aria-label="Trayectoria interactiva del patrimonio">
           <header className="forma-stage-heading">
             <div>
-              <span>Lectura temporal</span>
-              <h1>La historia completa, mes a mes</h1>
-              <p>La línea superior muestra el patrimonio. La inferior, el capital neto. El espacio entre ambas es el resultado acumulado.</p>
+              <span>Mapa patrimonial vivo</span>
+              <h2>Todo el recorrido en una sola escena</h2>
+              <p>Saldo de cartera, capital y resultado conviven sobre el mismo eje temporal. Selecciona cualquier punto o deja que AXIS narre la evolución.</p>
             </div>
             <div className="forma-lenses" aria-label="Capa visual">
               <button type="button" className={lens === 'composition' ? 'is-active' : ''} aria-pressed={lens === 'composition'} onClick={() => setLens('composition')}>Composición</button>
@@ -557,8 +562,13 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
                 reducedMotion={reducedMotion}
                 onSelect={selectMonth}
               />
+              <div className="forma-scene-caption" aria-hidden="true">
+                <span>{active.label}</span>
+                <strong>{Math.round(active.balance).toLocaleString('es-ES')} €</strong>
+                <small>{active.isPending ? 'Capital actualizado' : `${signedMoney(active.profit)} · ${signedPercent(active.returnPct)}`}</small>
+              </div>
               <div className="forma-key" aria-label="Leyenda">
-                <span><i className="is-wealth" /> Patrimonio</span>
+                <span><i className="is-wealth" /> Saldo de cartera</span>
                 <span><i className="is-capital" /> Capital neto</span>
                 <span><i className="is-result" /> Resultado acumulado</span>
                 <span><i className="is-in" /> Aportación</span>
@@ -576,7 +586,7 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
               <div className="forma-active-reading" aria-live="polite">
                 <span>{story.act} · {active.label}</span>
                 <strong>{formatCurrency(active.balance)}</strong>
-                <small>{active.isPending ? 'Saldo visible' : 'Patrimonio al cierre'}</small>
+                <small>{active.isPending ? 'Saldo visible' : 'Saldo al cierre'}</small>
               </div>
               <div className="forma-month-facts">
                 <div><span>Resultado mensual</span><strong className={active.profit < 0 ? 'is-negative' : 'is-positive'}>{active.isPending ? 'Pendiente' : signedMoney(active.profit)}</strong></div>
@@ -589,7 +599,7 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
                   {active.decrements > 0 ? <span className="is-out"><small>Retirado</small><strong>-{formatCurrency(active.decrements)}</strong></span> : null}
                 </div>
               ) : null}
-              <div className="forma-month-story"><span>{story.title}</span><p>{story.body}</p></div>
+              <div className="forma-month-story"><small>{story.act}</small><span>{story.title}</span><p>{story.body}</p></div>
               <div className="forma-month-actions">
                 <button type="button" aria-label="Mes anterior" disabled={activeIndex <= 0} onClick={() => selectMonth(activeIndex - 1, 'anterior')}><Icon name="previous" /><span>Anterior</span></button>
                 <button type="button" className="is-precision" onClick={(event) => openPrecision(event.currentTarget, 'mes')} aria-label="Abrir detalle exacto"><Icon name="precision" /><span>Ver cifras</span></button>
@@ -612,23 +622,42 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
               ><Icon name={playing ? 'pause' : 'play'} /><span>{playing ? 'Pausar recorrido' : 'Reproducir historia'}</span></button>
               <button type="button" aria-label="Reiniciar recorrido" onClick={() => { setMode('story'); setActiveIndex(0); setPlaying(!reducedMotion); }}><Icon name="reset" /><span>Reiniciar</span></button>
             </div>
-            <div className="forma-timeline" ref={timelineRef} role="list" aria-label="Seleccionar un mes">
-              {months.map((month, index) => (
-                <button
-                  key={month.key}
-                  type="button"
-                  role="listitem"
-                  data-index={index}
-                  className={`${index === activeIndex ? 'is-active' : ''}${month.increments ? ' has-in' : ''}${month.decrements ? ' has-out' : ''}${month.isPending ? ' is-pending' : ''}`}
-                  aria-label={`${month.label}: ${formatCurrency(month.balance)}`}
-                  onClick={() => selectMonth(index, 'timeline')}
-                >
-                  <span>{month.shortLabel}</span>
-                  <strong>{Math.round(month.balance).toLocaleString('es-ES')} €</strong>
-                  <small>{month.isPending ? 'Capital actualizado' : signedMoney(month.profit)}</small>
-                  <i>{month.increments > 0 ? '+' : ''}{month.decrements > 0 ? '-' : ''}</i>
-                </button>
-              ))}
+            <div className="forma-time-control">
+              <div className="forma-scrubber">
+                <span>{months[0].shortLabel}</span>
+                <label>
+                  <span className="sr-only">Recorrer meses</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max={Math.max(0, months.length - 1)}
+                    step="1"
+                    value={activeIndex}
+                    aria-label="Recorrer meses"
+                    onChange={(event) => selectMonth(Number(event.target.value), 'deslizador')}
+                    style={{ '--forma-progress': `${months.length > 1 ? (activeIndex / (months.length - 1)) * 100 : 100}%` } as React.CSSProperties}
+                  />
+                </label>
+                <span>{months[months.length - 1].shortLabel}</span>
+              </div>
+              <div className="forma-timeline" ref={timelineRef} role="list" aria-label="Seleccionar un mes">
+                {months.map((month, index) => (
+                  <button
+                    key={month.key}
+                    type="button"
+                    role="listitem"
+                    data-index={index}
+                    className={`${index === activeIndex ? 'is-active' : ''}${month.increments ? ' has-in' : ''}${month.decrements ? ' has-out' : ''}${month.isPending ? ' is-pending' : ''}`}
+                    aria-label={`${month.label}: ${formatCurrency(month.balance)}`}
+                    onClick={() => selectMonth(index, 'timeline')}
+                  >
+                    <span>{month.shortLabel}</span>
+                    <strong>{Math.round(month.balance).toLocaleString('es-ES')} €</strong>
+                    <small>{month.isPending ? 'Capital actualizado' : signedMoney(month.profit)}</small>
+                    <i>{month.increments > 0 ? '+' : ''}{month.decrements > 0 ? '-' : ''}</i>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </section>
