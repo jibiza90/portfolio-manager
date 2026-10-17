@@ -1,35 +1,40 @@
 .forma-root {
-  --forma-ink: #142624;
-  --forma-muted: #61716d;
-  --forma-paper: #f4f0e7;
-  --forma-paper-bright: #fbfaf5;
-  --forma-line: rgba(29, 57, 53, 0.14);
-  --forma-green: #244d49;
-  --forma-green-soft: #86a49d;
-  --forma-gold: #b89350;
-  --forma-gold-light: #d8c18f;
-  --forma-coral: #a95650;
+  --forma-ink: #112724;
+  --forma-deep: #174b45;
+  --forma-green: #17695f;
+  --forma-green-bright: #2f8b7d;
+  --forma-muted: #60736f;
+  --forma-paper: #f2efe7;
+  --forma-paper-bright: #fcfbf7;
+  --forma-panel: rgba(255, 254, 249, 0.82);
+  --forma-line: rgba(25, 70, 64, 0.14);
+  --forma-line-strong: rgba(25, 70, 64, 0.26);
+  --forma-gold: #ad8a47;
+  --forma-gold-light: #d5be82;
+  --forma-coral: #aa5e58;
   position: relative;
   isolation: isolate;
   width: 100%;
   overflow: hidden;
-  border: 1px solid rgba(36, 77, 73, 0.15);
-  border-radius: 34px;
+  border: 1px solid var(--forma-line);
+  border-radius: 30px;
   color: var(--forma-ink);
   background:
-    radial-gradient(circle at 82% 5%, rgba(184, 147, 80, 0.13), transparent 30%),
-    radial-gradient(circle at 10% 28%, rgba(74, 130, 120, 0.09), transparent 28%),
-    var(--forma-paper);
-  box-shadow: 0 42px 110px rgba(32, 55, 51, 0.16);
-  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+    radial-gradient(circle at 80% -12%, rgba(184, 151, 84, 0.16), transparent 34%),
+    radial-gradient(circle at 8% 25%, rgba(47, 139, 125, 0.09), transparent 31%),
+    linear-gradient(145deg, #f7f4ec 0%, #efede5 100%);
+  box-shadow: 0 36px 100px rgba(26, 54, 50, 0.15);
+  font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
 .forma-root * { box-sizing: border-box; }
-.forma-root button { font: inherit; }
-.forma-root button:focus-visible { outline: 2px solid var(--forma-gold); outline-offset: 3px; }
+.forma-root button,
+.forma-root select { font: inherit; }
+.forma-root button:focus-visible,
+.forma-root select:focus-visible { outline: 3px solid rgba(173, 138, 71, 0.65); outline-offset: 3px; }
 .forma-root svg { display: block; }
-.forma-root .is-positive { color: #176e60 !important; }
+.forma-root .is-positive { color: #147365 !important; }
 .forma-root .is-negative { color: var(--forma-coral) !important; }
 .forma-root.has-precision { z-index: 40; }
 
@@ -37,530 +42,464 @@
   position: relative;
   z-index: 30;
   display: grid;
-  min-height: 98px;
-  padding: 18px clamp(24px, 3vw, 54px);
-  grid-template-columns: minmax(230px, 1fr) auto minmax(230px, 1fr);
+  min-height: 96px;
+  padding: 18px clamp(24px, 3vw, 52px);
+  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
   align-items: center;
-  gap: 28px;
+  gap: 26px;
   border-bottom: 1px solid var(--forma-line);
-  background: rgba(250, 248, 241, 0.78);
+  background: rgba(250, 248, 241, 0.82);
   backdrop-filter: blur(24px) saturate(1.12);
 }
 
-.forma-brand { display: flex; align-items: center; gap: 14px; }
-.forma-brand-mark { position: relative; display: block; width: 43px; height: 43px; }
+.forma-brand { display: flex; align-items: center; gap: 15px; min-width: 0; }
+.forma-brand-mark { position: relative; display: block; width: 46px; height: 46px; flex: 0 0 auto; }
 .forma-brand-mark::before,
 .forma-brand-mark i { position: absolute; content: ""; }
-.forma-brand-mark::before { inset: 2px; border: 1px solid rgba(36,77,73,.42); transform: rotate(45deg); }
-.forma-brand-mark i:first-child { inset: 9px; background: var(--forma-green); transform: rotate(45deg); }
-.forma-brand-mark i:last-child { top: 18px; left: 18px; width: 7px; height: 7px; background: var(--forma-gold-light); transform: rotate(45deg); }
-.forma-brand > span:last-child { display: flex; flex-direction: column; gap: 3px; }
-.forma-brand strong { font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 22px; font-weight: 500; letter-spacing: .2em; line-height: 1; }
-.forma-brand small { color: var(--forma-muted); font-size: 8px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+.forma-brand-mark::before { inset: 2px; border: 1px solid rgba(23, 105, 95, 0.45); border-radius: 50%; }
+.forma-brand-mark i:nth-child(1) { left: 7px; right: 7px; top: 22px; height: 1px; background: var(--forma-deep); transform: rotate(-12deg); }
+.forma-brand-mark i:nth-child(2) { left: 10px; right: 10px; top: 17px; height: 1px; background: var(--forma-gold); transform: rotate(17deg); }
+.forma-brand-mark i:nth-child(3) { width: 8px; height: 8px; right: 7px; top: 12px; border-radius: 50%; background: var(--forma-green); box-shadow: 0 0 0 5px rgba(23,105,95,.11); }
+.forma-brand > span:last-child { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.forma-brand strong { font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 25px; font-weight: 500; letter-spacing: .22em; line-height: 1; }
+.forma-brand small { color: var(--forma-muted); font-size: 8px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
 
 .forma-mode-nav {
   display: grid;
-  min-width: 480px;
+  min-width: 450px;
   padding: 4px;
   grid-template-columns: repeat(3, 1fr);
   border: 1px solid var(--forma-line);
   border-radius: 999px;
-  background: rgba(255,255,255,.42);
+  background: rgba(255,255,255,.48);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
 }
 .forma-mode-nav button {
   min-height: 50px;
-  padding: 8px 18px;
+  padding: 7px 18px;
   border: 0;
   border-radius: 999px;
   color: var(--forma-muted);
   background: transparent;
   cursor: pointer;
-  transition: background 220ms ease, color 220ms ease, box-shadow 220ms ease;
+  transition: background 220ms ease, color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
 }
 .forma-mode-nav button span,
 .forma-mode-nav button small { display: block; }
-.forma-mode-nav button span { font-size: 10px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
-.forma-mode-nav button small { margin-top: 3px; font-size: 8px; }
-.forma-mode-nav button.is-active { color: #f9f7f0; background: var(--forma-green); box-shadow: 0 11px 24px rgba(36,77,73,.2); }
-.forma-mode-nav button.is-active small { color: rgba(255,255,255,.68); }
+.forma-mode-nav button span { font-size: 10px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+.forma-mode-nav button small { margin-top: 3px; font-size: 8px; opacity: .74; }
+.forma-mode-nav button:hover { color: var(--forma-ink); }
+.forma-mode-nav button.is-active { color: #fffdf7; background: var(--forma-deep); box-shadow: 0 10px 24px rgba(23,75,69,.21); transform: translateY(-1px); }
 
-.forma-header-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.forma-header-actions { display: flex; justify-content: flex-end; gap: 9px; }
 .forma-header-actions button,
-.forma-precision-sheet header button {
+.forma-scene-zoom button {
   display: grid;
-  width: 43px;
-  height: 43px;
+  width: 46px;
+  height: 46px;
   padding: 0;
   place-items: center;
   border: 1px solid var(--forma-line);
   border-radius: 50%;
-  color: var(--forma-ink);
-  background: rgba(255,255,255,.48);
-  cursor: pointer;
-  transition: transform 170ms ease, border-color 170ms ease, background 170ms ease;
-}
-.forma-header-actions button:hover,
-.forma-precision-sheet header button:hover { border-color: rgba(36,77,73,.4); background: #fff; transform: translateY(-2px); }
-.forma-header-actions button.is-active { color: #fff; background: var(--forma-green); }
-.forma-header-actions svg,
-.forma-precision-sheet header button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-
-.forma-theatre { position: relative; padding: 20px clamp(18px, 2.2vw, 42px) 28px; }
-.forma-stage {
-  position: relative;
-  min-height: min(910px, calc(100dvh - 145px));
-  overflow: hidden;
-  border: 1px solid rgba(31,67,62,.13);
-  border-radius: 28px 28px 10px 10px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.7), rgba(245,241,232,.25) 52%, rgba(218,212,199,.42)),
-    repeating-linear-gradient(90deg, transparent 0, transparent calc(8.333% - 1px), rgba(36,77,73,.035) calc(8.333% - 1px), rgba(36,77,73,.035) 8.333%);
-}
-.forma-stage::before {
-  position: absolute;
-  z-index: 3;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgba(244,240,231,.92), transparent 25%, transparent 74%, rgba(244,240,231,.78)),
-    linear-gradient(180deg, rgba(244,240,231,.74), transparent 24%, transparent 68%, rgba(244,240,231,.56));
-  content: "";
-  pointer-events: none;
-}
-
-.forma-stage-meta {
-  position: absolute;
-  z-index: 14;
-  top: 25px;
-  right: 28px;
-  left: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-.forma-stage-meta > span { display: flex; align-items: center; gap: 9px; color: var(--forma-muted); font-size: 8px; font-weight: 850; letter-spacing: .15em; text-transform: uppercase; }
-.forma-stage-meta > span i { width: 6px; height: 6px; border-radius: 50%; background: var(--forma-gold); box-shadow: 0 0 0 5px rgba(184,147,80,.1); }
-.forma-lenses { display: flex; padding: 3px; border: 1px solid var(--forma-line); border-radius: 999px; background: rgba(252,250,244,.72); backdrop-filter: blur(12px); }
-.forma-lenses button { min-height: 34px; padding: 0 15px; border: 0; border-radius: 999px; color: var(--forma-muted); background: transparent; font-size: 8px; font-weight: 850; letter-spacing: .08em; cursor: pointer; }
-.forma-lenses button.is-active { color: #fff; background: var(--forma-green); }
-
-.forma-active-reading {
-  position: absolute;
-  z-index: 12;
-  top: 96px;
-  left: clamp(30px, 4vw, 74px);
-  display: flex;
-  align-items: flex-start;
-  flex-direction: column;
-  pointer-events: none;
-}
-.forma-active-reading > span { color: var(--forma-green); font-size: 9px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
-.forma-active-reading > strong { margin-top: 12px; color: var(--forma-ink); font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(54px, 6vw, 108px); font-weight: 400; letter-spacing: -.055em; line-height: .84; text-shadow: 0 18px 38px rgba(30,52,49,.08); }
-.forma-active-reading > small { margin-top: 14px; color: var(--forma-muted); font-size: 10px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
-
-.forma-scene-shell,
-.forma-scene-fallback { position: absolute; z-index: 2; inset: 0; }
-.forma-scene-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-.forma-scene-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--forma-muted); background: rgba(244,240,231,.8); font-size: 9px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
-.forma-scene-loading i { width: 23px; height: 23px; border: 1px solid rgba(36,77,73,.2); border-top-color: var(--forma-green); border-radius: 50%; animation: formaSpin 900ms linear infinite; }
-
-.forma-scene-zoom {
-  position: absolute;
-  z-index: 15;
-  top: 78px;
-  right: 29px;
-  display: grid;
-  padding: 3px;
-  grid-template-columns: 34px 48px 34px;
-  border: 1px solid var(--forma-line);
-  border-radius: 999px;
-  background: rgba(252,250,244,.78);
-  box-shadow: 0 12px 28px rgba(35,57,53,.08);
-  backdrop-filter: blur(14px);
-}
-.forma-scene-zoom button { display: grid; min-width: 0; height: 34px; padding: 0; place-items: center; border: 0; border-radius: 999px; color: var(--forma-green); background: transparent; font-size: 16px; cursor: pointer; }
-.forma-scene-zoom button:nth-child(2) { color: var(--forma-muted); background: rgba(255,255,255,.58); }
-.forma-scene-zoom button span { font-size: 8px; font-weight: 850; letter-spacing: .03em; }
-.forma-scene-zoom button:hover { color: #fff; background: var(--forma-green); }
-
-.forma-scene-tooltip {
-  position: absolute;
-  z-index: 30;
-  display: flex;
-  width: 244px;
-  min-height: 128px;
-  padding: 18px 20px;
-  align-items: flex-start;
-  flex-direction: column;
-  border: 1px solid rgba(255,255,255,.36);
-  border-radius: 3px 20px 20px 20px;
-  color: #fff;
-  background: rgba(24,47,44,.93);
-  box-shadow: 0 24px 60px rgba(26,48,44,.24);
-  backdrop-filter: blur(18px);
-  pointer-events: none;
-}
-.forma-scene-tooltip span { color: var(--forma-gold-light); font-size: 8px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
-.forma-scene-tooltip strong { margin-top: 7px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 27px; font-weight: 400; line-height: 1; }
-.forma-scene-tooltip small { margin-top: 9px; color: rgba(255,255,255,.74); font-size: 10px; }
-.forma-scene-tooltip em { margin-top: 5px; color: rgba(255,255,255,.58); font-size: 8px; font-style: normal; }
-
-.forma-narrative {
-  position: absolute;
-  z-index: 12;
-  right: clamp(30px, 4vw, 74px);
-  bottom: 77px;
-  width: min(430px, 34vw);
-  padding: 27px 30px 29px;
-  border-top: 1px solid rgba(36,77,73,.3);
-  border-bottom: 1px solid rgba(36,77,73,.14);
-  background: linear-gradient(90deg, rgba(250,248,241,.82), rgba(250,248,241,.5));
-  backdrop-filter: blur(14px);
-}
-.forma-narrative > span { color: var(--forma-gold); font-size: 9px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
-.forma-narrative h1 { margin: 14px 0 0; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(31px, 2.65vw, 48px); font-weight: 400; letter-spacing: -.035em; line-height: .98; text-wrap: balance; }
-.forma-narrative > p { margin: 18px 0 0; color: #52645f; font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif; font-size: 15px; line-height: 1.55; }
-.forma-narrative > div { display: grid; margin-top: 22px; padding-top: 17px; grid-template-columns: 1fr 1fr; gap: 18px; border-top: 1px solid var(--forma-line); }
-.forma-narrative > div span { display: flex; flex-direction: column; gap: 6px; }
-.forma-narrative small { color: var(--forma-muted); font-size: 7px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.forma-narrative strong { font-size: 13px; font-weight: 750; }
-
-.forma-key { position: absolute; z-index: 12; bottom: 25px; left: 30px; display: flex; align-items: center; gap: 18px; color: var(--forma-muted); font-size: 7px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.forma-key span { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
-.forma-key i { width: 12px; height: 5px; border-radius: 1px; }
-.forma-key i.is-capital { background: var(--forma-green); }
-.forma-key i.is-result { background: rgba(184,147,80,.75); box-shadow: 0 0 8px rgba(184,147,80,.3); }
-.forma-key i.is-in { width: 3px; height: 10px; background: var(--forma-gold); }
-.forma-key i.is-out { width: 3px; height: 10px; background: var(--forma-coral); }
-
-.forma-console {
-  position: relative;
-  z-index: 20;
-  display: grid;
-  min-height: 142px;
-  padding: 23px 28px 19px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 24px;
-  border: 1px solid rgba(31,67,62,.16);
-  border-top: 0;
-  border-radius: 0 0 28px 28px;
-  background: rgba(251,249,243,.88);
-  box-shadow: 0 24px 50px rgba(36,57,53,.08);
-  backdrop-filter: blur(22px);
-}
-.forma-playback { display: flex; align-items: center; gap: 7px; }
-.forma-playback button,
-.forma-precision-shortcut {
-  display: flex;
-  min-width: 38px;
-  height: 38px;
-  padding: 0 11px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid var(--forma-line);
-  border-radius: 999px;
-  color: var(--forma-ink);
+  color: var(--forma-deep);
   background: rgba(255,255,255,.58);
   cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
 }
-.forma-playback button:disabled { opacity: .28; cursor: default; }
-.forma-playback button.is-main { min-width: 112px; color: #fff; border-color: var(--forma-green); background: var(--forma-green); }
-.forma-playback button span,
-.forma-precision-shortcut span { font-size: 8px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
-.forma-playback svg,
-.forma-precision-shortcut svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.forma-playback button.is-main svg { fill: currentColor; }
+.forma-header-actions button:hover { transform: translateY(-2px); border-color: var(--forma-line-strong); background: #fff; }
+.forma-header-actions button.is-active { color: #fff; background: var(--forma-deep); }
+.forma-header-actions svg,
+.forma-scene-zoom svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 
-.forma-timeline { position: relative; display: flex; min-width: 0; padding: 18px 0 2px; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: rgba(36,77,73,.22) transparent; }
-.forma-timeline-line { position: absolute; top: 23px; right: 0; left: 0; height: 1px; background: linear-gradient(90deg, rgba(36,77,73,.06), rgba(36,77,73,.28), rgba(36,77,73,.06)); }
-.forma-timeline button { position: relative; display: flex; min-width: 87px; padding: 18px 7px 7px; align-items: center; flex: 1 0 87px; flex-direction: column; gap: 5px; border: 0; color: #72817d; background: transparent; cursor: pointer; }
-.forma-timeline button > i { position: absolute; top: 1px; left: 50%; width: 8px; height: 8px; border: 1px solid rgba(36,77,73,.38); border-radius: 50%; background: #f7f4ec; transform: translateX(-50%); transition: 180ms ease; }
-.forma-timeline button > span { font-size: 8px; font-weight: 850; white-space: nowrap; }
-.forma-timeline button > small { color: #85928f; font-size: 7px; white-space: nowrap; }
-.forma-timeline button.is-active { color: var(--forma-ink); }
-.forma-timeline button.is-active > i { border-color: var(--forma-gold); background: var(--forma-gold); box-shadow: 0 0 0 6px rgba(184,147,80,.12); transform: translateX(-50%) scale(1.15); }
-.forma-timeline button.has-in::after,
-.forma-timeline button.has-out::before { position: absolute; top: 4px; width: 3px; height: 7px; content: ""; }
-.forma-timeline button.has-in::after { left: calc(50% - 10px); background: var(--forma-gold); }
-.forma-timeline button.has-out::before { left: calc(50% + 7px); background: var(--forma-coral); }
-.forma-timeline button.is-pending > i { border-style: dashed; border-color: var(--forma-green-soft); background: #fff; }
-.forma-precision-shortcut { min-width: 150px; height: 42px; border-color: rgba(184,147,80,.34); color: var(--forma-green); }
+.forma-theatre { padding: clamp(18px, 2.3vw, 38px); }
 
-.forma-current-equation {
+.forma-position {
   display: grid;
-  margin-top: 20px;
-  min-height: 205px;
-  padding: 32px clamp(25px, 3.5vw, 58px);
-  grid-template-columns: 1fr auto 1fr auto 1.15fr;
-  align-items: center;
-  gap: clamp(18px, 2.4vw, 46px);
-  border-top: 1px solid var(--forma-line);
-  border-bottom: 1px solid var(--forma-line);
-  background: rgba(255,255,255,.28);
+  margin-bottom: 22px;
+  padding: clamp(25px, 3vw, 46px);
+  grid-template-columns: minmax(310px, 1.15fr) minmax(480px, 1fr);
+  gap: clamp(30px, 4vw, 72px);
+  align-items: end;
+  border: 1px solid var(--forma-line);
+  border-radius: 25px;
+  background:
+    linear-gradient(110deg, rgba(255,255,255,.9), rgba(250,247,237,.64)),
+    repeating-linear-gradient(90deg, transparent 0, transparent 79px, rgba(24,79,72,.028) 80px);
+  box-shadow: 0 22px 56px rgba(30, 60, 56, 0.08), inset 0 1px 0 #fff;
 }
-.forma-current-equation > div { display: flex; min-width: 0; flex-direction: column; gap: 9px; }
-.forma-current-equation > div > span { color: var(--forma-muted); font-size: 8px; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
-.forma-current-equation > div > strong { font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(31px, 3vw, 52px); font-weight: 400; letter-spacing: -.035em; line-height: 1; white-space: nowrap; }
-.forma-current-equation > div > small { color: var(--forma-muted); font-size: 9px; line-height: 1.4; }
-.forma-current-equation > i { color: var(--forma-gold); font-family: Georgia, serif; font-size: 29px; font-style: normal; }
-.forma-current-equation > div.is-total { padding-left: clamp(20px, 3vw, 48px); border-left: 1px solid rgba(184,147,80,.4); }
-.forma-current-equation > div.is-total strong { color: var(--forma-green); font-size: clamp(38px, 3.8vw, 65px); }
+.forma-position-primary { min-width: 0; }
+.forma-position-primary > span,
+.forma-position-metrics article > span,
+.forma-stage-heading > div > span,
+.forma-active-reading > span,
+.forma-month-facts span,
+.forma-current-equation span,
+.forma-precision-sheet span {
+  color: var(--forma-muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.forma-position-primary > strong {
+  display: block;
+  margin: 6px 0 5px;
+  font-family: "Bodoni 72", Didot, Georgia, serif;
+  font-size: clamp(50px, 5.4vw, 92px);
+  font-weight: 500;
+  line-height: .98;
+  letter-spacing: -.045em;
+  white-space: nowrap;
+}
+.forma-position-primary > small { display: block; max-width: 520px; color: var(--forma-muted); font-size: 11px; line-height: 1.5; }
+.forma-position-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+.forma-position-metrics article { min-width: 0; min-height: 104px; padding: 10px 14px; border-left: 1px solid var(--forma-line); }
+.forma-position-metrics article > span { display: block; min-height: 30px; line-height: 1.45; }
+.forma-position-metrics article > strong { display: block; margin: 9px 0 7px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(23px, 1.85vw, 34px); font-weight: 500; line-height: 1; white-space: nowrap; }
+.forma-position-metrics article > small { color: var(--forma-muted); font-size: 9px; line-height: 1.35; }
 
-.forma-footer { display: flex; min-height: 70px; padding: 20px 4px 0; align-items: flex-start; justify-content: space-between; gap: 24px; color: var(--forma-muted); font-size: 8px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
-.forma-footer span:last-child { color: var(--forma-green); }
-
-.forma-intro {
-  position: absolute;
-  z-index: 120;
-  inset: 0;
+.forma-stage {
+  overflow: hidden;
+  border: 1px solid var(--forma-line);
+  border-radius: 27px;
+  background: rgba(255, 254, 249, 0.66);
+  box-shadow: 0 26px 72px rgba(30, 60, 56, 0.1), inset 0 1px 0 rgba(255,255,255,.9);
+}
+.forma-stage-heading {
   display: flex;
+  min-height: 114px;
+  padding: 24px 28px;
   align-items: center;
-  flex-direction: column;
-  justify-content: center;
-  color: var(--forma-ink);
-  background:
-    linear-gradient(110deg, transparent 0 48%, rgba(184,147,80,.12) 48% 49%, transparent 49%),
-    radial-gradient(circle at 50% 50%, #fff 0, #f4f0e7 62%, #e6dfd2 100%);
-  animation: formaIntroOut 700ms 1.75s cubic-bezier(.7,0,.2,1) both;
+  justify-content: space-between;
+  gap: 30px;
+  border-bottom: 1px solid var(--forma-line);
 }
-.forma-intro::before,
-.forma-intro::after { position: absolute; top: 50%; width: 34%; height: 1px; background: linear-gradient(90deg, transparent, rgba(36,77,73,.28)); content: ""; animation: formaIntroLine 1.1s cubic-bezier(.2,.8,.2,1) both; }
-.forma-intro::before { left: 0; }
-.forma-intro::after { right: 0; transform: scaleX(-1); }
-.forma-intro > button { position: absolute; top: 24px; right: 26px; min-height: 38px; padding: 0 15px; border: 1px solid var(--forma-line); border-radius: 999px; color: var(--forma-muted); background: rgba(255,255,255,.46); font-size: 8px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
-.forma-intro-signature { position: relative; width: 90px; height: 90px; margin-bottom: 28px; }
-.forma-intro-signature::before,
-.forma-intro-signature i { position: absolute; inset: 0; border: 1px solid rgba(36,77,73,.28); content: ""; transform: rotate(45deg) scale(.68); animation: formaBuild 1.15s cubic-bezier(.2,.8,.2,1) both; }
-.forma-intro-signature i:nth-child(1) { inset: 15px; border-color: rgba(36,77,73,.5); animation-delay: .13s; }
-.forma-intro-signature i:nth-child(2) { inset: 29px; border: 0; background: var(--forma-green); animation-delay: .25s; }
-.forma-intro-signature i:nth-child(3) { inset: 40px; border: 0; background: var(--forma-gold-light); animation-delay: .36s; }
-.forma-intro > span { color: var(--forma-muted); font-size: 9px; font-weight: 900; letter-spacing: .23em; text-transform: uppercase; }
-.forma-intro > strong { margin-top: 15px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(70px, 10vw, 150px); font-weight: 400; letter-spacing: .13em; line-height: .8; }
-.forma-intro > small { margin-top: 24px; color: var(--forma-green); font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.forma-stage-heading > div:first-child { max-width: 750px; }
+.forma-stage-heading h1 { margin: 6px 0 5px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(27px, 2.6vw, 45px); font-weight: 500; line-height: 1.05; letter-spacing: -.02em; }
+.forma-stage-heading p { margin: 0; color: var(--forma-muted); font-size: 11px; line-height: 1.5; }
+.forma-lenses { display: flex; flex: 0 0 auto; padding: 4px; border: 1px solid var(--forma-line); border-radius: 999px; background: rgba(255,255,255,.6); }
+.forma-lenses button { min-height: 40px; padding: 0 17px; border: 0; border-radius: 999px; color: var(--forma-muted); background: transparent; font-size: 9px; font-weight: 900; letter-spacing: .08em; cursor: pointer; }
+.forma-lenses button.is-active { color: #fff; background: var(--forma-deep); box-shadow: 0 8px 18px rgba(23,75,69,.19); }
 
-.forma-precision-backdrop { position: fixed; z-index: 1094; inset: 0; visibility: hidden; opacity: 0; background: rgba(20,38,36,.2); backdrop-filter: blur(6px); transition: 260ms ease; }
+.forma-stage-grid { display: grid; grid-template-columns: minmax(0, 2.35fr) minmax(315px, .82fr); min-height: 650px; }
+.forma-visual-frame { position: relative; min-width: 0; padding: 0 18px 16px; border-right: 1px solid var(--forma-line); background: radial-gradient(circle at 54% 44%, rgba(255,255,255,.9), rgba(240,237,227,.36) 68%, transparent); }
+.forma-stage-meta { position: relative; z-index: 5; display: flex; min-height: 56px; padding: 0 8px; align-items: center; justify-content: space-between; gap: 12px; }
+.forma-stage-meta > span { color: var(--forma-deep); font-size: 9px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+.forma-stage-meta > span i { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--forma-gold); box-shadow: 0 0 0 5px rgba(173,138,71,.1); }
+.forma-stage-meta > small { color: var(--forma-muted); font-size: 9px; font-weight: 900; letter-spacing: .12em; }
+
+.forma-scene-shell,
+.forma-scene-fallback { position: relative; width: 100%; height: 520px; min-height: 430px; overflow: hidden; border: 1px solid rgba(23,75,69,.11); border-radius: 18px; background: linear-gradient(180deg, rgba(252,251,246,.9), rgba(236,234,225,.54)); box-shadow: inset 0 1px 0 #fff; }
+.forma-scene-canvas { display: block; width: 100%; height: 100%; touch-action: pan-y; }
+.forma-scene-axis { position: absolute; z-index: 3; top: 38px; bottom: 38px; left: 11px; display: flex; width: 72px; flex-direction: column; justify-content: space-between; pointer-events: none; }
+.forma-scene-axis span { color: #60736f; font-size: 9px; font-weight: 800; letter-spacing: .02em; text-align: right; }
+.forma-scene-orientation { position: absolute; z-index: 3; top: 13px; right: 15px; display: flex; gap: 13px; pointer-events: none; }
+.forma-scene-orientation span { display: inline-flex; align-items: center; gap: 5px; color: var(--forma-muted); font-size: 8px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.forma-scene-orientation span::before { width: 18px; height: 3px; content: ""; border-radius: 3px; background: var(--forma-deep); }
+.forma-scene-orientation span:last-child::before { height: 5px; background: var(--forma-green); box-shadow: 0 0 8px rgba(23,105,95,.35); }
+.forma-scene-zoom { position: absolute; z-index: 6; right: 14px; bottom: 14px; display: flex; gap: 5px; padding: 4px; border: 1px solid var(--forma-line); border-radius: 999px; background: rgba(252,251,246,.88); backdrop-filter: blur(12px); }
+.forma-scene-zoom button { width: 34px; height: 34px; border: 0; background: transparent; font-size: 17px; }
+.forma-scene-zoom button:nth-child(2) { width: 48px; color: var(--forma-muted); font-size: 9px; font-weight: 900; }
+.forma-scene-loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; color: var(--forma-muted); background: rgba(247,244,236,.8); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.forma-scene-loading i { width: 46px; height: 46px; border: 1px solid var(--forma-line-strong); border-top-color: var(--forma-green); border-radius: 50%; animation: forma-spin 1s linear infinite; }
+.forma-scene-tooltip { position: absolute; z-index: 12; width: 270px; min-height: 146px; padding: 18px 20px; pointer-events: none; border: 1px solid rgba(23,75,69,.2); border-radius: 15px; background: rgba(254,253,248,.96); box-shadow: 0 20px 54px rgba(21,50,46,.2); backdrop-filter: blur(18px); }
+.forma-scene-tooltip::before { position: absolute; top: 0; left: 0; width: 4px; height: 100%; content: ""; border-radius: 15px 0 0 15px; background: linear-gradient(var(--forma-green), var(--forma-gold)); }
+.forma-scene-tooltip > span { display: block; color: var(--forma-muted); font-size: 9px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.forma-scene-tooltip > strong { display: block; margin: 7px 0 5px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 30px; font-weight: 500; line-height: 1; }
+.forma-scene-tooltip small,
+.forma-scene-tooltip em,
+.forma-scene-tooltip b { display: block; margin-top: 5px; color: var(--forma-muted); font-size: 10px; font-style: normal; }
+.forma-scene-tooltip b { margin-top: 10px; color: var(--forma-green); font-size: 8px; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+
+.forma-key { display: flex; min-height: 54px; padding: 13px 10px 0; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px 20px; }
+.forma-key span { display: inline-flex; align-items: center; gap: 7px; color: var(--forma-muted); font-size: 8px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.forma-key i { display: block; width: 20px; height: 4px; border-radius: 3px; background: var(--forma-green); }
+.forma-key .is-capital { height: 3px; background: var(--forma-deep); }
+.forma-key .is-result { height: 9px; background: rgba(173,138,71,.5); }
+.forma-key .is-in { width: 4px; height: 13px; background: var(--forma-gold); }
+.forma-key .is-out { width: 4px; height: 13px; background: var(--forma-coral); }
+
+.forma-narrative { display: flex; min-width: 0; padding: 26px; flex-direction: column; background: linear-gradient(160deg, rgba(253,252,247,.96), rgba(241,238,228,.78)); }
+.forma-month-selector { margin-bottom: 22px; }
+.forma-month-selector label { display: block; margin-bottom: 8px; color: var(--forma-muted); font-size: 8px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+.forma-month-selector select { width: 100%; min-height: 48px; padding: 0 44px 0 15px; border: 1px solid var(--forma-line-strong); border-radius: 12px; color: var(--forma-ink); background: rgba(255,255,255,.78); font-size: 13px; font-weight: 800; cursor: pointer; }
+.forma-active-reading { padding-bottom: 20px; border-bottom: 1px solid var(--forma-line); }
+.forma-active-reading > span { display: block; color: var(--forma-gold); }
+.forma-active-reading > strong { display: block; margin: 8px 0 5px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(38px, 3.4vw, 58px); font-weight: 500; line-height: 1; letter-spacing: -.03em; white-space: nowrap; }
+.forma-active-reading > small { color: var(--forma-muted); font-size: 10px; }
+.forma-month-facts { display: grid; margin-top: 18px; grid-template-columns: 1fr; gap: 0; }
+.forma-month-facts > div { display: flex; min-height: 50px; align-items: center; justify-content: space-between; gap: 15px; border-bottom: 1px solid var(--forma-line); }
+.forma-month-facts strong { font-size: 14px; }
+.forma-month-movements { display: grid; margin-top: 13px; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.forma-month-movements > span { display: flex; min-height: 64px; padding: 11px; flex-direction: column; justify-content: center; border: 1px solid var(--forma-line); border-radius: 11px; background: rgba(255,255,255,.55); }
+.forma-month-movements small { color: var(--forma-muted); font-size: 8px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.forma-month-movements strong { margin-top: 5px; font-size: 13px; }
+.forma-month-movements .is-in strong { color: var(--forma-gold); }
+.forma-month-movements .is-out strong { color: var(--forma-coral); }
+.forma-month-story { margin-top: 18px; }
+.forma-month-story > span { font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 22px; line-height: 1.05; }
+.forma-month-story p { margin: 8px 0 0; color: var(--forma-muted); font-size: 11px; line-height: 1.55; }
+.forma-month-actions { display: grid; margin-top: auto; padding-top: 22px; grid-template-columns: 1fr 1.12fr 1fr; gap: 7px; }
+.forma-month-actions button { display: flex; min-width: 0; min-height: 46px; padding: 0 8px; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--forma-line); border-radius: 10px; color: var(--forma-deep); background: rgba(255,255,255,.56); font-size: 8px; font-weight: 900; letter-spacing: .04em; cursor: pointer; }
+.forma-month-actions button:disabled { opacity: .34; cursor: default; }
+.forma-month-actions button.is-precision { color: #fff; background: var(--forma-deep); }
+.forma-month-actions svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+.forma-console { display: grid; min-height: 154px; padding: 18px 20px; grid-template-columns: 210px minmax(0,1fr); gap: 16px; align-items: stretch; border-top: 1px solid var(--forma-line); background: rgba(247,244,236,.72); }
+.forma-playback { display: grid; grid-template-columns: 1fr; gap: 7px; }
+.forma-playback button { display: flex; min-height: 48px; padding: 0 14px; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--forma-line); border-radius: 11px; color: var(--forma-deep); background: rgba(255,255,255,.62); font-size: 9px; font-weight: 900; cursor: pointer; }
+.forma-playback button.is-main { min-height: 66px; color: #fff; background: var(--forma-deep); box-shadow: 0 13px 28px rgba(23,75,69,.18); }
+.forma-playback svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.forma-playback .is-main svg { fill: currentColor; stroke: none; }
+.forma-timeline { display: flex; min-width: 0; overflow-x: auto; overflow-y: hidden; gap: 8px; padding: 1px 1px 9px; scroll-behavior: smooth; scrollbar-color: rgba(23,75,69,.32) transparent; scrollbar-width: thin; }
+.forma-timeline button { position: relative; display: grid; min-width: 132px; min-height: 116px; padding: 14px; grid-template-rows: auto 1fr auto; align-content: stretch; text-align: left; border: 1px solid var(--forma-line); border-radius: 13px; color: var(--forma-ink); background: rgba(255,255,255,.56); cursor: pointer; transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease; }
+.forma-timeline button:hover { transform: translateY(-2px); border-color: var(--forma-line-strong); background: #fff; }
+.forma-timeline button.is-active { border-color: rgba(23,105,95,.55); background: #fff; box-shadow: 0 12px 28px rgba(23,75,69,.12), inset 0 3px 0 var(--forma-green); }
+.forma-timeline button > span { color: var(--forma-muted); font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.forma-timeline button > strong { align-self: center; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 20px; font-weight: 500; white-space: nowrap; }
+.forma-timeline button > small { color: var(--forma-green); font-size: 9px; font-weight: 800; }
+.forma-timeline button > i { position: absolute; top: 10px; right: 10px; color: var(--forma-gold); font-size: 10px; font-style: normal; font-weight: 900; letter-spacing: 2px; }
+.forma-timeline button.has-out > i { color: var(--forma-coral); }
+.forma-timeline button.is-pending { border-style: dashed; }
+
+.forma-current-equation { display: grid; margin-top: 22px; padding: clamp(25px, 3vw, 45px); grid-template-columns: minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1.25fr); gap: clamp(16px, 2.5vw, 42px); align-items: center; border-top: 1px solid var(--forma-line); border-bottom: 1px solid var(--forma-line); background: rgba(255,255,255,.34); }
+.forma-current-equation > div { min-width: 0; }
+.forma-current-equation > div > span { display: block; }
+.forma-current-equation > div > strong { display: block; margin: 9px 0 8px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(29px, 3vw, 52px); font-weight: 500; line-height: 1; white-space: nowrap; }
+.forma-current-equation > div > small { color: var(--forma-muted); font-size: 9px; line-height: 1.45; }
+.forma-current-equation > i { color: var(--forma-gold); font-family: Georgia, serif; font-size: 27px; font-style: normal; }
+.forma-current-equation .is-total { padding-left: clamp(18px, 2.5vw, 40px); border-left: 1px solid rgba(173,138,71,.3); }
+
+.forma-footer { display: flex; padding: 22px 3px 2px; justify-content: space-between; gap: 20px; color: var(--forma-muted); font-size: 8px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+
+.forma-precision-backdrop { position: fixed; z-index: 9998; inset: 0; visibility: hidden; background: rgba(15,36,33,.42); opacity: 0; backdrop-filter: blur(10px); transition: opacity 240ms ease, visibility 240ms ease; }
 .forma-precision-backdrop.is-visible { visibility: visible; opacity: 1; }
-.forma-precision-sheet {
-  position: fixed;
-  z-index: 1095;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(880px, 94vw);
-  padding: 36px clamp(24px, 4vw, 58px) 60px;
-  overflow-y: auto;
-  visibility: hidden;
-  opacity: 0;
-  color: var(--forma-ink);
-  background:
-    radial-gradient(circle at 100% 0, rgba(184,147,80,.13), transparent 32%),
-    #f8f5ed;
-  box-shadow: -40px 0 100px rgba(25,47,43,.18);
-  clip-path: inset(0 0 0 100%);
-  transform: translateX(0);
-  transition: clip-path 460ms cubic-bezier(.22,.8,.22,1), opacity 260ms ease, visibility 460ms;
-}
-.forma-precision-sheet.is-open { visibility: visible; opacity: 1; clip-path: inset(0); }
-.forma-precision-sheet > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding-bottom: 29px; border-bottom: 1px solid var(--forma-line); }
-.forma-precision-sheet > header span { color: var(--forma-gold); font-size: 9px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
-.forma-precision-sheet > header h2 { margin: 12px 0 0; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(38px, 4.2vw, 64px); font-weight: 400; letter-spacing: -.04em; line-height: .92; }
-
-.forma-precision-equation { display: grid; margin-top: 28px; padding: 25px 0; grid-template-columns: repeat(5, minmax(0,1fr) auto) minmax(0,1.1fr); align-items: center; gap: 9px; border-bottom: 1px solid var(--forma-line); }
-.forma-precision-equation > div { display: flex; min-width: 0; flex-direction: column; gap: 8px; }
-.forma-precision-equation span { color: var(--forma-muted); font-size: 7px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
-.forma-precision-equation strong { font-size: clamp(13px, 1.35vw, 20px); white-space: nowrap; }
+.forma-precision-sheet { position: fixed; z-index: 9999; top: 0; right: 0; display: none; width: min(850px, 92vw); height: 100dvh; overflow-y: auto; padding: clamp(24px, 4vw, 54px); color: var(--forma-ink); background: #f8f6ef; box-shadow: -30px 0 80px rgba(15,36,33,.24); }
+.forma-precision-sheet.is-open { display: block; animation: forma-sheet-in 320ms cubic-bezier(.2,.8,.2,1) both; }
+.forma-precision-sheet > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 25px; }
+.forma-precision-sheet > header h2 { margin: 7px 0 0; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(29px, 3.2vw, 48px); font-weight: 500; line-height: 1.05; }
+.forma-precision-sheet > header button { display: grid; width: 46px; height: 46px; flex: 0 0 auto; place-items: center; border: 1px solid var(--forma-line); border-radius: 50%; color: var(--forma-deep); background: #fff; cursor: pointer; }
+.forma-precision-sheet > header svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+.forma-precision-equation { display: grid; margin-top: 34px; padding: 20px; grid-template-columns: repeat(9, auto); align-items: center; gap: 10px; border: 1px solid var(--forma-line); border-radius: 17px; background: #fff; }
+.forma-precision-equation > div { min-width: 0; }
+.forma-precision-equation span { display: block; font-size: 7px; }
+.forma-precision-equation strong { display: block; margin-top: 8px; font-size: clamp(13px, 1.4vw, 19px); white-space: nowrap; }
 .forma-precision-equation > i { color: var(--forma-gold); font-style: normal; }
-.forma-precision-equation .is-total { padding-left: 11px; border-left: 1px solid rgba(184,147,80,.45); }
-.forma-precision-equation .is-total strong { color: var(--forma-green); }
-
-.forma-precision-facts { display: grid; margin-top: 26px; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--forma-line); }
-.forma-precision-facts article { display: flex; min-height: 146px; padding: 21px 17px; flex-direction: column; justify-content: space-between; border-right: 1px solid var(--forma-line); }
+.forma-precision-equation .is-total { padding-left: 12px; border-left: 1px solid var(--forma-line); }
+.forma-precision-facts { display: grid; margin-top: 16px; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--forma-line); border-radius: 17px; background: rgba(255,255,255,.55); }
+.forma-precision-facts article { min-width: 0; min-height: 122px; padding: 18px; border-right: 1px solid var(--forma-line); }
 .forma-precision-facts article:last-child { border-right: 0; }
-.forma-precision-facts span { color: var(--forma-muted); font-size: 7px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
-.forma-precision-facts strong { font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 24px; font-weight: 400; letter-spacing: -.025em; }
-.forma-precision-facts small { color: var(--forma-muted); font-size: 8px; line-height: 1.4; }
-
-.forma-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 17px; }
-.forma-section-heading span { color: var(--forma-green); font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 29px; }
-.forma-section-heading p { max-width: 400px; margin: 0; color: var(--forma-muted); font-size: 9px; line-height: 1.5; text-align: right; }
+.forma-precision-facts strong { display: block; margin: 12px 0 8px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 25px; font-weight: 500; white-space: nowrap; }
+.forma-precision-facts small { color: var(--forma-muted); font-size: 8px; line-height: 1.45; }
 .forma-tranches,
 .forma-movement-ledger,
-.forma-linear-period { margin-top: 32px; }
+.forma-linear-period,
+.forma-method-note { margin-top: 20px; border: 1px solid var(--forma-line); border-radius: 17px; background: rgba(255,255,255,.6); }
+.forma-section-heading { padding: 20px; border-bottom: 1px solid var(--forma-line); }
+.forma-section-heading > span { color: var(--forma-ink); font-size: 10px; }
+.forma-section-heading p { margin: 5px 0 0; color: var(--forma-muted); font-size: 9px; line-height: 1.45; }
 .forma-tranche-head,
-.forma-tranches > div:not(.forma-section-heading) { display: grid; min-width: 690px; padding: 14px 12px; grid-template-columns: minmax(260px,1.4fr) repeat(3,minmax(100px,.55fr)); align-items: center; gap: 15px; border-bottom: 1px solid var(--forma-line); }
-.forma-tranche-head { color: var(--forma-muted); background: rgba(36,77,73,.04); font-size: 7px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
-.forma-tranche-head span:not(:first-child),
-.forma-tranches > div:not(.forma-section-heading) > strong { text-align: right; }
-.forma-tranches > div:not(.forma-section-heading) > span { font-size: 10px; }
-.forma-tranches > div:not(.forma-section-heading) > strong { font-size: 10px; }
-.forma-tranches > div.is-reconciliation { color: var(--forma-muted); font-style: italic; }
-.forma-tranches > div.is-total { color: #fff; background: var(--forma-green); }
-.forma-movement-ledger > div:not(.forma-section-heading) { display: grid; padding: 15px 12px; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--forma-line); font-size: 10px; }
+.forma-tranches > div:not(.forma-section-heading) { display: grid; min-height: 48px; padding: 11px 18px; grid-template-columns: minmax(190px,1.6fr) repeat(3,minmax(100px,.8fr)); gap: 12px; align-items: center; border-bottom: 1px solid var(--forma-line); }
+.forma-tranche-head { min-height: 38px; color: var(--forma-muted); font-size: 7px; font-weight: 900; letter-spacing: .09em; text-transform: uppercase; }
+.forma-tranches > div:not(.forma-section-heading) > span { color: var(--forma-ink); font-size: 9px; letter-spacing: 0; text-transform: none; }
+.forma-tranches > div:not(.forma-section-heading) > strong { font-size: 10px; text-align: right; }
+.forma-tranches .is-reconciliation { background: rgba(173,138,71,.06); }
+.forma-tranches .is-total { border-bottom: 0 !important; background: rgba(23,105,95,.07); }
+.forma-movement-ledger > div:not(.forma-section-heading) { display: grid; min-height: 52px; padding: 12px 20px; grid-template-columns: 1fr 1fr 1fr; align-items: center; border-bottom: 1px solid var(--forma-line); }
+.forma-movement-ledger > div:last-child { border-bottom: 0; }
+.forma-movement-ledger strong,
+.forma-movement-ledger b { font-size: 11px; }
 .forma-movement-ledger b { text-align: right; }
-.forma-linear-period { padding: 27px; border: 1px solid var(--forma-line); }
-.forma-linear-period span { color: var(--forma-green); font-family: "Bodoni 72", Didot, Georgia, serif; font-size: 27px; }
-.forma-linear-period p { margin: 9px 0 0; color: var(--forma-muted); font-size: 10px; }
-.forma-method-note { display: grid; margin-top: 32px; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--forma-line); border-bottom: 1px solid var(--forma-line); }
-.forma-method-note > div { display: grid; padding: 23px 0; grid-template-columns: 80px 1fr; gap: 20px; }
-.forma-method-note > div:first-child { padding-right: 25px; border-right: 1px solid var(--forma-line); }
-.forma-method-note > div:last-child { padding-left: 25px; }
-.forma-method-note span { color: var(--forma-gold); font-size: 9px; font-weight: 900; letter-spacing: .12em; }
-.forma-method-note p { margin: 0; color: var(--forma-muted); font-family: Georgia, serif; font-size: 11px; line-height: 1.5; }
+.forma-linear-period { padding: 22px; }
+.forma-linear-period > span { color: var(--forma-ink); font-size: 10px; }
+.forma-linear-period p { margin: 7px 0 0; color: var(--forma-muted); font-size: 10px; line-height: 1.55; }
+.forma-method-note { display: grid; grid-template-columns: repeat(2,1fr); }
+.forma-method-note > div { padding: 20px; border-right: 1px solid var(--forma-line); }
+.forma-method-note > div:last-child { border-right: 0; }
+.forma-method-note p { margin: 7px 0 0; color: var(--forma-muted); font-size: 9px; line-height: 1.5; }
 
-.forma-scene-fallback svg { width: 100%; height: 100%; }
-.forma-fallback-grid { stroke: rgba(36,77,73,.08); stroke-width: 1; }
-.forma-fallback-capital { fill: none; stroke: var(--forma-green); stroke-width: 4; }
-.forma-fallback-wealth { fill: none; stroke: var(--forma-gold); stroke-width: 5; }
-.forma-fallback-stem { stroke: rgba(36,77,73,.15); stroke-width: 1; }
-.forma-fallback-node { fill: #f7f4ec; stroke: var(--forma-green); stroke-width: 3; }
-.forma-scene-fallback g.is-active .forma-fallback-node { fill: var(--forma-gold); stroke: #fff; stroke-width: 4; }
-.forma-scene-fallback g.is-muted { opacity: .2; }
-.forma-fallback-in { stroke: var(--forma-gold); stroke-width: 7; }
-.forma-fallback-out { stroke: var(--forma-coral); stroke-width: 7; }
-.forma-scene-fallback text { fill: var(--forma-muted); font-size: 13px; font-weight: 750; }
-.forma-fallback-hits { position: absolute; inset: 7% 4% 13% 6%; display: grid; grid-template-columns: repeat(var(--forma-count), 1fr); }
-.forma-fallback-hits button { border: 0; background: transparent; cursor: pointer; }
-.forma-compatible-note { position: absolute; right: 24px; bottom: 22px; color: var(--forma-muted); font-size: 7px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.forma-empty { min-height: 420px; padding: 60px; color: #56645f; background: #f4f0e7; }
+.forma-scene-fallback svg { display: block; width: 100%; height: 100%; }
+.forma-fallback-grid { stroke: rgba(23,75,69,.12); stroke-width: 1; }
+.forma-fallback-axis-label { fill: #60736f; font-size: 10px; font-weight: 700; }
+.forma-fallback-capital { fill: none; stroke: #263f3d; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.forma-fallback-wealth { fill: none; stroke: #17695f; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+.forma-fallback-result-span { stroke: rgba(173,138,71,.45); stroke-width: 3; }
+.forma-fallback-focus { fill: rgba(173,138,71,.1); }
+.forma-fallback-node { fill: #17695f; stroke: #f8f6ef; stroke-width: 4; }
+.forma-fallback-capital-node { fill: #263f3d; stroke: #f8f6ef; stroke-width: 3; }
+.forma-fallback-in { fill: none; stroke: var(--forma-gold); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.forma-fallback-out { fill: none; stroke: var(--forma-coral); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.forma-scene-fallback g.is-muted { opacity: .16; }
+.forma-fallback-hits { position: absolute; inset: 5% 2% 5% 6%; display: grid; grid-template-columns: repeat(var(--forma-count), 1fr); }
+.forma-fallback-hits button { min-width: 0; border: 0; background: transparent; cursor: pointer; }
+.forma-compatible-note { position: absolute; right: 14px; bottom: 12px; color: var(--forma-muted); font-size: 8px; font-weight: 800; }
 
-.forma-root.is-cinema { position: fixed; z-index: 1080; inset: 0; width: 100vw; min-height: 100dvh; overflow-y: auto; border: 0; border-radius: 0; }
-.forma-root.is-cinema .forma-header { position: sticky; top: 0; }
-.forma-root.is-cinema .forma-theatre { padding: 10px; }
-.forma-root.is-cinema .forma-stage { min-height: calc(100dvh - 244px); }
+.forma-intro { position: absolute; z-index: 100; inset: 0; display: grid; place-content: center; justify-items: center; color: #f9f6ed; background: radial-gradient(circle at 50% 44%, #286c63, #102d29 68%); animation: forma-intro-exit 2.55s ease forwards; }
+.forma-intro > button { position: absolute; top: 24px; right: 28px; min-height: 44px; padding: 0 19px; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; color: #fff; background: transparent; cursor: pointer; }
+.forma-intro-signature { position: relative; width: min(50vw, 560px); height: 140px; }
+.forma-intro-signature i { position: absolute; left: 0; right: 0; height: 1px; transform-origin: left; animation: forma-draw 1.4s cubic-bezier(.2,.8,.2,1) both; }
+.forma-intro-signature i:nth-child(1) { top: 92px; background: rgba(255,255,255,.5); transform: rotate(-4deg); }
+.forma-intro-signature i:nth-child(2) { top: 72px; background: var(--forma-gold-light); transform: rotate(3deg); animation-delay: .16s; }
+.forma-intro-signature i:nth-child(3) { top: 48px; background: #7cc7b9; transform: rotate(-1deg); animation-delay: .32s; }
+.forma-intro-signature i:nth-child(4) { top: 25px; left: auto; right: 0; width: 12px; height: 12px; border-radius: 50%; background: #f8e4a8; animation-delay: 1s; }
+.forma-intro > span { font-size: 9px; font-weight: 900; letter-spacing: .24em; text-transform: uppercase; }
+.forma-intro > strong { margin-top: 12px; font-family: "Bodoni 72", Didot, Georgia, serif; font-size: clamp(54px, 9vw, 116px); font-weight: 500; letter-spacing: .2em; line-height: .9; }
+.forma-intro > small { margin-top: 19px; font-size: 10px; letter-spacing: .13em; opacity: .72; }
+
+.forma-route-loading,
+.forma-empty { display: grid; min-height: 55vh; place-content: center; color: #48605c; background: #f5f2e9; font-size: 11px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+
+.forma-root.is-cinema { position: fixed; z-index: 9997; inset: 0; width: 100vw; height: 100dvh; overflow-y: auto; border: 0; border-radius: 0; }
+.forma-root.is-cinema .forma-theatre { min-height: calc(100dvh - 96px); }
+.forma-root.is-cinema .forma-position { display: none; }
+.forma-root.is-cinema .forma-stage { min-height: calc(100dvh - 132px); }
+.forma-root.is-cinema .forma-stage-grid { min-height: calc(100dvh - 365px); }
+.forma-root.is-cinema .forma-scene-shell,
+.forma-root.is-cinema .forma-scene-fallback { height: calc(100dvh - 430px); min-height: 440px; }
 .forma-root.is-cinema .forma-current-equation,
 .forma-root.is-cinema .forma-footer { display: none; }
 
-@keyframes formaSpin { to { transform: rotate(360deg); } }
-@keyframes formaBuild { from { opacity: 0; transform: rotate(45deg) scale(.08); } to { opacity: 1; transform: rotate(45deg) scale(.68); } }
-@keyframes formaIntroLine { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes formaIntroOut { to { opacity: 0; visibility: hidden; transform: scale(1.025); } }
+@keyframes forma-spin { to { transform: rotate(360deg); } }
+@keyframes forma-draw { from { scale: 0 1; opacity: 0; } to { scale: 1 1; opacity: 1; } }
+@keyframes forma-intro-exit { 0%,82% { opacity: 1; visibility: visible; } 100% { opacity: 0; visibility: hidden; pointer-events: none; } }
+@keyframes forma-sheet-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
-@media (min-width: 1900px) {
-  .forma-stage { min-height: 980px; }
-  .forma-narrative { width: 490px; }
-  .forma-current-equation { min-height: 230px; }
+@media (max-width: 1280px) {
+  .forma-header { grid-template-columns: auto 1fr auto; }
+  .forma-mode-nav { min-width: 0; width: min(450px, 100%); justify-self: center; }
+  .forma-position { grid-template-columns: minmax(280px,.9fr) minmax(440px,1.1fr); gap: 30px; }
+  .forma-position-primary > strong { font-size: clamp(45px,5vw,70px); }
+  .forma-stage-grid { grid-template-columns: minmax(0,1.8fr) minmax(300px,.8fr); }
+  .forma-active-reading > strong { font-size: 39px; }
 }
 
-@media (max-width: 1380px) {
-  .forma-header { grid-template-columns: 220px 1fr auto; }
-  .forma-mode-nav { min-width: 430px; }
-  .forma-stage { min-height: 830px; }
-  .forma-narrative { width: 390px; }
-  .forma-key { gap: 12px; }
-  .forma-console { grid-template-columns: auto minmax(0,1fr); }
-  .forma-precision-shortcut { grid-column: 1 / -1; justify-self: end; margin-top: -7px; }
-}
-
-@media (max-width: 1050px) {
-  .forma-header { min-height: 154px; grid-template-columns: 1fr auto; }
-  .forma-mode-nav { grid-row: 2; grid-column: 1 / -1; width: 100%; min-width: 0; }
-  .forma-stage { min-height: 820px; }
-  .forma-active-reading > strong { font-size: clamp(50px, 9vw, 82px); }
-  .forma-narrative { right: 28px; width: min(410px, 48vw); }
+@media (max-width: 1000px) {
+  .forma-header { grid-template-columns: 1fr auto; gap: 15px; }
+  .forma-mode-nav { grid-column: 1 / -1; grid-row: 2; width: 100%; max-width: none; }
+  .forma-position { grid-template-columns: 1fr; align-items: start; }
+  .forma-position-metrics article:first-child { border-left: 0; }
+  .forma-stage-heading { align-items: flex-start; flex-direction: column; }
+  .forma-lenses { width: 100%; }
+  .forma-lenses button { flex: 1; }
+  .forma-stage-grid { grid-template-columns: 1fr; }
+  .forma-visual-frame { border-right: 0; border-bottom: 1px solid var(--forma-line); }
+  .forma-narrative { display: grid; grid-template-columns: minmax(210px,.8fr) minmax(270px,1fr); gap: 18px 28px; }
+  .forma-month-selector { grid-column: 1; margin: 0; }
+  .forma-active-reading { grid-column: 1; grid-row: 2 / span 2; }
+  .forma-month-facts { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+  .forma-month-movements { grid-column: 2; margin: 0; }
+  .forma-month-story { grid-column: 1; }
+  .forma-month-actions { grid-column: 2; margin-top: 0; }
   .forma-current-equation { grid-template-columns: 1fr auto 1fr; }
-  .forma-current-equation > i:nth-of-type(2),
-  .forma-current-equation > div.is-total { grid-row: 2; }
   .forma-current-equation > i:nth-of-type(2) { display: none; }
-  .forma-current-equation > div.is-total { grid-column: 1 / -1; padding: 27px 0 0; border-top: 1px solid rgba(184,147,80,.36); border-left: 0; }
-  .forma-precision-equation { grid-template-columns: 1fr auto 1fr auto 1fr; }
-  .forma-precision-equation > i:nth-of-type(n+3),
-  .forma-precision-equation > div:nth-of-type(n+4) { margin-top: 15px; }
-  .forma-precision-equation > div.is-total { grid-column: 4 / 6; }
-  .forma-precision-facts { grid-template-columns: 1fr 1fr; }
+  .forma-current-equation .is-total { grid-column: 1 / -1; padding: 24px 0 0; border-top: 1px solid var(--forma-line); border-left: 0; }
+  .forma-footer { flex-wrap: wrap; }
+}
+
+@media (max-width: 720px) {
+  .forma-root { border-radius: 20px; }
+  .forma-header { min-height: 0; padding: 14px; }
+  .forma-brand-mark { width: 39px; height: 39px; }
+  .forma-brand strong { font-size: 20px; }
+  .forma-brand small { font-size: 7px; }
+  .forma-header-actions { gap: 5px; }
+  .forma-header-actions button { width: 44px; height: 44px; }
+  .forma-mode-nav button { min-height: 47px; padding: 6px; }
+  .forma-mode-nav button span { font-size: 8px; }
+  .forma-mode-nav button small { display: none; }
+  .forma-theatre { padding: 10px; }
+  .forma-position { margin-bottom: 10px; padding: 22px 17px; border-radius: 18px; gap: 24px; }
+  .forma-position-primary { text-align: center; }
+  .forma-position-primary > strong { font-size: clamp(40px,13vw,56px); }
+  .forma-position-primary > small { font-size: 9px; }
+  .forma-position-metrics { grid-template-columns: 1fr; }
+  .forma-position-metrics article { display: grid; min-height: 58px; padding: 11px 0; grid-template-columns: 1fr auto; align-items: center; border-top: 1px solid var(--forma-line); border-left: 0; }
+  .forma-position-metrics article > span { min-height: 0; }
+  .forma-position-metrics article > strong { margin: 0; font-size: 26px; }
+  .forma-position-metrics article > small { grid-column: 1 / -1; }
+  .forma-stage { border-radius: 18px; }
+  .forma-stage-heading { min-height: 0; padding: 20px 16px; gap: 16px; }
+  .forma-stage-heading h1 { font-size: 30px; }
+  .forma-stage-heading p { font-size: 10px; }
+  .forma-lenses button { min-height: 44px; padding: 0 5px; font-size: 8px; }
+  .forma-visual-frame { padding: 0 7px 10px; }
+  .forma-stage-meta { min-height: 48px; padding: 0 5px; }
+  .forma-stage-meta > span { font-size: 7px; }
+  .forma-scene-shell,
+  .forma-scene-fallback { height: 420px; min-height: 420px; border-radius: 14px; }
+  .forma-scene-axis { top: 42px; bottom: 42px; left: 5px; width: 53px; }
+  .forma-scene-axis span { font-size: 7px; }
+  .forma-scene-orientation { left: 62px; right: auto; }
+  .forma-scene-orientation span { font-size: 7px; }
+  .forma-scene-zoom { right: 9px; bottom: 9px; }
+  .forma-scene-zoom button { width: 44px; height: 44px; }
+  .forma-scene-zoom button:nth-child(2) { width: 50px; }
+  .forma-key { gap: 9px 13px; }
+  .forma-key span { font-size: 7px; }
+  .forma-narrative { display: flex; padding: 20px 16px; gap: 0; }
+  .forma-month-selector { margin-bottom: 18px; }
+  .forma-active-reading > strong { font-size: 43px; }
+  .forma-month-facts { margin-top: 16px; }
+  .forma-month-story > span { font-size: 20px; }
+  .forma-month-actions { margin-top: 20px; padding-top: 0; }
+  .forma-month-actions button { min-height: 48px; }
+  .forma-console { padding: 13px; grid-template-columns: 1fr; }
+  .forma-playback { grid-template-columns: 1.5fr 1fr; }
+  .forma-playback button,
+  .forma-playback button.is-main { min-height: 48px; }
+  .forma-timeline button { min-width: 122px; min-height: 106px; }
+  .forma-current-equation { margin-top: 10px; padding: 24px 17px; grid-template-columns: 1fr; gap: 0; }
+  .forma-current-equation > i { display: none; }
+  .forma-current-equation > div { padding: 17px 0; border-bottom: 1px solid var(--forma-line); text-align: center; }
+  .forma-current-equation > div > strong { font-size: 36px; }
+  .forma-current-equation .is-total { grid-column: auto; padding: 17px 0 0; border-top: 0; border-bottom: 0; }
+  .forma-footer { padding: 18px 3px 4px; flex-direction: column; text-align: center; }
+  .forma-precision-sheet { width: 100vw; padding: 22px 14px; }
+  .forma-precision-equation { grid-template-columns: 1fr auto 1fr; }
+  .forma-precision-equation > div { min-height: 58px; }
+  .forma-precision-equation .is-total { grid-column: 1 / -1; padding: 14px 0 0; border-top: 1px solid var(--forma-line); border-left: 0; }
+  .forma-precision-facts { grid-template-columns: repeat(2,1fr); }
   .forma-precision-facts article:nth-child(2) { border-right: 0; }
   .forma-precision-facts article:nth-child(-n+2) { border-bottom: 1px solid var(--forma-line); }
-}
-
-@media (max-width: 760px) {
-  .forma-root { border-radius: 22px; }
-  .forma-header { min-height: 140px; padding: 14px 15px; gap: 13px; }
-  .forma-brand-mark { width: 36px; height: 36px; }
-  .forma-brand strong { font-size: 18px; }
-  .forma-brand small { display: none; }
-  .forma-header-actions { gap: 4px; }
-  .forma-header-actions button { width: 44px; height: 44px; }
-  .forma-mode-nav button { min-height: 46px; padding: 6px; }
-  .forma-mode-nav button small { display: none; }
-  .forma-theatre { padding: 10px 8px 20px; }
-  .forma-stage { min-height: 790px; border-radius: 20px 20px 8px 8px; }
-  .forma-stage-meta { top: 15px; right: 14px; left: 14px; align-items: flex-start; flex-direction: column; gap: 9px; }
-  .forma-stage-meta > span { max-width: 130px; line-height: 1.45; }
-  .forma-lenses { display: grid; width: 100%; max-width: none; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
-  .forma-lenses button { min-width: 0; min-height: 44px; padding: 0 6px; }
-  .forma-active-reading { top: 122px; left: 18px; }
-  .forma-active-reading > span { font-size: 8px; }
-  .forma-active-reading > strong { max-width: calc(100vw - 55px); font-size: clamp(42px, 13vw, 63px); }
-  .forma-active-reading > small { margin-top: 9px; }
-  .forma-narrative { right: 13px; bottom: 66px; left: 13px; width: auto; padding: 20px 19px; }
-  .forma-narrative h1 { font-size: 32px; }
-  .forma-narrative > p { margin-top: 12px; font-size: 13px; }
-  .forma-narrative > div { margin-top: 15px; padding-top: 13px; }
-  .forma-key { bottom: 25px; left: 16px; max-width: calc(100% - 32px); gap: 9px; overflow-x: auto; }
-  .forma-key span { font-size: 8px; }
-  .forma-scene-zoom { top: 210px; right: 13px; grid-template-columns: 44px 48px 44px; }
-  .forma-scene-zoom button { height: 44px; }
-  .forma-scene-tooltip { width: 215px; min-height: 115px; padding: 15px 17px; }
-  .forma-console { min-height: 184px; padding: 15px 13px; grid-template-columns: 1fr; gap: 10px; border-radius: 0 0 20px 20px; }
-  .forma-playback { justify-content: center; }
-  .forma-playback button,
-  .forma-precision-shortcut { min-width: 44px; height: 44px; }
-  .forma-timeline { grid-row: 2; width: 100%; }
-  .forma-timeline button { min-width: 78px; flex-basis: 78px; }
-  .forma-timeline button > span { font-size: 9px; }
-  .forma-timeline button > small { font-size: 8px; }
-  .forma-precision-shortcut { grid-row: 3; grid-column: 1; justify-self: center; margin: 0; }
-  .forma-current-equation { min-height: 0; padding: 27px 18px; grid-template-columns: 1fr; gap: 19px; }
-  .forma-current-equation > i { display: none; }
-  .forma-current-equation > div { min-height: 74px; padding-bottom: 18px; border-bottom: 1px solid var(--forma-line); }
-  .forma-current-equation > div > strong { font-size: 35px; }
-  .forma-current-equation > div.is-total { grid-row: auto; padding: 0; border: 0; }
-  .forma-current-equation > div.is-total strong { font-size: 44px; }
-  .forma-footer { padding: 18px 6px 0; flex-direction: column; gap: 8px; font-size: 8px; }
-  .forma-footer span:last-child { display: none; }
-  .forma-precision-sheet { width: 100vw; padding: 24px 16px 45px; }
-  .forma-precision-sheet > header h2 { font-size: 38px; }
-  .forma-precision-equation { grid-template-columns: 1fr 1fr; gap: 0; }
-  .forma-precision-equation > i { display: none; }
-  .forma-precision-equation > div,
-  .forma-precision-equation > div.is-total { min-height: 93px; padding: 15px; border: 1px solid var(--forma-line); border-bottom: 0; }
-  .forma-precision-equation > div.is-total { grid-column: 1 / -1; border-bottom: 1px solid var(--forma-line); }
-  .forma-precision-facts { grid-template-columns: 1fr 1fr; }
-  .forma-precision-facts article { min-height: 134px; }
-  .forma-section-heading { align-items: flex-start; flex-direction: column; }
-  .forma-section-heading p { text-align: left; }
-  .forma-tranches { overflow-x: auto; }
+  .forma-tranche-head { display: none; }
+  .forma-tranches > div:not(.forma-section-heading) { grid-template-columns: 1fr 1fr; gap: 7px; }
+  .forma-tranches > div:not(.forma-section-heading) > span { grid-column: 1 / -1; }
+  .forma-tranches > div:not(.forma-section-heading) > strong { text-align: left; }
+  .forma-tranches > div:not(.forma-section-heading) > strong:last-child { text-align: right; }
   .forma-method-note { grid-template-columns: 1fr; }
-  .forma-method-note > div:first-child { padding-right: 0; border-right: 0; border-bottom: 1px solid var(--forma-line); }
-  .forma-method-note > div:last-child { padding-left: 0; }
-  .forma-root.is-cinema .forma-stage { min-height: calc(100dvh - 326px); }
-  .forma-root.is-cinema .forma-header { position: sticky; top: 0; }
+  .forma-method-note > div { border-right: 0; border-bottom: 1px solid var(--forma-line); }
+  .forma-method-note > div:last-child { border-bottom: 0; }
+  .forma-root.is-cinema .forma-stage-heading { display: none; }
+  .forma-root.is-cinema .forma-stage-grid { min-height: auto; }
+  .forma-root.is-cinema .forma-scene-shell,
+  .forma-root.is-cinema .forma-scene-fallback { height: 54dvh; min-height: 390px; }
 }
 
 @media (max-width: 430px) {
-  .forma-stage { min-height: 750px; }
-  .forma-mode-nav button span { font-size: 8px; }
-  .forma-active-reading > strong { font-size: clamp(38px, 12.5vw, 54px); }
-  .forma-narrative h1 { font-size: 28px; }
-  .forma-narrative > p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-  .forma-narrative strong { font-size: 11px; }
-  .forma-key { display: grid; grid-template-columns: repeat(2, max-content); row-gap: 6px; overflow: visible; }
-  .forma-playback button.is-main { min-width: 102px; }
-  .forma-precision-facts { grid-template-columns: 1fr; }
-  .forma-precision-facts article { min-height: 112px; border-right: 0; border-bottom: 1px solid var(--forma-line); }
-  .forma-precision-facts article:last-child { border-bottom: 0; }
-  .forma-intro > strong { font-size: 60px; }
+  .forma-brand small { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+  .forma-position-primary > strong { font-size: 39px; }
+  .forma-stage-heading h1 { font-size: 27px; }
+  .forma-lenses button { letter-spacing: 0; }
+  .forma-active-reading > strong { font-size: 38px; }
+  .forma-month-actions { grid-template-columns: 1fr 1fr; }
+  .forma-month-actions .is-precision { grid-column: 1 / -1; grid-row: 1; }
+  .forma-scene-tooltip { width: 238px; }
 }
 
-@media (max-height: 780px) and (min-width: 761px) {
-  .forma-stage { min-height: 690px; }
-  .forma-active-reading { top: 78px; }
-  .forma-active-reading > strong { font-size: 66px; }
-  .forma-narrative { bottom: 55px; padding: 20px 24px; }
-  .forma-narrative h1 { font-size: 34px; }
-  .forma-narrative > p { margin-top: 12px; font-size: 13px; }
-  .forma-key { bottom: 18px; }
+@media (max-height: 520px) and (orientation: landscape) {
+  .forma-root.is-cinema .forma-header { display: none; }
+  .forma-root.is-cinema .forma-theatre { padding: 6px; }
+  .forma-root.is-cinema .forma-stage { min-height: calc(100dvh - 12px); }
+  .forma-root.is-cinema .forma-stage-heading { display: none; }
+  .forma-root.is-cinema .forma-stage-grid { grid-template-columns: minmax(0,1.8fr) minmax(270px,.8fr); min-height: calc(100dvh - 150px); }
+  .forma-root.is-cinema .forma-visual-frame { border-right: 1px solid var(--forma-line); border-bottom: 0; }
+  .forma-root.is-cinema .forma-scene-shell,
+  .forma-root.is-cinema .forma-scene-fallback { height: calc(100dvh - 210px); min-height: 260px; }
+  .forma-root.is-cinema .forma-narrative { display: flex; padding: 13px; }
+  .forma-root.is-cinema .forma-month-selector,
+  .forma-root.is-cinema .forma-month-story,
+  .forma-root.is-cinema .forma-month-movements { display: none; }
+  .forma-root.is-cinema .forma-console { min-height: 130px; grid-template-columns: 190px minmax(0,1fr); padding: 9px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

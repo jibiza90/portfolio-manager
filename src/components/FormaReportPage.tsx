@@ -411,19 +411,19 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
       style={{ '--forma-month-count': months.length } as React.CSSProperties}
     >
       {introVisible ? (
-        <div className="forma-intro" aria-label="Introducción FORMA">
+        <div className="forma-intro" aria-label="Introducción AXIS">
           <button type="button" onClick={() => setIntroVisible(false)}>Omitir</button>
-          <div className="forma-intro-signature"><i /><i /><i /></div>
-          <span>Tu patrimonio toma forma</span>
-          <strong>FORMA</strong>
+          <div className="forma-intro-signature"><i /><i /><i /><i /></div>
+          <span>Tu patrimonio, a través del tiempo</span>
+          <strong>AXIS</strong>
           <small>{months[0].label} — {months[latestPublishedIndex]?.label ?? active.label}</small>
         </div>
       ) : null}
 
       <header className="forma-header">
-        <div className="forma-brand" aria-label="FORMA Patrimonio en construcción">
-          <span className="forma-brand-mark"><i /><i /></span>
-          <span><strong>FORMA</strong><small>Patrimonio en construcción</small></span>
+        <div className="forma-brand" aria-label="AXIS Patrimonio en movimiento">
+          <span className="forma-brand-mark"><i /><i /><i /></span>
+          <span><strong>AXIS</strong><small>Patrimonio en movimiento</small></span>
         </div>
         <nav className="forma-mode-nav" aria-label="Modo de visualización">
           <button type="button" className={mode === 'story' ? 'is-active' : ''} aria-pressed={mode === 'story'} onClick={() => changeMode('story')}><span>Recorrido</span><small>Historia guiada</small></button>
@@ -438,83 +438,120 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
       </header>
 
       <main className="forma-theatre">
-        <section className="forma-stage" aria-label="Construcción interactiva del patrimonio">
-          <div className="forma-stage-meta">
-            <span><i /> {active.isPending ? 'Posición visible' : `Cierre · ${active.closeDate}`}</span>
+        <section className="forma-position" aria-label="Posición patrimonial actual">
+          <div className="forma-position-primary">
+            <span>Posición actual</span>
+            <strong>{formatCurrency(visibleBalance)}</strong>
+            <small>{pending.length ? 'Incluye movimientos posteriores al último cierre publicado' : `Último cierre publicado · ${latestPublishedMonth.closeDate}`}</small>
+          </div>
+          <div className="forma-position-metrics">
+            <article><span>Beneficio acumulado</span><strong className={report.beneficioTotal < 0 ? 'is-negative' : 'is-positive'}>{signedMoney(Number(report.beneficioTotal || 0))}</strong><small>Resultado de la inversión</small></article>
+            <article><span>Capital neto</span><strong>{formatCurrency(visibleCapital)}</strong><small>Aportado menos retirado</small></article>
+            <article><span>TWR acumulado</span><strong className={totalTwr < 0 ? 'is-negative' : 'is-positive'}>{signedPercent(totalTwr)}</strong><small>Desde {months[0].label}</small></article>
+          </div>
+        </section>
+
+        <section className="forma-stage" aria-label="Trayectoria interactiva del patrimonio">
+          <header className="forma-stage-heading">
+            <div>
+              <span>Lectura temporal</span>
+              <h1>La historia completa, mes a mes</h1>
+              <p>La línea superior muestra el patrimonio. La inferior, el capital neto. El espacio entre ambas es el resultado acumulado.</p>
+            </div>
             <div className="forma-lenses" aria-label="Capa visual">
               <button type="button" className={lens === 'composition' ? 'is-active' : ''} aria-pressed={lens === 'composition'} onClick={() => setLens('composition')}>Composición</button>
               <button type="button" className={lens === 'trajectory' ? 'is-active' : ''} aria-pressed={lens === 'trajectory'} onClick={() => setLens('trajectory')}>Trayectoria</button>
               <button type="button" className={lens === 'movements' ? 'is-active' : ''} aria-pressed={lens === 'movements'} onClick={() => setLens('movements')}>Movimientos</button>
             </div>
-          </div>
+          </header>
 
-          <div className="forma-active-reading" aria-live="polite">
-            <span>{story.act} · {active.label}</span>
-            <strong>{formatCurrency(active.balance)}</strong>
-            <small>Saldo {active.isPending ? 'visible' : 'al cierre'}</small>
-          </div>
-
-          <FormaPatrimonyScene
-            months={months}
-            activeIndex={activeIndex}
-            lens={lens}
-            reducedMotion={reducedMotion}
-            onSelect={selectMonth}
-          />
-
-          <aside className="forma-narrative" aria-label="Lectura del periodo">
-            <span>{String(activeIndex + 1).padStart(2, '0')} / {String(months.length).padStart(2, '0')}</span>
-            <h1>{story.title}</h1>
-            <p>{story.body}</p>
-            <div>
-              <span><small>Resultado mensual</small><strong className={active.profit < 0 ? 'is-negative' : 'is-positive'}>{active.isPending ? 'Pendiente de cierre' : signedMoney(active.profit)}</strong></span>
-              <span><small>Rentabilidad mensual</small><strong className={active.returnPct < 0 ? 'is-negative' : 'is-positive'}>{active.isPending ? '—' : signedPercent(active.returnPct)}</strong></span>
+          <div className="forma-stage-grid">
+            <div className="forma-visual-frame">
+              <div className="forma-stage-meta">
+                <span><i /> {active.isPending ? 'Posición visible' : `Cierre seleccionado · ${active.closeDate}`}</span>
+                <small>{String(activeIndex + 1).padStart(2, '0')} / {String(months.length).padStart(2, '0')}</small>
+              </div>
+              <FormaPatrimonyScene
+                months={months}
+                activeIndex={activeIndex}
+                lens={lens}
+                reducedMotion={reducedMotion}
+                onSelect={selectMonth}
+              />
+              <div className="forma-key" aria-label="Leyenda">
+                <span><i className="is-wealth" /> Patrimonio</span>
+                <span><i className="is-capital" /> Capital neto</span>
+                <span><i className="is-result" /> Resultado acumulado</span>
+                <span><i className="is-in" /> Aportación</span>
+                <span><i className="is-out" /> Retirada</span>
+              </div>
             </div>
-          </aside>
 
-          <div className="forma-key" aria-label="Leyenda">
-            <span><i className="is-capital" /> Capital neto</span>
-            <span><i className="is-result" /> Beneficio acumulado</span>
-            <span><i className="is-in" /> Aportación</span>
-            <span><i className="is-out" /> Retirada</span>
+            <aside className="forma-narrative" aria-label="Detalle del mes seleccionado">
+              <div className="forma-month-selector">
+                <label htmlFor="forma-month-select">Mes seleccionado</label>
+                <select id="forma-month-select" value={activeIndex} onChange={(event) => selectMonth(Number(event.target.value), 'selector')}>
+                  {months.map((month, index) => <option key={month.key} value={index}>{month.label}</option>)}
+                </select>
+              </div>
+              <div className="forma-active-reading" aria-live="polite">
+                <span>{story.act} · {active.label}</span>
+                <strong>{formatCurrency(active.balance)}</strong>
+                <small>{active.isPending ? 'Saldo visible' : 'Patrimonio al cierre'}</small>
+              </div>
+              <div className="forma-month-facts">
+                <div><span>Resultado mensual</span><strong className={active.profit < 0 ? 'is-negative' : 'is-positive'}>{active.isPending ? 'Pendiente' : signedMoney(active.profit)}</strong></div>
+                <div><span>Rentabilidad mensual</span><strong className={active.returnPct < 0 ? 'is-negative' : 'is-positive'}>{active.isPending ? '—' : signedPercent(active.returnPct)}</strong></div>
+                <div><span>Capital neto</span><strong>{formatCurrency(active.netCapital)}</strong></div>
+              </div>
+              {(active.increments > 0 || active.decrements > 0) ? (
+                <div className="forma-month-movements">
+                  {active.increments > 0 ? <span className="is-in"><small>Aportado</small><strong>+{formatCurrency(active.increments)}</strong></span> : null}
+                  {active.decrements > 0 ? <span className="is-out"><small>Retirado</small><strong>-{formatCurrency(active.decrements)}</strong></span> : null}
+                </div>
+              ) : null}
+              <div className="forma-month-story"><span>{story.title}</span><p>{story.body}</p></div>
+              <div className="forma-month-actions">
+                <button type="button" aria-label="Mes anterior" disabled={activeIndex <= 0} onClick={() => selectMonth(activeIndex - 1, 'anterior')}><Icon name="previous" /><span>Anterior</span></button>
+                <button type="button" className="is-precision" onClick={() => changeMode('precision')} aria-label="Abrir detalle exacto"><Icon name="precision" /><span>Ver cifras</span></button>
+                <button type="button" aria-label="Mes siguiente" disabled={activeIndex >= months.length - 1} onClick={() => selectMonth(activeIndex + 1, 'siguiente')}><span>Siguiente</span><Icon name="next" /></button>
+              </div>
+            </aside>
           </div>
-        </section>
 
-        <section className="forma-console" aria-label="Control del recorrido">
-          <div className="forma-playback">
-            <button type="button" aria-label="Mes anterior" disabled={activeIndex <= 0} onClick={() => selectMonth(activeIndex - 1, 'anterior')}><Icon name="previous" /></button>
-            <button
-              type="button"
-              className="is-main"
-              aria-label={playing ? 'Pausar recorrido' : 'Reproducir recorrido'}
-              aria-pressed={playing}
-              onClick={() => {
-                setMode('story');
-                setPlaying((current) => !current);
-              }}
-            ><Icon name={playing ? 'pause' : 'play'} /><span>{playing ? 'Pausar' : 'Reproducir'}</span></button>
-            <button type="button" aria-label="Mes siguiente" disabled={activeIndex >= months.length - 1} onClick={() => selectMonth(activeIndex + 1, 'siguiente')}><Icon name="next" /></button>
-            <button type="button" aria-label="Reiniciar recorrido" onClick={() => { setMode('story'); setActiveIndex(0); setPlaying(!reducedMotion); }}><Icon name="reset" /></button>
-          </div>
-          <div className="forma-timeline" ref={timelineRef} role="list" aria-label="Línea temporal del patrimonio">
-            <i className="forma-timeline-line" />
-            {months.map((month, index) => (
+          <div className="forma-console" aria-label="Control del recorrido">
+            <div className="forma-playback">
               <button
-                key={month.key}
                 type="button"
-                role="listitem"
-                data-index={index}
-                className={`${index === activeIndex ? 'is-active' : ''}${month.increments ? ' has-in' : ''}${month.decrements ? ' has-out' : ''}${month.isPending ? ' is-pending' : ''}`}
-                aria-label={`${month.label}: ${formatCurrency(month.balance)}`}
-                onClick={() => selectMonth(index, 'timeline')}
-              >
-                <i />
-                <span>{month.shortLabel}</span>
-                <small>{Math.round(month.balance).toLocaleString('es-ES')} €</small>
-              </button>
-            ))}
+                className="is-main"
+                aria-label={playing ? 'Pausar recorrido' : 'Reproducir recorrido'}
+                aria-pressed={playing}
+                onClick={() => {
+                  setMode('story');
+                  setPlaying((current) => !current);
+                }}
+              ><Icon name={playing ? 'pause' : 'play'} /><span>{playing ? 'Pausar recorrido' : 'Reproducir historia'}</span></button>
+              <button type="button" aria-label="Reiniciar recorrido" onClick={() => { setMode('story'); setActiveIndex(0); setPlaying(!reducedMotion); }}><Icon name="reset" /><span>Reiniciar</span></button>
+            </div>
+            <div className="forma-timeline" ref={timelineRef} role="list" aria-label="Seleccionar un mes">
+              {months.map((month, index) => (
+                <button
+                  key={month.key}
+                  type="button"
+                  role="listitem"
+                  data-index={index}
+                  className={`${index === activeIndex ? 'is-active' : ''}${month.increments ? ' has-in' : ''}${month.decrements ? ' has-out' : ''}${month.isPending ? ' is-pending' : ''}`}
+                  aria-label={`${month.label}: ${formatCurrency(month.balance)}`}
+                  onClick={() => selectMonth(index, 'timeline')}
+                >
+                  <span>{month.shortLabel}</span>
+                  <strong>{Math.round(month.balance).toLocaleString('es-ES')} €</strong>
+                  <small>{month.isPending ? 'Capital actualizado' : signedMoney(month.profit)}</small>
+                  <i>{month.increments > 0 ? '+' : ''}{month.decrements > 0 ? '-' : ''}</i>
+                </button>
+              ))}
+            </div>
           </div>
-          <button type="button" className="forma-precision-shortcut" onClick={() => changeMode('precision')} aria-label="Abrir detalle exacto"><Icon name="precision" /><span>Comprobar cifras</span></button>
         </section>
 
         <section className="forma-current-equation" aria-label="Composición patrimonial actual">
@@ -528,7 +565,7 @@ export const FormaReportPage: React.FC<FormaReportPageProps> = ({
         <footer className="forma-footer">
           <span>Periodo disponible · {months[0].label} — {months[latestPublishedIndex]?.label ?? active.label}</span>
           <span>Actualizado · {new Date(report.createdAt).toLocaleDateString('es-ES')}</span>
-          <span>Arrastra la construcción o selecciona un mes para explorarlo</span>
+          <span>Selecciona cualquier mes para consultar su composición exacta</span>
         </footer>
       </main>
 

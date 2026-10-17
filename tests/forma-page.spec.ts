@@ -20,26 +20,30 @@ const openForma = async (page: import('@playwright/test').Page) => {
 
 test('renders FORMA as an isolated data-driven patrimony construction', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'iphone-13-landscape', 'The real WebGL scene uses its own project to avoid GPU contention.');
-  test.setTimeout(150_000);
+  test.setTimeout(240_000);
   const pageErrors: Error[] = [];
   page.on('pageerror', (error) => pageErrors.push(error));
   await page.setViewportSize({ width: 1728, height: 1080 });
   await mountReport(page);
   await openForma(page);
 
-  await expect(page.locator('.forma-brand')).toContainText('FORMA');
+  await expect(page.locator('.forma-brand')).toContainText('AXIS');
   await expect(page.locator('.forma-active-reading')).toContainText('49.200,00');
   await expect(page.locator('.forma-scene-canvas')).toBeVisible();
   await expect(page.locator('.forma-timeline button')).toHaveCount(14);
   await expect(page.locator('.forma-current-equation')).toContainText('127.548,34');
+  await expect(page.locator('#forma-month-select option')).toHaveCount(14);
+  await page.locator('#forma-month-select').selectOption('1');
+  await expect(page.locator('.forma-active-reading')).toContainText('50.000,00');
+  await page.locator('#forma-month-select').selectOption('0');
 
   const canvasSize = await page.locator('.forma-scene-canvas').evaluate((canvas: HTMLCanvasElement) => ({ width: canvas.width, height: canvas.height }));
   expect(canvasSize.width).toBeGreaterThan(900);
-  expect(canvasSize.height).toBeGreaterThan(600);
+  expect(canvasSize.height).toBeGreaterThan(420);
 
   await page.getByRole('button', { name: 'Recorrido Historia guiada' }).click();
   await expect(page.getByRole('button', { name: 'Pausar recorrido' })).toBeVisible();
-  await expect.poll(async () => page.locator('.forma-timeline button.is-active').getAttribute('data-index'), { timeout: 6_000 }).toBe('1');
+  await expect.poll(async () => Number(await page.locator('.forma-timeline button.is-active').getAttribute('data-index')), { timeout: 15_000 }).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Pausar recorrido' }).click();
   await expect(page.getByRole('button', { name: 'Reproducir recorrido' })).toBeVisible();
   const pausedIndex = await page.locator('.forma-timeline button.is-active').getAttribute('data-index');

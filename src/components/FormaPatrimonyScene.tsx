@@ -35,69 +35,99 @@ const clamp = (value: number, minimum: number, maximum: number) => Math.max(mini
 
 const signedMoney = (value: number) => {
   if (Math.abs(value) < 0.005) return formatCurrency(0);
-  return `${value > 0 ? '+' : '−'}${formatCurrency(Math.abs(value))}`;
+  return `${value > 0 ? '+' : '-'}${formatCurrency(Math.abs(value))}`;
 };
 
 const signedPercent = (value: number) => {
   if (Math.abs(value) < 0.005) return '0,00 %';
-  return `${value > 0 ? '+' : '−'}${Math.abs(value).toLocaleString('es-ES', {
+  return `${value > 0 ? '+' : '-'}${Math.abs(value).toLocaleString('es-ES', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })} %`;
 };
 
-const FormaFallback: React.FC<FormaPatrimonySceneProps> = ({ months, activeIndex, lens, onSelect }) => {
-  const width = 1280;
-  const height = 620;
-  const left = 78;
-  const right = 44;
-  const top = 48;
-  const bottom = 92;
+const compactCurrency = (value: number) => {
+  const absolute = Math.abs(value);
+  if (absolute >= 1_000_000) return `${(value / 1_000_000).toLocaleString('es-ES', { maximumFractionDigits: 1 })} M EUR`;
+  if (absolute >= 1_000) return `${Math.round(value / 1_000).toLocaleString('es-ES')}k EUR`;
+  return `${Math.round(value).toLocaleString('es-ES')} EUR`;
+};
+
+const buildScale = (months: FormaMonthNode[]) => {
+  const values = months.flatMap((month) => [month.balance, month.netCapital]);
+  const rawMaximum = Math.max(1, ...values);
+  const rawMinimum = Math.min(0, ...values);
+  const padding = Math.max(1, (rawMaximum - rawMinimum) * 0.12);
+  const minimum = Math.max(0, rawMinimum - padding * 0.25);
+  const maximum = rawMaximum + padding;
+  const range = Math.max(1, maximum - minimum);
+  return { minimum, maximum, range };
+};
+
+const makeChartGeometry = (months: FormaMonthNode[], width: number, height: number) => {
+  const scale = buildScale(months);
+  const left = 84;
+  const right = 34;
+  const top = 36;
+  const bottom = 36;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
-  const maximum = Math.max(1, ...months.flatMap((month) => [month.balance, month.netCapital]));
-  const minimum = Math.min(0, ...months.flatMap((month) => [month.balance, month.netCapital]));
-  const range = Math.max(1, maximum - minimum);
   const xFor = (index: number) => left + (months.length === 1 ? plotWidth / 2 : (index / (months.length - 1)) * plotWidth);
-  const yFor = (value: number) => top + ((maximum - value) / range) * plotHeight;
+  const yFor = (value: number) => top + ((scale.maximum - value) / scale.range) * plotHeight;
   const wealthPath = months.map((month, index) => `${index ? 'L' : 'M'} ${xFor(index)} ${yFor(month.balance)}`).join(' ');
   const capitalPath = months.map((month, index) => `${index ? 'L' : 'M'} ${xFor(index)} ${yFor(month.netCapital)}`).join(' ');
-  const areaPath = `${wealthPath} ${months.slice().reverse().map((month, reverseIndex) => {
+  const resultArea = `${wealthPath} ${months.slice().reverse().map((month, reverseIndex) => {
     const index = months.length - 1 - reverseIndex;
     return `L ${xFor(index)} ${yFor(month.netCapital)}`;
   }).join(' ')} Z`;
+  return { ...scale, left, right, top, bottom, plotWidth, plotHeight, xFor, yFor, wealthPath, capitalPath, resultArea };
+};
+
+const FormaFallback: React.FC<FormaPatrimonySceneProps> = ({ months, activeIndex, lens, onSelect }) => {
+  const width = 1280;
+  const height = 610;
+  const chart = makeChartGeometry(months, width, height);
 
   return (
     <div className="forma-scene-fallback" data-renderer="svg-compatible">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Construcción patrimonial interactiva en modo compatible">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Trayectoria patrimonial interactiva en modo compatible">
         <defs>
-          <linearGradient id="forma-profit-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#caa96a" stopOpacity="0.5" />
-            <stop offset="1" stopColor="#caa96a" stopOpacity="0.06" />
+          <linearGradient id="forma-result-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#b99858" stopOpacity="0.42" />
+            <stop offset="1" stopColor="#b99858" stopOpacity="0.04" />
           </linearGradient>
-          <filter id="forma-soft-shadow" x="-20%" y="-20%" width="140%" height="160%">
-            <feDropShadow dx="0" dy="10" stdDeviation="12" floodColor="#273c3a" floodOpacity="0.14" />
+          <filter id="forma-path-glow" x="-20%" y="-40%" width="140%" height="180%">
+            <feGaussianBlur stdDeviation="7" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
         </defs>
         {[0, 0.25, 0.5, 0.75, 1].map((tick) => {
-          const y = top + tick * plotHeight;
-          return <line key={tick} x1={left} x2={width - right} y1={y} y2={y} className="forma-fallback-grid" />;
-        })}
-        {lens !== 'composition' ? <path d={areaPath} fill="url(#forma-profit-fill)" /> : null}
-        <path d={capitalPath} className="forma-fallback-capital" />
-        <path d={wealthPath} className="forma-fallback-wealth" filter="url(#forma-soft-shadow)" />
-        {months.map((month, index) => {
-          const x = xFor(index);
-          const y = yFor(month.balance);
-          const isActive = index === activeIndex;
-          const movementVisible = lens !== 'movements' || month.increments > 0 || month.decrements > 0 || month.isPending;
+          const y = chart.top + tick * chart.plotHeight;
+          const value = chart.maximum - tick * chart.range;
           return (
-            <g key={month.key} className={`${isActive ? 'is-active' : ''}${movementVisible ? '' : ' is-muted'}`}>
-              <line x1={x} x2={x} y1={y} y2={top + plotHeight} className="forma-fallback-stem" />
-              {month.increments > 0 ? <path d={`M ${x - 25} ${y + 20} L ${x - 8} ${y + 20}`} className="forma-fallback-in" /> : null}
-              {month.decrements > 0 ? <path d={`M ${x + 8} ${y + 28} L ${x + 25} ${y + 28}`} className="forma-fallback-out" /> : null}
-              <circle cx={x} cy={y} r={isActive ? 10 : 6} className="forma-fallback-node" />
-              <text x={x} y={height - 47} textAnchor="middle">{month.shortLabel}</text>
+            <g key={tick}>
+              <line x1={chart.left} x2={width - chart.right} y1={y} y2={y} className="forma-fallback-grid" />
+              <text x={chart.left - 14} y={y + 5} textAnchor="end" className="forma-fallback-axis-label">{compactCurrency(value)}</text>
+            </g>
+          );
+        })}
+        {lens !== 'movements' ? <path d={chart.resultArea} fill="url(#forma-result-fill)" opacity={lens === 'composition' ? 1 : 0.36} /> : null}
+        <path d={chart.capitalPath} className="forma-fallback-capital" opacity={lens === 'movements' ? 0.22 : 1} />
+        <path d={chart.wealthPath} className="forma-fallback-wealth" filter="url(#forma-path-glow)" opacity={lens === 'movements' ? 0.28 : 1} />
+        {months.map((month, index) => {
+          const x = chart.xFor(index);
+          const wealthY = chart.yFor(month.balance);
+          const capitalY = chart.yFor(month.netCapital);
+          const isActive = index === activeIndex;
+          const movement = month.increments > 0 || month.decrements > 0 || month.isPending;
+          return (
+            <g key={month.key} className={`${isActive ? 'is-active' : ''}${lens === 'movements' && !movement ? ' is-muted' : ''}`}>
+              {isActive ? <rect x={x - 16} y={chart.top - 12} width="32" height={chart.plotHeight + 24} rx="16" className="forma-fallback-focus" /> : null}
+              <line x1={x} x2={x} y1={wealthY} y2={capitalY} className="forma-fallback-result-span" />
+              <circle cx={x} cy={capitalY} r={isActive ? 7 : 4.5} className="forma-fallback-capital-node" />
+              <circle cx={x} cy={wealthY} r={isActive ? 11 : 6.5} className="forma-fallback-node" />
+              {month.increments > 0 ? <path d={`M ${x - 13} ${wealthY + 26} L ${x - 13} ${wealthY + 8} l -6 7 m 6 -7 l 6 7`} className="forma-fallback-in" /> : null}
+              {month.decrements > 0 ? <path d={`M ${x + 13} ${wealthY + 8} L ${x + 13} ${wealthY + 26} l -6 -7 m 6 7 l 6 -7`} className="forma-fallback-out" /> : null}
             </g>
           );
         })}
@@ -113,7 +143,7 @@ const FormaFallback: React.FC<FormaPatrimonySceneProps> = ({ months, activeIndex
           />
         ))}
       </div>
-      <span className="forma-compatible-note">Visualización compatible · todos los datos permanecen disponibles</span>
+      <span className="forma-compatible-note">Modo compatible · todos los periodos y cifras siguen disponibles</span>
     </div>
   );
 };
@@ -125,12 +155,13 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
   const activeIndexRef = useRef(activeIndex);
   const lensRef = useRef(lens);
   const onSelectRef = useRef(onSelect);
-  const zoomRef = useRef(0);
+  const zoomRef = useRef(100);
   const [rendererState, setRendererState] = useState<'checking' | 'webgl' | 'fallback'>('checking');
   const [hover, setHover] = useState<HoverState | null>(null);
-  const [zoom, setZoom] = useState(0);
+  const [zoom, setZoom] = useState(100);
   const hoveredMonth = hover ? months[hover.index] : null;
-  const maximum = useMemo(() => Math.max(1, ...months.flatMap((month) => [month.balance, month.netCapital])), [months]);
+  const scale = useMemo(() => buildScale(months), [months]);
+  const tickValues = useMemo(() => Array.from({ length: 5 }, (_, index) => scale.maximum - (scale.range * index) / 4), [scale]);
 
   useEffect(() => { activeIndexRef.current = activeIndex; }, [activeIndex]);
   useEffect(() => { lensRef.current = lens; }, [lens]);
@@ -151,201 +182,193 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
     }
 
     setRendererState('webgl');
-    const constrainedDevice = (window.devicePixelRatio || 1) > 1.8;
-    const pixelRatio = constrainedDevice
-      ? host.clientWidth > 1200 ? 0.9 : 1.2
-      : Math.min(window.devicePixelRatio || 1, host.clientWidth > 1200 ? 1.2 : 1.4);
-    renderer.setPixelRatio(pixelRatio);
+    const highDensity = (window.devicePixelRatio || 1) > 1.8;
+    renderer.setPixelRatio(highDensity ? 1 : Math.min(window.devicePixelRatio || 1, 1.35));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.08;
-    renderer.shadowMap.enabled = !constrainedDevice;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMappingExposure = 1.12;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xf3efe6, 0.048);
-    const camera = new THREE.PerspectiveCamera(31, 1, 0.1, 100);
-    camera.position.set(3.8, 5.4, 10.8);
+    const camera = new THREE.OrthographicCamera(-7, 7, 3.7, -3.7, 0.1, 40);
+    camera.position.set(0, 0, 12);
+    camera.lookAt(0, 0, 0);
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x36504d, 2.8));
+    const keyLight = new THREE.DirectionalLight(0xfff8e8, 4.6);
+    keyLight.position.set(-5, 8, 10);
+    scene.add(keyLight);
+    const rimLight = new THREE.PointLight(0x7ec6b7, 15, 26, 2);
+    rimLight.position.set(6, 2, 7);
+    scene.add(rimLight);
 
     const world = new THREE.Group();
-    world.rotation.y = -0.07;
     scene.add(world);
 
-    const hemisphere = new THREE.HemisphereLight(0xffffff, 0x59706c, 2.6);
-    scene.add(hemisphere);
-    const keyLight = new THREE.DirectionalLight(0xfff7df, 5.2);
-    keyLight.position.set(-4, 10, 7);
-    keyLight.castShadow = true;
-    keyLight.shadow.mapSize.set(1024, 1024);
-    scene.add(keyLight);
-    const edgeLight = new THREE.DirectionalLight(0x80c8bb, 2.4);
-    edgeLight.position.set(8, 4, -5);
-    scene.add(edgeLight);
+    const chartWidth = 12.8;
+    const chartHeight = 5.65;
+    const chartBottom = -2.72;
+    const xFor = (index: number) => months.length === 1 ? 0 : -chartWidth / 2 + (index / (months.length - 1)) * chartWidth;
+    const yFor = (value: number) => chartBottom + ((value - scale.minimum) / scale.range) * chartHeight;
 
-    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0xe9e4d9, roughness: 0.94, metalness: 0.02 });
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 28), groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.08;
-    ground.receiveShadow = true;
-    world.add(ground);
-
-    const capitalMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x244d49,
-      roughness: 0.42,
-      metalness: 0.08,
-      clearcoat: 0.35,
-      clearcoatRoughness: 0.34
-    });
-    const profitMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xd0ad68,
-      roughness: 0.13,
-      metalness: 0.04,
-      transmission: 0.38,
+    const panelMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xf5f2e9,
+      roughness: 0.82,
+      metalness: 0.02,
       transparent: true,
       opacity: 0.72,
-      thickness: 0.9,
-      clearcoat: 0.85,
-      clearcoatRoughness: 0.12
+      transmission: 0.08
     });
-    const negativeMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xb86159,
-      roughness: 0.27,
-      transparent: true,
-      opacity: 0.72,
-      transmission: 0.16
-    });
-    const pendingMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x8aa8a1,
-      roughness: 0.22,
-      transparent: true,
-      opacity: 0.48,
-      wireframe: true
-    });
-    const inflowMaterial = new THREE.MeshStandardMaterial({ color: 0xb89350, roughness: 0.34, metalness: 0.35 });
-    const outflowMaterial = new THREE.MeshStandardMaterial({ color: 0xa95650, roughness: 0.43, metalness: 0.12 });
-    const spineMaterial = new THREE.MeshBasicMaterial({ color: 0x718b84, transparent: true, opacity: 0.34 });
-    const selectedMaterial = new THREE.MeshBasicMaterial({ color: 0xd6b568, transparent: true, opacity: 0.95 });
-    const materialTemplates: THREE.Material[] = [
-      capitalMaterial,
-      profitMaterial,
-      negativeMaterial,
-      pendingMaterial,
-      inflowMaterial,
-      outflowMaterial,
-      spineMaterial,
-      selectedMaterial
-    ];
-    const cloneMaterial = <T extends THREE.Material>(source: T) => {
-      const material = source.clone() as T;
-      material.userData.baseOpacity = material.opacity;
-      material.transparent = true;
-      return material;
-    };
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(14.2, 6.9), panelMaterial);
+    panel.position.z = -1.25;
+    world.add(panel);
 
-    const spacing = 1.18;
-    const structureHeight = 5.6;
-    const capitalFloor = 0.34;
-    const profitFloor = 0.08;
-    const structureGroups: THREE.Group[] = [];
+    const gridMaterial = new THREE.MeshBasicMaterial({ color: 0x365a55, transparent: true, opacity: 0.11 });
+    for (let index = 0; index < 5; index += 1) {
+      const grid = new THREE.Mesh(new THREE.BoxGeometry(chartWidth, 0.012, 0.012), gridMaterial.clone());
+      grid.position.set(0, chartBottom + (chartHeight * index) / 4, -0.7);
+      world.add(grid);
+    }
+
+    const wealthPoints = months.map((month, index) => new THREE.Vector3(xFor(index), yFor(month.balance), 0.34));
+    const capitalPoints = months.map((month, index) => new THREE.Vector3(xFor(index), yFor(month.netCapital), -0.15));
+    const wealthCurve = new THREE.CatmullRomCurve3(wealthPoints, false, 'catmullrom', 0.08);
+    const capitalCurve = new THREE.CatmullRomCurve3(capitalPoints, false, 'catmullrom', 0.08);
+
+    const wealthGlowMaterial = new THREE.MeshBasicMaterial({ color: 0x1b786d, transparent: true, opacity: 0.13 });
+    const wealthMaterial = new THREE.MeshPhysicalMaterial({ color: 0x17665e, roughness: 0.24, metalness: 0.2, clearcoat: 0.88, clearcoatRoughness: 0.16 });
+    const capitalMaterial = new THREE.MeshPhysicalMaterial({ color: 0x263f3d, roughness: 0.42, metalness: 0.12, clearcoat: 0.38 });
+    const resultMaterial = new THREE.MeshPhysicalMaterial({ color: 0xc0a05e, roughness: 0.22, metalness: 0.12, transparent: true, opacity: 0.28, transmission: 0.18, side: THREE.DoubleSide });
+    const movementInMaterial = new THREE.MeshPhysicalMaterial({ color: 0xb28d48, roughness: 0.3, metalness: 0.38, emissive: 0x4e3712, emissiveIntensity: 0.2 });
+    const movementOutMaterial = new THREE.MeshPhysicalMaterial({ color: 0xb8655e, roughness: 0.36, metalness: 0.14, emissive: 0x5b1e1a, emissiveIntensity: 0.18 });
+    const pendingMaterial = new THREE.MeshPhysicalMaterial({ color: 0x759c94, roughness: 0.28, wireframe: true, transparent: true, opacity: 0.8 });
+
+    const wealthGlow = new THREE.Mesh(new THREE.TubeGeometry(wealthCurve, Math.max(48, months.length * 12), 0.15, 8, false), wealthGlowMaterial);
+    wealthGlow.userData.layer = 'trajectory';
+    world.add(wealthGlow);
+    const wealthPath = new THREE.Mesh(new THREE.TubeGeometry(wealthCurve, Math.max(48, months.length * 12), 0.055, 10, false), wealthMaterial);
+    wealthPath.userData.layer = 'trajectory';
+    world.add(wealthPath);
+    const capitalPath = new THREE.Mesh(new THREE.TubeGeometry(capitalCurve, Math.max(48, months.length * 12), 0.034, 8, false), capitalMaterial);
+    capitalPath.userData.layer = 'capital';
+    world.add(capitalPath);
+
+    const resultMeshes: THREE.Mesh[] = [];
+    for (let index = 0; index < months.length - 1; index += 1) {
+      const aWealth = wealthPoints[index];
+      const bWealth = wealthPoints[index + 1];
+      const aCapital = capitalPoints[index];
+      const bCapital = capitalPoints[index + 1];
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+        aWealth.x, aWealth.y, 0,
+        bWealth.x, bWealth.y, 0,
+        bCapital.x, bCapital.y, 0,
+        aWealth.x, aWealth.y, 0,
+        bCapital.x, bCapital.y, 0,
+        aCapital.x, aCapital.y, 0
+      ], 3));
+      geometry.computeVertexNormals();
+      const result = new THREE.Mesh(geometry, resultMaterial.clone());
+      result.userData.layer = 'result';
+      resultMeshes.push(result);
+      world.add(result);
+    }
+
+    const focusMaterial = new THREE.MeshBasicMaterial({ color: 0xc5a45f, transparent: true, opacity: 0.13, depthWrite: false });
+    const focus = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 6.15), focusMaterial);
+    focus.position.set(xFor(activeIndex), 0, -0.48);
+    world.add(focus);
+
     const hitTargets: THREE.Object3D[] = [];
-    const pathPoints: THREE.Vector3[] = [];
+    const nodeGroups: THREE.Group[] = [];
+    const movementGroups: THREE.Group[] = [];
+    const nodeGeometry = new THREE.SphereGeometry(0.105, 18, 14);
+    const capitalNodeGeometry = new THREE.SphereGeometry(0.065, 14, 10);
+    const hitGeometry = new THREE.SphereGeometry(0.34, 10, 8);
+    const hitMaterial = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
 
     months.forEach((month, index) => {
-      const group = new THREE.Group();
-      group.position.x = index * spacing;
-      group.userData.index = index;
-      const capitalHeight = Math.max(capitalFloor, (Math.max(0, month.netCapital) / maximum) * structureHeight);
-      const rawResult = month.balance - month.netCapital;
-      const resultHeight = Math.max(profitFloor, (Math.abs(rawResult) / maximum) * structureHeight);
-      const width = month.isPending ? 0.62 : 0.72;
-
-      const capital = new THREE.Mesh(
-        new THREE.BoxGeometry(width, capitalHeight, 1.04),
-        cloneMaterial(month.isPending ? pendingMaterial : capitalMaterial)
+      const nodeGroup = new THREE.Group();
+      nodeGroup.userData.index = index;
+      const wealthNodeMaterial = (month.isPending ? pendingMaterial : wealthMaterial).clone();
+      const capitalNodeMaterial = (month.isPending ? pendingMaterial : capitalMaterial).clone();
+      const wealthNode = new THREE.Mesh(nodeGeometry, wealthNodeMaterial);
+      wealthNode.position.copy(wealthPoints[index]);
+      wealthNode.userData.index = index;
+      nodeGroup.add(wealthNode);
+      const capitalNode = new THREE.Mesh(capitalNodeGeometry, capitalNodeMaterial);
+      capitalNode.position.copy(capitalPoints[index]);
+      nodeGroup.add(capitalNode);
+      const connectorMaterial = resultMaterial.clone();
+      connectorMaterial.opacity = 0.48;
+      const connectorHeight = Math.max(0.03, Math.abs(wealthPoints[index].y - capitalPoints[index].y));
+      const connector = new THREE.Mesh(new THREE.BoxGeometry(0.026, connectorHeight, 0.026), connectorMaterial);
+      connector.position.set(xFor(index), (wealthPoints[index].y + capitalPoints[index].y) / 2, 0.08);
+      nodeGroup.add(connector);
+      const halo = new THREE.Mesh(
+        new THREE.TorusGeometry(0.2, 0.018, 8, 32),
+        new THREE.MeshBasicMaterial({ color: 0xc7a65f, transparent: true, opacity: index === activeIndex ? 0.95 : 0.12 })
       );
-      capital.position.y = capitalHeight / 2;
-      capital.castShadow = true;
-      capital.receiveShadow = true;
-      capital.userData.index = index;
-      group.add(capital);
-      hitTargets.push(capital);
+      halo.position.copy(wealthPoints[index]);
+      halo.position.z += 0.01;
+      halo.userData.role = 'halo';
+      nodeGroup.add(halo);
+      const hit = new THREE.Mesh(hitGeometry, hitMaterial.clone());
+      hit.position.copy(wealthPoints[index]);
+      hit.userData.index = index;
+      nodeGroup.add(hit);
+      hitTargets.push(hit);
+      nodeGroups.push(nodeGroup);
+      world.add(nodeGroup);
 
-      const result = new THREE.Mesh(
-        new THREE.BoxGeometry(width * 0.94, resultHeight, 0.98),
-        cloneMaterial(month.isPending ? pendingMaterial : rawResult >= 0 ? profitMaterial : negativeMaterial)
-      );
-      result.position.y = rawResult >= 0 ? capitalHeight + resultHeight / 2 : Math.max(resultHeight / 2, capitalHeight - resultHeight / 2);
-      result.castShadow = true;
-      result.userData.index = index;
-      result.userData.role = 'result';
-      group.add(result);
-      hitTargets.push(result);
-
-      const cap = new THREE.Mesh(new THREE.BoxGeometry(width + 0.09, 0.035, 1.13), cloneMaterial(selectedMaterial));
-      cap.position.y = Math.max(capitalHeight, capitalHeight + (rawResult >= 0 ? resultHeight : 0)) + 0.035;
-      cap.userData.role = 'cap';
-      group.add(cap);
-
+      const movementGroup = new THREE.Group();
+      movementGroup.userData.hasMovement = Boolean(month.increments || month.decrements || month.isPending);
+      const markerBaseY = chartBottom + 0.18;
       if (month.increments > 0) {
-        const inflowSize = clamp((month.increments / maximum) * 4.2, 0.16, 0.72);
-        const inflow = new THREE.Mesh(new THREE.BoxGeometry(0.34, inflowSize, 0.7), cloneMaterial(inflowMaterial));
-        inflow.position.set(-0.62, Math.max(0.16, inflowSize / 2), 0.05);
-        inflow.castShadow = true;
-        inflow.userData.role = 'movement';
-        inflow.userData.index = index;
-        group.add(inflow);
-        hitTargets.push(inflow);
+        const height = clamp((month.increments / scale.maximum) * 4.2, 0.34, 1.15);
+        const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.052, height, 0.052), movementInMaterial.clone());
+        shaft.position.set(xFor(index) - 0.13, markerBaseY + height / 2, 0.64);
+        movementGroup.add(shaft);
+        const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.24, 4), movementInMaterial.clone());
+        arrow.position.set(xFor(index) - 0.13, markerBaseY + height + 0.11, 0.64);
+        movementGroup.add(arrow);
       }
-
       if (month.decrements > 0) {
-        const outflowSize = clamp((month.decrements / maximum) * 4.2, 0.16, 0.65);
-        const outflow = new THREE.Mesh(new THREE.BoxGeometry(0.34, outflowSize, 0.7), cloneMaterial(outflowMaterial));
-        outflow.position.set(0.62, Math.max(0.16, outflowSize / 2), 0.05);
-        outflow.castShadow = true;
-        outflow.userData.role = 'movement';
-        outflow.userData.index = index;
-        group.add(outflow);
-        hitTargets.push(outflow);
+        const height = clamp((month.decrements / scale.maximum) * 4.2, 0.34, 1.05);
+        const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.052, height, 0.052), movementOutMaterial.clone());
+        shaft.position.set(xFor(index) + 0.13, markerBaseY + height / 2, 0.64);
+        movementGroup.add(shaft);
+        const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.24, 4), movementOutMaterial.clone());
+        arrow.rotation.z = Math.PI;
+        arrow.position.set(xFor(index) + 0.13, markerBaseY - 0.03, 0.64);
+        movementGroup.add(arrow);
       }
-
-      const rib = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.05, 2.8), cloneMaterial(spineMaterial));
-      rib.position.set(0, 0.03, 0);
-      group.add(rib);
-
-      const totalHeight = Math.max(capitalHeight, capitalHeight + (rawResult >= 0 ? resultHeight : 0));
-      pathPoints.push(new THREE.Vector3(index * spacing, totalHeight + 0.2, 0));
-      structureGroups.push(group);
-      world.add(group);
+      movementGroups.push(movementGroup);
+      world.add(movementGroup);
     });
-
-    let trajectoryMaterial: THREE.Material | null = null;
-    if (pathPoints.length > 1) {
-      const path = new THREE.CatmullRomCurve3(pathPoints, false, 'catmullrom', 0.18);
-      trajectoryMaterial = cloneMaterial(selectedMaterial);
-      const tube = new THREE.Mesh(new THREE.TubeGeometry(path, Math.max(40, months.length * 8), 0.018, 6, false), trajectoryMaterial);
-      tube.userData.role = 'trajectory';
-      world.add(tube);
-    }
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    const dragStart = { x: 0, y: 0, active: false, moved: false };
     let frame = 0;
     let visible = !document.hidden;
-    let targetCameraX = activeIndex * spacing;
-    let targetCameraY = 5.4;
-    let targetCameraZ = 10.8;
-    let lastTime = performance.now();
-    let lastRenderTime = 0;
-    const frameInterval = 1000 / (constrainedDevice ? 24 : 45);
+    let lastRender = 0;
+    let introProgress = reducedMotion ? 1 : 0;
+    let mobileView = false;
+    const frameInterval = 1000 / (highDensity ? 28 : 45);
 
     const resize = () => {
       const bounds = host.getBoundingClientRect();
       const width = Math.max(1, Math.round(bounds.width));
       const height = Math.max(1, Math.round(bounds.height));
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
+      const aspect = width / height;
+      mobileView = width < 720;
+      const verticalHalf = mobileView ? 3.65 : 3.55;
+      camera.left = -verticalHalf * aspect;
+      camera.right = verticalHalf * aspect;
+      camera.top = verticalHalf;
+      camera.bottom = -verticalHalf;
       camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
     };
 
     const updatePointer = (event: PointerEvent) => {
@@ -356,7 +379,7 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
       const hit = raycaster.intersectObjects(hitTargets, false)[0];
       if (!hit) {
         setHover(null);
-        canvas.style.cursor = dragStart.active ? 'grabbing' : 'grab';
+        canvas.style.cursor = 'crosshair';
         return;
       }
       const index = Number(hit.object.userData.index);
@@ -365,94 +388,67 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
       canvas.style.cursor = 'pointer';
     };
 
-    const handlePointerDown = (event: PointerEvent) => {
-      dragStart.x = event.clientX;
-      dragStart.y = event.clientY;
-      dragStart.active = true;
-      dragStart.moved = false;
-      updatePointer(event);
-      canvas.setPointerCapture?.(event.pointerId);
-    };
-
-    const handlePointerMove = (event: PointerEvent) => {
-      if (dragStart.active && Math.abs(event.clientX - dragStart.x) > 8) dragStart.moved = true;
-      updatePointer(event);
-    };
-
-    const handlePointerUp = (event: PointerEvent) => {
-      const delta = event.clientX - dragStart.x;
-      const moved = dragStart.moved;
-      dragStart.active = false;
-      canvas.releasePointerCapture?.(event.pointerId);
-      if (moved && Math.abs(delta) > 44) {
-        onSelectRef.current(clamp(activeIndexRef.current + (delta < 0 ? 1 : -1), 0, months.length - 1), 'arrastre');
-        return;
-      }
+    const selectPointerMonth = () => {
       raycaster.setFromCamera(pointer, camera);
       const hit = raycaster.intersectObjects(hitTargets, false)[0];
       const index = Number(hit?.object.userData.index);
-      if (Number.isFinite(index)) onSelectRef.current(index, 'escena');
+      if (Number.isFinite(index)) onSelectRef.current(index, 'grafico');
     };
-
-    const handlePointerLeave = () => {
-      if (!dragStart.active) setHover(null);
-    };
+    const handlePointerLeave = () => setHover(null);
 
     const handleVisibility = () => { visible = !document.hidden; };
-
     const animate = (time: number) => {
       frame = window.requestAnimationFrame(animate);
-      if (!visible) return;
-      if (time - lastRenderTime < frameInterval) return;
-      lastRenderTime = time;
-      const delta = Math.min(0.05, (time - lastTime) / 1000);
-      lastTime = time;
+      if (!visible || time - lastRender < frameInterval) return;
+      lastRender = time;
       const current = activeIndexRef.current;
       const currentLens = lensRef.current;
-      targetCameraX = current * spacing + (currentLens === 'composition' ? 2.55 : 1.7);
-      targetCameraY = currentLens === 'trajectory' ? 6.8 : 5.35;
-      targetCameraZ = (currentLens === 'trajectory' ? 13.4 : currentLens === 'movements' ? 11.8 : 10.5) + zoomRef.current;
-      const smoothing = reducedMotion ? 1 : 1 - Math.pow(0.001, delta);
+      const targetCameraX = mobileView ? xFor(current) : 0;
+      const smoothing = reducedMotion ? 1 : 0.1;
       camera.position.x += (targetCameraX - camera.position.x) * smoothing;
-      camera.position.y += (targetCameraY - camera.position.y) * smoothing;
-      camera.position.z += (targetCameraZ - camera.position.z) * smoothing;
-      camera.lookAt(current * spacing, 2.15, 0);
+      camera.zoom += ((zoomRef.current / 100) - camera.zoom) * smoothing;
+      camera.updateProjectionMatrix();
 
-      structureGroups.forEach((group, index) => {
+      if (introProgress < 1) introProgress = Math.min(1, introProgress + 0.018);
+      world.scale.x = introProgress;
+      world.position.x = -chartWidth / 2 * (1 - introProgress);
+      focus.position.x += (xFor(current) - focus.position.x) * smoothing;
+
+      nodeGroups.forEach((group, index) => {
         const selected = index === current;
-        const month = months[index];
-        const movementMonth = month.increments > 0 || month.decrements > 0 || month.isPending;
-        const targetScale = selected ? 1.11 : currentLens === 'composition' ? 0.88 : 0.98;
-        group.scale.x += (targetScale - group.scale.x) * (reducedMotion ? 1 : 0.08);
-        group.scale.y += (targetScale - group.scale.y) * (reducedMotion ? 1 : 0.08);
-        group.scale.z += (targetScale - group.scale.z) * (reducedMotion ? 1 : 0.08);
-        group.position.z += (((selected ? 0.48 : 0) - group.position.z) * (reducedMotion ? 1 : 0.08));
-        const structureOpacity = currentLens === 'movements'
-          ? movementMonth ? 0.48 : 0.11
-          : currentLens === 'trajectory'
-            ? selected ? 1 : 0.74
-            : selected ? 1 : 0.54;
-        group.traverse((object) => {
-          if (!(object instanceof THREE.Mesh)) return;
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          materials.forEach((material) => {
-            const baseOpacity = Number(material.userData.baseOpacity ?? 1);
-            const role = object.userData.role;
-            const layerOpacity = role === 'cap'
-              ? selected ? 1 : currentLens === 'movements' && !movementMonth ? 0.06 : 0.14
-              : role === 'movement'
-                ? currentLens === 'movements' ? 1 : selected ? 1 : 0.64
-                : structureOpacity;
-            material.opacity = baseOpacity * layerOpacity;
-            material.transparent = true;
-          });
-        });
+        const nodeScale = selected ? 1.55 : 1;
+        const capitalScale = selected ? 1.35 : 1;
+        group.children[0]?.scale.lerp(new THREE.Vector3(nodeScale, nodeScale, nodeScale), reducedMotion ? 1 : 0.12);
+        group.children[1]?.scale.lerp(new THREE.Vector3(capitalScale, capitalScale, capitalScale), reducedMotion ? 1 : 0.12);
+        const halo = group.children.find((child) => child.userData.role === 'halo') as THREE.Mesh | undefined;
+        if (halo && halo.material instanceof THREE.Material) {
+          halo.scale.lerp(new THREE.Vector3(selected ? 1.25 : 1, selected ? 1.25 : 1, selected ? 1.25 : 1), reducedMotion ? 1 : 0.12);
+          halo.material.opacity += ((selected ? 0.95 : 0.12) - halo.material.opacity) * 0.12;
+        }
+        const movementMonth = movementGroups[index]?.userData.hasMovement;
+        group.visible = currentLens !== 'movements' || movementMonth || selected;
       });
 
-      if (trajectoryMaterial) {
-        const baseOpacity = Number(trajectoryMaterial.userData.baseOpacity ?? 1);
-        trajectoryMaterial.opacity = baseOpacity * (currentLens === 'trajectory' ? 1 : currentLens === 'composition' ? 0.3 : 0.14);
-      }
+      const wealthOpacity = currentLens === 'movements' ? 0.22 : 1;
+      const capitalOpacity = currentLens === 'movements' ? 0.16 : 1;
+      (wealthPath.material as THREE.Material).transparent = true;
+      (wealthPath.material as THREE.Material).opacity = wealthOpacity;
+      wealthGlowMaterial.opacity += (((currentLens === 'trajectory' ? 0.22 : 0.13) * wealthOpacity) - wealthGlowMaterial.opacity) * 0.1;
+      (capitalPath.material as THREE.Material).transparent = true;
+      (capitalPath.material as THREE.Material).opacity = capitalOpacity;
+      resultMeshes.forEach((mesh) => {
+        const material = mesh.material as THREE.Material;
+        material.opacity += (((currentLens === 'composition' ? 0.3 : currentLens === 'trajectory' ? 0.08 : 0.03)) - material.opacity) * 0.1;
+      });
+      movementGroups.forEach((group) => {
+        group.visible = Boolean(group.userData.hasMovement);
+        group.traverse((object) => {
+          if (!(object instanceof THREE.Mesh)) return;
+          const material = object.material as THREE.Material;
+          material.transparent = true;
+          material.opacity = currentLens === 'movements' ? 1 : 0.72;
+        });
+      });
 
       renderer.render(scene, camera);
     };
@@ -460,9 +456,9 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
     const observer = new ResizeObserver(resize);
     observer.observe(host);
     resize();
-    canvas.addEventListener('pointerdown', handlePointerDown);
-    canvas.addEventListener('pointermove', handlePointerMove);
-    canvas.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointermove', updatePointer);
+    canvas.addEventListener('pointerdown', updatePointer);
+    canvas.addEventListener('pointerup', selectPointerMonth);
     canvas.addEventListener('pointerleave', handlePointerLeave);
     document.addEventListener('visibilitychange', handleVisibility);
     frame = window.requestAnimationFrame(animate);
@@ -470,13 +466,13 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
     return () => {
       observer.disconnect();
       window.cancelAnimationFrame(frame);
-      canvas.removeEventListener('pointerdown', handlePointerDown);
-      canvas.removeEventListener('pointermove', handlePointerMove);
-      canvas.removeEventListener('pointerup', handlePointerUp);
+      canvas.removeEventListener('pointermove', updatePointer);
+      canvas.removeEventListener('pointerdown', updatePointer);
+      canvas.removeEventListener('pointerup', selectPointerMonth);
       canvas.removeEventListener('pointerleave', handlePointerLeave);
       document.removeEventListener('visibilitychange', handleVisibility);
       const geometries = new Set<THREE.BufferGeometry>();
-      const materials = new Set<THREE.Material>(materialTemplates);
+      const materials = new Set<THREE.Material>();
       scene.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return;
         geometries.add(object.geometry);
@@ -489,25 +485,29 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
       renderer.dispose();
       renderer.forceContextLoss();
     };
-  }, [maximum, months, reducedMotion]);
+  }, [months, reducedMotion, scale]);
 
   if (rendererState === 'fallback') return <FormaFallback {...props} />;
 
   return (
     <div ref={hostRef} className="forma-scene-shell">
-      <canvas ref={canvasRef} className="forma-scene-canvas" aria-label="Escultura tridimensional interactiva del patrimonio" />
-      <div className="forma-scene-zoom" aria-label="Control de acercamiento">
-        <button type="button" aria-label="Acercar visualización" onClick={() => setZoom((current) => clamp(current - 1.1, -2.4, 2.8))}>+</button>
-        <button type="button" aria-label="Restablecer acercamiento" onClick={() => setZoom(0)}><span>{Math.round((1 - zoom / 10.8) * 100)}%</span></button>
-        <button type="button" aria-label="Alejar visualización" onClick={() => setZoom((current) => clamp(current + 1.1, -2.4, 2.8))}>−</button>
+      <div className="forma-scene-axis" aria-hidden="true">
+        {tickValues.map((value) => <span key={value}>{compactCurrency(value)}</span>)}
       </div>
-      {rendererState === 'checking' ? <div className="forma-scene-loading" role="status"><i /><span>Construyendo el patrimonio</span></div> : null}
+      <canvas ref={canvasRef} className="forma-scene-canvas" aria-label="Trayectoria tridimensional interactiva del patrimonio" />
+      <div className="forma-scene-orientation" aria-hidden="true"><span>Capital neto</span><span>Patrimonio</span></div>
+      <div className="forma-scene-zoom" aria-label="Control de acercamiento">
+        <button type="button" aria-label="Acercar visualización" onClick={() => setZoom((current) => clamp(current + 10, 80, 130))}>+</button>
+        <button type="button" aria-label="Restablecer acercamiento" onClick={() => setZoom(100)}><span>{zoom}%</span></button>
+        <button type="button" aria-label="Alejar visualización" onClick={() => setZoom((current) => clamp(current - 10, 80, 130))}>-</button>
+      </div>
+      {rendererState === 'checking' ? <div className="forma-scene-loading" role="status"><i /><span>Preparando la trayectoria</span></div> : null}
       {hoveredMonth && hover ? (
         <div
           className="forma-scene-tooltip"
           style={{
-            left: clamp(hover.x + 14, 10, Math.max(10, (hostRef.current?.clientWidth ?? 320) - 254)),
-            top: clamp(hover.y - 142, 74, Math.max(74, (hostRef.current?.clientHeight ?? 320) - 150))
+            left: clamp(hover.x + 16, 12, Math.max(12, (hostRef.current?.clientWidth ?? 320) - 286)),
+            top: clamp(hover.y - 154, 58, Math.max(58, (hostRef.current?.clientHeight ?? 320) - 170))
           }}
           role="status"
         >
@@ -515,7 +515,8 @@ export const FormaPatrimonyScene: React.FC<FormaPatrimonySceneProps> = (props) =
           <strong>{formatCurrency(hoveredMonth.balance)}</strong>
           <small>{signedMoney(hoveredMonth.profit)} · {signedPercent(hoveredMonth.returnPct)}</small>
           {hoveredMonth.increments > 0 ? <em>+{formatCurrency(hoveredMonth.increments)} aportado</em> : null}
-          {hoveredMonth.decrements > 0 ? <em>−{formatCurrency(hoveredMonth.decrements)} retirado</em> : null}
+          {hoveredMonth.decrements > 0 ? <em>-{formatCurrency(hoveredMonth.decrements)} retirado</em> : null}
+          <b>Seleccionar mes</b>
         </div>
       ) : null}
     </div>
