@@ -33,7 +33,9 @@ test('renders AETHER as an isolated WebGL capital film with real report data', a
   expect(canvasSize.width).toBeGreaterThan(500);
   expect(canvasSize.height).toBeGreaterThan(500);
 
-  await page.locator('.aether-time-node').nth(12).click();
+  const marchNode = page.locator('.aether-time-node').nth(12);
+  await marchNode.focus();
+  await page.keyboard.press('Enter');
   await expect(page.locator('.aether-overline')).toContainText('Marzo 2026');
   await expect(page.locator('.aether-chapter')).toContainText('4673,31');
 
