@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReportData } from '../services/reportLinks';
+import { Pdf3SignalDocument } from './Pdf3SignalDocument';
 import './PdfDesignStudio.css';
 
-export type PdfDesignId = 'pdf1' | 'pdf2';
+export type PdfDesignId = 'pdf1' | 'pdf2' | 'pdf3';
 
 export interface PdfStudioMonth {
   key: string;
@@ -32,7 +33,7 @@ interface PdfDesignStudioProps {
   selectedDesign: PdfDesignId;
   onDesignChange: (design: PdfDesignId) => void;
   loadCurrentPdf: () => Promise<{ blob: Blob; filename: string }>;
-  onPdf2DownloaderReady?: (download: (() => Promise<void>) | null) => void;
+  onGeneratedPdfDownloaderReady?: (download: (() => Promise<void>) | null) => void;
   onDownloaded?: (details: {
     reportClientId: string;
     reportLabel: string;
@@ -559,7 +560,7 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
   selectedDesign,
   onDesignChange,
   loadCurrentPdf,
-  onPdf2DownloaderReady,
+  onGeneratedPdfDownloaderReady,
   onDownloaded,
   periodStart,
   periodEnd
@@ -574,13 +575,16 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
   const [pdf1Loading, setPdf1Loading] = useState(false);
   const [pdf1Error, setPdf1Error] = useState<string | null>(null);
   const [exportState, setExportState] = useState<{ busy: boolean; current: number; total: number }>({ busy: false, current: 0, total: 0 });
+  const generatedDesign = selectedDesign === 'pdf2' || selectedDesign === 'pdf3';
+  const pageWidthCss = selectedDesign === 'pdf3' ? 1123 : 794;
+  const pageHeightCss = selectedDesign === 'pdf3' ? 794 : 1123;
 
   const fitToWidth = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     const available = Math.max(320, viewport.clientWidth - 52);
-    setScale(Math.max(0.38, Math.min(1.18, available / 794)));
-  }, []);
+    setScale(Math.max(0.32, Math.min(1.18, available / pageWidthCss)));
+  }, [pageWidthCss]);
 
   useEffect(() => {
     fitToWidth();
@@ -616,13 +620,13 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
     };
   }, [selectedDesign, loadCurrentPdf, summary.periodLabel]);
 
-  const pdf2Pages = documentRef.current?.querySelectorAll<HTMLElement>('.pdf2-document-page').length ?? 0;
+  const generatedPages = documentRef.current?.querySelectorAll<HTMLElement>('.pdf-document-page, .pdf2-document-page').length ?? 0;
 
   useEffect(() => {
     const viewport = viewportRef.current;
-    if (!viewport || selectedDesign !== 'pdf2') return undefined;
+    if (!viewport || !generatedDesign) return undefined;
     const updateCurrentPage = () => {
-      const pages = Array.from(viewport.querySelectorAll<HTMLElement>('.pdf2-document-page'));
+      const pages = Array.from(viewport.querySelectorAll<HTMLElement>('.pdf-document-page, .pdf2-document-page'));
       if (pages.length === 0) return;
       const viewportTop = viewport.getBoundingClientRect().top + 110;
       let bestPage = 1;
@@ -639,23 +643,24 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
     viewport.addEventListener('scroll', updateCurrentPage, { passive: true });
     updateCurrentPage();
     return () => viewport.removeEventListener('scroll', updateCurrentPage);
-  }, [selectedDesign, scale, pdf2Pages]);
+  }, [generatedDesign, selectedDesign, scale, generatedPages]);
 
-  const downloadPdf2 = useCallback(async () => {
+  const downloadGeneratedPdf = useCallback(async () => {
     const documentNode = documentRef.current;
     if (!documentNode || exportState.busy) return;
-    const pages = Array.from(documentNode.querySelectorAll<HTMLElement>('.pdf2-document-page'));
+    const pages = Array.from(documentNode.querySelectorAll<HTMLElement>('.pdf-document-page, .pdf2-document-page'));
     if (pages.length === 0) return;
     setExportState({ busy: true, current: 0, total: pages.length });
     try {
       const [{ jsPDF }, html2canvasModule] = await Promise.all([import('jspdf'), import('html2canvas')]);
       const html2canvas = html2canvasModule.default;
       await document.fonts?.ready;
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true });
+      const isPdf3 = selectedDesign === 'pdf3';
+      const doc = new jsPDF({ orientation: isPdf3 ? 'landscape' : 'portrait', unit: 'pt', format: 'a4', compress: true });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const exportHost = document.createElement('div');
-      exportHost.className = 'pdf-studio pdf2-export-host';
+      exportHost.className = `pdf-studio ${isPdf3 ? 'pdf3-export-host' : 'pdf2-export-host'}`;
       document.body.appendChild(exportHost);
       try {
         for (let index = 0; index < pages.length; index += 1) {
@@ -670,28 +675,29 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
             requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
           });
           const canvas = await html2canvas(exportPage, {
-            backgroundColor: '#f6f2e9',
+            backgroundColor: isPdf3 ? '#f8f9f7' : '#f6f2e9',
             scale: 2,
             useCORS: true,
             logging: false,
-            width: 794,
-            height: 1123,
+            width: pageWidthCss,
+            height: pageHeightCss,
             windowWidth: 1440,
             scrollX: 0,
             scrollY: 0
           });
-          if (index > 0) doc.addPage('a4', 'portrait');
+          if (index > 0) doc.addPage('a4', isPdf3 ? 'landscape' : 'portrait');
           doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
         }
       } finally {
         exportHost.remove();
       }
-      const filename = `informe-atlas-${report.clientCode}-${periodStart || 'todo'}-${periodEnd || 'todo'}.pdf`;
+      const concept = isPdf3 ? 'signal' : 'atlas';
+      const filename = `informe-${concept}-${report.clientCode}-${periodStart || 'todo'}-${periodEnd || 'todo'}.pdf`;
       const blob = doc.output('blob');
       triggerBlobDownload(blob, filename);
       onDownloaded?.({
         reportClientId: report.clientId,
-        reportLabel: `${report.clientCode} - PDF 2 ATLAS`,
+        reportLabel: `${report.clientCode} - ${isPdf3 ? 'PDF 3 SIGNAL' : 'PDF 2 ATLAS'}`,
         periodStart: periodStart || 'todo',
         periodEnd: periodEnd || 'todo',
         filename,
@@ -700,17 +706,17 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
     } finally {
       setExportState({ busy: false, current: 0, total: 0 });
     }
-  }, [exportState.busy, onDownloaded, periodEnd, periodStart, report]);
+  }, [exportState.busy, onDownloaded, pageHeightCss, pageWidthCss, periodEnd, periodStart, report, selectedDesign]);
 
   useEffect(() => {
-    onPdf2DownloaderReady?.(downloadPdf2);
-    return () => onPdf2DownloaderReady?.(null);
-  }, [downloadPdf2, onPdf2DownloaderReady]);
+    onGeneratedPdfDownloaderReady?.(generatedDesign ? downloadGeneratedPdf : null);
+    return () => onGeneratedPdfDownloaderReady?.(null);
+  }, [downloadGeneratedPdf, generatedDesign, onGeneratedPdfDownloaderReady]);
 
   const goToPage = (nextPage: number) => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    const pages = Array.from(viewport.querySelectorAll<HTMLElement>('.pdf2-document-page'));
+    const pages = Array.from(viewport.querySelectorAll<HTMLElement>('.pdf-document-page, .pdf2-document-page'));
     const clamped = Math.max(1, Math.min(pages.length, nextPage));
     pages[clamped - 1]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setCurrentPage(clamped);
@@ -736,30 +742,31 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
       anchor.click();
       return;
     }
-    void downloadPdf2();
+    void downloadGeneratedPdf();
   };
 
   return (
     <section className="pdf-studio" ref={viewerRef} aria-label="Disenos PDF">
       <header className="pdf-studio-header">
-        <div><span>LABORATORIO EDITORIAL &middot; DEMO1</span><h1>Dise&ntilde;os PDF</h1><p>Vista previa fiel del documento que recibir&aacute; el cliente.</p></div>
+        <div><span>LABORATORIO EDITORIAL &middot; DEMO1</span><h1>Dise&ntilde;os PDF</h1><p>Versiones documentales independientes de las p&aacute;ginas del portal.</p></div>
         <div className="pdf-studio-designs" role="tablist" aria-label="Seleccionar diseno PDF">
           <button type="button" role="tab" aria-selected={selectedDesign === 'pdf1'} className={selectedDesign === 'pdf1' ? 'is-active' : ''} onClick={() => onDesignChange('pdf1')}><span>PDF 1</span><strong>Actual</strong><small>Informe oficial existente</small></button>
           <button type="button" role="tab" aria-selected={selectedDesign === 'pdf2'} className={selectedDesign === 'pdf2' ? 'is-active' : ''} onClick={() => onDesignChange('pdf2')}><span>PDF 2</span><strong>ATLAS</strong><small>Dise&ntilde;ado por Codex &middot; GPT-5</small></button>
+          <button type="button" role="tab" aria-selected={selectedDesign === 'pdf3'} className={selectedDesign === 'pdf3' ? 'is-active' : ''} onClick={() => onDesignChange('pdf3')}><span>PDF 3</span><strong>SIGNAL</strong><small>Dise&ntilde;ado por Codex &middot; GPT-5</small></button>
         </div>
       </header>
 
       <div className="pdf-studio-toolbar">
-        <div className="pdf-studio-document-name"><span>{selectedDesign === 'pdf1' ? 'PDF 1 / ACTUAL' : 'PDF 2 / ATLAS PATRIMONIAL'}</span><strong>{summary.periodLabel}</strong></div>
-        {selectedDesign === 'pdf2' ? (
+        <div className="pdf-studio-document-name"><span>{selectedDesign === 'pdf1' ? 'PDF 1 / ACTUAL' : selectedDesign === 'pdf2' ? 'PDF 2 / ATLAS PATRIMONIAL' : 'PDF 3 / SIGNAL PATRIMONIAL'}</span><strong>{summary.periodLabel}</strong></div>
+        {generatedDesign ? (
           <div className="pdf-studio-pagination" aria-label="Navegacion de paginas">
             <button type="button" onClick={() => goToPage(currentPage - 1)} disabled={currentPage <= 1} aria-label="Pagina anterior">&larr;</button>
-            <span>P&aacute;gina <strong>{currentPage}</strong> de <strong>{pdf2Pages || 1}</strong></span>
-            <button type="button" onClick={() => goToPage(currentPage + 1)} disabled={currentPage >= (pdf2Pages || 1)} aria-label="Pagina siguiente">&rarr;</button>
+            <span>P&aacute;gina <strong>{currentPage}</strong> de <strong>{generatedPages || 1}</strong></span>
+            <button type="button" onClick={() => goToPage(currentPage + 1)} disabled={currentPage >= (generatedPages || 1)} aria-label="Pagina siguiente">&rarr;</button>
           </div>
         ) : <span className="pdf-studio-pagination">Documento actual</span>}
         <div className="pdf-studio-actions">
-          {selectedDesign === 'pdf2' ? (
+          {generatedDesign ? (
             <>
               <button type="button" onClick={() => setScale((value) => Math.max(0.38, value - 0.1))} aria-label="Reducir zoom">&minus;</button>
               <span>{Math.round(scale * 100)}%</span>
@@ -781,9 +788,13 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
             {pdf1Error ? <div className="pdf-studio-state is-error"><strong>No se pudo mostrar el documento</strong><p>{pdf1Error}</p></div> : null}
             {pdf1Url && !pdf1Loading ? <iframe src={`${pdf1Url}#toolbar=0&navpanes=0&view=FitH`} title="Vista previa PDF 1 actual" /> : null}
           </div>
-        ) : (
+        ) : selectedDesign === 'pdf2' ? (
           <div className="pdf2-preview-stack" style={{ '--pdf-scale': scale } as React.CSSProperties}>
             <Pdf2Document ref={documentRef} report={report} months={months} movements={movements} breakdowns={breakdowns} summary={summary} />
+          </div>
+        ) : (
+          <div className="pdf3-preview-stack" style={{ '--pdf-scale': scale } as React.CSSProperties}>
+            <Pdf3SignalDocument ref={documentRef} report={report} months={months} movements={movements} breakdowns={breakdowns} summary={summary} />
           </div>
         )}
       </div>

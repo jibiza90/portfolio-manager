@@ -342,7 +342,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
   const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19' | 'page20' | 'page21' | 'page22' | 'page23' | 'page24' | 'page25' | 'page26' | 'page27' | 'page28' | 'page29' | 'page30'>('page1');
   const [demoViewMode, setDemoViewMode] = useState<'pages' | 'pdfs'>('pages');
-  const [demoPdfDesign, setDemoPdfDesign] = useState<PdfDesignId>('pdf2');
+  const [demoPdfDesign, setDemoPdfDesign] = useState<PdfDesignId>('pdf3');
   const detailScrollAnimationRef = useRef<number | null>(null);
   const tooltipHideTimerRef = useRef<number | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -351,9 +351,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
   const lastInteractionAtRef = useRef(Date.now());
   const lastTrackedChartPointRef = useRef<{ key: string; at: number } | null>(null);
-  const pdf2DownloaderRef = useRef<(() => Promise<void>) | null>(null);
-  const registerPdf2Downloader = useCallback((download: (() => Promise<void>) | null) => {
-    pdf2DownloaderRef.current = download;
+  const generatedPdfDownloaderRef = useRef<(() => Promise<void>) | null>(null);
+  const registerGeneratedPdfDownloader = useCallback((download: (() => Promise<void>) | null) => {
+    generatedPdfDownloaderRef.current = download;
   }, []);
   const syncImmersiveReportPeriod = useCallback((startMonth: string, endMonth: string, isAll: boolean) => {
     if (isAll) {
@@ -528,7 +528,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     setPeriodPreset('all');
     setDemoReportPage('page1');
     setDemoViewMode('pages');
-    setDemoPdfDesign('pdf2');
+    setDemoPdfDesign('pdf3');
   }, [report?.clientId]);
 
   useLayoutEffect(() => {
@@ -874,8 +874,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
   const handleDownload = async () => {
     if (!report) return;
-    if (report.clientId === DEMO_CLIENT_ID && demoViewMode === 'pdfs' && demoPdfDesign === 'pdf2' && pdf2DownloaderRef.current) {
-      await pdf2DownloaderRef.current();
+    if (report.clientId === DEMO_CLIENT_ID && demoViewMode === 'pdfs' && demoPdfDesign !== 'pdf1' && generatedPdfDownloaderRef.current) {
+      await generatedPdfDownloaderRef.current();
       return;
     }
     if (report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page5') {
@@ -2843,7 +2843,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           selectedDesign={demoPdfDesign}
           onDesignChange={setDemoPdfDesign}
           loadCurrentPdf={buildModernReportPdf}
-          onPdf2DownloaderReady={registerPdf2Downloader}
+          onGeneratedPdfDownloaderReady={registerGeneratedPdfDownloader}
           onDownloaded={onDownloaded}
           periodStart={rangeStart}
           periodEnd={rangeEnd}
