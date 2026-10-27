@@ -883,6 +883,12 @@ input[type='number'] {
 .info-module-copy p { font-size: 13px; }
 .info-module-copy small { font-size: 11px; }
 
+.info-module-copy .info-module-error {
+  display: block;
+  color: #b42318;
+  font-weight: 700;
+}
+
 .info-module-switch {
   display: grid;
   justify-items: center;
@@ -892,6 +898,11 @@ input[type='number'] {
   border-radius: 12px;
   background: rgba(15, 109, 122, 0.055);
   cursor: pointer;
+}
+
+.info-module-switch:has(input:disabled) {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .info-module-switch input {

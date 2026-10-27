@@ -2195,7 +2195,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const plotWidth = geometry.width - geometry.left - geometry.right;
     const chartWidth = isScrollable
       ? isWideReportPage
-        ? `max(calc(${(chartData.length / 10) * 100}% + 28px), ${chartData.length * 92 + 28}px)`
+        ? `calc(${(chartData.length / 10) * 100}% + 28px)`
         : `calc(${(chartData.length / 10) * (geometry.width / plotWidth) * 100}% + 22px)`
       : '100%';
     const showPointTooltip = (anchor: Element, point: PatrimonyTooltipState) => {

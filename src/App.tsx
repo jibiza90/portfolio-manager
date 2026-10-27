@@ -22,6 +22,7 @@ import {
 } from './utils/monthlyHistory';
 import {
   fetchClientAccessProfile,
+  fetchClientContributionJourneyVisibility,
   fetchClientPublicationState,
   ensureClientPublicationBaseline,
   isValidLoginId,
@@ -32,6 +33,7 @@ import {
   archiveClientAndRevokeAccess,
   CLIENT_PUBLICATION_PAYLOAD_VERSION,
   revokeClientAccess,
+  setClientContributionJourneyVisibility,
   type ClientPublicationState,
   type AccessProfileRecord
 } from './services/cloudPortfolio';
@@ -97,6 +99,13 @@ const normalizeContact = (input?: Partial<ContactInfo>): ContactInfo => ({
   ...EMPTY_CONTACT,
   ...(input ?? {})
 });
+
+const serializeContactsForPublicationRevision = (contacts: Record<string, ContactInfo>) => JSON.stringify(
+  Object.fromEntries(Object.entries(contacts).map(([clientId, contact]) => {
+    const { showContributionJourney: _uiSetting, ...publishableContact } = contact;
+    return [clientId, publishableContact];
+  }))
+);
 
 const getContactFullName = (input?: Partial<ContactInfo>) => {
   const contact = normalizeContact(input);
@@ -3485,7 +3494,7 @@ export default function App() {
     localStorage.setItem(CONTACTS_REVISION_STORAGE_KEY, initial);
     return initial;
   });
-  const contactsSerialRef = useRef(JSON.stringify(contacts));
+  const contactsSerialRef = useRef(serializeContactsForPublicationRevision(contacts));
   const [showBulkMonthlyReturn, setShowBulkMonthlyReturn] = useState(false);
   const [bulkMonthlyMonth, setBulkMonthlyMonth] = useState(`${getYearFromIso(derivedFocusDate)}-01`);
   const [bulkMonthlyReturnText, setBulkMonthlyReturnText] = useState('');
@@ -3829,8 +3838,9 @@ export default function App() {
   useEffect(() => {
     const serialised = JSON.stringify(contacts);
     localStorage.setItem('portfolio-contacts', serialised);
-    if (contactsSerialRef.current === serialised) return;
-    contactsSerialRef.current = serialised;
+    const publicationSerialised = serializeContactsForPublicationRevision(contacts);
+    if (contactsSerialRef.current === publicationSerialised) return;
+    contactsSerialRef.current = publicationSerialised;
     const nextRevision = createLocalRevision();
     localStorage.setItem(CONTACTS_REVISION_STORAGE_KEY, nextRevision);
     setContactsRevision(nextRevision);
@@ -4608,6 +4618,8 @@ function InfoClientes({
   const [accessMessage, setAccessMessage] = useState<string | null>(null);
   const [clientAccessProfile, setClientAccessProfile] = useState<AccessProfileRecord | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [contributionJourneyBusy, setContributionJourneyBusy] = useState(false);
+  const [contributionJourneyError, setContributionJourneyError] = useState<string | null>(null);
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -4803,17 +4815,70 @@ function InfoClientes({
     setContacts((prev) => ({ ...prev, [selectedId]: { ...contact, [field]: value } }));
   };
 
-  const updateContributionJourneyVisibility = (enabled: boolean) => {
+  const updateContributionJourneyVisibility = async (enabled: boolean) => {
+    if (!currentClient || contributionJourneyBusy) return;
+    const previousValue = contact.showContributionJourney;
     setContacts((prev) => ({
       ...prev,
       [selectedId]: { ...contact, showContributionJourney: enabled }
     }));
-    window.dispatchEvent(new CustomEvent('show-toast', {
-      detail: enabled
-        ? 'Evolucion de aportaciones activada. Pendiente de publicar.'
-        : 'Evolucion de aportaciones desactivada. Pendiente de publicar.'
-    }));
+    setContributionJourneyBusy(true);
+    setContributionJourneyError(null);
+    try {
+      await setClientContributionJourneyVisibility(selectedId, enabled);
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: enabled
+          ? 'Evolucion de aportaciones visible para este cliente.'
+          : 'Evolucion de aportaciones ocultada para este cliente.'
+      }));
+    } catch (error) {
+      console.error('No se pudo guardar la configuracion visual del cliente', error);
+      setContacts((prev) => ({
+        ...prev,
+        [selectedId]: { ...normalizeContact(prev[selectedId]), showContributionJourney: previousValue }
+      }));
+      setContributionJourneyError('No se pudo aplicar el cambio. Intentalo de nuevo.');
+    } finally {
+      setContributionJourneyBusy(false);
+    }
   };
+
+  useEffect(() => {
+    if (!isPrimaryAdmin || !currentClient || isGeneralView) return;
+    let cancelled = false;
+    setContributionJourneyBusy(true);
+    setContributionJourneyError(null);
+
+    void (async () => {
+      try {
+        const cloudValue = await fetchClientContributionJourneyVisibility(currentClient.id);
+        if (cancelled) return;
+        const localValue = normalizeContact(contacts[currentClient.id]).showContributionJourney;
+        if (cloudValue === null) {
+          if (localValue) await setClientContributionJourneyVisibility(currentClient.id, true);
+          return;
+        }
+        if (cloudValue !== localValue) {
+          setContacts((prev) => ({
+            ...prev,
+            [currentClient.id]: {
+              ...normalizeContact(prev[currentClient.id]),
+              showContributionJourney: cloudValue
+            }
+          }));
+        }
+      } catch (error) {
+        console.error('No se pudo cargar la configuracion visual del cliente', error);
+        if (!cancelled) setContributionJourneyError('No se pudo comprobar la configuracion visual.');
+      } finally {
+        if (!cancelled) setContributionJourneyBusy(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentClient?.id, isGeneralView, isPrimaryAdmin]);
 
   useEffect(() => {
     if (!currentClient || isGeneralView) return;
@@ -5241,7 +5306,7 @@ function InfoClientes({
                 <h4>Módulos visibles</h4>
               </div>
               <span className={clsx('info-module-status', contact.showContributionJourney && 'is-active')}>
-                {contact.showContributionJourney ? 'Activado' : 'Oculto'}
+                {contributionJourneyBusy ? 'Guardando' : contact.showContributionJourney ? 'Activado' : 'Oculto'}
               </span>
             </div>
             <div className="info-module-option">
@@ -5252,15 +5317,19 @@ function InfoClientes({
                   retiradas atribuidas, beneficio generado y valor actual atribuido.
                 </p>
                 <small>
-                  El ajuste se guarda automáticamente y llegará al cliente cuando publiques la siguiente actualización.
+                  El ajuste se aplica inmediatamente en el acceso de este cliente, sin publicar datos financieros pendientes.
                   No modifica saldos, rentabilidades, TWR ni el informe PDF.
                 </small>
+                {contributionJourneyError ? (
+                  <small className="info-module-error" role="alert">{contributionJourneyError}</small>
+                ) : null}
               </div>
               <label className="info-module-switch">
                 <input
                   type="checkbox"
                   checked={contact.showContributionJourney}
-                  onChange={(event) => updateContributionJourneyVisibility(event.target.checked)}
+                  disabled={contributionJourneyBusy}
+                  onChange={(event) => { void updateContributionJourneyVisibility(event.target.checked); }}
                   aria-label="Mostrar evolución individual de aportaciones a este cliente"
                 />
                 <span className="info-module-switch-track" aria-hidden="true"><i /></span>

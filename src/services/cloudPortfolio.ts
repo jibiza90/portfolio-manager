@@ -136,6 +136,23 @@ export interface ClientPublicationState {
   payloadVersion?: number;
 }
 
+export const fetchClientContributionJourneyVisibility = async (clientId: string): Promise<boolean | null> => {
+  const doc = await db.collection(CLIENT_OVERVIEW_COLLECTION).doc(clientId).get();
+  if (!doc.exists) return null;
+  const value = doc.data()?.showContributionJourney;
+  return typeof value === 'boolean' ? value : null;
+};
+
+export const setClientContributionJourneyVisibility = async (
+  clientId: string,
+  enabled: boolean
+) => {
+  await db.collection(CLIENT_OVERVIEW_COLLECTION).doc(clientId).set({
+    showContributionJourney: enabled,
+    uiSettingsUpdatedAt: Date.now()
+  }, { merge: true });
+};
+
 export const fetchClientPublicationState = async (): Promise<ClientPublicationState | null> => {
   const doc = await db.doc(PUBLICATION_DOC_PATH).get();
   if (!doc.exists) return null;
@@ -207,6 +224,14 @@ export const publishClientOverviews = async (
       String(overviewDoc.data().clientName ?? '').trim()
     ])
   );
+  const overviewContributionJourneyByClientId = new Map(
+    existingOverviews.docs.map((overviewDoc) => [
+      overviewDoc.id,
+      typeof overviewDoc.data().showContributionJourney === 'boolean'
+        ? overviewDoc.data().showContributionJourney as boolean
+        : null
+    ])
+  );
   const generalReferenceMonthly = buildGeneralReferenceMonthly(clients, monthlyHistoryByClient);
   const batch = db.batch();
   clients.forEach((client) => {
@@ -217,13 +242,18 @@ export const publishClientOverviews = async (
       (isMeaningfulDisplayName(storedDisplayName) ? storedDisplayName : '') ||
       (isMeaningfulDisplayName(previousOverviewName) ? previousOverviewName : '') ||
       client.name;
+    const storedContributionJourney = overviewContributionJourneyByClientId.get(client.id);
+    const effectiveContact = {
+      ...(contacts[client.id] ?? {}),
+      showContributionJourney: storedContributionJourney ?? contacts[client.id]?.showContributionJourney === true
+    };
     const docRef = db.collection(CLIENT_OVERVIEW_COLLECTION).doc(client.id);
     batch.set(docRef, buildClientOverview(
       snapshot,
       client.id,
       displayName,
       monthlyHistoryByClient[client.id] ?? {},
-      contacts[client.id],
+      effectiveContact,
       client.id === GENERAL_REFERENCE_CLIENT_ID ? generalReferenceMonthly : undefined
     ));
   });
@@ -311,6 +341,9 @@ export const syncInitialClientOverviews = async (
       totalDecrements: position.totalDecrements,
       ytdReturnPct: 0,
       twrYtd: 0,
+      showContributionJourney: typeof existing?.showContributionJourney === 'boolean'
+        ? existing.showContributionJourney
+        : contacts[client.id]?.showContributionJourney === true,
       latestProfitMonth: null,
       latestReturnMonth: null,
       monthly: [],

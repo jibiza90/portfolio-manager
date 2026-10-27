@@ -520,7 +520,7 @@ const buildPublishedClientReport = (
     ...report,
     clientName: clientCode,
     clientCode,
-    showContributionJourney: report.showContributionJourney ?? overview.showContributionJourney ?? false,
+    showContributionJourney: overview.showContributionJourney ?? report.showContributionJourney ?? false,
     contributionBreakdowns:
       clientId === DEMO_CLIENT_ID
         ? deriveContributionBreakdowns(report, '0000-00')
