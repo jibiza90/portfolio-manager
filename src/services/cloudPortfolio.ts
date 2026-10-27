@@ -15,7 +15,7 @@ const PUBLICATION_DOC_PATH = 'portfolio/client-publication';
 const CLIENT_OVERVIEW_COLLECTION = 'portfolio_client_overviews';
 const CONTACTS_STORAGE_KEY = 'portfolio-contacts';
 const GENERAL_REFERENCE_CLIENT_ID = 'client-004';
-export const CLIENT_PUBLICATION_PAYLOAD_VERSION = 3;
+export const CLIENT_PUBLICATION_PAYLOAD_VERSION = 4;
 export const INITIAL_CLIENT_PUBLICATION_MODE = 'initial-provisional';
 
 export interface GeneralReferenceMonth {
@@ -96,6 +96,7 @@ const buildClientOverview = (
     clientId,
     clientName: report?.name ?? displayName,
     report: report ? toClientReportPayload(report) : null,
+    showContributionJourney: localContact?.showContributionJourney === true,
     ...(generalReferenceMonthly?.length ? { generalReferenceMonthly } : {}),
     updatedAt: Date.now()
   };

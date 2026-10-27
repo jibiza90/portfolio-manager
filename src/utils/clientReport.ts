@@ -11,6 +11,7 @@ export type ClientContactInfo = {
   surname?: string;
   email?: string;
   phone?: string;
+  showContributionJourney?: boolean;
 };
 
 export interface ClientReportData {
@@ -41,6 +42,7 @@ export interface ClientReportData {
   beneficioUltimoMes: number;
   rentabilidadUltimoMes: number;
   twrYtd: number;
+  showContributionJourney: boolean;
   twrMonthly: Array<{ month: string; twr: number; periods: Array<unknown> }>;
 }
 
@@ -57,6 +59,7 @@ export interface ClientReportPayload {
   beneficioUltimoMes: number;
   rentabilidadUltimoMes: number;
   twrYtd: number;
+  showContributionJourney: boolean;
   monthlyStats: Array<{
     month: string;
     profit: number;
@@ -272,6 +275,7 @@ export function buildClientReportData(
     beneficioUltimoMes: lastMonth?.profit ?? 0,
     rentabilidadUltimoMes: lastMonth?.profitPct ?? 0,
     twrYtd,
+    showContributionJourney: contact?.showContributionJourney === true,
     twrMonthly
   };
 }
@@ -297,6 +301,7 @@ export function toClientReportPayload(data: ClientReportData): ClientReportPaylo
     beneficioUltimoMes: data.beneficioUltimoMes ?? 0,
     rentabilidadUltimoMes: data.rentabilidadUltimoMes ?? 0,
     twrYtd: data.twrYtd ?? 0,
+    showContributionJourney: data.showContributionJourney === true,
     monthlyStats: monthlyStats.map((item) => ({
       month: item.monthLabel,
       profit: item.profit ?? 0,

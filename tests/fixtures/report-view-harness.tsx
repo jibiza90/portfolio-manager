@@ -66,7 +66,11 @@ const buildReportData = (monthCount: number): ReportData => {
   };
 };
 
-export const mountReportView = (monthCount = 12, clientId = 'client-001') => {
+export const mountReportView = (
+  monthCount = 12,
+  clientId = 'client-001',
+  showContributionJourney = false
+) => {
   const root = document.getElementById('root');
   if (!root) throw new Error('Missing root element');
   root.innerHTML = '';
@@ -74,7 +78,7 @@ export const mountReportView = (monthCount = 12, clientId = 'client-001') => {
   const reportData = buildReportData(monthCount);
   createRoot(root).render(
     <ReportView
-      reportData={{ ...reportData, clientId }}
+      reportData={{ ...reportData, clientId, showContributionJourney }}
       pendingCashMovements={[{ iso: '2026-04-10', type: 'increment', amount: 15000 }]}
     />
   );

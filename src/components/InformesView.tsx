@@ -544,6 +544,7 @@ export function InformesView({ contacts }: { contacts: Record<string, ContactInf
       beneficioUltimoMes: clientData.beneficioUltimoMes ?? 0,
       rentabilidadUltimoMes: clientData.rentabilidadUltimoMes ?? 0,
       twrYtd: clientData.twrYtd ?? 0,
+      showContributionJourney: clientData.showContributionJourney,
       monthlyStats: clientData.monthlyStats.map(m => ({
         month: m.monthLabel,
         profit: m.profit ?? 0,
@@ -759,6 +760,7 @@ Su gestor de inversiones`
                           beneficioUltimoMes: clientDataForEmail.beneficioUltimoMes ?? 0,
                           rentabilidadUltimoMes: clientDataForEmail.rentabilidadUltimoMes ?? 0,
                           twrYtd: clientDataForEmail.twrYtd ?? 0,
+                          showContributionJourney: clientDataForEmail.showContributionJourney,
                           monthlyStats: clientDataForEmail.monthlyStats.map((m) => ({
                             month: m.monthLabel,
                             profit: m.profit ?? 0,

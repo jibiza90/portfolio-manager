@@ -74,6 +74,7 @@ type ContactInfo = {
   waitlistAmount: string;
   waitlistNote: string;
   notes: string;
+  showContributionJourney: boolean;
 };
 type FollowUpTask = {
   id: string;
@@ -89,7 +90,8 @@ const EMPTY_CONTACT: ContactInfo = {
   phone: '',
   waitlistAmount: '',
   waitlistNote: '',
-  notes: ''
+  notes: '',
+  showContributionJourney: false
 };
 const normalizeContact = (input?: Partial<ContactInfo>): ContactInfo => ({
   ...EMPTY_CONTACT,
@@ -1554,7 +1556,7 @@ function formatClientDisplayName(clientId: string, contacts: Record<string, Cont
 }
 
 function hasClientMetadata(contact: ContactInfo) {
-  return Object.values(contact).some((value) => value.trim() !== '');
+  return Object.values(contact).some((value) => typeof value === 'string' && value.trim() !== '');
 }
 
 function BulkMonthlyReturnModal({
@@ -4797,8 +4799,20 @@ function InfoClientes({
     { label: 'Peticion extra registrada', ok: (parseNumberEs(contact.waitlistAmount) ?? 0) > 0 || !!contact.waitlistNote }
   ]), [contact.email, contact.phone, firstIncrementDate, guaranteeInitial, movementHistory.length, contact.waitlistAmount, contact.waitlistNote]);
 
-  const updateField = (field: keyof ContactInfo, value: string) => {
+  const updateField = (field: Exclude<keyof ContactInfo, 'showContributionJourney'>, value: string) => {
     setContacts((prev) => ({ ...prev, [selectedId]: { ...contact, [field]: value } }));
+  };
+
+  const updateContributionJourneyVisibility = (enabled: boolean) => {
+    setContacts((prev) => ({
+      ...prev,
+      [selectedId]: { ...contact, showContributionJourney: enabled }
+    }));
+    window.dispatchEvent(new CustomEvent('show-toast', {
+      detail: enabled
+        ? 'Evolucion de aportaciones activada. Pendiente de publicar.'
+        : 'Evolucion de aportaciones desactivada. Pendiente de publicar.'
+    }));
   };
 
   useEffect(() => {
@@ -5218,6 +5232,43 @@ function InfoClientes({
             </label>
           </div>
         </section>
+
+        {isPrimaryAdmin ? (
+          <section className="info-section info-client-modules">
+            <div className="info-client-modules-heading">
+              <div>
+                <span className="eyebrow">Área del cliente</span>
+                <h4>Módulos visibles</h4>
+              </div>
+              <span className={clsx('info-module-status', contact.showContributionJourney && 'is-active')}>
+                {contact.showContributionJourney ? 'Activado' : 'Oculto'}
+              </span>
+            </div>
+            <div className="info-module-option">
+              <div className="info-module-copy">
+                <strong>Evolución individual de aportaciones</strong>
+                <p>
+                  Muestra al cliente el recorrido estimado de cada aportación: capital incorporado,
+                  retiradas atribuidas, beneficio generado y valor actual atribuido.
+                </p>
+                <small>
+                  El ajuste se guarda automáticamente y llegará al cliente cuando publiques la siguiente actualización.
+                  No modifica saldos, rentabilidades, TWR ni el informe PDF.
+                </small>
+              </div>
+              <label className="info-module-switch">
+                <input
+                  type="checkbox"
+                  checked={contact.showContributionJourney}
+                  onChange={(event) => updateContributionJourneyVisibility(event.target.checked)}
+                  aria-label="Mostrar evolución individual de aportaciones a este cliente"
+                />
+                <span className="info-module-switch-track" aria-hidden="true"><i /></span>
+                <strong>{contact.showContributionJourney ? 'Visible para este cliente' : 'No visible para este cliente'}</strong>
+              </label>
+            </div>
+          </section>
+        ) : null}
 
         {/* Garantías */}
         <section className="info-section">

@@ -73,6 +73,7 @@ interface ClientOverview {
   initialPosition?: InitialPosition;
   pendingCashMovements?: PendingCashMovement[];
   pendingCashUpdatedAt?: number;
+  showContributionJourney?: boolean;
   updatedAt: number;
   rows?: Array<{
     iso: string;
@@ -466,6 +467,7 @@ const buildFallbackReportFromOverview = (
     beneficioUltimoMes: overview.latestProfitMonth?.profit ?? 0,
     rentabilidadUltimoMes: ((overview.latestReturnMonth?.retPct ?? 0) * 100),
     twrYtd: overview.twrYtd ?? overview.ytdReturnPct ?? 0,
+    showContributionJourney: overview.showContributionJourney === true,
     monthlyStats: monthly,
     patrimonioEvolution: monthly.map((item) => ({
       month: item.month,
@@ -518,6 +520,7 @@ const buildPublishedClientReport = (
     ...report,
     clientName: clientCode,
     clientCode,
+    showContributionJourney: report.showContributionJourney ?? overview.showContributionJourney ?? false,
     contributionBreakdowns:
       clientId === DEMO_CLIENT_ID
         ? deriveContributionBreakdowns(report, '0000-00')

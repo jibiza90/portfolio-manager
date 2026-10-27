@@ -9,6 +9,7 @@ import { getViewportTooltipPosition, ViewportTooltipPlacement } from '../utils/v
 import { PremiumReportPage } from './PremiumReportPage';
 import { AnnualVisionReportPage } from './AnnualVisionReportPage';
 import { CapitalFlowReportPage } from './CapitalFlowReportPage';
+import { ContributionJourneyModule } from './ContributionJourneyModule';
 import { NarrativeReportPage } from './NarrativeReportPage';
 import { ClientLedgerReportPage } from './ClientLedgerReportPage';
 import { CapitalRiverReportPage } from './CapitalRiverReportPage';
@@ -962,7 +963,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   }
 
   if (!report) return null;
-  const isWideReportPage = report.clientId !== DEMO_CLIENT_ID || demoReportPage === 'page20';
+  const isWideReportPage = report.clientId !== DEMO_CLIENT_ID || demoReportPage === 'page1' || demoReportPage === 'page20';
 
   const visiblePendingCashMovements = [...pendingCashMovements]
     .filter((movement) => Number.isFinite(movement.amount) && movement.amount > 0)
@@ -3296,6 +3297,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <div className="report-pro-info-card" tabIndex={0} data-tooltip="Saldo actual de la cartera del cliente."><span>Saldo actual</span><strong>{formatCurrency(visibleBalance)}</strong></div>
             </div>
         </section>
+
+        {report.showContributionJourney ? (
+          <ContributionJourneyModule
+            report={report}
+            pendingCashMovements={visiblePendingCashMovements}
+            onAnalyticsEvent={onAnalyticsEvent}
+          />
+        ) : null}
 
         <section className="report-pro-demo-control-panel">
             <div className="report-pro-panel-head">

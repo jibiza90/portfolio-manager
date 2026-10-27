@@ -13,6 +13,7 @@ export interface ReportData {
   beneficioUltimoMes: number;
   rentabilidadUltimoMes: number;
   twrYtd?: number;
+  showContributionJourney?: boolean;
   monthlyStats: Array<{
     month: string;
     profit: number;

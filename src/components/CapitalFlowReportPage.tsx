@@ -4,7 +4,7 @@ import type { ReportData } from '../services/reportLinks';
 import { formatCurrency } from '../utils/format';
 import './CapitalFlowReportPage.css';
 
-interface FlowPendingMovement {
+export interface FlowPendingMovement {
   iso: string;
   type: 'increment' | 'decrement';
   amount: number;
@@ -23,7 +23,7 @@ interface CapitalFlowReportPageProps {
   }) => void;
 }
 
-interface FlowMonth {
+export interface FlowMonth {
   key: string;
   label: string;
   returnPct: number;
@@ -32,7 +32,7 @@ interface FlowMonth {
   hasClose: boolean;
 }
 
-interface SourceLot {
+export interface SourceLot {
   id: string;
   iso: string;
   entryKey: string;
@@ -42,7 +42,7 @@ interface SourceLot {
   specificEntryReturnPct?: number;
 }
 
-interface CapitalLot extends SourceLot {
+export interface CapitalLot extends SourceLot {
   remainingCapital: number;
   allocatedWithdrawal: number;
   performanceFactor: number;
@@ -53,7 +53,7 @@ interface CapitalLot extends SourceLot {
   accumulatedReturnPct: number;
 }
 
-interface WithdrawalFlow {
+export interface WithdrawalFlow {
   id: string;
   iso: string;
   monthKey: string;
@@ -136,7 +136,7 @@ const calculateTwrPct = (months: FlowMonth[]) => (
   (months.reduce((factor, month) => factor * (1 + month.returnPct / 100), 1) - 1) * 100
 );
 
-const buildCapitalModel = (
+export const buildCapitalModel = (
   report: ReportData,
   months: FlowMonth[],
   pendingCashMovements: FlowPendingMovement[]

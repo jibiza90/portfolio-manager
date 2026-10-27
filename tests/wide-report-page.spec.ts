@@ -62,6 +62,38 @@ test('renders page 20 as the full-width professional edition of page 1', async (
   expect(hasHorizontalPageOverflow).toBe(false);
 });
 
+test('uses the page 20 layout on demo page 1', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await mountDemoReport(page);
+
+  const pageOneButton = page.getByRole('button', { name: 'Página 1', exact: true });
+  await expect(pageOneButton).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.report-pro-wide-sheet')).toBeVisible();
+  await expect(page.locator('.report-pro-bar-col')).toHaveCount(13);
+  await expect(page.locator('.report-pro-dot-hit')).toHaveCount(13);
+});
+
+test('shows the contribution journey only when the client module is enabled', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(async (modulePath) => {
+    const harness = await import(/* @vite-ignore */ modulePath);
+    harness.mountReportView(13, 'client-007', true);
+  }, '/tests/fixtures/report-view-harness.tsx');
+
+  const module = page.locator('.report-pro-contribution-journey');
+  await expect(module).toBeVisible();
+  await expect(module.getByRole('heading', { name: 'Evolución de cada aportación' })).toBeVisible();
+  await expect(module.locator('.contribution-journey-selector > button')).toHaveCount(3);
+
+  await module.getByRole('button', { name: 'Con retiradas' }).click();
+  await expect(module.locator('.contribution-journey-selector > button')).toHaveCount(2);
+
+  const hasHorizontalPageOverflow = await page.evaluate(() => (
+    document.documentElement.scrollWidth > window.innerWidth + 1
+  ));
+  expect(hasHorizontalPageOverflow).toBe(false);
+});
+
 test('uses page 20 as the standard client report with annual closing totals', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
