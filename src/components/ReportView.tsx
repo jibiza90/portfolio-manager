@@ -348,6 +348,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const reportRef = useRef<HTMLDivElement>(null);
   const chartVisibilityRef = useRef<HTMLDivElement>(null);
   const patrimonyScrollRef = useRef<HTMLDivElement>(null);
+  const closingTableScrollRef = useRef<HTMLDivElement>(null);
   const lastDownloadSignalRef = useRef(downloadSignal ?? 0);
   const lastInteractionAtRef = useRef(Date.now());
   const lastTrackedChartPointRef = useRef<{ key: string; at: number } | null>(null);
@@ -551,6 +552,48 @@ export const ReportView: React.FC<ReportViewProps> = ({
       window.clearTimeout(settledTimer);
     };
   }, [report?.clientId, report?.createdAt, report?.patrimonioEvolution.length, periodPreset, periodStartMonth, periodEndMonth, demoReportPage]);
+
+  useLayoutEffect(() => {
+    if (!report) return undefined;
+    let settledFrame = 0;
+    let settledTimer = 0;
+    const scrollMonthlyChartToLatest = () => {
+      const scroller = chartVisibilityRef.current;
+      if (!scroller) return;
+      scroller.scrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    };
+    const frame = window.requestAnimationFrame(() => {
+      scrollMonthlyChartToLatest();
+      settledFrame = window.requestAnimationFrame(scrollMonthlyChartToLatest);
+      settledTimer = window.setTimeout(scrollMonthlyChartToLatest, 120);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(settledFrame);
+      window.clearTimeout(settledTimer);
+    };
+  }, [report?.clientId, report?.createdAt, report?.monthlyStats.length, chartView, periodPreset, periodStartMonth, periodEndMonth, demoReportPage]);
+
+  useLayoutEffect(() => {
+    if (!report) return undefined;
+    let settledFrame = 0;
+    let settledTimer = 0;
+    const scrollClosingTableToLatest = () => {
+      const scroller = closingTableScrollRef.current;
+      if (!scroller) return;
+      scroller.scrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    };
+    const frame = window.requestAnimationFrame(() => {
+      scrollClosingTableToLatest();
+      settledFrame = window.requestAnimationFrame(scrollClosingTableToLatest);
+      settledTimer = window.setTimeout(scrollClosingTableToLatest, 120);
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(settledFrame);
+      window.clearTimeout(settledTimer);
+    };
+  }, [report?.clientId, report?.createdAt, report?.monthlyStats.length, periodPreset, periodStartMonth, periodEndMonth, demoReportPage]);
 
   useEffect(() => {
     if (!analyticsEnabled) return undefined;
@@ -3617,7 +3660,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
             <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
             <span>Pulsa el bot&oacute;n <strong>+</strong> de cualquier mes para consultar la composici&oacute;n completa del resultado.</span>
           </div>
-          <div className="table-scroll report-pro-closing-scroll">
+          <div ref={closingTableScrollRef} className="table-scroll report-pro-closing-scroll">
             <table className="monthly-table report-pro-table report-pro-closing-table">
               <thead>
                 <tr>

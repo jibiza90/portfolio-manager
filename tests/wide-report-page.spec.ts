@@ -99,6 +99,9 @@ test('uses page 20 as the standard client report with annual closing totals', as
   await expect(yearlyTotals).toHaveCount(2);
   await expect(yearlyTotals.nth(0)).toContainText('Total 2025');
   await expect(yearlyTotals.nth(1)).toContainText('Total 2026');
+  await expect.poll(() => page.locator('.report-pro-closing-scroll').evaluate((element) => (
+    Math.abs(element.scrollHeight - element.clientHeight - element.scrollTop) <= 1
+  ))).toBe(true);
 
   await page.getByRole('button', { name: 'Ver detalle de Mar 2026' }).click();
   await expect(page.locator('#report-month-detail-monthly-2026-03')).toBeVisible();
@@ -139,6 +142,9 @@ test('keeps page 20 usable on compact screens', async ({ page }) => {
   await expect(page.locator('.report-pro-wide-sheet')).toBeVisible();
   await expect(page.locator('.report-pro-chart-toolbar select')).toBeVisible();
   await expect(page.locator('.report-pro-expand-chart-button')).toBeVisible();
+  await expect.poll(() => page.locator('.report-pro-chart-scroll').evaluate((element) => (
+    Math.abs(element.scrollWidth - element.clientWidth - element.scrollLeft) <= 20
+  ))).toBe(true);
 
   const hasHorizontalPageOverflow = await page.evaluate(() => (
     document.documentElement.scrollWidth > window.innerWidth + 1
