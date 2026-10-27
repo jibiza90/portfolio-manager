@@ -32,6 +32,7 @@ import { EstacionesReportPage } from './EstacionesReportPage';
 import { PrismaOriginReportPage } from './PrismaOriginReportPage';
 import { NexusReportPage } from './NexusReportPage';
 import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio';
+import { PatrimonyTrendChart, type PatrimonyTrendPoint } from './PatrimonyTrendChart';
 import './WideReportPage.css';
 
 const AetherReportPage = React.lazy(() => import('./AetherReportPage').then((module) => ({ default: module.AetherReportPage })));
@@ -1106,6 +1107,24 @@ export const ReportView: React.FC<ReportViewProps> = ({
     })
     : patrimonioWithData;
   const effectivePatrimonioData = patrimonioChartData.length > 0 ? patrimonioChartData : patrimonioWithData;
+  // Grafico de patrimonio en pruebas: solo en demo1, pagina 1. Los clientes siguen viendo el actual.
+  const usePatrimonyTrendPreview = report.clientId === DEMO_CLIENT_ID && demoViewMode === 'pages' && demoReportPage === 'page1';
+  const patrimonyTrendPoints: PatrimonyTrendPoint[] = usePatrimonyTrendPreview
+    ? effectivePatrimonioData.map((point) => {
+      const key = reportMonthToKey(point.month);
+      const stat = monthlyWithData.find((month) => reportMonthToKey(month.month) === key);
+      const monthMovements = (report.movements ?? []).filter((movement) => movement.iso.slice(0, 7) === key);
+      return {
+        key,
+        label: point.month,
+        balance: point.balance ?? 0,
+        profit: stat?.profit,
+        returnPct: stat ? getDisplayedMonthReturnPct(stat) : undefined,
+        inflow: monthMovements.filter((movement) => movement.type === 'increment').reduce((sum, movement) => sum + movement.amount, 0),
+        outflow: monthMovements.filter((movement) => movement.type === 'decrement').reduce((sum, movement) => sum + movement.amount, 0)
+      };
+    })
+    : [];
   const buildPatrimonyGeometry = (
     data: typeof patrimonioWithData,
     width: number,
@@ -3648,7 +3667,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
               Ampliar grafico
             </button>
           </div>
-          {renderPatrimonyChart(false)}
+          {usePatrimonyTrendPreview && patrimonyTrendPoints.length > 0 ? (
+            <PatrimonyTrendChart
+              points={patrimonyTrendPoints}
+              onHoverMonth={(label) => onAnalyticsEvent?.({ type: 'patrimony_trend_hover', label })}
+            />
+          ) : renderPatrimonyChart(false)}
         </section>
 
         <section className="report-pro-panel report-pro-closing-panel">

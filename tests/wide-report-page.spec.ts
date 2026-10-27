@@ -70,7 +70,11 @@ test('uses the page 20 layout on demo page 1', async ({ page }) => {
   await expect(pageOneButton).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.report-pro-wide-sheet')).toBeVisible();
   await expect(page.locator('.report-pro-bar-col')).toHaveCount(13);
-  await expect(page.locator('.report-pro-dot-hit')).toHaveCount(13);
+  // La pagina 1 de demo1 prueba el nuevo grafico de patrimonio con todos los meses visibles.
+  await expect(page.locator('.pm-trend')).toBeVisible();
+  await expect(page.locator('.pm-trend-month')).toHaveCount(13);
+  await expect(page.locator('.pm-trend-scroll')).not.toHaveClass(/is-scrollable/);
+  await expect(page.locator('.report-pro-dot-hit')).toHaveCount(0);
 });
 
 test('shows the contribution journey only when the client module is enabled', async ({ page }) => {
