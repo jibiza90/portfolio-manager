@@ -12,6 +12,10 @@ const LEGACY_DEMO_CLIENT_ID = 'client-demo';
 export const isDemoClient = (clientId: string) =>
   clientId === DEMO_CLIENT_ID || clientId === LEGACY_DEMO_CLIENT_ID;
 
+// Clientes que cuentan en el total de la cartera pero no para calcular la participacion del resto.
+const PARTICIPATION_EXCLUDED_CLIENT_IDS = new Set(['client-003']);
+export const isExcludedFromParticipation = (clientId: string) => PARTICIPATION_EXCLUDED_CLIENT_IDS.has(clientId);
+
 const numberedClients = Array.from({ length: 100 }, (_, index) => {
   const padded = String(index + 1).padStart(3, '0');
   return {

@@ -39,6 +39,15 @@ import {
 } from './services/cloudPortfolio';
 import { auth } from './services/firebaseApp';
 import {
+  COMMISSION_RATE_PRESETS,
+  formatCommissionRate,
+  getCapitalPendingToRecover,
+  getCommissionRate,
+  getWithdrawalCommissions,
+  loadCommissionRates,
+  saveCommissionRates
+} from './utils/commissions';
+import {
   createAndDownloadAdminBackup,
   parseAdminBackup,
   restoreAdminBackup,
@@ -1790,7 +1799,34 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage, canPrevie
   const setClientMovement = usePortfolioStore((s) => s.setClientMovement);
   const setClientMonthlyHistory = usePortfolioStore((s) => s.setClientMonthlyHistory);
   const monthlyHistory = usePortfolioStore((s) => s.monthlyHistoryByClient[clientId] ?? {});
+  const clientMovements = usePortfolioStore((s) => s.movementsByClient[clientId]);
   const clientRows = useMemo(() => snapshot.clientRowsById[clientId] || [], [snapshot, clientId]);
+  const withdrawalCommissionByIso = useMemo(
+    () => new Map(
+      getWithdrawalCommissions(clientMovements, getCommissionRate(clientId, loadCommissionRates()))
+        .map((withdrawal) => [withdrawal.iso, withdrawal])
+    ),
+    [clientId, clientMovements]
+  );
+  // Al apuntar una retirada, avisa de si genera comision o de cuanto capital falta por recuperar.
+  const showWithdrawalCommissionNotice = (iso: string, amount: number) => {
+    const rate = getCommissionRate(clientId, loadCommissionRates());
+    const movements = { ...(clientMovements ?? {}), [iso]: { ...(clientMovements?.[iso] ?? {}), decrement: amount } };
+    const withdrawal = getWithdrawalCommissions(movements, rate).find((item) => item.iso === iso);
+    if (!withdrawal) return;
+    const capitalLeft = Math.max(0, withdrawal.capitalPendingBefore - withdrawal.amount);
+    if (rate === null) {
+      setAlertMessage(`Retirada de ${formatCurrency(amount)}. Este cliente no tiene comisión.`);
+    } else if (withdrawal.commission > 0) {
+      setAlertMessage(
+        `Comisión de esta retirada: ${formatCurrency(withdrawal.commission)} (${formatCommissionRate(rate)} sobre ${formatCurrency(withdrawal.commissionableAmount)} de beneficio retirado).`
+      );
+    } else {
+      setAlertMessage(
+        `Sin comisión: esta retirada todavía es capital aportado. Faltan ${formatCurrency(capitalLeft)} de retiradas para empezar a cobrar el ${formatCommissionRate(rate)}.`
+      );
+    }
+  };
   const activeYear = useMemo(() => getYearFromIso(focusDate), [focusDate]);
   const yearRows = useMemo(
     () => clientRows.filter((r) => r.iso.startsWith(`${activeYear}-`)),
@@ -2248,9 +2284,19 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage, canPrevie
                           return;
                         }
                         setClientMovement(clientId, r.iso, 'decrement', v);
+                        if (v !== undefined && !Number.isNaN(v) && v > 0 && v !== r.decrement) {
+                          showWithdrawalCommissionNotice(r.iso, v);
+                        }
                       }}
                     />
-                  )}</td>
+                  )}
+                  {(r.decrement ?? 0) > 0 && withdrawalCommissionByIso.get(r.iso) ? (
+                    <small style={{ display: 'block', marginTop: 4, whiteSpace: 'nowrap', color: (withdrawalCommissionByIso.get(r.iso)?.commission ?? 0) > 0 ? '#b45309' : '#64748b' }}>
+                      {(withdrawalCommissionByIso.get(r.iso)?.commission ?? 0) > 0
+                        ? `Comisión ${formatCurrency(withdrawalCommissionByIso.get(r.iso)?.commission ?? 0)}`
+                        : 'Sin comisión'}
+                    </small>
+                  ) : null}</td>
                   <td>
                     {(r.decrement ?? 0) > 0 ? (
                       <div>
@@ -5859,9 +5905,10 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
   setComisionEstado: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
 }) {
   const { snapshot } = usePortfolioStore();
-  const derivedFocusDate = useFocusDate();
-  const activeYear = useMemo(() => getYearFromIso(derivedFocusDate), [derivedFocusDate]);
+  const movementsByClient = usePortfolioStore((s) => s.movementsByClient);
   const [openRow, setOpenRow] = useState<string | null>(null);
+  const [commissionRates, setCommissionRates] = useState<Record<string, number | null>>(() => loadCommissionRates());
+  const [customRateText, setCustomRateText] = useState<Record<string, string>>({});
   const [comisionEstadoRetiro, setComisionEstadoRetiro] = useState<Record<string, boolean>>(() => {
     const raw = localStorage.getItem('portfolio-comision-estado-retiro');
     if (raw) {
@@ -5885,55 +5932,52 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
     return `${d}.${m}.${y}`;
   };
 
+  const updateCommissionRate = (clientId: string, rate: number | null) => {
+    setCommissionRates((prev) => {
+      const next = { ...prev, [clientId]: rate };
+      saveCommissionRates(next);
+      return next;
+    });
+    window.dispatchEvent(new CustomEvent('show-toast', { detail: `Comisión: ${formatCommissionRate(rate)}` }));
+  };
+
+  // Todo el historico del cliente (no solo el año): la comision empieza cuando ha
+  // retirado todo el capital que aporto desde el principio.
   const clientStats = useMemo(() => {
     return getPortfolioClients().map((c) => {
       const rows = snapshot.clientRowsById[c.id] || [];
-      const yearRows = rows.filter((r) => r.iso.startsWith(`${activeYear}-`));
-      const incrementos = yearRows.reduce((s, r) => s + (r.increment ?? 0), 0);
-      const decrementos = yearRows.reduce((s, r) => s + (r.decrement ?? 0), 0);
-      const validRows = [...yearRows].reverse();
+      const incrementos = rows.reduce((s, r) => s + (r.increment ?? 0), 0);
+      const decrementos = rows.reduce((s, r) => s + (r.decrement ?? 0), 0);
+      const validRows = [...rows].reverse();
       const lastWithFinal = validRows.find((r) => r.finalBalance !== undefined && r.finalBalance > 0);
       const lastWithBase = validRows.find((r) => r.baseBalance !== undefined && r.baseBalance > 0);
       const saldo = lastWithFinal?.finalBalance ?? lastWithBase?.baseBalance ?? 0;
 
       const beneficioTotal = saldo + decrementos - incrementos;
-      const beneficioRetirado = Math.max(0, decrementos - incrementos);
-      const comisionRetirada = beneficioRetirado * 0.05;
-      // Comisión si retira hoy: 5% del beneficio total, solo si es positivo (ya recuperó capital)
-      const comisionSiRetiraHoy = beneficioTotal > 0 ? beneficioTotal * 0.05 : 0;
+      const rate = getCommissionRate(c.id, commissionRates);
+      const capitalPendiente = getCapitalPendingToRecover(movementsByClient[c.id]);
+      // Si lo retirara todo hoy: solo lo que supera el capital pendiente de recuperar.
+      const comisionSiRetiraHoy = rate ? Math.max(0, saldo - capitalPendiente) * rate : 0;
 
-      const comisionGenerada = comisionRetirada;
       const estadoCobrada = comisionEstado[c.id] ?? false;
 
       const lastDecrement = validRows.find((r) => (r.decrement || 0) > 0);
       const fechaDecremento = lastDecrement?.iso ?? '';
 
-      // Retiros individuales con estado
-      let cumInc = 0;
-      let cumDec = 0;
-      const retiros = yearRows
-        .slice()
-        .sort((a, b) => (a.iso > b.iso ? 1 : -1))
-        .flatMap((r) => {
-          if (r.increment) cumInc += r.increment;
-          if (r.decrement) {
-            const prevOver = Math.max(0, cumDec - cumInc);
-            cumDec += r.decrement;
-            const newOver = Math.max(0, cumDec - cumInc);
-            const commissionPortion = Math.max(0, newOver - prevOver);
-            const commission = commissionPortion * 0.05;
-            const key = `${c.id}-${r.iso}`;
-            return [{
-              key,
-              iso: r.iso,
-              retiro: r.decrement,
-              comision: commission,
-              estado: comisionEstadoRetiro[key] ?? false
-            }];
-          }
-          return [];
-        });
+      // Retiros individuales con estado (la clave por fecha se mantiene para no perder lo marcado)
+      const retiros = getWithdrawalCommissions(movementsByClient[c.id], rate).map((withdrawal) => {
+        const key = `${c.id}-${withdrawal.iso}`;
+        return {
+          key,
+          iso: withdrawal.iso,
+          retiro: withdrawal.amount,
+          comision: withdrawal.commission,
+          capitalPendienteAntes: withdrawal.capitalPendingBefore,
+          estado: comisionEstadoRetiro[key] ?? false
+        };
+      });
 
+      const comisionGenerada = retiros.reduce((s, r) => s + r.comision, 0);
       const comisionPendiente = retiros.reduce((s, r) => s + (r.estado ? 0 : r.comision), 0);
 
       const displayName = getClientDisplayName(c.id, contacts);
@@ -5941,6 +5985,8 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
       return {
         id: c.id,
         name: displayName,
+        rate,
+        capitalPendiente,
         incrementos,
         decrementos,
         saldo,
@@ -5953,7 +5999,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
         retiros
       };
     });
-  }, [snapshot, contacts, comisionEstado, comisionEstadoRetiro, activeYear]);
+  }, [snapshot, contacts, comisionEstado, comisionEstadoRetiro, commissionRates, movementsByClient]);
 
   const totals = useMemo(() => {
     const comisionAcumuladaTotal = clientStats.reduce((s, c) => s + c.comisionGenerada, 0);
@@ -5980,7 +6026,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
         <div className="comisiones-header-content">
           <div className="eyebrow">Panel de Comisiones</div>
           <h1>Gestión de Comisiones</h1>
-          <p className="hero-copy">Control y seguimiento de comisiones del 5% sobre beneficios</p>
+          <p className="hero-copy">Comisión sobre lo retirado una vez el cliente ha recuperado todo su capital aportado</p>
         </div>
       </div>
 
@@ -5991,7 +6037,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
           <div className="kpi-content">
             <span className="kpi-label">Comisión total generada</span>
             <span className="kpi-value-large">{formatCurrency(totals.comisionAcumuladaTotal)}</span>
-            <span className="kpi-subtitle">5% sobre beneficios retirados</span>
+            <span className="kpi-subtitle">Sobre lo retirado tras recuperar el capital</span>
           </div>
         </div>
         <div className="kpi-card-large warning">
@@ -6015,6 +6061,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
             <thead>
               <tr>
                 <th>Cliente</th>
+                <th className="text-center">Comisión</th>
                 <th className="text-right">Invertido</th>
                 <th className="text-right">Retirado</th>
                 <th className="text-right">Saldo actual</th>
@@ -6033,6 +6080,45 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                     style={{ cursor: 'pointer' }}
                   >
                     <td className="client-name">{c.name}</td>
+                    <td className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
+                        <select
+                          aria-label={`Comisión de ${c.name}`}
+                          value={c.rate === null ? 'none' : COMMISSION_RATE_PRESETS.some((preset) => Math.abs(preset - (c.rate ?? 0)) < 1e-9) ? String(c.rate) : 'custom'}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === 'none') updateCommissionRate(c.id, null);
+                            else if (value === 'custom') setCustomRateText((prev) => ({ ...prev, [c.id]: c.rate !== null ? String((c.rate * 100).toLocaleString('es-ES')) : '' }));
+                            else updateCommissionRate(c.id, Number(value));
+                          }}
+                        >
+                          {COMMISSION_RATE_PRESETS.map((preset) => (
+                            <option key={preset} value={String(preset)}>{formatCommissionRate(preset)}</option>
+                          ))}
+                          <option value="custom">Otro…</option>
+                          <option value="none">Sin comisión</option>
+                        </select>
+                        {customRateText[c.id] !== undefined || (c.rate !== null && !COMMISSION_RATE_PRESETS.some((preset) => Math.abs(preset - (c.rate ?? 0)) < 1e-9)) ? (
+                          <input
+                            aria-label={`Porcentaje de comisión de ${c.name}`}
+                            style={{ width: 56 }}
+                            placeholder="%"
+                            value={customRateText[c.id] ?? (c.rate !== null ? (c.rate * 100).toLocaleString('es-ES') : '')}
+                            onChange={(e) => setCustomRateText((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                            onBlur={(e) => {
+                              const parsed = parseNumberEs(e.target.value.replace('%', '').trim());
+                              if (parsed !== undefined && parsed >= 0 && parsed <= 100) updateCommissionRate(c.id, parsed / 100);
+                              setCustomRateText((prev) => {
+                                const next = { ...prev };
+                                delete next[c.id];
+                                return next;
+                              });
+                            }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                          />
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="text-right">{formatCurrency(c.incrementos)}</td>
                     <td className="text-right">{formatCurrency(c.decrementos)}</td>
                     <td className="text-right font-semibold">{formatCurrency(c.saldo)}</td>
@@ -6051,7 +6137,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                   </tr>
                   {openRow === c.id && (
                     <tr className="detail-row" onClick={(e) => e.stopPropagation()}>
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         <div className="detail-panel">
                           <div className="detail-info">
                             <div className="eyebrow">Detalle de comisión</div>
@@ -6064,6 +6150,14 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                                 <span className="label">Si retira hoy</span>
                                 <span className="value">{formatCurrency(c.comisionSiRetiraHoy)}</span>
                               </div>
+                              <div className="summary-item">
+                                <span className="label">Capital por recuperar</span>
+                                <span className="value">{formatCurrency(c.capitalPendiente)}</span>
+                              </div>
+                              <div className="summary-item">
+                                <span className="label">Comisión aplicada</span>
+                                <span className="value">{formatCommissionRate(c.rate)}</span>
+                              </div>
                             </div>
                             {c.retiros.length > 0 && (
                               <div className="retiros-list">
@@ -6072,7 +6166,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                                     <tr>
                                       <th>Fecha</th>
                                       <th className="text-right">Retirado</th>
-                                      <th className="text-right">Comisión (5%)</th>
+                                      <th className="text-right">Comisión ({formatCommissionRate(c.rate)})</th>
                                       <th className="text-center">Estado</th>
                                     </tr>
                                   </thead>
@@ -6081,7 +6175,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
                                       <tr key={r.key}>
                                         <td>{formatDate(r.iso)}</td>
                                         <td className="text-right">{formatCurrency(r.retiro)}</td>
-                                        <td className="text-right">{formatCurrency(r.comision)}</td>
+                                        <td className="text-right" title={r.comision > 0 ? undefined : `Sin comisión: faltaban ${formatCurrency(r.capitalPendienteAntes)} de capital por recuperar`}>{formatCurrency(r.comision)}</td>
                                         <td className="text-center">
                                           <button
                                             className={`btn-estado ${r.estado ? 'cobrada' : 'pendiente'}`}
@@ -6107,6 +6201,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
             <tfoot>
               <tr className="totals-row">
                 <td className="font-semibold">TOTALES</td>
+                <td />
                 <td className="text-right font-semibold">{formatCurrency(clientStats.reduce((s, c) => s + c.incrementos, 0))}</td>
                 <td className="text-right font-semibold">{formatCurrency(clientStats.reduce((s, c) => s + c.decrementos, 0))}</td>
                 <td className="text-right font-semibold">{formatCurrency(clientStats.reduce((s, c) => s + c.saldo, 0))}</td>

@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { CLIENTS, isDemoClient } from '../constants/clients';
+import { CLIENTS, isDemoClient, isExcludedFromParticipation } from '../constants/clients';
 import {
   Movement,
   MonthlyHistoryEntry,
@@ -555,8 +555,19 @@ export const buildSnapshot = (
       : undefined;
 
     if (actualFinalTotal !== undefined) {
-      portfolioDayRows.forEach((row) => {
-        row.sharePct = actualFinalTotal > 0 ? (row.finalBalance ?? 0) / actualFinalTotal : undefined;
+      // La participacion se calcula sin los clientes excluidos (p.ej. client-003),
+      // que si siguen contando en el total de la cartera.
+      const participationTotal = getPortfolioClients()
+        .filter(({ id }) => !isExcludedFromParticipation(id))
+        .map(({ id }) => clientRowsById[id][clientRowsById[id].length - 1])
+        .filter((row): row is ClientDayRow => Boolean(row) && row.finalBalance !== undefined)
+        .reduce((sum, row) => sum + (row.finalBalance ?? 0), 0);
+      getPortfolioClients().forEach(({ id }) => {
+        const row = clientRowsById[id][clientRowsById[id].length - 1];
+        if (!row || row.finalBalance === undefined) return;
+        row.sharePct = !isExcludedFromParticipation(id) && participationTotal > 0
+          ? (row.finalBalance ?? 0) / participationTotal
+          : undefined;
         row.shareAmount = row.finalBalance;
       });
     }

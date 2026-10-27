@@ -10,7 +10,8 @@ export interface CalendarDay {
 
 export const START_YEAR = 2025;
 export const YEAR = dayjs().year();
-export const END_YEAR = 2027;
+// El calendario llega siempre hasta el año siguiente al actual (nunca antes de 2027).
+export const END_YEAR = Math.max(2027, YEAR + 1);
 
 dayjs.locale('es');
 
