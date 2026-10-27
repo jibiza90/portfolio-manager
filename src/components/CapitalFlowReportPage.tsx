@@ -45,6 +45,13 @@ export interface SourceLot {
 export interface CapitalLot extends SourceLot {
   remainingCapital: number;
   allocatedWithdrawal: number;
+  withdrawalAllocations: Array<{
+    withdrawalId: string;
+    iso: string;
+    amount: number;
+    pending: boolean;
+    returnPct?: number;
+  }>;
   performanceFactor: number;
   attributedProfit: number;
   currentValue: number;
@@ -252,21 +259,29 @@ export const buildCapitalModel = (
     }))
   ].sort((left, right) => left.iso.localeCompare(right.iso));
 
-  const mutableLots = sourceLots.map((lot) => ({ ...lot, remainingCapital: lot.amount, allocatedWithdrawal: 0 }));
+  const mutableLots = sourceLots.map((lot) => ({
+    ...lot,
+    remainingCapital: lot.amount,
+    allocatedWithdrawal: 0,
+    withdrawalAllocations: [] as CapitalLot['withdrawalAllocations']
+  }));
   withdrawals.forEach((withdrawal) => {
     const eligible = mutableLots.filter((lot) => lot.iso <= withdrawal.iso && lot.remainingCapital > 0.005);
-    const eligibleCapital = eligible.reduce((sum, lot) => sum + lot.remainingCapital, 0);
-    if (eligibleCapital <= 0) return;
     let unallocated = withdrawal.amount;
-    eligible.forEach((lot, index) => {
-      const proportionalAmount = index === eligible.length - 1
-        ? unallocated
-        : withdrawal.amount * (lot.remainingCapital / eligibleCapital);
-      const appliedAmount = Math.min(lot.remainingCapital, proportionalAmount);
+    for (const lot of eligible) {
+      if (unallocated <= 0.005) break;
+      const appliedAmount = Math.min(lot.remainingCapital, unallocated);
       lot.remainingCapital -= appliedAmount;
       lot.allocatedWithdrawal += appliedAmount;
+      lot.withdrawalAllocations.push({
+        withdrawalId: withdrawal.id,
+        iso: withdrawal.iso,
+        amount: appliedAmount,
+        pending: withdrawal.pending,
+        returnPct: withdrawal.returnPct
+      });
       unallocated -= appliedAmount;
-    });
+    }
   });
 
   const closedMonths = months.filter((month) => month.hasClose);
@@ -318,6 +333,7 @@ export const buildCapitalModel = (
       specificEntryReturnPct: lot.specificEntryReturnPct,
       remainingCapital: lot.remainingCapital,
       allocatedWithdrawal: lot.allocatedWithdrawal,
+      withdrawalAllocations: lot.withdrawalAllocations,
       performanceFactor: lot.performanceFactor,
       attributedProfit,
       currentValue,
@@ -624,7 +640,7 @@ export const CapitalFlowReportPage: React.FC<CapitalFlowReportPageProps> = ({
 
       <section className="pf4-method">
         <div><span>Nota metodológica</span><h2>Una lectura trazable, no una segunda contabilidad.</h2></div>
-        <p>La atribución por aportación es una estimación pedagógica: combina el rendimiento publicado desde cada fecha de entrada, distribuye proporcionalmente las retiradas y reconcilia el resultado con el saldo total. Los importes oficiales siguen siendo el saldo, los movimientos y los cierres publicados.</p>
+        <p>La atribución por aportación es una estimación pedagógica: combina el rendimiento publicado desde cada fecha de entrada, imputa cronológicamente cada retirada a la aportación más antigua con capital disponible y reconcilia el resultado con el saldo total. Los importes oficiales siguen siendo el saldo, los movimientos y los cierres publicados.</p>
       </section>
 
       <footer className="pf4-footer">

@@ -3298,14 +3298,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
             </div>
         </section>
 
-        {report.showContributionJourney ? (
-          <ContributionJourneyModule
-            report={report}
-            pendingCashMovements={visiblePendingCashMovements}
-            onAnalyticsEvent={onAnalyticsEvent}
-          />
-        ) : null}
-
         <section className="report-pro-demo-control-panel">
             <div className="report-pro-panel-head">
               <span className="report-pro-global-filter-badge">Filtro global</span>
@@ -3805,6 +3797,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
             </div>
           </section>
         )}
+
+        {report.showContributionJourney ? (
+          <ContributionJourneyModule
+            report={report}
+            pendingCashMovements={visiblePendingCashMovements}
+            onAnalyticsEvent={onAnalyticsEvent}
+          />
+        ) : null}
 
 
         <section className="report-pro-waterfall-panel" aria-label="Composicion financiera de la cartera">

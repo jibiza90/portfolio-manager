@@ -82,16 +82,68 @@ test('shows the contribution journey only when the client module is enabled', as
 
   const module = page.locator('.report-pro-contribution-journey');
   await expect(module).toBeVisible();
-  await expect(module.getByRole('heading', { name: 'Evolución de cada aportación' })).toBeVisible();
-  await expect(module.locator('.contribution-journey-selector > button')).toHaveCount(3);
+  await expect(module.getByRole('heading', { name: 'Qué ocurrió con cada aportación' })).toBeVisible();
+  await expect(module.locator('.contribution-journey-map > button')).toHaveCount(3);
+  await expect(module.locator('.contribution-journey-withdrawal-list > div')).toHaveCount(2);
+  await expect(module.locator('.contribution-journey-detail')).toContainText('40.000,00 €');
+
+  const movementPanel = page.getByRole('heading', { name: 'Capital aportado y retirado' }).locator('..').locator('..');
+  const journeyFollowsMovements = await page.evaluate(([movements, journey]) => (
+    Boolean(movements.compareDocumentPosition(journey) & Node.DOCUMENT_POSITION_FOLLOWING)
+  ), [await movementPanel.elementHandle(), await module.elementHandle()]);
+  expect(journeyFollowsMovements).toBe(true);
 
   await module.getByRole('button', { name: 'Con retiradas' }).click();
-  await expect(module.locator('.contribution-journey-selector > button')).toHaveCount(2);
+  await expect(module.locator('.contribution-journey-map > button')).toHaveCount(1);
 
   const hasHorizontalPageOverflow = await page.evaluate(() => (
     document.documentElement.scrollWidth > window.innerWidth + 1
   ));
   expect(hasHorizontalPageOverflow).toBe(false);
+});
+
+test('allocates withdrawals to the oldest contribution before moving to the next one', async ({ page }) => {
+  await page.goto('/');
+  const lots = await page.evaluate(async (modulePath) => {
+    const { buildCapitalModel } = await import(/* @vite-ignore */ modulePath);
+    const report = {
+      clientId: 'fifo-test',
+      clientName: 'FIFO Test',
+      clientCode: 'fifo-test',
+      incrementos: 70000,
+      decrementos: 35000,
+      saldo: 35000,
+      beneficioTotal: 0,
+      rentabilidad: 0,
+      beneficioUltimoMes: 0,
+      rentabilidadUltimoMes: 0,
+      twrYtd: 0,
+      monthlyStats: [],
+      patrimonioEvolution: [],
+      movements: [
+        { iso: '2026-01-10', type: 'increment', amount: 30000, balance: 30000 },
+        { iso: '2026-02-10', type: 'increment', amount: 40000, balance: 70000 },
+        { iso: '2026-03-10', type: 'decrement', amount: 35000, balance: 35000 }
+      ],
+      contributionBreakdowns: [],
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 86400000
+    };
+    return buildCapitalModel(report, [], []).lots.map((lot: {
+      allocatedWithdrawal: number;
+      remainingCapital: number;
+      withdrawalAllocations: Array<{ amount: number }>;
+    }) => ({
+      allocatedWithdrawal: lot.allocatedWithdrawal,
+      remainingCapital: lot.remainingCapital,
+      allocationAmounts: lot.withdrawalAllocations.map((allocation) => allocation.amount)
+    }));
+  }, '/src/components/CapitalFlowReportPage.tsx');
+
+  expect(lots).toEqual([
+    { allocatedWithdrawal: 30000, remainingCapital: 0, allocationAmounts: [30000] },
+    { allocatedWithdrawal: 5000, remainingCapital: 35000, allocationAmounts: [5000] }
+  ]);
 });
 
 test('uses page 20 as the standard client report with annual closing totals', async ({ page }) => {

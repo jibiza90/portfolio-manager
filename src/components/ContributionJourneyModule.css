@@ -119,14 +119,14 @@
 
 .contribution-journey-summary span,
 .contribution-journey-facts span,
-.contribution-journey-flow span {
+.contribution-journey-equation span {
   color: var(--journey-muted);
   font-size: 0.76rem;
   font-weight: 700;
 }
 
 .contribution-journey-summary .is-total span,
-.contribution-journey-flow .is-total span { color: #bcd3cf; }
+.contribution-journey-equation .is-total span { color: #c6ddd8; }
 
 .contribution-journey-summary strong {
   overflow-wrap: anywhere;
@@ -172,6 +172,166 @@
   color: #f5fffb;
   background: #1c7063;
   box-shadow: 0 8px 18px rgba(25, 112, 96, 0.2);
+}
+
+.contribution-journey-map {
+  display: grid;
+  gap: 10px;
+}
+
+.contribution-journey-map > button {
+  display: grid;
+  grid-template-columns: minmax(145px, 0.82fr) minmax(125px, 1fr) 18px minmax(125px, 1fr) 18px minmax(125px, 1fr) 18px minmax(145px, 1.08fr);
+  grid-template-rows: auto auto;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--journey-line);
+  border-radius: 18px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.76);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.contribution-journey-map > button:hover,
+.contribution-journey-map > button.is-active {
+  border-color: rgba(25, 138, 116, 0.5);
+  box-shadow: 0 15px 34px rgba(29, 77, 73, 0.1);
+  transform: translateY(-1px);
+}
+
+.contribution-journey-map > button.is-active {
+  background: linear-gradient(135deg, #ffffff, #edf8f3);
+}
+
+.contribution-journey-identity {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1 / 3;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-content: center;
+  gap: 3px 10px;
+  min-width: 0;
+  padding: 12px;
+  border-right: 1px solid var(--journey-line);
+}
+
+.contribution-journey-identity > i {
+  display: grid;
+  grid-row: 1 / 4;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  color: #0f725f;
+  background: var(--journey-green-soft);
+  font-size: 0.74rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.contribution-journey-identity small,
+.contribution-journey-map-step small {
+  color: var(--journey-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.contribution-journey-identity > strong {
+  font-size: 0.88rem;
+}
+
+.contribution-journey-identity > .contribution-journey-status {
+  grid-column: 2;
+  justify-self: start;
+  margin-top: 3px;
+  font-style: normal;
+}
+
+.contribution-journey-map-step {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 82px;
+  padding: 12px;
+  border-radius: 13px;
+  background: #f5f8f6;
+}
+
+.contribution-journey-map-step strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(0.9rem, 1.15vw, 1.08rem);
+}
+
+.contribution-journey-map-step em {
+  overflow: hidden;
+  color: #84918f;
+  font-size: 0.64rem;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contribution-journey-map-step.is-withdrawal {
+  background: #fff8ef;
+}
+
+.contribution-journey-map-step.is-withdrawal strong {
+  color: #a04d31;
+}
+
+.contribution-journey-map-step.is-current {
+  color: #f6fffc;
+  background: linear-gradient(145deg, #205052, #153739);
+}
+
+.contribution-journey-map-step.is-current small,
+.contribution-journey-map-step.is-current em {
+  color: #c5d8d4;
+}
+
+.contribution-journey-map > button > b {
+  align-self: center;
+  color: #92a19e;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.contribution-journey-map-formula {
+  grid-column: 2 / 8;
+  grid-row: 2;
+  align-self: center;
+  min-width: 0;
+  padding: 2px 6px;
+  color: #6c7c79;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.contribution-journey-map-formula strong {
+  color: #173f41;
+}
+
+.contribution-journey-map-action {
+  grid-column: 8;
+  grid-row: 2;
+  align-self: center;
+  justify-self: end;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #0f725f;
+  background: #e4f4ed;
+  font-size: 0.66rem;
+  font-weight: 850;
+}
+
+.contribution-journey-map > .contribution-journey-detail {
+  margin: -2px 0 8px;
 }
 
 .contribution-journey-layout {
@@ -305,43 +465,134 @@
   flex: 0 0 auto;
 }
 
-.contribution-journey-flow {
+.contribution-journey-equations {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr) auto);
-  align-items: stretch;
-  gap: 7px;
+  gap: 10px;
 }
 
-.contribution-journey-flow > div {
+.contribution-journey-equation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1.15fr);
+  align-items: stretch;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid rgba(29, 72, 74, 0.1);
+  border-radius: 17px;
+  background: #f7faf8;
+}
+
+.contribution-journey-equation.is-result {
+  background: linear-gradient(135deg, rgba(229, 244, 237, 0.78), rgba(247, 250, 248, 0.96));
+}
+
+.contribution-journey-equation > div {
   display: grid;
   align-content: center;
   gap: 6px;
   min-width: 0;
-  min-height: 96px;
+  min-height: 82px;
   padding: 14px;
   border-radius: 14px;
-  background: #f3f7f5;
+  background: rgba(255, 255, 255, 0.88);
 }
 
-.contribution-journey-flow > div.is-total {
+.contribution-journey-equation > div.is-highlight {
+  color: #0e6959;
+  background: #e7f5ef;
+}
+
+.contribution-journey-equation > div.is-total {
   color: #f6fffc;
-  background: #173b3d;
+  background: linear-gradient(145deg, #205052, #153739);
+  box-shadow: 0 10px 24px rgba(21, 55, 57, 0.16);
 }
 
-.contribution-journey-flow > b {
+.contribution-journey-equation > b {
   align-self: center;
   color: #82928f;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
 }
 
-.contribution-journey-flow strong {
+.contribution-journey-equation strong {
   overflow-wrap: anywhere;
-  font-size: clamp(0.92rem, 1.35vw, 1.12rem);
+  font-size: clamp(0.94rem, 1.25vw, 1.12rem);
+}
+
+.contribution-journey-withdrawals {
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(174, 106, 42, 0.18);
+  border-radius: 15px;
+  background: #fffaf3;
+}
+
+.contribution-journey-withdrawals-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(174, 106, 42, 0.14);
+}
+
+.contribution-journey-withdrawals-head strong {
+  color: #654019;
+  font-size: 0.8rem;
+}
+
+.contribution-journey-withdrawals-head span {
+  color: #8b765f;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.contribution-journey-withdrawal-list {
+  display: grid;
+}
+
+.contribution-journey-withdrawal-list > div {
+  display: grid;
+  grid-template-columns: 112px 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+}
+
+.contribution-journey-withdrawal-list > div + div {
+  border-top: 1px solid rgba(174, 106, 42, 0.1);
+}
+
+.contribution-journey-withdrawal-list span {
+  color: #6f6254;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.contribution-journey-withdrawal-list strong {
+  color: #a04d31;
+  font-size: 0.82rem;
+}
+
+.contribution-journey-withdrawal-list em {
+  color: #75695d;
+  font-size: 0.7rem;
+  font-style: normal;
+  text-align: right;
+}
+
+.contribution-journey-no-withdrawals {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px dashed rgba(29, 72, 74, 0.18);
+  border-radius: 13px;
+  color: var(--journey-muted);
+  background: rgba(246, 249, 247, 0.76);
+  font-size: 0.76rem;
 }
 
 .contribution-journey-facts {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 9px;
   margin-top: 12px;
 }
@@ -378,6 +629,15 @@
 
 @media (max-width: 1050px) {
   .contribution-journey-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .contribution-journey-map > button { grid-template-columns: 150px repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, auto); }
+  .contribution-journey-map > button > b { display: none; }
+  .contribution-journey-identity { grid-column: 1; grid-row: 1 / 3; }
+  .contribution-journey-map-step.is-origin { grid-column: 2; grid-row: 1; }
+  .contribution-journey-map-step.is-withdrawal { grid-column: 3; grid-row: 1; }
+  .contribution-journey-map-step.is-result { grid-column: 2; grid-row: 2; }
+  .contribution-journey-map-step.is-current { grid-column: 3; grid-row: 2; }
+  .contribution-journey-map-formula { grid-column: 2 / 4; grid-row: 3; }
+  .contribution-journey-map-action { grid-column: 1; grid-row: 3; justify-self: start; }
   .contribution-journey-layout { grid-template-columns: 1fr; }
   .contribution-journey-selector {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -395,21 +655,35 @@
   .contribution-journey-controls { align-items: stretch; flex-direction: column; }
   .contribution-journey-filters { display: grid; grid-template-columns: repeat(3, 1fr); }
   .contribution-journey-filters button { min-width: 0; padding-inline: 8px; }
+  .contribution-journey-map > button { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; padding: 10px; }
+  .contribution-journey-identity { grid-column: 1 / 3; grid-row: 1; border-right: 0; border-bottom: 1px solid var(--journey-line); }
+  .contribution-journey-map-step.is-origin { grid-column: 1; grid-row: 2; }
+  .contribution-journey-map-step.is-withdrawal { grid-column: 2; grid-row: 2; }
+  .contribution-journey-map-step.is-result { grid-column: 1; grid-row: 3; }
+  .contribution-journey-map-step.is-current { grid-column: 2; grid-row: 3; }
+  .contribution-journey-map-formula { grid-column: 1 / 3; grid-row: 4; line-height: 1.5; }
+  .contribution-journey-map-action { grid-column: 1 / 3; grid-row: 5; justify-self: stretch; text-align: center; }
   .contribution-journey-selector { display: flex; margin-inline: -14px; padding: 2px 14px 10px; overflow-x: auto; scroll-snap-type: x mandatory; }
   .contribution-journey-selector > button { flex: 0 0 min(78vw, 280px); scroll-snap-align: start; }
   .contribution-journey-detail-head { display: grid; }
   .contribution-journey-detail-head > .contribution-journey-status { justify-self: start; }
-  .contribution-journey-flow { grid-template-columns: 1fr; }
-  .contribution-journey-flow > b { display: none; }
-  .contribution-journey-flow > div { min-height: 76px; }
-  .contribution-journey-facts { grid-template-columns: 1fr; }
+  .contribution-journey-equation { grid-template-columns: 1fr; }
+  .contribution-journey-equation > b { display: none; }
+  .contribution-journey-equation > div { min-height: 72px; }
+  .contribution-journey-withdrawals-head { align-items: flex-start; flex-direction: column; }
+  .contribution-journey-withdrawal-list > div { grid-template-columns: 1fr auto; }
+  .contribution-journey-withdrawal-list em { grid-column: 1 / -1; text-align: left; }
+  .contribution-journey-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 480px) {
   .contribution-journey-summary { grid-template-columns: 1fr; }
   .contribution-journey-summary article { min-height: 86px; }
+  .contribution-journey-map-step { min-height: 94px; padding: 10px; }
+  .contribution-journey-facts { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .contribution-journey-selector > button { transition: none; }
+  .contribution-journey-selector > button,
+  .contribution-journey-map > button { transition: none; }
 }
