@@ -38,7 +38,13 @@ import {
   type AccessProfileRecord
 } from './services/cloudPortfolio';
 import { auth } from './services/firebaseApp';
-import { createAndDownloadAdminBackup } from './services/adminBackup';
+import {
+  createAndDownloadAdminBackup,
+  parseAdminBackup,
+  restoreAdminBackup,
+  type AdminBackupRestorePlan,
+  type AdminBackupRestoreResult
+} from './services/adminBackup';
 import {
   ACTIVE_PRESENCE_VERSION,
   deleteReportDownloadEvent,
@@ -3350,17 +3356,71 @@ function LoginAccessView({
   );
 }
 
+const RESTORE_CONFIRMATION_WORD = 'RESTAURAR';
+
 function AdminBackupView({
   busy,
   error,
   success,
-  onDownload
+  onDownload,
+  onRestore
 }: {
   busy: boolean;
   error: string | null;
   success: string | null;
   onDownload: () => void;
+  onRestore: (
+    plan: AdminBackupRestorePlan,
+    onProgress: (message: string) => void
+  ) => Promise<AdminBackupRestoreResult & { safetyBackupFilename: string }>;
 }) {
+  const [restoreFileName, setRestoreFileName] = useState<string | null>(null);
+  const [restorePlan, setRestorePlan] = useState<AdminBackupRestorePlan | null>(null);
+  const [restoreConfirmation, setRestoreConfirmation] = useState('');
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreProgress, setRestoreProgress] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restoreDone, setRestoreDone] = useState<(AdminBackupRestoreResult & { safetyBackupFilename: string }) | null>(null);
+
+  const selectRestoreFile = async (file: File | undefined) => {
+    setRestorePlan(null);
+    setRestoreError(null);
+    setRestoreDone(null);
+    setRestoreConfirmation('');
+    setRestoreFileName(file?.name ?? null);
+    if (!file) return;
+    try {
+      setRestorePlan(parseAdminBackup(await file.text()));
+    } catch (parseError) {
+      setRestoreError(parseError instanceof Error ? parseError.message : 'No se pudo leer el archivo.');
+    }
+  };
+
+  const runRestore = async () => {
+    if (!restorePlan || restoreBusy || restoreConfirmation.trim() !== RESTORE_CONFIRMATION_WORD) return;
+    setRestoreBusy(true);
+    setRestoreError(null);
+    try {
+      const result = await onRestore(restorePlan, setRestoreProgress);
+      setRestoreDone(result);
+      setRestoreProgress(null);
+    } catch (restoreFailure) {
+      console.error('No se pudo restaurar el backup', restoreFailure);
+      setRestoreProgress(null);
+      setRestoreError(
+        restoreFailure instanceof Error && restoreFailure.message.startsWith('No se pudo descargar')
+          ? restoreFailure.message
+          : `${restoreFailure instanceof Error ? restoreFailure.message : 'Error desconocido'}. La restauracion no se completo: recarga la pagina y, si hace falta, vuelve a restaurar este archivo o la copia descargada justo antes.`
+      );
+    } finally {
+      setRestoreBusy(false);
+    }
+  };
+
+  const restoreDate = restorePlan?.createdAt
+    ? new Date(restorePlan.createdAt).toLocaleString('es-ES')
+    : 'fecha desconocida';
+
   return (
     <div className="glass-card fade-in" style={{ display: 'grid', gap: 14 }}>
       <section style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
@@ -3401,6 +3461,102 @@ function AdminBackupView({
             {success ? <span className="positive" style={{ fontWeight: 700 }}>{success}</span> : null}
             {error ? <span style={{ color: '#b42318', fontWeight: 700 }}>{error}</span> : null}
           </div>
+        </div>
+      </section>
+
+      <section style={{ border: '1px solid #d7d2c8', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
+        <header style={{ padding: '14px 16px', borderBottom: '1px solid #ebe6dd' }}>
+          <h3 style={{ margin: 0 }}>Restaurar desde archivo</h3>
+          <p className="muted" style={{ margin: '6px 0 0 0' }}>
+            Sube un backup descargado aqui y la web vuelve a dejar los datos como estaban en ese momento.
+          </p>
+        </header>
+        <div style={{ padding: 16, display: 'grid', gap: 14 }}>
+          <div style={{ border: '1px solid #d7d2c8', borderRadius: 12, padding: 14, background: '#fffaf0', display: 'grid', gap: 6 }}>
+            <strong>Antes de restaurar, se descarga automaticamente un backup del estado actual.</strong>
+            <span className="muted">
+              Si te equivocas de archivo, puedes restaurar esa copia y volver a como estaba. Nunca se borra nada que no
+              este en el archivo. Los clientes ven lo que tenian publicado en la fecha del backup.
+            </span>
+          </div>
+
+          {restoreDone ? (
+            <div style={{ border: '1px solid #9fd8b4', borderRadius: 12, padding: 14, background: '#f0fbf4', display: 'grid', gap: 8 }}>
+              <strong className="positive">Restauracion completada.</strong>
+              <span>Copia previa descargada: {restoreDone.safetyBackupFilename}</span>
+              <span>Datos principales restaurados: {restoreDone.coreWritten} · Datos del navegador: {restoreDone.localKeys}</span>
+              <span>
+                Historial restaurado: {restoreDone.historyWritten}
+                {restoreDone.historyFailed > 0 ? ` · ${restoreDone.historyFailed} registros de historial no se pudieron reescribir (permisos de Firebase); siguen guardados en el archivo.` : ''}
+              </span>
+              <div>
+                <button type="button" className="info-add-btn" onClick={() => window.location.reload()}>
+                  Recargar la pagina para ver los datos
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontWeight: 700 }}>1. Elige el archivo de backup (.json)</span>
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  disabled={restoreBusy}
+                  onChange={(event) => { void selectRestoreFile(event.target.files?.[0]); }}
+                />
+              </label>
+
+              {restorePlan ? (
+                <div style={{ border: '1px solid #ebe6dd', borderRadius: 12, padding: 14, background: '#fbfaf7', display: 'grid', gap: 6 }}>
+                  <strong>2. Revisa que es el backup correcto</strong>
+                  <span>Archivo: {restoreFileName}</span>
+                  <span>Fecha del backup: {restoreDate}{restorePlan.createdByEmail ? ` · hecho por ${restorePlan.createdByEmail}` : ''}</span>
+                  <span>
+                    Clientes: {restorePlan.summary.clients} ({restorePlan.summary.clientsWithMovements} con movimientos) ·
+                    Movimientos: {restorePlan.summary.movements} · Dias con saldo: {restorePlan.summary.dailyFinals}
+                  </span>
+                  <span>
+                    Accesos de clientes: {restorePlan.summary.accessProfiles} · Resumenes publicados: {restorePlan.summary.clientOverviews} ·
+                    Mensajes: {restorePlan.summary.supportMessages}
+                  </span>
+                  <span>
+                    Historial (accesos y actividad): {restorePlan.summary.historyRecords} · Datos del navegador: {restorePlan.summary.localKeys}
+                  </span>
+                  {restorePlan.skippedExpiredReportLinks > 0 ? (
+                    <span className="muted">{restorePlan.skippedExpiredReportLinks} enlaces de informe caducados no se restauran (ya no funcionaban).</span>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {restorePlan ? (
+                <label style={{ display: 'grid', gap: 6, maxWidth: 360 }}>
+                  <span style={{ fontWeight: 700 }}>3. Escribe {RESTORE_CONFIRMATION_WORD} para confirmar</span>
+                  <input
+                    value={restoreConfirmation}
+                    disabled={restoreBusy}
+                    autoComplete="off"
+                    onChange={(event) => setRestoreConfirmation(event.target.value)}
+                  />
+                </label>
+              ) : null}
+
+              {restorePlan ? (
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="info-delete-btn"
+                    onClick={() => { void runRestore(); }}
+                    disabled={restoreBusy || restoreConfirmation.trim() !== RESTORE_CONFIRMATION_WORD}
+                  >
+                    {restoreBusy ? 'Restaurando...' : 'Restaurar este backup'}
+                  </button>
+                  {restoreProgress ? <span className="muted">{restoreProgress}</span> : null}
+                </div>
+              ) : null}
+            </>
+          )}
+          {restoreError ? <span style={{ color: '#b42318', fontWeight: 700 }}>{restoreError}</span> : null}
         </div>
       </section>
     </div>
@@ -3537,26 +3693,55 @@ export default function App() {
   const [publicationError, setPublicationError] = useState<string | null>(null);
   const initialOverviewSyncRef = useRef<string>('');
 
+  const downloadCurrentAdminBackup = async () => {
+    await waitForPendingPortfolioSave();
+    const state = usePortfolioStore.getState();
+    return createAndDownloadAdminBackup({
+      contacts,
+      guarantees,
+      comisionesCobradas,
+      comisionEstado,
+      followUpByClient,
+      portfolioState: {
+        finalByDay: state.finalByDay,
+        movementsByClient: state.movementsByClient,
+        monthlyHistoryByClient: state.monthlyHistoryByClient
+      }
+    });
+  };
+
+  const handleRestoreAdminBackup = async (
+    plan: AdminBackupRestorePlan,
+    onProgress: (message: string) => void
+  ) => {
+    if (!isPrimaryAdmin) throw new Error('Solo el admin principal puede restaurar.');
+    if (usePortfolioStore.getState().saveStatus === 'error') {
+      throw new Error('Hay un error de guardado pendiente. Recarga la página antes de restaurar.');
+    }
+
+    // Copia de seguridad del estado actual antes de tocar nada.
+    onProgress('Descargando copia de seguridad del estado actual...');
+    let safetyBackup: Awaited<ReturnType<typeof createAndDownloadAdminBackup>>;
+    try {
+      safetyBackup = await downloadCurrentAdminBackup();
+    } catch (error) {
+      console.error('No se pudo crear la copia previa a la restauracion', error);
+      throw new Error('No se pudo descargar la copia del estado actual. No se ha restaurado nada.');
+    }
+
+    // Bloquea el autoguardado para que los datos en memoria no pisen lo restaurado.
+    usePortfolioStore.getState().setWriteAccess(false);
+    const result = await restoreAdminBackup(plan, onProgress);
+    return { ...result, safetyBackupFilename: safetyBackup.filename };
+  };
+
   const handleDownloadAdminBackup = async () => {
     if (!isPrimaryAdmin || backupBusy) return;
     setBackupBusy(true);
     setBackupError(null);
     setBackupSuccess(null);
     try {
-      await waitForPendingPortfolioSave();
-      const state = usePortfolioStore.getState();
-      const result = await createAndDownloadAdminBackup({
-        contacts,
-        guarantees,
-        comisionesCobradas,
-        comisionEstado,
-        followUpByClient,
-        portfolioState: {
-          finalByDay: state.finalByDay,
-          movementsByClient: state.movementsByClient,
-          monthlyHistoryByClient: state.monthlyHistoryByClient
-        }
-      });
+      const result = await downloadCurrentAdminBackup();
       setBackupSuccess(`Backup descargado: ${result.filename}`);
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Backup completo descargado.' }));
     } catch (error) {
@@ -4531,6 +4716,7 @@ export default function App() {
           error={backupError}
           success={backupSuccess}
           onDownload={handleDownloadAdminBackup}
+          onRestore={handleRestoreAdminBackup}
         />
       ) : activeView === MENSAJES_VIEW ? (
         <AdminMessagesView contacts={contacts} />
