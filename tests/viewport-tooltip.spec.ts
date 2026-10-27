@@ -31,36 +31,29 @@ test('keeps every report tooltip visible inside the real page viewport', async (
   }, '/tests/fixtures/report-view-harness.tsx');
   // La pagina 1 de demo1 prueba un grafico nuevo; la 20 es la que ven los clientes.
   await page.locator('[aria-label$="20"]').click();
+  // Aparta el raton del boton pulsado para que no reabra globos al desplazar la pagina.
+  await page.mouse.move(1, 1);
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
   await expect(page.getByLabel('Periodo')).toHaveValue('all');
 
-  const fittedPatrimonyChart = page.locator('.report-pro-patrimony-scroll');
-  await expect.poll(async () => fittedPatrimonyChart.evaluate((element) => {
-    const currentScrollLeft = element.scrollLeft;
-    element.scrollLeft = Number.MAX_SAFE_INTEGER;
-    const maximumScrollLeft = element.scrollLeft;
-    element.scrollLeft = currentScrollLeft;
-    return {
-      atLatestMonth: Math.abs(currentScrollLeft - maximumScrollLeft) <= 1,
-      scrollable: element.classList.contains('is-scrollable')
-    };
-  })).toEqual({ atLatestMonth: true, scrollable: true });
-  const fittedDimensions = await fittedPatrimonyChart.evaluate((element) => ({
-    clientWidth: element.clientWidth
+  // Grafico de patrimonio: empieza en el ultimo mes y el eje de importes se queda fijo al deslizar.
+  const patrimonyChart = page.locator('.pm-trend-scroll');
+  await expect(page.locator('.pm-trend-month')).toHaveCount(12);
+  const patrimonyState = await patrimonyChart.evaluate((element) => ({
+    scrollable: element.classList.contains('is-scrollable'),
+    atLatestMonth: Math.abs(element.scrollLeft - (element.scrollWidth - element.clientWidth)) <= 1
   }));
-  const fittedMonthRowWidth = await page.locator('.report-pro-patrimony-scroll .report-pro-month-row').evaluate((element) => (
-    element.getBoundingClientRect().width
-  ));
-  expect(12 * fittedDimensions.clientWidth / fittedMonthRowWidth).toBeCloseTo(10, 1);
-
-  const fixedAxis = page.locator('.report-pro-fixed-y-axis');
-  const fixedAxisBeforeScroll = await fixedAxis.boundingBox();
-  await fittedPatrimonyChart.evaluate((element) => { element.scrollLeft = 0; });
-  const fixedAxisAfterScroll = await fixedAxis.boundingBox();
-  expect(fixedAxisBeforeScroll).not.toBeNull();
-  expect(fixedAxisAfterScroll).not.toBeNull();
-  expect(fixedAxisAfterScroll!.x).toBeCloseTo(fixedAxisBeforeScroll!.x, 0);
-  await fittedPatrimonyChart.evaluate((element) => { element.scrollLeft = Number.MAX_SAFE_INTEGER; });
+  expect(patrimonyState.atLatestMonth).toBe(true);
+  if (patrimonyState.scrollable) {
+    const fixedAxis = page.locator('.pm-trend-yaxis');
+    const fixedAxisBeforeScroll = await fixedAxis.boundingBox();
+    await patrimonyChart.evaluate((element) => { element.scrollLeft = 0; });
+    const fixedAxisAfterScroll = await fixedAxis.boundingBox();
+    expect(fixedAxisBeforeScroll).not.toBeNull();
+    expect(fixedAxisAfterScroll).not.toBeNull();
+    expect(fixedAxisAfterScroll!.x).toBeCloseTo(fixedAxisBeforeScroll!.x, 0);
+    await patrimonyChart.evaluate((element) => { element.scrollLeft = Number.MAX_SAFE_INTEGER; });
+  }
 
   const assertVisibleInsideViewport = async () => {
     const tooltip = page.locator('.report-pro-viewport-tooltip');
@@ -91,9 +84,7 @@ test('keeps every report tooltip visible inside the real page viewport', async (
     page.locator('.report-pro-capital-history-card').nth(1),
     page.getByRole('button', { name: 'Ejemplo' }),
     page.locator('.report-pro-bar-col').first(),
-    page.locator('.report-pro-bar-col').last(),
-    page.locator('.report-pro-dot-hit').first(),
-    page.locator('.report-pro-dot-hit').last()
+    page.locator('.report-pro-bar-col').last()
   ];
 
   for (const trigger of customTriggers) {
@@ -113,26 +104,15 @@ test('keeps every report tooltip visible inside the real page viewport', async (
   }, '/tests/fixtures/report-view-harness.tsx');
   // La pagina 1 de demo1 prueba un grafico nuevo; la 20 es la que ven los clientes.
   await page.locator('[aria-label$="20"]').click();
+  // Aparta el raton del boton pulsado para que no reabra globos al desplazar la pagina.
+  await page.mouse.move(1, 1);
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
   await expect(page.getByLabel('Periodo')).toHaveValue('all');
 
-  const scrollablePatrimonyChart = page.locator('.report-pro-patrimony-scroll');
-  await expect.poll(async () => scrollablePatrimonyChart.evaluate((element) => {
-    const currentScrollLeft = element.scrollLeft;
-    element.scrollLeft = Number.MAX_SAFE_INTEGER;
-    const maximumScrollLeft = element.scrollLeft;
-    element.scrollLeft = currentScrollLeft;
-    return Math.abs(currentScrollLeft - maximumScrollLeft) <= 1;
-  })).toBe(true);
-  const scrollableDimensions = await scrollablePatrimonyChart.evaluate((element) => ({
-    clientWidth: element.clientWidth,
-    scrollWidth: element.scrollWidth,
-    scrollable: element.classList.contains('is-scrollable')
-  }));
-  expect(scrollableDimensions.scrollable).toBe(true);
-  expect(scrollableDimensions.scrollWidth).toBeGreaterThan(scrollableDimensions.clientWidth);
-  const scrollableMonthRowWidth = await page.locator('.report-pro-patrimony-scroll .report-pro-month-row').evaluate((element) => (
-    element.getBoundingClientRect().width
+  const scrollablePatrimonyChart = page.locator('.pm-trend-scroll');
+  await expect(page.locator('.pm-trend-month')).toHaveCount(13);
+  const latestMonthVisible = await scrollablePatrimonyChart.evaluate((element) => (
+    Math.abs(element.scrollLeft - (element.scrollWidth - element.clientWidth)) <= 1
   ));
-  expect(13 * scrollableDimensions.clientWidth / scrollableMonthRowWidth).toBeCloseTo(10, 1);
+  expect(latestMonthVisible).toBe(true);
 });

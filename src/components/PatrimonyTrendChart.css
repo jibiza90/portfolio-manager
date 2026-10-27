@@ -7,6 +7,8 @@
   --pm-negative: #b4372f;
   --pm-line: rgba(10, 32, 55, 0.08);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 16px;
   margin-top: 8px;
   font-variant-numeric: tabular-nums;
@@ -64,6 +66,8 @@
 .pm-trend-scroll {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: hidden;
   border-radius: 18px;
   background: linear-gradient(180deg, #fbfdfd 0%, #ffffff 100%);
@@ -265,4 +269,19 @@
   .pm-trend-halo {
     animation: none;
   }
+}
+
+.pm-trend-frame {
+  position: relative;
+  min-width: 0;
+  width: 100%;
+}
+
+.pm-trend-yaxis {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  pointer-events: none;
+  border-radius: 18px 0 0 18px;
+  background: linear-gradient(90deg, #fdfefe 72%, rgba(253, 254, 254, 0));
 }

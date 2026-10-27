@@ -19,7 +19,9 @@ interface PatrimonyTrendChartProps {
 
 const HEIGHT = 440;
 const PAD = { top: 46, right: 28, bottom: 86, left: 74 };
+const PAD_COMPACT = { top: 46, right: 14, bottom: 86, left: 52 };
 const MIN_MONTH_WIDTH = 72;
+const MAX_VISIBLE_MONTHS = 13;
 
 // Separador de miles siempre (es-ES no lo pone en numeros de 4 cifras).
 const groupThousands = (value: number) => {
@@ -98,11 +100,13 @@ const monotonePath = (pts: Array<{ x: number; y: number }>) => {
 
 export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points, onHoverMonth }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const [wrapWidth, setWrapWidth] = useState(1100);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    const element = wrapRef.current;
+    // Se mide el marco (no el contenido desplazable) para que el ancho no crezca con el grafico.
+    const element = frameRef.current;
     if (!element) return undefined;
     const update = () => setWrapWidth(Math.max(320, element.clientWidth));
     update();
@@ -111,25 +115,31 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
     return () => observer.disconnect();
   }, []);
 
-  const width = Math.max(wrapWidth, PAD.left + PAD.right + points.length * MIN_MONTH_WIDTH);
+  // En el movil los margenes son mas estrechos para que quepan mas meses.
+  const pad = wrapWidth < 520 ? PAD_COMPACT : PAD;
+  const minMonthWidth = wrapWidth < 520 ? 64 : MIN_MONTH_WIDTH;
+  // Como maximo se ven MAX_VISIBLE_MONTHS a la vez (y nunca meses de menos de MIN_MONTH_WIDTH);
+  // con mas meses el grafico se desliza lateralmente.
+  const visibleMonths = Math.max(1, Math.min(points.length, MAX_VISIBLE_MONTHS));
+  const monthWidth = Math.max(minMonthWidth, (wrapWidth - pad.left - pad.right) / visibleMonths);
+  const width = Math.max(wrapWidth, pad.left + pad.right + points.length * monthWidth);
 
-  // En pantallas estrechas el grafico se desliza: empieza mostrando los meses mas recientes.
+  // Siempre empieza mostrando el ultimo mes; se desliza a la izquierda para ver los anteriores.
   useEffect(() => {
     const element = wrapRef.current;
     if (element && width > element.clientWidth) element.scrollLeft = element.scrollWidth;
   }, [points.length, width]);
-  const plotW = width - PAD.left - PAD.right;
-  const plotBottom = HEIGHT - PAD.bottom;
-  const monthWidth = points.length > 0 ? plotW / points.length : plotW;
+  const plotW = width - pad.left - pad.right;
+  const plotBottom = HEIGHT - pad.bottom;
   const useCompactLabels = monthWidth < 82;
 
   const model = useMemo(() => {
     if (points.length === 0) return null;
     const axis = buildAxis(points.map((point) => point.balance));
-    const y = (value: number) => PAD.top + (1 - (value - axis.low) / Math.max(1, axis.high - axis.low)) * (plotBottom - PAD.top);
+    const y = (value: number) => pad.top + (1 - (value - axis.low) / Math.max(1, axis.high - axis.low)) * (plotBottom - pad.top);
     const coords = points.map((point, index) => ({
       ...point,
-      x: PAD.left + (index + 0.5) * monthWidth,
+      x: pad.left + (index + 0.5) * monthWidth,
       y: y(point.balance),
       change: index > 0 ? point.balance - points[index - 1].balance : undefined
     }));
@@ -139,7 +149,7 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
       const text = useCompactLabels ? formatCompactEuro(point.balance) : formatEuro(point.balance);
       const boxWidth = text.length * 6.6 + 16;
       const isLast = index === coords.length - 1;
-      const centerX = Math.min(Math.max(point.x, PAD.left + boxWidth / 2), width - PAD.right - boxWidth / 2);
+      const centerX = Math.min(Math.max(point.x, pad.left + boxWidth / 2), width - pad.right - boxWidth / 2);
       let top = point.y - 34;
       let box = { left: centerX - boxWidth / 2, right: centerX + boxWidth / 2, top, bottom: top + 22 };
       const overlaps = (a: typeof box, b: typeof box | null) =>
@@ -152,7 +162,7 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
       return { text, centerX, top, boxWidth, below: top > point.y };
     });
     return { axis, y, coords, labels };
-  }, [monthWidth, plotBottom, points, useCompactLabels, width]);
+  }, [monthWidth, pad, plotBottom, points, useCompactLabels, width]);
 
   if (!model) return null;
 
@@ -171,7 +181,7 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
     if (!svg) return;
     const rect = svg.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width) * width;
-    const index = Math.min(coords.length - 1, Math.max(0, Math.floor((x - PAD.left) / monthWidth)));
+    const index = Math.min(coords.length - 1, Math.max(0, Math.floor((x - pad.left) / monthWidth)));
     if (index !== activeIndex) {
       setActiveIndex(index);
       onHoverMonth?.(coords[index].label);
@@ -203,6 +213,7 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
         </div>
       </div>
 
+      <div ref={frameRef} className="pm-trend-frame">
       <div ref={wrapRef} className={`pm-trend-scroll${isScrollable ? ' is-scrollable' : ''}`}>
         <div className="pm-trend-stage" style={{ width }}>
           <svg
@@ -225,21 +236,16 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
             </defs>
 
             {axis.ticks.map((tick) => (
-              <g key={tick}>
-                <line className="pm-trend-grid" x1={PAD.left} x2={width - PAD.right} y1={y(tick)} y2={y(tick)} />
-                <text className="pm-trend-axis" x={PAD.left - 12} y={y(tick) + 4} textAnchor="end">
-                  {formatCompactEuro(tick)}
-                </text>
-              </g>
+              <line key={tick} className="pm-trend-grid" x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} />
             ))}
 
             {active ? (
               <rect
                 className="pm-trend-column"
                 x={active.x - monthWidth / 2}
-                y={PAD.top - 20}
+                y={pad.top - 20}
                 width={monthWidth}
-                height={plotBottom - PAD.top + 20}
+                height={plotBottom - pad.top + 20}
                 rx={10}
               />
             ) : null}
@@ -295,10 +301,10 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
 
             <rect
               className="pm-trend-hit"
-              x={PAD.left}
-              y={PAD.top - 20}
+              x={pad.left}
+              y={pad.top - 20}
               width={plotW}
-              height={plotBottom - PAD.top + 20}
+              height={plotBottom - pad.top + 20}
               onPointerMove={handlePointer}
               onPointerDown={handlePointer}
               onPointerLeave={() => setActiveIndex(null)}
@@ -330,6 +336,15 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
             </div>
           ) : null}
         </div>
+      </div>
+      {/* Eje de importes fijo: se queda visible aunque el grafico se deslice. */}
+      <svg className="pm-trend-yaxis" width={pad.left} height={HEIGHT} aria-hidden="true">
+        {axis.ticks.map((tick) => (
+          <text key={tick} className="pm-trend-axis" x={pad.left - 12} y={y(tick) + 4} textAnchor="end">
+            {formatCompactEuro(tick)}
+          </text>
+        ))}
+      </svg>
       </div>
       <p className="pm-trend-footnote">
         Debajo de cada mes: rentabilidad del mes y, si las hubo, ▲ aportaciones y ▼ retiradas.

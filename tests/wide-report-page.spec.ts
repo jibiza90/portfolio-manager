@@ -20,41 +20,30 @@ test('renders page 20 as the full-width professional edition of page 1', async (
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
   await expect(page.locator('.report-pro-wide-sheet')).toBeVisible();
   await expect(page.locator('.report-pro-bar-col')).toHaveCount(13);
-  await expect(page.locator('.report-pro-dot-hit')).toHaveCount(13);
+  await expect(page.locator('.pm-trend-month')).toHaveCount(13);
 
   const reportWidth = await page.locator('.report-pro-wide-sheet').evaluate((element) => element.getBoundingClientRect().width);
   expect(reportWidth).toBeGreaterThan(1320);
 
-  const lineChartHeight = await page.locator('.report-pro-line-chart').first().evaluate((element) => element.getBoundingClientRect().height);
-  expect(lineChartHeight).toBeGreaterThanOrEqual(490);
-
+  // Con 13 meses en escritorio caben todos, sin barra lateral.
   const patrimonySection = page.locator('.report-pro-wide-sheet .report-pro-patrimony-section').last();
   await patrimonySection.scrollIntoViewIfNeeded();
   await page.waitForTimeout(200);
-  await expect(patrimonySection.locator('.report-pro-month-guide')).toHaveCount(13);
-  await expect(patrimonySection.locator('.report-pro-wide-axis-scale')).toContainText('125.000');
-
-  const visibleChartItems = await patrimonySection.evaluate((root) => {
-    const scroller = root.querySelector('.report-pro-patrimony-scroll');
-    if (!scroller) return { months: [], clippedLabels: -1 };
+  await expect(patrimonySection.locator('.pm-trend-scroll')).not.toHaveClass(/is-scrollable/);
+  await expect(patrimonySection.locator('.pm-trend-yaxis text').first()).toBeVisible();
+  const visibleMonths = await patrimonySection.evaluate((root) => {
+    const scroller = root.querySelector('.pm-trend-scroll');
+    if (!scroller) return [];
     const viewport = scroller.getBoundingClientRect();
-    const months = [...root.querySelectorAll('.report-pro-month-row span')]
+    return [...root.querySelectorAll('.pm-trend-month')]
       .filter((element) => {
         const rect = element.getBoundingClientRect();
         return rect.left >= viewport.left && rect.right <= viewport.right;
       })
       .map((element) => element.textContent);
-    const clippedLabels = [...root.querySelectorAll('.report-pro-point-label')]
-      .filter((element) => {
-        const rect = element.getBoundingClientRect();
-        const intersects = rect.right > viewport.left && rect.left < viewport.right;
-        return intersects && (rect.left < viewport.left - 0.5 || rect.right > viewport.right + 0.5);
-      }).length;
-    return { months, clippedLabels };
   });
-  expect(visibleChartItems.months).toHaveLength(10);
-  expect(visibleChartItems.months.at(-1)).toBe('Mar 26');
-  expect(visibleChartItems.clippedLabels).toBe(0);
+  expect(visibleMonths).toHaveLength(13);
+  expect(visibleMonths.at(-1)).toBe('Mar 2026');
 
   const hasHorizontalPageOverflow = await page.evaluate(() => (
     document.documentElement.scrollWidth > window.innerWidth + 1

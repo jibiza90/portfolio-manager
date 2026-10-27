@@ -1107,8 +1107,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
     })
     : patrimonioWithData;
   const effectivePatrimonioData = patrimonioChartData.length > 0 ? patrimonioChartData : patrimonioWithData;
-  // Grafico de patrimonio en pruebas: solo en demo1, pagina 1. Los clientes siguen viendo el actual.
-  const usePatrimonyTrendPreview = report.clientId === DEMO_CLIENT_ID && demoViewMode === 'pages' && demoReportPage === 'page1';
+  // Grafico de patrimonio del informe estandar: todos los clientes y, en demo1, las paginas 1 y 20.
+  const usePatrimonyTrendPreview = isWideReportPage && demoViewMode === 'pages';
   const patrimonyTrendPoints: PatrimonyTrendPoint[] = usePatrimonyTrendPreview
     ? effectivePatrimonioData.map((point) => {
       const key = reportMonthToKey(point.month);
