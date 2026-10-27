@@ -62,6 +62,55 @@ test('renders page 20 as the full-width professional edition of page 1', async (
   expect(hasHorizontalPageOverflow).toBe(false);
 });
 
+test('uses page 20 as the standard client report with annual closing totals', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await page.evaluate(async (modulePath) => {
+    const harness = await import(/* @vite-ignore */ modulePath);
+    harness.mountReportView(13, 'client-007');
+  }, '/tests/fixtures/report-view-harness.tsx');
+
+  await expect(page.locator('.report-pro-wide-sheet')).toBeVisible();
+  await expect(page.locator('.demo-report-page-switcher')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Cierres y composición del resultado' })).toBeVisible();
+
+  const kpiLabels = await page.locator('.report-pro-kpis-demo > .report-pro-kpi > span').allTextContents();
+  expect(kpiLabels).toEqual([
+    'Capital aportado',
+    'TWR acumulado',
+    'Beneficio acumulado',
+    'Capital retirado',
+    'Rentabilidad total'
+  ]);
+
+  const headers = await page.locator('.report-pro-closing-table thead th').allTextContents();
+  expect(headers).toEqual([
+    '',
+    'Mes',
+    'Saldo inicial',
+    'Aportaciones',
+    'Retiradas',
+    'Resultado',
+    'Rentabilidad',
+    'Saldo final'
+  ]);
+
+  const yearlyTotals = page.locator('.report-pro-closing-year-total');
+  await expect(yearlyTotals).toHaveCount(2);
+  await expect(yearlyTotals.nth(0)).toContainText('Total 2025');
+  await expect(yearlyTotals.nth(1)).toContainText('Total 2026');
+
+  await page.getByRole('button', { name: 'Ver detalle de Mar 2026' }).click();
+  await expect(page.locator('#report-month-detail-monthly-2026-03')).toBeVisible();
+
+  const positiveBarStyle = await page.locator('.report-pro-bar.positive').first().evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor };
+  });
+  expect(positiveBarStyle.backgroundImage).toBe('none');
+  expect(positiveBarStyle.backgroundColor).toBe('rgb(22, 163, 74)');
+});
+
 test('keeps the expanded page 20 patrimony chart aligned and fully labelled', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await mountDemoReport(page);

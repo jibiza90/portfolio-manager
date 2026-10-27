@@ -219,11 +219,11 @@
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-bar.positive {
-  background: linear-gradient(180deg, #31c6a4 0%, #087b74 100%);
+  background: #16a34a;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-bar.negative {
-  background: linear-gradient(180deg, #f58a7d 0%, #b7424b 100%);
+  background: #dc2626;
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-bar-label {
@@ -473,6 +473,257 @@
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-table tbody tr:hover {
   background: rgba(39, 174, 164, 0.075);
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel {
+  overflow: hidden;
+  border-color: rgba(8, 123, 131, 0.2);
+  background:
+    radial-gradient(700px 260px at 100% 0%, rgba(49, 198, 164, 0.08), transparent 70%),
+    #ffffff;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-eyebrow {
+  display: block;
+  margin-bottom: 7px;
+  color: #087b83;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-scroll {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 15px;
+  overflow-x: auto !important;
+  overscroll-behavior-inline: contain;
+  scrollbar-color: rgba(8, 123, 131, 0.48) rgba(8, 123, 131, 0.08);
+  scrollbar-width: thin;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-scroll::-webkit-scrollbar {
+  height: 9px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-scroll::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(8, 123, 131, 0.08);
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(255, 255, 255, 0.78);
+  border-radius: 999px;
+  background: rgba(8, 123, 131, 0.48);
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table {
+  width: 100%;
+  min-width: 1120px;
+  table-layout: fixed;
+  border: 1px solid rgba(12, 70, 93, 0.12);
+  border-radius: 16px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table > thead > tr > th:nth-child(1),
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(1) {
+  width: 58px;
+  text-align: center;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table > thead > tr > th:nth-child(2),
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(2) {
+  width: 172px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table > thead > tr > th,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table > tbody > tr > td {
+  padding: 15px 14px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table > thead > tr > th {
+  border-bottom: 1px solid rgba(8, 123, 131, 0.2);
+  color: #163f54;
+  background: #e8f4f4;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.055em;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table > tbody > tr:not(.report-pro-expanded-row):not(.report-pro-closing-year-total) > td {
+  border-bottom: 1px solid rgba(12, 70, 93, 0.08);
+  color: #26485d;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table > tbody > tr.is-open > td {
+  background: rgba(232, 246, 247, 0.82);
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-toggle {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(8, 123, 131, 0.38);
+  border-radius: 9px;
+  color: #087b83;
+  background: #ffffff;
+  box-shadow: 0 5px 13px rgba(8, 123, 131, 0.1);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 150ms ease, color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-toggle:hover,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-toggle:focus-visible {
+  color: #ffffff;
+  background: #087b83;
+  box-shadow: 0 8px 18px rgba(8, 123, 131, 0.2);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-toggle[aria-expanded='true'] {
+  color: #ffffff;
+  background: #087b83;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-movement {
+  display: block;
+  width: fit-content;
+  margin-top: 5px;
+  padding: 3px 7px;
+  border: 1px solid rgba(8, 123, 131, 0.15);
+  border-radius: 999px;
+  color: #087b83;
+  background: rgba(8, 123, 131, 0.07);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-table .report-pro-expanded-row > td {
+  padding: 12px !important;
+  white-space: normal;
+  background: #eff8f8 !important;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-simple-detail {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(420px, auto);
+  align-items: center;
+  gap: 20px;
+  padding: 18px 20px;
+  border: 1px solid rgba(8, 123, 131, 0.16);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-simple-detail > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-simple-detail span {
+  color: #61798a;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-simple-detail strong {
+  color: var(--wr-ink);
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-simple-detail p {
+  margin: 0;
+  color: #526a7d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-equation {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: #f3f8f9;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-equation span {
+  color: #26485d;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-equation b {
+  color: #6b8190;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-equation strong {
+  color: #087b83;
+  font-size: 15px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-year-total > td {
+  padding-top: 17px;
+  padding-bottom: 17px;
+  border-top: 2px solid rgba(8, 123, 131, 0.3);
+  border-bottom: 1px solid rgba(8, 123, 131, 0.22);
+  color: #0a3542;
+  background: linear-gradient(90deg, #dff1f0, #edf7f7);
+  font-variant-numeric: tabular-nums;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-year-total:hover > td {
+  background: linear-gradient(90deg, #dff1f0, #edf7f7);
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-year-total td:nth-child(2) {
+  white-space: normal;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-year-total td:nth-child(2) > strong {
+  display: block;
+  color: #075d63;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-year-total td:nth-child(2) > span {
+  display: block;
+  margin-top: 3px;
+  color: #587487;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-bars.is-general-reference .report-pro-bar.positive {
+  background: #0369a1;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-bars.is-general-reference .report-pro-bar.negative {
+  background: #c2410c;
 }
 
 @media (max-width: 1360px) {

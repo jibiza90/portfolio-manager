@@ -919,7 +919,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   }
 
   if (!report) return null;
-  const isWideDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page20';
+  const isWideReportPage = report.clientId !== DEMO_CLIENT_ID || demoReportPage === 'page20';
 
   const visiblePendingCashMovements = [...pendingCashMovements]
     .filter((movement) => Number.isFinite(movement.amount) && movement.amount > 0)
@@ -1098,13 +1098,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
     return { width, height, ...pads, plotBottom, points, linePoints, areaPath, yTicks };
   };
   const chartW = 1000;
-  const chartH = isWideDemoPage ? 500 : 360;
+  const chartH = isWideReportPage ? 500 : 360;
   const patrimonyGeometry = buildPatrimonyGeometry(effectivePatrimonioData, chartW, chartH, {
-    left: isWideDemoPage ? 0 : 78,
-    right: isWideDemoPage ? 0 : 24,
-    top: isWideDemoPage ? 54 : 20,
-    bottom: isWideDemoPage ? 34 : 18
-  }, isWideDemoPage);
+    left: isWideReportPage ? 0 : 78,
+    right: isWideReportPage ? 0 : 24,
+    top: isWideReportPage ? 54 : 20,
+    bottom: isWideReportPage ? 34 : 18
+  }, isWideReportPage);
   const expandedSelectedStart = expandedStartMonth || rangeStart || firstPeriodKey;
   const expandedSelectedEnd = expandedEndMonth || rangeEnd || lastPeriodKey;
   const expandedRangeStart = expandedSelectedStart <= expandedSelectedEnd ? expandedSelectedStart : expandedSelectedEnd;
@@ -1123,7 +1123,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     right: 60,
     top: 42,
     bottom: 28
-  }, isWideDemoPage);
+  }, isWideReportPage);
   const movementCapitalSeries = (report.movements ?? []).reduce<Array<{ iso: string; type: string; amount: number; netCapital: number }>>((acc, mov) => {
     const previousNet = acc.length ? acc[acc.length - 1].netCapital : 0;
     acc.push({
@@ -1228,6 +1228,57 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (hasIncrement) return 'Aportacion';
     if (hasDecrement) return 'Retirada';
     return '';
+  };
+  const monthlyClosingRows = effectiveMonthlyWithData.map((month) => {
+    const monthKey = reportMonthToKey(month.month);
+    const historyIndex = monthlyWithData.findIndex((item) => reportMonthToKey(item.month) === monthKey);
+    const previousBalance = historyIndex > 0 ? monthlyWithData[historyIndex - 1].endBalance : undefined;
+    const movements = (report.movements ?? []).filter((movement) => movement.iso.slice(0, 7) === monthKey);
+    const increments = movements
+      .filter((movement) => movement.type === 'increment')
+      .reduce((sum, movement) => sum + (movement.amount ?? 0), 0);
+    const decrements = movements
+      .filter((movement) => movement.type === 'decrement')
+      .reduce((sum, movement) => sum + (movement.amount ?? 0), 0);
+    const profit = month.profit ?? 0;
+    const balance = month.endBalance ?? 0;
+    const opening = previousBalance ?? balance - profit - increments + decrements;
+
+    return {
+      month,
+      monthKey,
+      year: monthKey.slice(0, 4),
+      opening,
+      increments,
+      decrements,
+      profit,
+      returnPct: getDisplayedMonthReturnPct(month),
+      balance,
+      breakdown: tableContributionByMonth.get(monthKey)
+    };
+  });
+  const visibleYearCounts = monthlyClosingRows.reduce<Map<string, number>>((counts, row) => {
+    counts.set(row.year, (counts.get(row.year) ?? 0) + 1);
+    return counts;
+  }, new Map());
+  const publishedYearCounts = monthlyWithData.reduce<Map<string, number>>((counts, month) => {
+    const year = reportMonthToKey(month.month).slice(0, 4);
+    counts.set(year, (counts.get(year) ?? 0) + 1);
+    return counts;
+  }, new Map());
+  const closingYearSummary = (year: string) => {
+    const rows = monthlyClosingRows.filter((row) => row.year === year);
+    const first = rows[0];
+    const last = rows[rows.length - 1];
+    return {
+      isComplete: (visibleYearCounts.get(year) ?? 0) === (publishedYearCounts.get(year) ?? 0),
+      opening: first?.opening ?? 0,
+      increments: rows.reduce((sum, row) => sum + row.increments, 0),
+      decrements: rows.reduce((sum, row) => sum + row.decrements, 0),
+      profit: rows.reduce((sum, row) => sum + row.profit, 0),
+      returnPct: (rows.reduce((factor, row) => factor * (1 + row.returnPct / 100), 1) - 1) * 100,
+      balance: last?.balance ?? 0
+    };
   };
   const hasVisibleMonthlyBreakdowns = effectiveMonthlyWithData.some((month) =>
     tableContributionByMonth.has(reportMonthToKey(month.month))
@@ -2099,7 +2150,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const isScrollable = !expanded && chartData.length > 10;
     const plotWidth = geometry.width - geometry.left - geometry.right;
     const chartWidth = isScrollable
-      ? isWideDemoPage
+      ? isWideReportPage
         ? `max(calc(${(chartData.length / 10) * 100}% + 28px), ${chartData.length * 92 + 28}px)`
         : `calc(${(chartData.length / 10) * (geometry.width / plotWidth) * 100}% + 22px)`
       : '100%';
@@ -2117,7 +2168,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       const label = formatCurrencyNoCents(point.value);
       const approxWidth = expanded
         ? Math.min(154, Math.max(86, label.length * 7.1))
-        : isWideDemoPage
+        : isWideReportPage
           ? Math.min(98, Math.max(66, label.length * 5.8))
           : Math.min(110, Math.max(56, label.length * 5.4));
       const labelX = Math.max(geometry.left + approxWidth / 2, Math.min(point.x, geometry.width - geometry.right - approxWidth / 2));
@@ -2130,18 +2181,18 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const chart = (
       <div
         ref={expanded ? undefined : patrimonyScrollRef}
-        className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${isScrollable ? 'is-scrollable' : ''}${isWideDemoPage ? ' is-wide-patrimony' : ''}`}
+        className={`report-pro-patrimony-scroll ${expanded ? 'is-expanded' : ''} ${isScrollable ? 'is-scrollable' : ''}${isWideReportPage ? ' is-wide-patrimony' : ''}`}
       >
         <div className="report-pro-patrimony-scroll-inner" style={{ width: chartWidth, minWidth: chartWidth }}>
           <div className={`report-pro-line-wrap ${expanded ? 'report-pro-line-wrap-expanded' : ''}`}>
           <div className="report-pro-plot-stage">
-          <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" className={`report-pro-line-chart ${expanded ? 'report-pro-line-chart-expanded' : ''}${isWideDemoPage ? ' report-pro-line-chart-wide' : ''}`}>
+          <svg viewBox={`0 0 ${geometry.width} ${geometry.height}`} preserveAspectRatio="none" className={`report-pro-line-chart ${expanded ? 'report-pro-line-chart-expanded' : ''}${isWideReportPage ? ' report-pro-line-chart-wide' : ''}`}>
             <defs>
               <linearGradient id={`patrimonyArea${gradientSuffix}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={isWideDemoPage ? 'rgba(11, 139, 143, 0.34)' : 'rgba(14,165,233,0.30)'} />
-                <stop offset="100%" stopColor={isWideDemoPage ? 'rgba(31, 179, 166, 0.025)' : 'rgba(14,165,233,0.03)'} />
+                <stop offset="0%" stopColor={isWideReportPage ? 'rgba(11, 139, 143, 0.34)' : 'rgba(14,165,233,0.30)'} />
+                <stop offset="100%" stopColor={isWideReportPage ? 'rgba(31, 179, 166, 0.025)' : 'rgba(14,165,233,0.03)'} />
               </linearGradient>
-              {isWideDemoPage ? (
+              {isWideReportPage ? (
                 <linearGradient id={`patrimonyLine${gradientSuffix}`} x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stopColor="#185b76" />
                   <stop offset="58%" stopColor="#087f86" />
@@ -2149,7 +2200,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 </linearGradient>
               ) : null}
             </defs>
-            {isWideDemoPage ? geometry.points.map((point, idx) => (
+            {isWideReportPage ? geometry.points.map((point, idx) => (
               <line
                 key={`${point.month}-${idx}-vertical-guide`}
                 className="report-pro-month-guide"
@@ -2172,12 +2223,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
             {geometry.areaPath && <path d={geometry.areaPath} className="report-pro-area" fill={`url(#patrimonyArea${gradientSuffix})`} />}
             {geometry.points.length > 1 && (
               <polyline
-                className={`report-pro-line ${expanded ? 'report-pro-line-expanded' : ''}${isWideDemoPage ? ' report-pro-line-wide' : ''}`}
+                className={`report-pro-line ${expanded ? 'report-pro-line-expanded' : ''}${isWideReportPage ? ' report-pro-line-wide' : ''}`}
                 points={geometry.linePoints}
-                style={isWideDemoPage ? { stroke: `url(#patrimonyLine${gradientSuffix})` } : undefined}
+                style={isWideReportPage ? { stroke: `url(#patrimonyLine${gradientSuffix})` } : undefined}
               />
             )}
-            {isWideDemoPage ? geometry.points.map((point, idx) => {
+            {isWideReportPage ? geometry.points.map((point, idx) => {
               const layout = getPointLabelLayout(point, idx);
               return (
                 <line
@@ -2192,10 +2243,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
             }) : null}
             {geometry.points.map((pt, idx) => (
                 <g key={`${pt.month}-${idx}`} className={idx % 2 === 0 ? 'is-even' : 'is-odd'}>
-                {isWideDemoPage && idx === geometry.points.length - 1 ? (
+                {isWideReportPage && idx === geometry.points.length - 1 ? (
                   <circle cx={pt.x} cy={pt.y} r={expanded ? '13' : '10'} className="report-pro-dot-halo" pointerEvents="none" />
                 ) : null}
-                <circle cx={pt.x} cy={pt.y} r={expanded ? '6.2' : isWideDemoPage ? '5.2' : '4.2'} className={`report-pro-dot ${expanded ? 'report-pro-dot-expanded' : ''}`} pointerEvents="none" />
+                <circle cx={pt.x} cy={pt.y} r={expanded ? '6.2' : isWideReportPage ? '5.2' : '4.2'} className={`report-pro-dot ${expanded ? 'report-pro-dot-expanded' : ''}`} pointerEvents="none" />
                 <circle
                   cx={pt.x}
                   cy={pt.y}
@@ -2229,7 +2280,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
             ))}
             {geometry.points.map((pt, idx) => {
               const { label, approxWidth, labelX, labelY } = getPointLabelLayout(pt, idx);
-              const isLatest = isWideDemoPage && idx === geometry.points.length - 1;
+              const isLatest = isWideReportPage && idx === geometry.points.length - 1;
               return (
                 <g key={`${pt.month}-${idx}-label`} className={`report-pro-point-label ${expanded ? 'report-pro-point-label-expanded' : ''} ${idx % 2 === 0 ? 'is-even' : 'is-odd'}${isLatest ? ' is-latest' : ''}`} pointerEvents="none">
                   <rect x={labelX - approxWidth / 2} y={labelY - (expanded ? 18 : 14)} width={approxWidth} height={expanded ? '26' : '20'} rx={expanded ? '9' : '7'} />
@@ -2257,10 +2308,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
     );
     if (expanded) return chart;
     return (
-      <div className={`report-pro-patrimony-chart-shell${isWideDemoPage ? ' is-wide' : ''}`}>
+      <div className={`report-pro-patrimony-chart-shell${isWideReportPage ? ' is-wide' : ''}`}>
         <div className="report-pro-patrimony-frame">
           <div className="report-pro-fixed-y-axis" aria-hidden="true">
-            {isWideDemoPage ? (
+            {isWideReportPage ? (
               <div className="report-pro-wide-axis-scale">
                 {geometry.yTicks.map((tick, idx) => (
                   <span key={`fixed-tick-${idx}`} style={{ top: `${(tick.y / geometry.height) * 100}%` }}>
@@ -2280,7 +2331,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </div>
           {chart}
         </div>
-        {isWideDemoPage && isScrollable ? (
+        {isWideReportPage && isScrollable ? (
           <div className="report-pro-patrimony-scroll-hint" aria-hidden="true">
             <span>Vista inicial: meses recientes</span>
             <span>Desliza para consultar meses anteriores</span>
@@ -2410,7 +2461,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   });
 
   return (
-    <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}${isWideDemoPage ? ' report-pro-page-wide' : ''}`}>
+    <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}${isWideReportPage ? ' report-pro-page-wide' : ''}`}>
       {viewportTooltip ? (
         <ViewportTooltip
           tooltip={viewportTooltip}
@@ -3091,7 +3142,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           />
         </React.Suspense>
       ) : (
-      <article className={`informe-preview glass-card report-pro-sheet report-pro-demo-sheet${isWideDemoPage ? ' report-pro-wide-sheet' : ''}`} ref={reportRef}>
+      <article className={`informe-preview glass-card report-pro-sheet report-pro-demo-sheet${isWideReportPage ? ' report-pro-wide-sheet' : ''}`} ref={reportRef}>
         <header className="report-pro-header">
           <div>
             <p className="report-pro-kicker">Portfolio Manager</p>
@@ -3163,9 +3214,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
         ) : null}
 
         <section className="report-pro-kpis report-pro-kpis-demo">
-          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Beneficio acumulado generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
-          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
           {renderCapitalHistoryCard('Capital aportado', visibleIncrements, 'increment', `Suma total de todas tus aportaciones registradas desde ${firstRegisteredDateLabel}.`, 'report-pro-kpi')}
+          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Beneficio acumulado generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
           {renderCapitalHistoryCard('Capital retirado', visibleDecrements, 'decrement', `Suma total de todas tus retiradas registradas desde ${firstRegisteredDateLabel}.`, 'report-pro-kpi')}
           <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip="Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, si depende de aportaciones y retiradas."><span>Rentabilidad total</span><strong className={report.rentabilidadDisponible !== false ? (report.rentabilidad >= 0 ? 'positive' : 'negative') : ''}>{report.rentabilidadDisponible !== false ? formatSignedPercent(report.rentabilidad) : 'No aplicable'}</strong></div>
         </section>
@@ -3556,166 +3607,104 @@ export const ReportView: React.FC<ReportViewProps> = ({
           {renderPatrimonyChart(false)}
         </section>
 
-        <section className="report-pro-panel">
+        <section className="report-pro-panel report-pro-closing-panel">
           <div className="report-pro-panel-head">
-            <h4>Tabla mensual</h4>
-            <p>Beneficio, rentabilidad y saldo por mes</p>
+            <span className="report-pro-closing-eyebrow">Trazabilidad mensual</span>
+            <h4>Cierres y composici&oacute;n del resultado</h4>
+            <p>Saldo inicial, movimientos de capital, resultado y saldo final de cada cierre mensual.</p>
           </div>
-          {hasVisibleMonthlyBreakdowns ? (
-            <div className="report-pro-detail-hint">
-              <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
-              <span>Los meses con aportaciones o retiradas desglosadas incluyen el detalle de cada parte. Pulsa <strong>Ver detalle</strong> para consultarlo.</span>
-            </div>
-          ) : null}
-          <div className="table-scroll">
-            <table className="monthly-table report-pro-table report-pro-demo-monthly-table">
-              <colgroup>
-                <col style={{ width: '34%' }} />
-                <col style={{ width: '22%' }} />
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '24%' }} />
-              </colgroup>
+          <div className="report-pro-detail-hint">
+            <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
+            <span>Pulsa el bot&oacute;n <strong>+</strong> de cualquier mes para consultar la composici&oacute;n completa del resultado.</span>
+          </div>
+          <div className="table-scroll report-pro-closing-scroll">
+            <table className="monthly-table report-pro-table report-pro-closing-table">
               <thead>
                 <tr>
+                  <th aria-label="Abrir detalle" />
                   <th>Mes</th>
-                  <th className="text-right">Beneficio</th>
+                  <th className="text-right">Saldo inicial</th>
+                  <th className="text-right">Aportaciones</th>
+                  <th className="text-right">Retiradas</th>
+                  <th className="text-right">Resultado</th>
                   <th className="text-right">Rentabilidad</th>
-                  <th className="text-right">Saldo</th>
+                  <th className="text-right">Saldo final</th>
                 </tr>
               </thead>
               <tbody>
-                {effectiveMonthlyWithData.map((m) => {
-                  const monthKey = reportMonthToKey(m.month);
-                  const breakdown = tableContributionByMonth.get(monthKey);
-                  const expanded = !!expandedContributionMonths[detailExpansionKey('monthly', monthKey)];
-                  const displayedPct = getDisplayedMonthReturnPct(m);
-                  const movementTag = monthlyMovementType(monthKey);
-                  const visibleInitialPct = breakdown
-                    ? getVisibleMonthReturnPct(monthKey, breakdown.initialReturnPct * 100)
-                    : displayedPct;
-                  const visibleInitialProfit = breakdown
-                    ? breakdown.initialCapital * (visibleInitialPct / 100)
-                    : 0;
-                  const withdrawals = breakdown?.withdrawals ?? [];
-                  const openingCapital = breakdown?.openingCapital ?? breakdown?.initialCapital ?? 0;
-                  const totalContributions = breakdown?.contributions.reduce(
-                    (sum, contribution) => sum + contribution.amount,
-                    0
-                  ) ?? 0;
-                  const totalWithdrawals = withdrawals.reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
-                  const explainedTotalProfit = breakdown
-                    ? visibleInitialProfit +
-                      breakdown.contributions.reduce((sum, contribution) => sum + contribution.profit, 0) +
-                      withdrawals.reduce((sum, withdrawal) => sum + withdrawal.profit, 0)
-                    : m.profit ?? 0;
+                {monthlyClosingRows.map((row, index) => {
+                  const expansionKey = detailExpansionKey('monthly', row.monthKey);
+                  const expanded = !!expandedContributionMonths[expansionKey];
+                  const movementTag = monthlyMovementType(row.monthKey);
+                  const nextRow = monthlyClosingRows[index + 1];
+                  const isYearEnd = !nextRow || nextRow.year !== row.year;
+                  const yearSummary = isYearEnd ? closingYearSummary(row.year) : null;
 
                   return (
-                    <React.Fragment key={m.month}>
-                      <tr>
+                    <React.Fragment key={row.monthKey}>
+                      <tr className={expanded ? 'is-open' : ''}>
                         <td>
-                          <span className="report-pro-month-cell">
-                            <span>{getMonthEndLabel(m.month)}</span>
-                            {breakdown ? renderMonthlyDetailButton(monthKey, m.month, 'monthly') : null}
-                            {movementTag ? <span className="report-pro-movement-pill">{movementTag}</span> : null}
-                          </span>
+                          <button
+                            type="button"
+                            className="report-pro-closing-toggle"
+                            aria-expanded={expanded}
+                            aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de ${row.month.month}`}
+                            title={expanded ? 'Ocultar composicion del resultado' : 'Ver composicion del resultado'}
+                            onClick={() => toggleMonthlyBreakdown(row.monthKey, 'monthly')}
+                          >
+                            {expanded ? '-' : '+'}
+                          </button>
                         </td>
-                        <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                          {formatCurrency(m.profit ?? 0)}
+                        <td>
+                          <strong>{row.month.month}</strong>
+                          {movementTag ? <span className="report-pro-closing-movement">{movementTag}</span> : null}
                         </td>
-                        <td className={`text-right ${displayedPct >= 0 ? 'positive' : 'negative'}`}>
-                          {`${displayedPct.toFixed(2)}%`}
-                        </td>
-                        <td className="text-right">{formatCurrency(m.endBalance ?? 0)}</td>
+                        <td className="text-right">{formatCurrency(row.opening)}</td>
+                        <td className="text-right positive">{row.increments ? `+${formatCurrency(row.increments)}` : '\u2014'}</td>
+                        <td className="text-right negative">{row.decrements ? `-${formatCurrency(row.decrements)}` : '\u2014'}</td>
+                        <td className={`text-right ${row.profit >= 0 ? 'positive' : 'negative'}`}>{formatSignedCurrency(row.profit)}</td>
+                        <td className={`text-right ${row.returnPct >= 0 ? 'positive' : 'negative'}`}>{formatSignedPercent(row.returnPct)}</td>
+                        <td className="text-right"><strong>{formatCurrency(row.balance)}</strong></td>
                       </tr>
-                      {breakdown && expanded ? (
-                        <tr id={`report-month-detail-monthly-${monthKey}`} className="report-pro-expanded-row">
-                          <td colSpan={4}>
-                            <div className="report-pro-inline-breakdown">
-                              <div className="report-pro-inline-title">
-                                <strong>Detalle de rentabilidad del mes - {m.month}</strong>
+                      {expanded && row.breakdown
+                        ? renderMonthlyBreakdownRow(row.month, row.breakdown, 8, 'monthly')
+                        : expanded ? (
+                          <tr id={`report-month-detail-monthly-${row.monthKey}`} className="report-pro-expanded-row report-pro-closing-detail-row">
+                            <td colSpan={8}>
+                              <div className="report-pro-closing-simple-detail">
+                                <div>
+                                  <span>Composici&oacute;n del cierre</span>
+                                  <strong>{row.month.month}</strong>
+                                  <p>{row.increments || row.decrements
+                                    ? 'Los movimientos de capital del mes ya estan incorporados en el saldo final. Este cierre no dispone de un desglose intramensual adicional.'
+                                    : 'El mes no contiene aportaciones ni retiradas. El resultado corresponde a la evolucion de la posicion durante el periodo.'}</p>
+                                </div>
+                                <div className="report-pro-closing-equation">
+                                  <span>{formatCurrency(row.opening)}</span>
+                                  {row.increments ? <><b>+</b><span>{formatCurrency(row.increments)}</span></> : null}
+                                  {row.decrements ? <><b>-</b><span>{formatCurrency(row.decrements)}</span></> : null}
+                                  <b>{row.profit >= 0 ? '+' : '-'}</b>
+                                  <span>{formatCurrency(Math.abs(row.profit))}</span>
+                                  <b>=</b>
+                                  <strong>{formatCurrency(row.balance)}</strong>
+                                </div>
                               </div>
-                              {totalWithdrawals > 0
-                                ? renderWithdrawalDistribution(
-                                    openingCapital,
-                                    breakdown.initialCapital,
-                                    visibleInitialProfit,
-                                    visibleInitialPct,
-                                    breakdown.contributions,
-                                    withdrawals,
-                                    explainedTotalProfit
-                                  )
-                                : (
-                                    <div className="report-pro-flow-summary">
-                                      <div><span>Saldo al inicio del mes</span><strong>{formatCurrency(openingCapital)}</strong></div>
-                                      {totalContributions > 0 ? <div><span>Aportaciones del mes</span><strong>+{formatCurrency(totalContributions)}</strong></div> : null}
-                                      <div className="is-final"><span>Saldo al cierre del mes</span><strong>{formatCurrency(m.endBalance ?? 0)}</strong></div>
-                                    </div>
-                                  )}
-                              <table>
-                                <thead>
-                                  <tr>
-                                    <th>Concepto</th>
-                                    <th className="text-right">Importe</th>
-                                    <th className="text-right">Rentabilidad aplicada</th>
-                                    <th className="text-right">Beneficio generado</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  <tr>
-                                    <td>{withdrawals.length > 0 ? 'Capital mantenido hasta final de mes' : 'Posición inicial del mes'}</td>
-                                    <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
-                                    <td className={`text-right ${visibleInitialPct >= 0 ? 'positive' : 'negative'}`}>
-                                      {visibleInitialPct.toFixed(2)}%
-                                    </td>
-                                    <td className={`text-right ${visibleInitialProfit >= 0 ? 'positive' : 'negative'}`}>
-                                      {formatCurrency(visibleInitialProfit)}
-                                    </td>
-                                  </tr>
-                                  {breakdown.contributions.map((contribution) => (
-                                    <tr key={`${monthKey}-${contribution.iso}-${contribution.amount}`}>
-                                      <td>Aportaci&oacute;n incorporada el {getShortDateLabel(contribution.iso)}</td>
-                                      <td className="text-right">{formatCurrency(contribution.amount)}</td>
-                                      <td className={`text-right ${contribution.returnPct >= 0 ? 'positive' : 'negative'}`}>
-                                        {(contribution.returnPct * 100).toFixed(2)}%
-                                      </td>
-                                      <td className={`text-right ${contribution.profit >= 0 ? 'positive' : 'negative'}`}>
-                                        {formatCurrency(contribution.profit)}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                  {withdrawals.map((withdrawal) => (
-                                    <tr key={`${monthKey}-${withdrawal.iso}-${withdrawal.amount}-withdrawal`}>
-                                      <td>Capital retirado el {getShortDateLabel(withdrawal.iso)}</td>
-                                      <td className="text-right">{formatCurrency(withdrawal.amount)}</td>
-                                      <td className={`text-right ${(withdrawal.returnPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                                        {withdrawal.returnPct === undefined ? '—' : `${(withdrawal.returnPct * 100).toFixed(2)}%`}
-                                      </td>
-                                      <td className={`text-right ${withdrawal.profit >= 0 ? 'positive' : 'negative'}`}>
-                                        {formatCurrency(withdrawal.profit)}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                  <tr className="report-pro-breakdown-total">
-                                    <td>Beneficio total del mes</td>
-                                    <td className="text-right">—</td>
-                                    <td className="text-right">—</td>
-                                    <td className={`text-right ${explainedTotalProfit >= 0 ? 'positive' : 'negative'}`}>
-                                      {formatCurrency(explainedTotalProfit)}
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                              <div className="report-pro-balance-formula">
-                                <span>Comprobaci&oacute;n del saldo final</span>
-                                <strong>
-                                  {formatCurrency(openingCapital)}
-                                  {totalContributions > 0 ? ` + ${formatCurrency(totalContributions)}` : ''}
-                                  {totalWithdrawals > 0 ? ` - ${formatCurrency(totalWithdrawals)}` : ''}
-                                  {` ${formatSignedCurrency(explainedTotalProfit)} = ${formatCurrency(m.endBalance ?? 0)}`}
-                                </strong>
-                              </div>
-                            </div>
+                            </td>
+                          </tr>
+                        ) : null}
+                      {yearSummary ? (
+                        <tr className="report-pro-closing-year-total">
+                          <td />
+                          <td>
+                            <strong>{yearSummary.isComplete ? `Total ${row.year}` : `Subtotal ${row.year}`}</strong>
+                            {!yearSummary.isComplete ? <span>Periodo mostrado</span> : null}
                           </td>
+                          <td className="text-right">{formatCurrency(yearSummary.opening)}</td>
+                          <td className="text-right positive">{yearSummary.increments ? `+${formatCurrency(yearSummary.increments)}` : '\u2014'}</td>
+                          <td className="text-right negative">{yearSummary.decrements ? `-${formatCurrency(yearSummary.decrements)}` : '\u2014'}</td>
+                          <td className={`text-right ${yearSummary.profit >= 0 ? 'positive' : 'negative'}`}>{formatSignedCurrency(yearSummary.profit)}</td>
+                          <td className={`text-right ${yearSummary.returnPct >= 0 ? 'positive' : 'negative'}`}>{formatSignedPercent(yearSummary.returnPct)}</td>
+                          <td className="text-right"><strong>{formatCurrency(yearSummary.balance)}</strong></td>
                         </tr>
                       ) : null}
                     </React.Fragment>
