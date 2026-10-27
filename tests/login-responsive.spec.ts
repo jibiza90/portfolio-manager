@@ -3,10 +3,10 @@ import { expect, test } from '@playwright/test';
 test('the login remains usable without horizontal page overflow', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Iniciar sesion' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Iniciar sesión' })).toBeVisible();
   await expect(page.getByLabel('Usuario o email admin')).toBeVisible();
   await expect(page.locator('#pmPass')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Iniciar sesion' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Iniciar sesión' })).toBeVisible();
 
   const dimensions = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
@@ -19,7 +19,7 @@ test('password visibility and remembered user controls work by touch', async ({ 
   await page.goto('/');
   const password = page.locator('#pmPass');
   await password.fill('prueba-segura');
-  await page.getByRole('button', { name: 'Mostrar contrasena' }).tap();
+  await page.getByRole('button', { name: 'Mostrar contraseña' }).tap();
   await expect(password).toHaveAttribute('type', 'text');
 
   await page.getByText('Recordar usuario', { exact: true }).tap();

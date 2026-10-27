@@ -5987,7 +5987,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
       {/* KPIs principales */}
       <div className="comisiones-kpis">
         <div className="kpi-card-large">
-          <div className="kpi-icon">ðŸ’°</div>
+          <div className="kpi-icon">💰</div>
           <div className="kpi-content">
             <span className="kpi-label">Comisión total generada</span>
             <span className="kpi-value-large">{formatCurrency(totals.comisionAcumuladaTotal)}</span>

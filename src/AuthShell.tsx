@@ -1204,14 +1204,14 @@ const LoginCard = ({
 
               <h1 className="pmTitle">Accede a tu cartera en segundos.</h1>
               <p className="pmCopy">
-                Entra con tu usuario y contrasena. El correo solo se usa para la administracion interna del sistema.
+                Entra con tu usuario y contraseña. El correo solo se usa para la administración interna del sistema.
               </p>
 
-              <div className="pmPills" aria-label="Caracteristicas">
+              <div className="pmPills" aria-label="Características">
                 <div className="pmPill"><i /> KPIs claros</div>
-                <div className="pmPill"><i /> Mensajeria privada</div>
+                <div className="pmPill"><i /> Mensajería privada</div>
                 <div className="pmPill"><i /> PDF con un clic</div>
-                <div className="pmPill"><i /> Historico con trazabilidad</div>
+                <div className="pmPill"><i /> Histórico con trazabilidad</div>
               </div>
             </div>
 
@@ -1223,7 +1223,7 @@ const LoginCard = ({
 
           <section className="pmCard" aria-label="Formulario de acceso">
             <div className="pmCardHead">
-              <h2 className="pmCardTitle">Iniciar sesion</h2>
+              <h2 className="pmCardTitle">Iniciar sesión</h2>
               <div className="pmStatus"><i /> Acceso privado</div>
             </div>
 
@@ -1261,7 +1261,7 @@ const LoginCard = ({
               </div>
 
               <div className="pmField">
-                <label className="pmLabel" htmlFor="pmPass">Contrasena</label>
+                <label className="pmLabel" htmlFor="pmPass">Contraseña</label>
                 <div className="pmControl">
                   <input
                     id="pmPass"
@@ -1275,8 +1275,8 @@ const LoginCard = ({
                   <button
                     type="button"
                     className="pmIconBtn"
-                    aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
-                    title={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                     onClick={() => setShowPassword((prev) => !prev)}
                   >
                     {showPassword ? 'Ocultar' : 'Mostrar'}
@@ -1311,11 +1311,11 @@ const LoginCard = ({
               <button className="pmSubmit" type="submit" disabled={busy || !identifier.trim() || !password}>
                 {busy ? (
                   <span className="pmSubmitBusy"><i className="pmSubmitSpinner" aria-hidden="true" /> Accediendo...</span>
-                ) : 'Iniciar sesion'}
+                ) : 'Iniciar sesión'}
               </button>
 
               {error ? <div id="pmLoginError" className="pmError" role="alert" aria-live="assertive">{error}</div> : null}
-              <p className="pmAccessHelp"><strong>Problemas para acceder?</strong> Contacta con tu gestor.</p>
+              <p className="pmAccessHelp"><strong>¿Problemas para acceder?</strong> Contacta con tu gestor.</p>
             </form>
           </section>
         </section>
@@ -1758,7 +1758,7 @@ const ClientPortal = ({
       });
     } catch (noticeError) {
       console.error('No se pudo guardar la confirmacion del aviso legal', noticeError);
-      setLegalNoticeError('No se pudo guardar la confirmacion. Comprueba la conexion e intentalo de nuevo.');
+      setLegalNoticeError('No se pudo guardar la confirmación. Comprueba la conexión e inténtalo de nuevo.');
     } finally {
       setLegalNoticeBusy(false);
     }
@@ -2506,7 +2506,7 @@ const ClientPortal = ({
       {supportOpen ? (
         <section className="client-portal-support" style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, overflow: 'hidden', marginBottom: 16 }}>
           <div className="client-portal-support-head" style={{ padding: 14, borderBottom: `1px solid ${palette.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <strong>Mensajes con administracion</strong>
+            <strong>Mensajes con administración</strong>
             <span style={{ fontSize: 12, color: palette.muted }}>Si hay respuesta nueva, veras aviso hasta abrir esta seccion.</span>
           </div>
           <div style={{ padding: 14, display: 'grid', gap: 10 }}>
@@ -2534,7 +2534,7 @@ const ClientPortal = ({
                 value={supportText}
                 onChange={(event) => setSupportText(event.target.value)}
                 rows={3}
-                placeholder="Escribe tu duda para administracion..."
+                placeholder="Escribe tu duda para administración..."
                 style={{ border: `1px solid ${palette.border}`, borderRadius: 10, padding: 10, font: 'inherit', resize: 'vertical' }}
               />
               <div className="client-portal-support-compose" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2828,13 +2828,13 @@ const AuthShell = () => {
       if (pendingLogoutTimerRef.current !== null) {
         return;
       }
-      setSession((prev) => (prev.role ? { ...prev, loading: true, error: 'Reconectando sesion...' } : prev));
+      setSession((prev) => (prev.role ? { ...prev, loading: true, error: 'Reconectando sesión...' } : prev));
       pendingLogoutTimerRef.current = window.setTimeout(() => {
         pendingLogoutTimerRef.current = null;
         if (auth.currentUser) {
           return;
         }
-        markLoggedOut('Tu sesion expiro. Vuelve a iniciar sesion.');
+        markLoggedOut('Tu sesión expiró. Vuelve a iniciar sesión.');
       }, 4000);
     };
 
@@ -2847,7 +2847,7 @@ const AuthShell = () => {
         if (inactivityLogoutRef.current) {
           inactivityLogoutRef.current = false;
           clearPendingLogoutTimer();
-          markLoggedOut('Sesion cerrada por inactividad (15 minutos).');
+          markLoggedOut('Sesión cerrada por inactividad (15 minutos).');
           return;
         }
         if (manualLogoutRef.current) {
@@ -2941,7 +2941,7 @@ const AuthShell = () => {
         console.error(error);
         setSession((prev) =>
           prev.role
-            ? { ...prev, loading: false, error: 'Conexion inestable. Intentando recuperar sesion...' }
+            ? { ...prev, loading: false, error: 'Conexión inestable. Intentando recuperar sesión...' }
             : {
                 loading: false,
                 role: null,
@@ -2950,7 +2950,7 @@ const AuthShell = () => {
                 email: null,
                 loginId: null,
                 displayName: null,
-                error: 'Error validando tu sesion.'
+                error: 'Error validando tu sesión.'
               }
         );
       }
@@ -2969,7 +2969,7 @@ const AuthShell = () => {
       inactivityLogoutRef.current = true;
       adminUidRef.current = null;
       setSession((prev) =>
-        prev.role ? { ...prev, loading: true, error: 'Sesion cerrandose por inactividad...' } : prev
+        prev.role ? { ...prev, loading: true, error: 'Sesión cerrándose por inactividad...' } : prev
       );
       void (async () => {
         try {
@@ -2982,7 +2982,7 @@ const AuthShell = () => {
         } catch (error) {
           console.error('Error cerrando sesion por inactividad', error);
           inactivityLogoutRef.current = false;
-          setSession((prev) => ({ ...prev, loading: false, error: 'No se pudo cerrar sesion por inactividad.' }));
+          setSession((prev) => ({ ...prev, loading: false, error: 'No se pudo cerrar sesión por inactividad.' }));
         }
       })();
     };
@@ -3079,15 +3079,15 @@ const AuthShell = () => {
         : buildClientAuthEmail(normalizedIdentifier);
       await auth.signInWithEmailAndPassword(authEmail, password);
     } catch (error) {
-      let message = 'No se pudo iniciar sesion. Intentalo de nuevo.';
+      let message = 'No se pudo iniciar sesión. Inténtalo de nuevo.';
       const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: string }).code) : '';
       if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
-        message = 'Usuario o contrasena incorrectos.';
+        message = 'Usuario o contraseña incorrectos.';
       }
       if (code === 'auth/network-request-failed' || code === 'auth/internal-error') {
-        message = 'No se pudo conectar con el servicio. Comprueba tu conexion e intentalo de nuevo.';
+        message = 'No se pudo conectar con el servicio. Comprueba tu conexión e inténtalo de nuevo.';
       }
-      if (code === 'auth/too-many-requests') message = 'Demasiados intentos. Espera un momento e intentalo otra vez.';
+      if (code === 'auth/too-many-requests') message = 'Demasiados intentos. Espera un momento e inténtalo otra vez.';
       if (code !== 'auth/network-request-failed' && code !== 'auth/internal-error') {
         recordLocalLoginFailure(normalizedIdentifier, code);
       }
@@ -3116,7 +3116,7 @@ const AuthShell = () => {
       setSession((prev) => ({
         ...prev,
         loading: false,
-        error: session.role === 'admin' ? 'No se pudo guardar antes de salir.' : 'No se pudo cerrar sesion.'
+        error: session.role === 'admin' ? 'No se pudo guardar antes de salir.' : 'No se pudo cerrar sesión.'
       }));
     }
   };
@@ -3202,7 +3202,7 @@ const AuthShell = () => {
         `}</style>
         <div className="pmLoadingCard">
           <div className="pmLoadingOrb" />
-          <strong style={{ fontSize: 20 }}>Cargando sesion{loadingDots}</strong>
+          <strong style={{ fontSize: 20 }}>Cargando sesión{loadingDots}</strong>
           <span style={{ color: palette.muted, fontSize: 13 }}>Estamos validando tu acceso y preparando tu panel</span>
           <div className="pmLoadingBars">
             <div className="pmLoadingBar" />
@@ -3328,7 +3328,7 @@ const AuthShell = () => {
           <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: palette.text }}>
             <div role="status" aria-live="polite" style={{ display: 'grid', justifyItems: 'center', gap: 10 }}>
               <span className="admin-app-loading-spinner" aria-hidden="true" />
-              <strong>Cargando panel de administracion...</strong>
+              <strong>Cargando panel de administración...</strong>
             </div>
           </main>
         )}
