@@ -64,6 +64,22 @@ const formatDate = (iso: string) => {
   return year && month && day ? `${day}/${month}/${year}` : iso;
 };
 
+const MONTH_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+// "del 1 al 20 jul 2026": tramo del mes hasta el dia de la retirada.
+const formatMonthToDateRange = (iso: string) => {
+  const [year, month, day] = iso.split('-').map(Number);
+  if (!year || !month || !day) return '';
+  return `del 1 al ${day} ${MONTH_SHORT[month - 1]} ${year}`;
+};
+
+// Importe con punto de miles siempre (es-ES no lo pone en cifras de 4 digitos).
+const formatGroupedCurrency = (value: number) => {
+  const safe = Number.isFinite(value) ? Math.abs(value) : 0;
+  const [integer, decimals] = safe.toFixed(2).split('.');
+  return `${integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${decimals} €`;
+};
+
 const formatSignedCurrency = (value: number) => {
   const safe = Number.isFinite(value) ? value : 0;
   if (Math.abs(safe) < 0.005) return formatCurrency(0);
@@ -262,10 +278,20 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
                           {lot.withdrawalAllocations.map((withdrawal) => (
                             <div key={`${withdrawal.withdrawalId}-${withdrawal.iso}`}>
                               <span>{formatDate(withdrawal.iso)}</span>
-                              <strong>−{formatCurrency(withdrawal.amount)}</strong>
-                              <em>{withdrawal.returnPct !== undefined
-                                ? `Rentabilidad hasta la retirada ${formatSignedPercent(withdrawal.returnPct)}`
-                                : withdrawal.pending ? 'Pendiente del próximo cierre' : 'Sin rentabilidad específica registrada'}</em>
+                              <strong>−{formatGroupedCurrency(withdrawal.amount)}</strong>
+                              <em>{withdrawal.pending
+                                ? 'Pendiente del próximo cierre'
+                                : withdrawal.returnSinceEntryPct !== undefined
+                                  ? `Rentabilidad desde la aportación ${formatSignedPercent(withdrawal.returnSinceEntryPct)}`
+                                  : 'Sin rentabilidad específica registrada'}</em>
+                              {!withdrawal.pending && withdrawal.returnSinceEntryPct !== undefined ? (
+                                <small>
+                                  Desde el {formatDate(lot.iso)}
+                                  {withdrawal.returnPct !== undefined
+                                    ? ` · incluye ${formatSignedPercent(withdrawal.returnPct)} ${formatMonthToDateRange(withdrawal.iso)}`
+                                    : ''}
+                                </small>
+                              ) : null}
                             </div>
                           ))}
                         </div>

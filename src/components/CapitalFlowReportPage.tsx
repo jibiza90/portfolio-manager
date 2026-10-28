@@ -51,6 +51,8 @@ export interface CapitalLot extends SourceLot {
     amount: number;
     pending: boolean;
     returnPct?: number;
+    // Rentabilidad de ese dinero desde el dia de la aportacion hasta el dia de la retirada (en %).
+    returnSinceEntryPct?: number;
   }>;
   performanceFactor: number;
   attributedProfit: number;
@@ -286,6 +288,80 @@ export const buildCapitalModel = (
 
   const closedMonths = months.filter((month) => month.hasClose);
   const latestClosedKey = closedMonths[closedMonths.length - 1]?.key ?? '';
+
+  // Rentabilidad del mes de entrada de una aportacion (factor 1 + r).
+  // - Si la aportacion tiene su rentabilidad propia, se usa esa.
+  // - Si no, se deduce de los saldos del mes (asi salen bien los meses introducidos a mano
+  //   antes de usar la web, donde el saldo final ya incluye los dias desde la aportacion).
+  const SANE_FACTOR_MIN = 0.8;
+  const SANE_FACTOR_MAX = 1.3;
+  const isSaneFactor = (factor: number) => Number.isFinite(factor) && factor >= SANE_FACTOR_MIN && factor <= SANE_FACTOR_MAX;
+  const getEntryMonthFactor = (lot: SourceLot) => {
+    if (lot.specificEntryReturnPct !== undefined) return 1 + lot.specificEntryReturnPct / 100;
+    const monthIndex = closedMonths.findIndex((month) => month.key === lot.entryKey);
+    const month = closedMonths[monthIndex];
+    if (!month) return 1;
+    const fullMonthFactor = 1 + month.returnPct / 100;
+    const previous = closedMonths[monthIndex - 1];
+    if (!previous) {
+      // Primer mes sin rentabilidad apuntada (p.ej. entrada el 26/06/2025 y primer cierre en julio):
+      // lo ganado esos dias esta en el saldo inicial del mes siguiente, introducido a mano.
+      const next = closedMonths[monthIndex + 1];
+      const nextHasFlows = next && (report.movements ?? []).some((movement) => movement.iso.slice(0, 7) === next.key);
+      if (Math.abs(month.returnPct) < 1e-9 && next && !nextHasFlows && month.balance > 0) {
+        const gapFactor = next.balance / (1 + next.returnPct / 100) / month.balance;
+        if (isSaneFactor(gapFactor)) return gapFactor;
+      }
+      return fullMonthFactor;
+    }
+    const monthIncrements = publishedIncrements.filter((movement) => movement.iso.slice(0, 7) === lot.entryKey);
+    const monthWithdrawals = publishedWithdrawals.filter((movement) => movement.iso.slice(0, 7) === lot.entryKey);
+    const unknownIncrements = monthIncrements.filter((movement) => movement.returnPct === undefined);
+    const unknownTotal = unknownIncrements.reduce((sum, movement) => sum + movement.amount, 0);
+    if (unknownTotal <= 0.005) return fullMonthFactor;
+    const withdrawnTotal = monthWithdrawals.reduce((sum, movement) => sum + movement.amount, 0);
+    const expectedWithoutUnknown =
+      (previous.balance - withdrawnTotal) * fullMonthFactor
+      + monthWithdrawals.reduce((sum, movement) => sum + movement.amount * (movement.returnPct ?? 0), 0)
+      + monthIncrements
+        .filter((movement) => movement.returnPct !== undefined)
+        .reduce((sum, movement) => sum + movement.amount * (1 + (movement.returnPct ?? 0)), 0);
+    const residualFactor = (month.balance - expectedWithoutUnknown) / unknownTotal;
+    return isSaneFactor(residualFactor) ? residualFactor : fullMonthFactor;
+  };
+  // Dias entre la primera aportacion y el primer cierre registrado (p.ej. 26-30 jun 2025):
+  // el saldo inicial del primer cierre ya incluye ese rendimiento.
+  const firstClosed = closedMonths[0];
+  const preHistoryFactor = (() => {
+    if (!firstClosed) return 1;
+    const before = publishedIncrements.filter((movement) => movement.iso.slice(0, 7) < firstClosed.key);
+    const beforeTotal = before.reduce((sum, movement) => sum + movement.amount, 0);
+    const firstMonthHasFlows = (report.movements ?? []).some((movement) => movement.iso.slice(0, 7) === firstClosed.key);
+    if (beforeTotal <= 0.005 || firstMonthHasFlows) return 1;
+    const startBalance = firstClosed.balance / (1 + firstClosed.returnPct / 100);
+    const factor = startBalance / beforeTotal;
+    return isSaneFactor(factor) ? factor : 1;
+  })();
+  const getReturnSinceEntryPct = (lot: SourceLot, withdrawal: WithdrawalFlow) => {
+    if (lot.pending || withdrawal.pending) return undefined;
+    const exitKey = withdrawal.monthKey;
+    const exitFactor = 1 + (withdrawal.returnPct ?? 0) / 100;
+    if (lot.entryKey >= exitKey) return (exitFactor - 1) * 100;
+    const isBeforeHistory = Boolean(firstClosed && lot.entryKey < firstClosed.key);
+    let factor = isBeforeHistory ? preHistoryFactor : getEntryMonthFactor(lot);
+    closedMonths
+      .filter((month) => month.key < exitKey && (isBeforeHistory ? true : month.key > lot.entryKey))
+      .forEach((month) => {
+        factor *= 1 + month.returnPct / 100;
+      });
+    return (factor * exitFactor - 1) * 100;
+  };
+  mutableLots.forEach((lot) => {
+    lot.withdrawalAllocations.forEach((allocation) => {
+      const withdrawal = withdrawals.find((item) => item.id === allocation.withdrawalId);
+      if (withdrawal) allocation.returnSinceEntryPct = getReturnSinceEntryPct(lot, withdrawal);
+    });
+  });
   const lotsWithPerformance = mutableLots.map((lot) => {
     const activeMonths = months.filter((month) => month.hasClose && month.key >= lot.entryKey);
     const performanceFactor = activeMonths.reduce((factor, month, index) => {

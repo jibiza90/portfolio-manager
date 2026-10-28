@@ -580,6 +580,14 @@
   text-align: right;
 }
 
+.contribution-journey-withdrawal-list small {
+  grid-column: 1 / -1;
+  margin-top: -6px;
+  color: #8f8274;
+  font-size: 0.66rem;
+  text-align: right;
+}
+
 .contribution-journey-no-withdrawals {
   margin-top: 12px;
   padding: 12px 14px;
@@ -673,6 +681,7 @@
   .contribution-journey-withdrawals-head { align-items: flex-start; flex-direction: column; }
   .contribution-journey-withdrawal-list > div { grid-template-columns: 1fr auto; }
   .contribution-journey-withdrawal-list em { grid-column: 1 / -1; text-align: left; }
+  .contribution-journey-withdrawal-list small { text-align: left; margin-top: -8px; }
   .contribution-journey-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
