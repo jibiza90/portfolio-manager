@@ -64,15 +64,6 @@ const formatDate = (iso: string) => {
   return year && month && day ? `${day}/${month}/${year}` : iso;
 };
 
-const MONTH_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-
-// "del 1 al 20 jul 2026": tramo del mes hasta el dia de la retirada.
-const formatMonthToDateRange = (iso: string) => {
-  const [year, month, day] = iso.split('-').map(Number);
-  if (!year || !month || !day) return '';
-  return `del 1 al ${day} ${MONTH_SHORT[month - 1]} ${year}`;
-};
-
 // Importe con punto de miles siempre (es-ES no lo pone en cifras de 4 digitos).
 const formatGroupedCurrency = (value: number) => {
   const safe = Number.isFinite(value) ? Math.abs(value) : 0;
@@ -285,12 +276,7 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
                                   ? `Rentabilidad desde la aportación ${formatSignedPercent(withdrawal.returnSinceEntryPct)}`
                                   : 'Sin rentabilidad específica registrada'}</em>
                               {!withdrawal.pending && withdrawal.returnSinceEntryPct !== undefined ? (
-                                <small>
-                                  Desde el {formatDate(lot.iso)}
-                                  {withdrawal.returnPct !== undefined
-                                    ? ` · incluye ${formatSignedPercent(withdrawal.returnPct)} ${formatMonthToDateRange(withdrawal.iso)}`
-                                    : ''}
-                                </small>
+                                <small>Desde el {formatDate(lot.iso)}</small>
                               ) : null}
                             </div>
                           ))}
