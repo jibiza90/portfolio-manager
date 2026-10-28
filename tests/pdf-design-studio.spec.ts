@@ -50,7 +50,7 @@ test('keeps PDF designs isolated and renders SIGNAL from real report data', asyn
   await page.getByRole('tab', { name: /PDF 1/i }).click();
   await expect(page.locator('.pdf1-preview iframe')).toBeVisible({ timeout: 45_000 });
   await page.getByRole('tab', { name: /Páginas del portal/i }).click();
-  await expect(page.locator('.demo-report-page-switcher')).toBeVisible();
+  await expect(page.locator('.report-pro-wide-sheet')).toBeVisible();
   await expect(page.locator('.pdf-studio')).toHaveCount(0);
 });
 

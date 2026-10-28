@@ -6,7 +6,7 @@ import {
   type CapitalLot,
   type FlowMonth,
   type FlowPendingMovement
-} from './CapitalFlowReportPage';
+} from './capitalModel';
 import './ContributionJourneyModule.css';
 
 interface ContributionJourneyModuleProps {

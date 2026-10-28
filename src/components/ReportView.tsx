@@ -6,39 +6,11 @@ import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 import type { GeneralReferenceMonth } from '../services/cloudPortfolio';
 import { DEMO_CLIENT_ID } from '../constants/clients';
 import { getViewportTooltipPosition, ViewportTooltipPlacement } from '../utils/viewportTooltip';
-import { PremiumReportPage } from './PremiumReportPage';
-import { AnnualVisionReportPage } from './AnnualVisionReportPage';
-import { CapitalFlowReportPage } from './CapitalFlowReportPage';
 import { ContributionJourneyModule } from './ContributionJourneyModule';
-import { NarrativeReportPage } from './NarrativeReportPage';
-import { ClientLedgerReportPage } from './ClientLedgerReportPage';
-import { CapitalRiverReportPage } from './CapitalRiverReportPage';
-import { WealthMosaicReportPage } from './WealthMosaicReportPage';
-import { AuraQuantumReportPage } from './AuraQuantumReportPage';
-import { AuraStrataReportPage } from './AuraStrataReportPage';
-import { ChronosOrbitReportPage } from './ChronosOrbitReportPage';
-import { StrataAtlasReportPage } from './StrataAtlasReportPage';
-import { HeliosDeskReportPage } from './HeliosDeskReportPage';
-import { PulseReportPage } from './PulseReportPage';
-import { VaultReportPage } from './VaultReportPage';
-import { MeridianReportPage } from './MeridianReportPage';
-import { ActaReportPage } from './ActaReportPage';
-import { TrazaReportPage } from './TrazaReportPage';
-import { ContinuumReportPage } from './ContinuumReportPage';
-import { HorizonApexReportPage } from './HorizonApexReportPage';
-import { PrismaBridgeReportPage } from './PrismaBridgeReportPage';
-import { ConsultaReportPage } from './ConsultaReportPage';
-import { EstacionesReportPage } from './EstacionesReportPage';
-import { PrismaOriginReportPage } from './PrismaOriginReportPage';
-import { NexusReportPage } from './NexusReportPage';
 import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio';
 import { PatrimonyTrendChart, type PatrimonyTrendPoint } from './PatrimonyTrendChart';
 import './WideReportPage.css';
 
-const AetherReportPage = React.lazy(() => import('./AetherReportPage').then((module) => ({ default: module.AetherReportPage })));
-const LucentReportPage = React.lazy(() => import('./LucentReportPage').then((module) => ({ default: module.LucentReportPage })));
-const AionJourneyReportPage = React.lazy(() => import('./AionJourneyReportPage').then((module) => ({ default: module.AionJourneyReportPage })));
-const FormaReportPage = React.lazy(() => import('./FormaReportPage').then((module) => ({ default: module.FormaReportPage })));
 
 interface ReportViewProps {
   token?: string;
@@ -342,7 +314,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [isPatrimonyExpanded, setIsPatrimonyExpanded] = useState(false);
   const [expandedStartMonth, setExpandedStartMonth] = useState('');
   const [expandedEndMonth, setExpandedEndMonth] = useState('');
-  const [demoReportPage, setDemoReportPage] = useState<'page1' | 'page2' | 'page3' | 'page4' | 'page5' | 'page6' | 'page7' | 'page8' | 'page9' | 'page10' | 'page11' | 'page12' | 'page13' | 'page14' | 'page15' | 'page16' | 'page17' | 'page18' | 'page19' | 'page20' | 'page21' | 'page22' | 'page23' | 'page24' | 'page25' | 'page26' | 'page27' | 'page28' | 'page29' | 'page30'>('page1');
   const [demoViewMode, setDemoViewMode] = useState<'pages' | 'pdfs'>('pages');
   const [demoPdfDesign, setDemoPdfDesign] = useState<PdfDesignId>('pdf3');
   const detailScrollAnimationRef = useRef<number | null>(null);
@@ -518,7 +489,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       document.removeEventListener('pointerdown', onDocumentPointerDown, true);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [demoReportPage, report?.clientId, report?.createdAt]);
+  }, [report?.clientId, report?.createdAt]);
 
   useEffect(() => {
     if (chartView === 'general' && generalReferenceMonthly.length === 0) {
@@ -529,7 +500,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
   useEffect(() => {
     if (!report) return;
     setPeriodPreset('all');
-    setDemoReportPage('page1');
     setDemoViewMode('pages');
     setDemoPdfDesign('pdf3');
   }, [report?.clientId]);
@@ -553,7 +523,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       window.cancelAnimationFrame(settledFrame);
       window.clearTimeout(settledTimer);
     };
-  }, [report?.clientId, report?.createdAt, report?.patrimonioEvolution.length, periodPreset, periodStartMonth, periodEndMonth, demoReportPage]);
+  }, [report?.clientId, report?.createdAt, report?.patrimonioEvolution.length, periodPreset, periodStartMonth, periodEndMonth]);
 
   useLayoutEffect(() => {
     if (!report) return undefined;
@@ -574,7 +544,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       window.cancelAnimationFrame(settledFrame);
       window.clearTimeout(settledTimer);
     };
-  }, [report?.clientId, report?.createdAt, report?.monthlyStats.length, chartView, periodPreset, periodStartMonth, periodEndMonth, demoReportPage]);
+  }, [report?.clientId, report?.createdAt, report?.monthlyStats.length, chartView, periodPreset, periodStartMonth, periodEndMonth]);
 
   useLayoutEffect(() => {
     if (!report) return undefined;
@@ -595,7 +565,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       window.cancelAnimationFrame(settledFrame);
       window.clearTimeout(settledTimer);
     };
-  }, [report?.clientId, report?.createdAt, report?.monthlyStats.length, periodPreset, periodStartMonth, periodEndMonth, demoReportPage]);
+  }, [report?.clientId, report?.createdAt, report?.monthlyStats.length, periodPreset, periodStartMonth, periodEndMonth]);
 
   useEffect(() => {
     if (!analyticsEnabled) return undefined;
@@ -634,7 +604,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       root?.removeEventListener('scroll', markActivity, true);
       document.removeEventListener('visibilitychange', markVisibleActivity);
     };
-  }, [analyticsEnabled, demoReportPage, report?.clientId]);
+  }, [analyticsEnabled, report?.clientId]);
 
   useEffect(() => {
     if (!analyticsEnabled || !onAnalyticsEvent || !reportRef.current) return undefined;
@@ -798,7 +768,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       tick();
       flushCurrentSection();
     };
-  }, [analyticsEnabled, demoReportPage, isPatrimonyExpanded, onAnalyticsEvent, report?.clientId]);
+  }, [analyticsEnabled, isPatrimonyExpanded, onAnalyticsEvent, report?.clientId]);
 
   useEffect(() => {
     if (!analyticsEnabled || !onAnalyticsEvent || !chartVisibilityRef.current || isPatrimonyExpanded) return undefined;
@@ -845,7 +815,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       tick();
       flush();
     };
-  }, [analyticsEnabled, chartView, demoReportPage, isPatrimonyExpanded, onAnalyticsEvent]);
+  }, [analyticsEnabled, chartView, isPatrimonyExpanded, onAnalyticsEvent]);
 
   useEffect(() => {
     if (!analyticsEnabled || !onAnalyticsEvent || !isPatrimonyExpanded) return undefined;
@@ -923,10 +893,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
       await generatedPdfDownloaderRef.current();
       return;
     }
-    if (report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page5') {
-      await handleDownloadNarrativeReport();
-      return;
-    }
     await handleDownloadModernReport();
   };
 
@@ -964,7 +930,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   }
 
   if (!report) return null;
-  const isWideReportPage = report.clientId !== DEMO_CLIENT_ID || demoReportPage === 'page1' || demoReportPage === 'page20';
+  // Solo queda el informe estandar (el que ven los clientes).
+  const isWideReportPage = true;
 
   const visiblePendingCashMovements = [...pendingCashMovements]
     .filter((movement) => Number.isFinite(movement.amount) && movement.amount > 0)
@@ -1677,108 +1644,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
     );
   };
 
-  async function handleDownloadNarrativeReport() {
-    const currentReport = report;
-    const narrativeRoot = reportRef.current?.querySelector<HTMLElement>('.pn5-report');
-    if (!currentReport || !narrativeRoot) return;
-
-    const [{ jsPDF }, html2canvasModule] = await Promise.all([
-      import('jspdf'),
-      import('html2canvas')
-    ]);
-    const html2canvas = html2canvasModule.default;
-    await document.fonts?.ready;
-
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const marginX = 34;
-    const imageTop = 42;
-    const imageBottom = 32;
-    const imageWidth = pageWidth - marginX * 2;
-    const imageHeight = pageHeight - imageTop - imageBottom;
-    const sections = Array.from(narrativeRoot.querySelectorAll<HTMLElement>('.pn5-opening, .pn5-chapter'));
-    let pageCount = 0;
-
-    const preparePage = () => {
-      if (pageCount > 0) doc.addPage();
-      pageCount += 1;
-      doc.setFillColor(244, 240, 232);
-      doc.rect(0, 0, pageWidth, pageHeight, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.5);
-      doc.setTextColor(22, 39, 53);
-      doc.text('JIGSA  ·  CARTA PATRIMONIAL', marginX, 23);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(97, 113, 123);
-      doc.text(currentReport.clientCode.toUpperCase(), pageWidth - marginX, 23, { align: 'right' });
-    };
-
-    for (const section of sections) {
-      const canvas = await html2canvas(section, {
-        backgroundColor: '#f4f0e8',
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        windowWidth: 1440,
-        onclone: (clonedDocument) => {
-          const clonedSection = clonedDocument.getElementById(section.id);
-          if (!clonedSection) return;
-          clonedSection.style.minHeight = '0';
-          clonedSection.style.padding = '58px 34px';
-          clonedSection.querySelectorAll<HTMLElement>('.pn5-chapter-turner').forEach((node) => {
-            node.style.display = 'none';
-          });
-        }
-      });
-      const sourcePageHeight = Math.max(1, Math.floor(canvas.width * imageHeight / imageWidth));
-      let sourceY = 0;
-      while (sourceY < canvas.height) {
-        preparePage();
-        const sliceHeight = Math.min(sourcePageHeight, canvas.height - sourceY);
-        const slice = document.createElement('canvas');
-        slice.width = canvas.width;
-        slice.height = sliceHeight;
-        const context = slice.getContext('2d');
-        context?.drawImage(canvas, 0, sourceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-        const renderedHeight = sliceHeight * imageWidth / canvas.width;
-        doc.addImage(slice.toDataURL('image/jpeg', 0.94), 'JPEG', marginX, imageTop, imageWidth, renderedHeight, undefined, 'FAST');
-        sourceY += sliceHeight;
-      }
-    }
-
-    const totalPages = doc.getNumberOfPages();
-    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
-      doc.setPage(pageNumber);
-      doc.setDrawColor(190, 183, 170);
-      doc.setLineWidth(0.45);
-      doc.line(marginX, pageHeight - 23, pageWidth - marginX, pageHeight - 23);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(97, 113, 123);
-      doc.text(`Pagina ${pageNumber} de ${totalPages}`, pageWidth - marginX, pageHeight - 11, { align: 'right' });
-    }
-
-    const filename = `carta-patrimonial-${currentReport.clientCode}.pdf`;
-    const pdfUrl = URL.createObjectURL(doc.output('blob'));
-    const downloadLink = document.createElement('a');
-    downloadLink.href = pdfUrl;
-    downloadLink.download = filename;
-    downloadLink.style.display = 'none';
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    downloadLink.remove();
-    window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 30_000);
-    onDownloaded?.({
-      reportClientId: currentReport.clientId,
-      reportLabel: currentReport.clientCode,
-      periodStart: rangeStart || 'todo',
-      periodEnd: rangeEnd || 'todo',
-      filename,
-      reportUpdatedAt: currentReport.createdAt
-    });
-  }
-
   async function buildModernReportPdf() {
     const currentReport = report;
     if (!currentReport) throw new Error('No hay un informe disponible para generar el PDF.');
@@ -2480,36 +2345,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
     )
     : null;
 
-  const isPremiumDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page2';
-  const isAnnualVisionDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page3';
-  const isCapitalFlowDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page4';
-  const isNarrativeDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page5';
-  const isLedgerDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page6';
-  const isRiverDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page7';
-  const isMosaicDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page8';
-  const isAuraDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page9';
-  const isStrataDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page10';
-  const isChronosDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page11';
-  const isAtlasDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page12';
-  const isHeliosDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page13';
-  const isPulseDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page14';
-  const isVaultDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page15';
-  const isMeridianDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page16';
-  const isActaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page17';
-  const isTrazaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page18';
-  const isContinuumDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page19';
-  const isApexDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page21';
-  const isPrismaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page22';
-  const isConsultaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page23';
-  const isEstacionesDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page24';
-  const isPrismaOriginDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page25';
-  const isNexusDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page26';
-  const isAetherDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page27';
-  const isLucentDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page28';
-  const isAionDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page29';
-  const isFormaDemoPage = report.clientId === DEMO_CLIENT_ID && demoReportPage === 'page30';
   const isPdfStudio = report.clientId === DEMO_CLIENT_ID && demoViewMode === 'pdfs';
-  const isImmersiveDemoPage = isPdfStudio || isPremiumDemoPage || isAnnualVisionDemoPage || isCapitalFlowDemoPage || isNarrativeDemoPage || isLedgerDemoPage || isRiverDemoPage || isMosaicDemoPage || isAuraDemoPage || isStrataDemoPage || isChronosDemoPage || isAtlasDemoPage || isHeliosDemoPage || isPulseDemoPage || isVaultDemoPage || isMeridianDemoPage || isActaDemoPage || isTrazaDemoPage || isContinuumDemoPage || isApexDemoPage || isPrismaDemoPage || isConsultaDemoPage || isEstacionesDemoPage || isPrismaOriginDemoPage || isNexusDemoPage || isAetherDemoPage || isLucentDemoPage || isAionDemoPage || isFormaDemoPage;
+  const isImmersiveDemoPage = isPdfStudio;
   const pdfStudioMonths: PdfStudioMonth[] = effectiveMonthlyWithData.map((month) => ({
     key: reportMonthToKey(month.month),
     label: month.month,
@@ -2544,400 +2381,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </div>
         </nav>
       ) : null}
-      {report.clientId === DEMO_CLIENT_ID && demoViewMode === 'pages' ? (
-        <nav className="demo-report-page-switcher has-nineteen-pages has-twenty-pages has-twenty-one-pages has-twenty-two-pages has-twenty-three-pages has-twenty-four-pages has-twenty-five-pages has-twenty-six-pages has-twenty-seven-pages has-twenty-eight-pages has-twenty-nine-pages has-thirty-pages" aria-label="Seleccionar pagina del informe">
-          <span>Vista del informe</span>
-          <div>
-            <button
-              type="button"
-              className={demoReportPage === 'page1' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page1'}
-              aria-label="Página 1"
-              onClick={() => setDemoReportPage('page1')}
-            >
-              <span className="demo-report-page-label">Página 1</span>
-              <small className="demo-report-page-author">ChatGPT</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page2' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page2'}
-              aria-label="Página 2"
-              onClick={() => {
-                setDemoReportPage('page2');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 2 premium' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 2</span>
-              <small className="demo-report-page-author">ChatGPT</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page3' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page3'}
-              aria-label="Página 3"
-              onClick={() => {
-                setDemoReportPage('page3');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 3 vision anual' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 3</span>
-              <small className="demo-report-page-author">SWE2</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page4' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page4'}
-              aria-label="Página 4"
-              onClick={() => {
-                setDemoReportPage('page4');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 4 recorrido del capital' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 4</span>
-              <small className="demo-report-page-author">SWE2</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page5' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page5'}
-              aria-label="Página 5"
-              onClick={() => {
-                setDemoReportPage('page5');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 5 carta patrimonial' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 5</span>
-              <small className="demo-report-page-author">SWE2</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page6' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page6'}
-              aria-label="Página 6"
-              onClick={() => {
-                setDemoReportPage('page6');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 6 legajo del cliente' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 6</span>
-              <small className="demo-report-page-author">Kimi 2.7</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page7' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page7'}
-              aria-label="Página 7"
-              onClick={() => {
-                setDemoReportPage('page7');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 7 rio del capital' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 7</span>
-              <small className="demo-report-page-author">Kimi 2.7</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page8' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page8'}
-              aria-label="Página 8"
-              onClick={() => {
-                setDemoReportPage('page8');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 8 mosaico patrimonial' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 8</span>
-              <small className="demo-report-page-author">Kimi 2.7</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page9' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page9'}
-              aria-label="Página 9"
-              onClick={() => {
-                setDemoReportPage('page9');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 9 Aura Quantum' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 9</span>
-              <small className="demo-report-page-author">Gemini 3.8</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page10' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page10'}
-              aria-label="Página 10"
-              onClick={() => {
-                setDemoReportPage('page10');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 10 Aura Strata' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 10</span>
-              <small className="demo-report-page-author">Gemini 3.8</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page11' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page11'}
-              aria-label="Página 11"
-              onClick={() => {
-                setDemoReportPage('page11');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 11 Chronos Orbit' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 11</span>
-              <small className="demo-report-page-author">Gemini 3.8</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page12' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page12'}
-              aria-label="Página 12"
-              onClick={() => {
-                setDemoReportPage('page12');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 12 The Strata Atlas' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 12</span>
-              <small className="demo-report-page-author">Gemini 3.8</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page13' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page13'}
-              aria-label="Página 13"
-              onClick={() => {
-                setDemoReportPage('page13');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 13 HELIOS mesa de gestion' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 13</span>
-              <small className="demo-report-page-author">GLM 5.3MAX</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page14' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page14'}
-              aria-label="Página 14"
-              onClick={() => {
-                setDemoReportPage('page14');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 14 PULSO sismografo patrimonial' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 14</span>
-              <small className="demo-report-page-author">GLM 5.3MAX</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page15' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page15'}
-              aria-label="Página 15"
-              onClick={() => {
-                setDemoReportPage('page15');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 15 BOVEDA camara de custodia' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 15</span>
-              <small className="demo-report-page-author">GLM 5.3MAX</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page16' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page16'}
-              aria-label="Página 16"
-              onClick={() => {
-                setDemoReportPage('page16');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 16 MERIDIANO — GROK 4.7' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 16</span>
-              <small className="demo-report-page-author">GROK 4.7</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page17' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page17'}
-              aria-label="Página 17"
-              onClick={() => {
-                setDemoReportPage('page17');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 17 ACTA — GROK 4.7' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 17</span>
-              <small className="demo-report-page-author">GROK 4.7</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page18' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page18'}
-              aria-label="Página 18"
-              onClick={() => {
-                setDemoReportPage('page18');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 18 TRAZA — GROK 4.7' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 18</span>
-              <small className="demo-report-page-author">GROK 4.7</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page19' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page19'}
-              aria-label="Página 19"
-              onClick={() => {
-                setDemoReportPage('page19');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 19 CONTINUUM — CODEX' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 19</span>
-              <small className="demo-report-page-author">CODEX</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page20' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page20'}
-              aria-label="Página 20"
-              onClick={() => {
-                setDemoReportPage('page20');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 20 informe original ampliado — CODEX' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 20</span>
-              <small className="demo-report-page-author">CODEX</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page21' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page21'}
-              aria-label="Página 21"
-              onClick={() => {
-                setDemoReportPage('page21');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 21 HORIZONTE APEX — Gemini 3.8 Flash' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 21</span>
-              <small className="demo-report-page-author">Gemini 3.8 Flash</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page22' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page22'}
-              aria-label="Página 22"
-              onClick={() => {
-                setDemoReportPage('page22');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 22 PRISMA — Claude Fable 5.1' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 22</span>
-              <small className="demo-report-page-author">Claude Fable 5.1</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page23' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page23'}
-              aria-label="Página 23"
-              onClick={() => {
-                setDemoReportPage('page23');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 23 CONSULTA — Claude Fable 5.1' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 23</span>
-              <small className="demo-report-page-author">Claude Fable 5.1</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page24' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page24'}
-              aria-label="Página 24"
-              onClick={() => {
-                setDemoReportPage('page24');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 24 ESTACIONES — Claude Fable 5.1' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 24</span>
-              <small className="demo-report-page-author">Claude Fable 5.1</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page25' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page25'}
-              aria-label="Página 25"
-              onClick={() => {
-                setDemoReportPage('page25');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 25 PRISMA ORIGEN — Claude Fable 5.1' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 25</span>
-              <small className="demo-report-page-author">Claude Fable 5.1</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page26' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page26'}
-              aria-label="Página 26"
-              onClick={() => {
-                setDemoReportPage('page26');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 26 NEXUS — CODEX' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 26</span>
-              <small className="demo-report-page-author">CODEX</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page27' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page27'}
-              aria-label="Página 27"
-              onClick={() => {
-                setDemoReportPage('page27');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 27 AETHER — CODEX' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 27</span>
-              <small className="demo-report-page-author">CODEX</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page28' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page28'}
-              aria-label="Página 28"
-              onClick={() => {
-                setDemoReportPage('page28');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 28 LUCENT — CODEX' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 28</span>
-              <small className="demo-report-page-author">CODEX</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page29' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page29'}
-              aria-label="Página 29"
-              onClick={() => {
-                setDemoReportPage('page29');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 29 AION — CODEX' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 29</span>
-              <small className="demo-report-page-author">CODEX</small>
-            </button>
-            <button
-              type="button"
-              className={demoReportPage === 'page30' ? 'is-active' : ''}
-              aria-pressed={demoReportPage === 'page30'}
-              aria-label="Página 30"
-              onClick={() => {
-                setDemoReportPage('page30');
-                onAnalyticsEvent?.({ type: 'report_page_change', label: 'Pagina 30 FORMA - CODEX' });
-              }}
-            >
-              <span className="demo-report-page-label">Página 30</span>
-              <small className="demo-report-page-author">CODEX</small>
-            </button>
-          </div>
-        </nav>
-      ) : null}
       {isImmersiveDemoPage ? null : expandedPatrimonyOverlay}
       {isPdfStudio ? (
         <PdfDesignStudio
@@ -2962,248 +2405,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
           periodStart={rangeStart}
           periodEnd={rangeEnd}
         />
-      ) : isPremiumDemoPage ? (
-        <PremiumReportPage
-          report={report}
-          generalReferenceMonthly={generalReferenceMonthly}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-        />
-      ) : isAnnualVisionDemoPage ? (
-        <AnnualVisionReportPage
-          report={report}
-          generalReferenceMonthly={generalReferenceMonthly}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-        />
-      ) : isCapitalFlowDemoPage ? (
-        <CapitalFlowReportPage
-          report={report}
-          generalReferenceMonthly={generalReferenceMonthly}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-        />
-      ) : isNarrativeDemoPage ? (
-        <NarrativeReportPage
-          report={report}
-          generalReferenceMonthly={generalReferenceMonthly}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadNarrativeReport}
-        />
-      ) : isLedgerDemoPage ? (
-        <ClientLedgerReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-        />
-      ) : isRiverDemoPage ? (
-        <CapitalRiverReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-        />
-      ) : isMosaicDemoPage ? (
-        <WealthMosaicReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-        />
-      ) : isAuraDemoPage ? (
-        <AuraQuantumReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-        />
-      ) : isStrataDemoPage ? (
-        <AuraStrataReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-        />
-      ) : isChronosDemoPage ? (
-        <ChronosOrbitReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-        />
-      ) : isAtlasDemoPage ? (
-        <StrataAtlasReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-        />
-      ) : isHeliosDemoPage ? (
-        <HeliosDeskReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isPulseDemoPage ? (
-        <PulseReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isVaultDemoPage ? (
-        <VaultReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isMeridianDemoPage ? (
-        <MeridianReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isActaDemoPage ? (
-        <ActaReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isTrazaDemoPage ? (
-        <TrazaReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isContinuumDemoPage ? (
-        <ContinuumReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isApexDemoPage ? (
-        <HorizonApexReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isPrismaDemoPage ? (
-        <PrismaBridgeReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isConsultaDemoPage ? (
-        <ConsultaReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isEstacionesDemoPage ? (
-        <EstacionesReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isPrismaOriginDemoPage ? (
-        <PrismaOriginReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-          onPeriodChange={syncImmersiveReportPeriod}
-        />
-      ) : isNexusDemoPage ? (
-        <NexusReportPage
-          report={report}
-          pendingCashMovements={visiblePendingCashMovements}
-          rootRef={reportRef}
-          onAnalyticsEvent={onAnalyticsEvent}
-          onDownload={handleDownloadModernReport}
-        />
-      ) : isAetherDemoPage ? (
-        <React.Suspense fallback={<div className="aether-route-loading" role="status">Preparando experiencia tridimensional…</div>}>
-          <AetherReportPage
-            report={report}
-            pendingCashMovements={visiblePendingCashMovements}
-            rootRef={reportRef}
-            onAnalyticsEvent={onAnalyticsEvent}
-            onDownload={handleDownloadModernReport}
-          />
-        </React.Suspense>
-      ) : isLucentDemoPage ? (
-        <React.Suspense fallback={<div className="lucent-route-loading" role="status">Construyendo el paisaje patrimonial…</div>}>
-          <LucentReportPage
-            report={report}
-            pendingCashMovements={visiblePendingCashMovements}
-            rootRef={reportRef}
-            onAnalyticsEvent={onAnalyticsEvent}
-            onDownload={handleDownloadModernReport}
-          />
-        </React.Suspense>
-      ) : isAionDemoPage ? (
-        <React.Suspense fallback={<div className="aion-route-loading" role="status">Reconstruyendo tu trayectoria patrimonial…</div>}>
-          <AionJourneyReportPage
-            report={report}
-            pendingCashMovements={visiblePendingCashMovements}
-            rootRef={reportRef}
-            onAnalyticsEvent={onAnalyticsEvent}
-            onDownload={handleDownloadModernReport}
-          />
-        </React.Suspense>
-      ) : isFormaDemoPage ? (
-        <React.Suspense fallback={<div className="forma-route-loading" role="status">Construyendo tu arquitectura patrimonial...</div>}>
-          <FormaReportPage
-            report={report}
-            pendingCashMovements={visiblePendingCashMovements}
-            rootRef={reportRef}
-            onAnalyticsEvent={onAnalyticsEvent}
-            onDownload={handleDownloadModernReport}
-          />
-        </React.Suspense>
       ) : (
       <article className={`informe-preview glass-card report-pro-sheet report-pro-demo-sheet${isWideReportPage ? ' report-pro-wide-sheet' : ''}`} ref={reportRef}>
         <header className="report-pro-header">

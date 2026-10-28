@@ -12,11 +12,8 @@ test('renders page 20 as the full-width professional edition of page 1', async (
   await page.setViewportSize({ width: 1440, height: 1000 });
   await mountDemoReport(page);
 
-  const pageTwentyButton = page.locator('[aria-label$="20"]');
-  await expect(pageTwentyButton).toContainText('CODEX');
-  await pageTwentyButton.click();
-
-  await expect(pageTwentyButton).toHaveAttribute('aria-pressed', 'true');
+  // Solo queda el informe estandar: sin selector de paginas.
+  await expect(page.locator('.demo-report-page-switcher')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
   await expect(page.locator('.report-pro-wide-sheet')).toBeVisible();
   await expect(page.locator('.report-pro-bar-col')).toHaveCount(13);
@@ -55,11 +52,8 @@ test('uses the page 20 layout on demo page 1', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await mountDemoReport(page);
 
-  const pageOneButton = page.getByRole('button', { name: 'Página 1', exact: true });
-  await expect(pageOneButton).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.report-pro-wide-sheet')).toBeVisible();
   await expect(page.locator('.report-pro-bar-col')).toHaveCount(13);
-  // La pagina 1 de demo1 prueba el nuevo grafico de patrimonio con todos los meses visibles.
   await expect(page.locator('.pm-trend')).toBeVisible();
   await expect(page.locator('.pm-trend-month')).toHaveCount(13);
   await expect(page.locator('.pm-trend-scroll')).not.toHaveClass(/is-scrollable/);
@@ -131,7 +125,7 @@ test('allocates withdrawals to the oldest contribution before moving to the next
       remainingCapital: lot.remainingCapital,
       allocationAmounts: lot.withdrawalAllocations.map((allocation) => allocation.amount)
     }));
-  }, '/src/components/CapitalFlowReportPage.tsx');
+  }, '/src/components/capitalModel.ts');
 
   expect(lots).toEqual([
     { allocatedWithdrawal: 30000, remainingCapital: 0, allocationAmounts: [30000] },
@@ -194,7 +188,6 @@ test('uses page 20 as the standard client report with annual closing totals', as
 test('keeps the expanded page 20 patrimony chart aligned and fully labelled', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await mountDemoReport(page);
-  await page.locator('[aria-label$="20"]').click();
   await page.locator('.report-pro-wide-sheet .report-pro-expand-chart-button').click();
 
   const overlay = page.locator('.report-pro-chart-overlay');
@@ -214,7 +207,6 @@ test('keeps the expanded page 20 patrimony chart aligned and fully labelled', as
 
 test('keeps page 20 usable on compact screens', async ({ page }) => {
   await mountDemoReport(page);
-  await page.locator('[aria-label$="20"]').click();
 
   await expect(page.locator('.report-pro-wide-sheet')).toBeVisible();
   await expect(page.locator('.report-pro-chart-toolbar select')).toBeVisible();

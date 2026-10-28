@@ -29,8 +29,6 @@ test('keeps every report tooltip visible inside the real page viewport', async (
     const harness = await import(/* @vite-ignore */ modulePath);
     harness.mountReportView(12);
   }, '/tests/fixtures/report-view-harness.tsx');
-  // La pagina 1 de demo1 prueba un grafico nuevo; la 20 es la que ven los clientes.
-  await page.locator('[aria-label$="20"]').click();
   // Aparta el raton del boton pulsado para que no reabra globos al desplazar la pagina.
   await page.mouse.move(1, 1);
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
@@ -102,8 +100,6 @@ test('keeps every report tooltip visible inside the real page viewport', async (
     const harness = await import(/* @vite-ignore */ modulePath);
     harness.mountReportView(13);
   }, '/tests/fixtures/report-view-harness.tsx');
-  // La pagina 1 de demo1 prueba un grafico nuevo; la 20 es la que ven los clientes.
-  await page.locator('[aria-label$="20"]').click();
   // Aparta el raton del boton pulsado para que no reabra globos al desplazar la pagina.
   await page.mouse.move(1, 1);
   await expect(page.getByRole('heading', { name: 'Investment Report' })).toBeVisible();
