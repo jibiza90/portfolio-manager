@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReportData } from '../services/reportLinks';
 import { Pdf3SignalDocument } from './Pdf3SignalDocument';
+import { Pdf4Document } from './Pdf4Document';
 import './PdfDesignStudio.css';
 
-export type PdfDesignId = 'pdf1' | 'pdf2' | 'pdf3';
+export type PdfDesignId = 'pdf1' | 'pdf2' | 'pdf3' | 'pdf4';
 
 export interface PdfStudioMonth {
   key: string;
@@ -575,7 +576,7 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
   const [pdf1Loading, setPdf1Loading] = useState(false);
   const [pdf1Error, setPdf1Error] = useState<string | null>(null);
   const [exportState, setExportState] = useState<{ busy: boolean; current: number; total: number }>({ busy: false, current: 0, total: 0 });
-  const generatedDesign = selectedDesign === 'pdf2' || selectedDesign === 'pdf3';
+  const generatedDesign = selectedDesign === 'pdf2' || selectedDesign === 'pdf3' || selectedDesign === 'pdf4';
   const pageWidthCss = selectedDesign === 'pdf3' ? 1123 : 794;
   const pageHeightCss = selectedDesign === 'pdf3' ? 794 : 1123;
 
@@ -656,11 +657,12 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
       const html2canvas = html2canvasModule.default;
       await document.fonts?.ready;
       const isPdf3 = selectedDesign === 'pdf3';
+      const isPdf4 = selectedDesign === 'pdf4';
       const doc = new jsPDF({ orientation: isPdf3 ? 'landscape' : 'portrait', unit: 'pt', format: 'a4', compress: true });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const exportHost = document.createElement('div');
-      exportHost.className = `pdf-studio ${isPdf3 ? 'pdf3-export-host' : 'pdf2-export-host'}`;
+      exportHost.className = `pdf-studio ${isPdf3 ? 'pdf3-export-host' : isPdf4 ? 'p4-export-host' : 'pdf2-export-host'}`;
       document.body.appendChild(exportHost);
       try {
         for (let index = 0; index < pages.length; index += 1) {
@@ -675,7 +677,7 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
             requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
           });
           const canvas = await html2canvas(exportPage, {
-            backgroundColor: isPdf3 ? '#f8f9f7' : '#f6f2e9',
+            backgroundColor: isPdf3 ? '#f8f9f7' : isPdf4 ? '#ffffff' : '#f6f2e9',
             scale: 2,
             useCORS: true,
             logging: false,
@@ -691,13 +693,13 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
       } finally {
         exportHost.remove();
       }
-      const concept = isPdf3 ? 'signal' : 'atlas';
+      const concept = isPdf3 ? 'signal' : isPdf4 ? 'patrimonial' : 'atlas';
       const filename = `informe-${concept}-${report.clientCode}-${periodStart || 'todo'}-${periodEnd || 'todo'}.pdf`;
       const blob = doc.output('blob');
       triggerBlobDownload(blob, filename);
       onDownloaded?.({
         reportClientId: report.clientId,
-        reportLabel: `${report.clientCode} - ${isPdf3 ? 'PDF 3 SIGNAL' : 'PDF 2 ATLAS'}`,
+        reportLabel: `${report.clientCode} - ${isPdf3 ? 'PDF 3 SIGNAL' : isPdf4 ? 'PDF 4 PATRIMONIAL' : 'PDF 2 ATLAS'}`,
         periodStart: periodStart || 'todo',
         periodEnd: periodEnd || 'todo',
         filename,
@@ -753,11 +755,12 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
           <button type="button" role="tab" aria-selected={selectedDesign === 'pdf1'} className={selectedDesign === 'pdf1' ? 'is-active' : ''} onClick={() => onDesignChange('pdf1')}><span>PDF 1</span><strong>Actual</strong><small>Informe oficial existente</small></button>
           <button type="button" role="tab" aria-selected={selectedDesign === 'pdf2'} className={selectedDesign === 'pdf2' ? 'is-active' : ''} onClick={() => onDesignChange('pdf2')}><span>PDF 2</span><strong>ATLAS</strong><small>Dise&ntilde;ado por Codex &middot; GPT-5</small></button>
           <button type="button" role="tab" aria-selected={selectedDesign === 'pdf3'} className={selectedDesign === 'pdf3' ? 'is-active' : ''} onClick={() => onDesignChange('pdf3')}><span>PDF 3</span><strong>SIGNAL</strong><small>Dise&ntilde;ado por Codex &middot; GPT-5</small></button>
+          <button type="button" role="tab" aria-selected={selectedDesign === 'pdf4'} className={selectedDesign === 'pdf4' ? 'is-active' : ''} onClick={() => onDesignChange('pdf4')}><span>PDF 4</span><strong>PATRIMONIAL</strong><small>Dise&ntilde;ado por Claude</small></button>
         </div>
       </header>
 
       <div className="pdf-studio-toolbar">
-        <div className="pdf-studio-document-name"><span>{selectedDesign === 'pdf1' ? 'PDF 1 / ACTUAL' : selectedDesign === 'pdf2' ? 'PDF 2 / ATLAS PATRIMONIAL' : 'PDF 3 / SIGNAL PATRIMONIAL'}</span><strong>{summary.periodLabel}</strong></div>
+        <div className="pdf-studio-document-name"><span>{selectedDesign === 'pdf1' ? 'PDF 1 / ACTUAL' : selectedDesign === 'pdf2' ? 'PDF 2 / ATLAS PATRIMONIAL' : selectedDesign === 'pdf3' ? 'PDF 3 / SIGNAL PATRIMONIAL' : 'PDF 4 / INFORME PATRIMONIAL'}</span><strong>{summary.periodLabel}</strong></div>
         {generatedDesign ? (
           <div className="pdf-studio-pagination" aria-label="Navegacion de paginas">
             <button type="button" onClick={() => goToPage(currentPage - 1)} disabled={currentPage <= 1} aria-label="Pagina anterior">&larr;</button>
@@ -791,6 +794,10 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
         ) : selectedDesign === 'pdf2' ? (
           <div className="pdf2-preview-stack" style={{ '--pdf-scale': scale } as React.CSSProperties}>
             <Pdf2Document ref={documentRef} report={report} months={months} movements={movements} breakdowns={breakdowns} summary={summary} />
+          </div>
+        ) : selectedDesign === 'pdf4' ? (
+          <div className="pdf4-preview-stack" style={{ '--pdf-scale': scale } as React.CSSProperties}>
+            <Pdf4Document ref={documentRef} report={report} months={months} movements={movements} breakdowns={breakdowns} summary={summary} />
           </div>
         ) : (
           <div className="pdf3-preview-stack" style={{ '--pdf-scale': scale } as React.CSSProperties}>

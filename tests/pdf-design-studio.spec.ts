@@ -93,3 +93,31 @@ test('paginates a 48-month SIGNAL history without overflowing A4 landscape pages
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toContain('informe-signal-demo1');
 });
+
+test('renders PDF 4 in A4 portrait with every section and no overflow', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'PDF 4 is covered once on a representative large viewport.');
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await mountReport(page);
+  await page.getByRole('tab', { name: /Diseños PDF/i }).click();
+  await page.getByRole('tab', { name: /PDF 4/i }).click();
+
+  await expect(page.locator('.p4-page')).toHaveCount(6);
+  await expect(page.locator('.p4-cover')).toContainText('112.548,34');
+  await expect(page.locator('.p4-closings tbody tr')).toHaveCount(13);
+  await expect(page.locator('.p4-lot')).toHaveCount(2);
+  await expect(page.locator('.p4-movements tbody tr')).toHaveCount(4);
+  await expect(page.locator('.p4-closing-page')).toContainText('TWR');
+
+  const overflows = await page.locator('.p4-page').evaluateAll((pages) => pages.map((node) => {
+    const footerTop = node.querySelector<HTMLElement>('.p4-foot')!.getBoundingClientRect().top;
+    const body = node.querySelector<HTMLElement>('.p4-body')!;
+    return Math.max(...Array.from(body.querySelectorAll<HTMLElement>('*')).map((child) => child.getBoundingClientRect().bottom)) > footerTop + 1;
+  }));
+  expect(overflows).not.toContain(true);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Descargar PDF' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toContain('informe-patrimonial-demo1');
+});
