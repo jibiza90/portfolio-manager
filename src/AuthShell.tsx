@@ -37,6 +37,8 @@ const SESSION_REFRESH_MS = 10 * 60 * 1000;
 const REMEMBERED_IDENTIFIER_KEY = 'portfolio-login-identifier';
 const CONTRIBUTION_BREAKDOWN_START_MONTH = '2026-04';
 const AdminApp = React.lazy(() => import('./App'));
+// Informe anual de rendimientos: de momento solo para demo1.
+const AnnualReturnsPanel = React.lazy(() => import('./components/AnnualReturns').then((module) => ({ default: module.AnnualReturnsPanel })));
 
 type Role = 'admin' | 'client';
 
@@ -1357,6 +1359,8 @@ const ClientPortal = ({
   const [expandedTwrChart, setExpandedTwrChart] = useState(false);
   const [liveProfileDisplayName, setLiveProfileDisplayName] = useState<string | null>(displayName);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [fiscalOpen, setFiscalOpen] = useState(false);
+  const [fiscalCommissions, setFiscalCommissions] = useState<{ rate: number | null; paidWithdrawalIsos: string[] } | null>(null);
   const [supportText, setSupportText] = useState('');
   const [supportBusy, setSupportBusy] = useState(false);
   const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
@@ -2453,6 +2457,28 @@ const ClientPortal = ({
           >
             {!shouldUseModernReportPdf && pdfBusy ? 'Generando PDF...' : 'Descargar PDF'}
           </button>
+          {clientId === DEMO_CLIENT_ID && report ? (
+            <button
+              type="button"
+              className="client-portal-action"
+              onClick={() => {
+                setFiscalOpen(true);
+                trackClientUsage({ type: 'fiscal_open', label: 'Información fiscal' });
+                void import('./services/commissionCloud').then(({ fetchClientCommissions }) => fetchClientCommissions(clientId)).then(setFiscalCommissions);
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 10,
+                border: `1px solid ${palette.border}`,
+                background: '#ffffff',
+                color: palette.text,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Información fiscal
+            </button>
+          ) : null}
           <button
             type="button"
             className="client-portal-action client-portal-logout"
@@ -2501,6 +2527,27 @@ const ClientPortal = ({
         <p style={{ color: palette.muted }}>
           Aun no hay resumen publicado para tu cuenta. El administrador debe sincronizar tus datos.
         </p>
+      ) : null}
+
+      {fiscalOpen && report ? (
+        <div role="dialog" aria-modal="true" aria-label="Información fiscal" style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(10,20,35,.45)', overflowY: 'auto', padding: '24px 16px' }}>
+          <div style={{ maxWidth: 1180, margin: '0 auto', background: '#f6f8f9', borderRadius: 18, padding: 20, display: 'grid', gap: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div><strong style={{ fontSize: 20 }}>Información fiscal</strong><div style={{ fontSize: 13, color: palette.muted }}>Informe anual de rendimientos</div></div>
+              <button type="button" onClick={() => setFiscalOpen(false)} style={{ border: `1px solid ${palette.border}`, borderRadius: 10, padding: '8px 14px', background: '#fff', fontWeight: 600, cursor: 'pointer' }}>Cerrar</button>
+            </div>
+            <React.Suspense fallback={<p style={{ color: palette.muted }}>Preparando el informe...</p>}>
+              <AnnualReturnsPanel
+                source={report}
+                commissions={fiscalCommissions}
+                holderName={headerName}
+                clientCode={loginId ?? clientId}
+                clientId={clientId}
+                onDownloaded={(details) => trackClientUsage({ type: 'annual_returns_download', label: details.filename, metadata: { year: details.year, mode: details.mode, method: details.method } })}
+              />
+            </React.Suspense>
+          </div>
+        </div>
       ) : null}
 
       {supportOpen ? (

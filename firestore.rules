@@ -38,6 +38,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Copia de las comisiones (porcentaje y retiradas cobradas): el cliente solo lee las suyas.
+    match /client_commissions/{clientId} {
+      allow read: if isAdmin() || clientOwns(clientId);
+      allow write: if isAdmin();
+    }
+
     match /portfolio_archived_clients/{clientId} {
       allow read, write: if isAdmin();
     }

@@ -38,6 +38,8 @@ import {
   type AccessProfileRecord
 } from './services/cloudPortfolio';
 import { auth } from './services/firebaseApp';
+import { schedulePushCommissionsMirror } from './services/commissionCloud';
+import { AdminFiscalInfo } from './components/AdminFiscalInfo';
 import {
   COMMISSION_RATE_PRESETS,
   formatCommissionRate,
@@ -80,6 +82,7 @@ const MENSAJES_VIEW = 'MENSAJES_VIEW';
 const ACCESOS_VIEW = 'ACCESOS_VIEW';
 const ACTIVIDAD_VIEW = 'ACTIVIDAD_VIEW';
 const BACKUP_VIEW = 'BACKUP_VIEW';
+const FISCAL_VIEW = 'FISCAL_VIEW';
 const CONTACTS_REVISION_STORAGE_KEY = 'portfolio-contacts-revision';
 const createLocalRevision = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 const getPortfolioClients = () => CLIENTS.filter((client) => !isDemoClient(client.id));
@@ -4187,6 +4190,11 @@ export default function App() {
     };
   }, [isPrimaryAdmin, portfolioInitialized]);
 
+  // Copia de las comisiones del navegador en Firebase (para la informacion fiscal del cliente).
+  useEffect(() => {
+    if (isPrimaryAdmin && portfolioInitialized) schedulePushCommissionsMirror(3000);
+  }, [isPrimaryAdmin, portfolioInitialized]);
+
   useEffect(() => {
     if (
       !isPrimaryAdmin ||
@@ -4264,7 +4272,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!isPrimaryAdmin && (activeView === ACCESOS_VIEW || activeView === ACTIVIDAD_VIEW || activeView === BACKUP_VIEW)) {
+    if (!isPrimaryAdmin && (activeView === ACCESOS_VIEW || activeView === ACTIVIDAD_VIEW || activeView === BACKUP_VIEW || activeView === FISCAL_VIEW)) {
       setActiveView(GENERAL_OPTION);
     }
   }, [activeView, isPrimaryAdmin]);
@@ -4605,6 +4613,12 @@ export default function App() {
             >
               Backup
             </button>
+            <button
+              className={clsx('side-link', activeView === FISCAL_VIEW && 'active')}
+              onClick={() => { setActiveView(FISCAL_VIEW); setMenuOpen(false); }}
+            >
+              Información fiscal
+            </button>
           </>
         ) : null}
         <button
@@ -4764,6 +4778,8 @@ export default function App() {
           onDownload={handleDownloadAdminBackup}
           onRestore={handleRestoreAdminBackup}
         />
+      ) : activeView === FISCAL_VIEW && isPrimaryAdmin ? (
+        <AdminFiscalInfo clients={CLIENTS.filter((client) => client.id !== 'client-demo').map((client) => ({ id: client.id, label: getClientDisplayName(client.id, contacts) }))} />
       ) : activeView === MENSAJES_VIEW ? (
         <AdminMessagesView contacts={contacts} />
       ) : (
@@ -5923,6 +5939,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
 
   useEffect(() => {
     localStorage.setItem('portfolio-comision-estado-retiro', JSON.stringify(comisionEstadoRetiro));
+    schedulePushCommissionsMirror();
   }, [comisionEstadoRetiro]);
 
   const formatDate = (iso?: string) => {
@@ -5936,6 +5953,7 @@ function ComisionesView({ contacts, comisionesCobradas, setComisionesCobradas, c
     setCommissionRates((prev) => {
       const next = { ...prev, [clientId]: rate };
       saveCommissionRates(next);
+      schedulePushCommissionsMirror();
       return next;
     });
     window.dispatchEvent(new CustomEvent('show-toast', { detail: `Comisión: ${formatCommissionRate(rate)}` }));
