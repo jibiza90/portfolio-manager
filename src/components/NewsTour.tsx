@@ -213,8 +213,12 @@ export const NewsTour: React.FC<NewsTourProps> = ({ onClose, onEvent }) => {
 
   let bubbleStyle: React.CSSProperties;
   let arrow: { side: 'top' | 'bottom'; x: number } | null = null;
+  // Si el apartado no se ve (el cliente ha movido la pagina), el globo se queda en una esquina: nunca fuera de la pantalla.
+  const targetVisible = !!rect && rect.top + rect.height > 0 && rect.top < viewport.height;
   if (mobile || !rect) {
     bubbleStyle = { left: 12, right: 12, bottom: 12 };
+  } else if (!targetVisible) {
+    bubbleStyle = { right: 24, bottom: 24, width };
   } else {
     const left = Math.min(Math.max(rect.left, 16), viewport.width - width - 16);
     const below = rect.top + rect.height + pad + gap;

@@ -58,6 +58,13 @@ test('news tour walks through every new feature and is not shown again after fin
   const distance = Math.min(Math.abs(box!.y - (target!.y + target!.height)), Math.abs(box!.y + box!.height - target!.y));
   expect(distance).toBeLessThan(40);
 
+  // Si el cliente mueve la pagina y el apartado deja de verse, el globo sigue dentro de la pantalla.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect.poll(async () => {
+    const moved = await bubble(page).boundingBox();
+    return Boolean(moved && moved.y >= 0 && moved.y + moved.height <= 900);
+  }).toBe(true);
+
   await page.getByRole('button', { name: 'Siguiente' }).click();
   await expect(bubble(page)).toContainText('Información fiscal');
   await bubble(page).getByRole('button', { name: 'Probar' }).click();
