@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import sealUrl from '../assets/jigsa-sello.png';
 import signatureUrl from '../assets/jigsa-firma.png';
 import { ISSUER } from './AnnualReturns';
-import { fetchClientCommissions } from '../services/commissionCloud';
 import { buildMovementReceipt, type MovementReceiptData, type ReceiptMovementInput } from '../utils/movementReceipts';
+import { applyPdfWatermark } from '../utils/pdfWatermark';
 import './MovementReceipt.css';
 
 // Justificante de cada aportacion o retirada: version extendida (A4) y resumida (un tercio de A4).
@@ -200,6 +200,7 @@ const exportReceipt = async (page: HTMLElement, format: ReceiptFormat, filename:
       ? new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4', compress: true })
       : new jsPDF({ orientation: 'landscape', unit: 'pt', format: [595.28, 280.63], compress: true });
     doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), undefined, 'FAST');
+    applyPdfWatermark(doc);
     const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
@@ -220,14 +221,16 @@ interface DialogProps {
   clientCode: string;
   movements: Array<{ iso: string; type: string; amount: number }>;
   movement: ReceiptMovementInput;
+  // Si llegan (demostracion), no se piden a la base de datos.
+  knownCommissions?: { rate: number | null; paidWithdrawalIsos: string[] } | null;
   onClose: () => void;
   onDownloaded?: (details: { filename: string; format: ReceiptFormat }) => void;
 }
 
 // Ventana para elegir formato, con la vista previa de los dos.
-export const MovementReceiptDialog: React.FC<DialogProps> = ({ clientId, holderName, clientCode, movements, movement, onClose, onDownloaded }) => {
+export const MovementReceiptDialog: React.FC<DialogProps> = ({ clientId, holderName, clientCode, movements, movement, knownCommissions, onClose, onDownloaded }) => {
   const [format, setFormat] = useState<ReceiptFormat>('compact');
-  const [commissions, setCommissions] = useState<{ rate: number | null; paidWithdrawalIsos: string[] } | null | undefined>(movement.type === 'decrement' ? undefined : null);
+  const [commissions, setCommissions] = useState<{ rate: number | null; paidWithdrawalIsos: string[] } | null | undefined>(movement.type === 'decrement' ? knownCommissions : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issuedAt] = useState(() => new Date());
@@ -235,11 +238,14 @@ export const MovementReceiptDialog: React.FC<DialogProps> = ({ clientId, holderN
   const compactRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (movement.type !== 'decrement') return undefined;
+    if (movement.type !== 'decrement' || knownCommissions !== undefined) return undefined;
     let active = true;
-    void fetchClientCommissions(clientId).then((doc) => { if (active) setCommissions(doc); });
+    void import('../services/commissionCloud')
+      .then(({ fetchClientCommissions }) => fetchClientCommissions(clientId))
+      .then((doc) => { if (active) setCommissions(doc); })
+      .catch(() => { if (active) setCommissions(null); });
     return () => { active = false; };
-  }, [clientId, movement.type]);
+  }, [clientId, knownCommissions, movement.type]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };

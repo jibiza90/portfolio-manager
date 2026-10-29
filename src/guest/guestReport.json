@@ -1,0 +1,368 @@
+{
+  "note": "Datos ficticios de la demostracion /invitado. Generado con scripts/generate-guest-demo.mjs; no editar a mano.",
+  "generatedFrom": {
+    "monthlyReturnsPct": {
+      "2025-07": 4.83,
+      "2025-08": 3.53,
+      "2025-09": 5.31,
+      "2025-10": 6.12,
+      "2025-11": 5.32,
+      "2025-12": 2.74,
+      "2026-01": 4.71,
+      "2026-02": 4.91,
+      "2026-03": 4.55,
+      "2026-04": 5.14,
+      "2026-05": 4.12,
+      "2026-06": 5.32,
+      "2026-07": 5.08,
+      "2026-08": 2.81,
+      "2026-09": 5.84
+    },
+    "movements": [
+      {
+        "iso": "2025-07-01",
+        "type": "increment",
+        "amount": 40000
+      },
+      {
+        "iso": "2025-09-03",
+        "type": "increment",
+        "amount": 10000
+      },
+      {
+        "iso": "2025-11-15",
+        "type": "decrement",
+        "amount": 15000
+      },
+      {
+        "iso": "2026-03-20",
+        "type": "decrement",
+        "amount": 38000
+      },
+      {
+        "iso": "2026-06-15",
+        "type": "increment",
+        "amount": 20000
+      }
+    ]
+  },
+  "pendingCashMovements": [
+    {
+      "iso": "2026-10-12",
+      "type": "increment",
+      "amount": 5000
+    }
+  ],
+  "commissions": {
+    "rate": 0.08,
+    "paidWithdrawalIsos": [
+      "2025-11-15",
+      "2026-03-20"
+    ]
+  },
+  "report": {
+    "clientId": "invitado",
+    "clientName": "Laura Martín Vidal",
+    "clientCode": "invitado",
+    "incrementos": 70000,
+    "decrementos": 53000,
+    "saldo": 46274.41538328285,
+    "beneficioTotal": 29274.415383282845,
+    "rentabilidad": 172.20244343107555,
+    "rentabilidadDisponible": true,
+    "beneficioUltimoMes": 2553.3124134388877,
+    "rentabilidadUltimoMes": 5.84,
+    "twrYtd": 0.9870847323002412,
+    "showContributionJourney": true,
+    "monthlyStats": [
+      {
+        "month": "Jul 2025",
+        "profit": 1932,
+        "profitPct": 4.83,
+        "endBalance": 41932,
+        "hasData": true
+      },
+      {
+        "month": "Ago 2025",
+        "profit": 1480.1996,
+        "profitPct": 3.53,
+        "endBalance": 43412.19959999999,
+        "hasData": true
+      },
+      {
+        "month": "Sep 2025",
+        "profit": 2800.787798759993,
+        "profitPct": 5.31,
+        "endBalance": 56212.987398759986,
+        "hasData": true
+      },
+      {
+        "month": "Oct 2025",
+        "profit": 3440.234828804111,
+        "profitPct": 6.12,
+        "endBalance": 59653.222227564096,
+        "hasData": true
+      },
+      {
+        "month": "Nov 2025",
+        "profit": 3173.5514225064103,
+        "profitPct": 5.32,
+        "endBalance": 47401.1786500705,
+        "hasData": true
+      },
+      {
+        "month": "Dic 2025",
+        "profit": 1298.7922950119316,
+        "profitPct": 2.74,
+        "endBalance": 48699.97094508244,
+        "hasData": true
+      },
+      {
+        "month": "Ene 2026",
+        "profit": 2293.768631513383,
+        "profitPct": 4.71,
+        "endBalance": 50993.73957659581,
+        "hasData": true
+      },
+      {
+        "month": "Feb 2026",
+        "profit": 2503.7926132108546,
+        "profitPct": 4.91,
+        "endBalance": 53497.53218980666,
+        "hasData": true
+      },
+      {
+        "month": "Mar 2026",
+        "profit": 2434.137714636203,
+        "profitPct": 4.55,
+        "endBalance": 17262.375904442866,
+        "hasData": true
+      },
+      {
+        "month": "Abr 2026",
+        "profit": 887.2861214883633,
+        "profitPct": 5.14,
+        "endBalance": 18149.662025931226,
+        "hasData": true
+      },
+      {
+        "month": "May 2026",
+        "profit": 747.7660754683665,
+        "profitPct": 4.12,
+        "endBalance": 18897.42810139959,
+        "hasData": true
+      },
+      {
+        "month": "Jun 2026",
+        "profit": 1572.8031749944566,
+        "profitPct": 5.32,
+        "endBalance": 40470.23127639405,
+        "hasData": true
+      },
+      {
+        "month": "Jul 2026",
+        "profit": 2055.8877488408175,
+        "profitPct": 5.08,
+        "endBalance": 42526.11902523487,
+        "hasData": true
+      },
+      {
+        "month": "Ago 2026",
+        "profit": 1194.9839446090998,
+        "profitPct": 2.81,
+        "endBalance": 43721.10296984397,
+        "hasData": true
+      },
+      {
+        "month": "Sep 2026",
+        "profit": 2553.3124134388877,
+        "profitPct": 5.84,
+        "endBalance": 46274.41538328285,
+        "hasData": true
+      }
+    ],
+    "patrimonioEvolution": [
+      {
+        "month": "Jul 2025",
+        "balance": 41932,
+        "hasData": true
+      },
+      {
+        "month": "Ago 2025",
+        "balance": 43412.19959999999,
+        "hasData": true
+      },
+      {
+        "month": "Sep 2025",
+        "balance": 56212.987398759986,
+        "hasData": true
+      },
+      {
+        "month": "Oct 2025",
+        "balance": 59653.222227564096,
+        "hasData": true
+      },
+      {
+        "month": "Nov 2025",
+        "balance": 47401.1786500705,
+        "hasData": true
+      },
+      {
+        "month": "Dic 2025",
+        "balance": 48699.97094508244,
+        "hasData": true
+      },
+      {
+        "month": "Ene 2026",
+        "balance": 50993.73957659581,
+        "hasData": true
+      },
+      {
+        "month": "Feb 2026",
+        "balance": 53497.53218980666,
+        "hasData": true
+      },
+      {
+        "month": "Mar 2026",
+        "balance": 17262.375904442866,
+        "hasData": true
+      },
+      {
+        "month": "Abr 2026",
+        "balance": 18149.662025931226,
+        "hasData": true
+      },
+      {
+        "month": "May 2026",
+        "balance": 18897.42810139959,
+        "hasData": true
+      },
+      {
+        "month": "Jun 2026",
+        "balance": 40470.23127639405,
+        "hasData": true
+      },
+      {
+        "month": "Jul 2026",
+        "balance": 42526.11902523487,
+        "hasData": true
+      },
+      {
+        "month": "Ago 2026",
+        "balance": 43721.10296984397,
+        "hasData": true
+      },
+      {
+        "month": "Sep 2026",
+        "balance": 46274.41538328285,
+        "hasData": true
+      }
+    ],
+    "movements": [
+      {
+        "iso": "2025-07-01",
+        "type": "increment",
+        "amount": 40000,
+        "balance": 40000
+      },
+      {
+        "iso": "2025-09-03",
+        "type": "increment",
+        "amount": 10000,
+        "balance": 53412.19959999999,
+        "returnPct": 0.04956
+      },
+      {
+        "iso": "2025-11-15",
+        "type": "decrement",
+        "amount": 15000,
+        "balance": 44653.222227564096,
+        "returnPct": 0.024827
+      },
+      {
+        "iso": "2026-03-20",
+        "type": "decrement",
+        "amount": 38000,
+        "balance": 15497.532189806661,
+        "returnPct": 0.027887
+      },
+      {
+        "iso": "2026-06-15",
+        "type": "increment",
+        "amount": 20000,
+        "balance": 38897.42810139959,
+        "returnPct": 0.028373
+      }
+    ],
+    "contributionBreakdowns": [
+      {
+        "month": "Sep 2025",
+        "openingCapital": 43412.19959999999,
+        "initialCapital": 43412.19959999999,
+        "initialReturnPct": 0.053099999999999994,
+        "initialProfit": 2305.187798759999,
+        "contributions": [
+          {
+            "iso": "2025-09-03",
+            "amount": 10000,
+            "returnPct": 0.04956,
+            "profit": 495.6
+          }
+        ],
+        "withdrawals": [],
+        "totalProfit": 2800.787798759993
+      },
+      {
+        "month": "Nov 2025",
+        "openingCapital": 59653.222227564096,
+        "initialCapital": 44653.222227564096,
+        "initialReturnPct": 0.053200000000000004,
+        "initialProfit": 2375.5514225064103,
+        "contributions": [],
+        "withdrawals": [
+          {
+            "iso": "2025-11-15",
+            "amount": 15000,
+            "returnPct": 0.024827,
+            "profit": 372.405
+          }
+        ],
+        "totalProfit": 3173.5514225064103
+      },
+      {
+        "month": "Mar 2026",
+        "openingCapital": 53497.53218980666,
+        "initialCapital": 15497.532189806661,
+        "initialReturnPct": 0.0455,
+        "initialProfit": 705.1377146362031,
+        "contributions": [],
+        "withdrawals": [
+          {
+            "iso": "2026-03-20",
+            "amount": 38000,
+            "returnPct": 0.027887,
+            "profit": 1059.706
+          }
+        ],
+        "totalProfit": 2434.137714636203
+      },
+      {
+        "month": "Jun 2026",
+        "openingCapital": 18897.42810139959,
+        "initialCapital": 18897.42810139959,
+        "initialReturnPct": 0.053200000000000004,
+        "initialProfit": 1005.3431749944582,
+        "contributions": [
+          {
+            "iso": "2026-06-15",
+            "amount": 20000,
+            "returnPct": 0.028373,
+            "profit": 567.4599999999999
+          }
+        ],
+        "withdrawals": [],
+        "totalProfit": 1572.8031749944566
+      }
+    ]
+  }
+}

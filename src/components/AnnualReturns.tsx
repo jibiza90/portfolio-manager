@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import sealUrl from '../assets/jigsa-sello.png';
 import signatureUrl from '../assets/jigsa-firma.png';
+import { applyPdfWatermark } from '../utils/pdfWatermark';
 import {
   availableReportYears,
   buildAnnualReport,
@@ -195,6 +196,7 @@ const exportPdf = async (pages: HTMLElement[], filename: string) => {
   } finally {
     host.remove();
   }
+  applyPdfWatermark(doc);
   const blob = doc.output('blob');
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

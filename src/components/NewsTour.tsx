@@ -4,7 +4,7 @@ import './NewsTour.css';
 // Visita guiada de novedades del area de cliente (de momento solo demo1).
 // Solo lee la pagina: lleva al cliente a cada apartado y lo ilumina. No guarda nada en la base de datos.
 
-interface TourStep {
+export interface TourStep {
   id: string;
   target: string;
   // Que pulsar con "Probar" (si no hay, no sale el boton).
@@ -19,7 +19,7 @@ interface TourStep {
 const TOUR_VERSION = '2026-10';
 const STORAGE_KEY = 'jigsa-news-tour-seen';
 
-const icon = (path: React.ReactNode) => (
+export const tourIcon = (path: React.ReactNode) => (
   <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{path}</svg>
 );
 
@@ -29,7 +29,7 @@ const STEPS: TourStep[] = [
     target: '[data-tour="patrimonio"]',
     tryTarget: '[data-tour="patrimonio"] .report-pro-expand-chart-button',
     color: '#087b83',
-    icon: icon(<path d="M4 19h16M5 15l4-4 4 3 6-7" />),
+    icon: tourIcon(<path d="M4 19h16M5 15l4-4 4 3 6-7" />),
     title: 'Nuevo gráfico de tu patrimonio',
     text: 'Mira cómo ha evolucionado tu patrimonio mes a mes, con el saldo, el beneficio y la rentabilidad de cada mes.'
   },
@@ -37,7 +37,7 @@ const STEPS: TourStep[] = [
     id: 'retiradas',
     target: '[data-tour="retiradas"]',
     color: '#ea580c',
-    icon: icon(<path d="M12 21V11M12 11L6 4M12 11l6-7M6 4v4M6 4h4M18 4v4M18 4h-4" />),
+    icon: tourIcon(<path d="M12 21V11M12 11L6 4M12 11l6-7M6 4v4M6 4h4M18 4v4M18 4h-4" />),
     title: 'Rentabilidad de cada retirada',
     text: 'Elige una aportación y verás sus retiradas, cuánto ha rendido cada una y de qué aportación sale el dinero.'
   },
@@ -46,7 +46,7 @@ const STEPS: TourStep[] = [
     target: '[data-tour="justificante"]',
     tryTarget: '[data-tour="justificante"]',
     color: '#16a34a',
-    icon: icon(<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" />),
+    icon: tourIcon(<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" />),
     title: 'Justificante de cada movimiento',
     text: 'Pulsa Descargar en cualquier aportación o retirada y elige el justificante extendido o el resumido.'
   },
@@ -55,7 +55,7 @@ const STEPS: TourStep[] = [
     target: '[data-tour="fiscal"]',
     tryTarget: '[data-tour="fiscal"]',
     color: '#7c3aed',
-    icon: icon(<path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h4" />),
+    icon: tourIcon(<path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h4" />),
     title: 'Información fiscal',
     text: 'Descarga el informe de rendimientos del año que quieras para tu declaración de la renta.'
   }
@@ -111,12 +111,23 @@ const scrollToTarget = (element: Element) => {
   }
 };
 
-interface NewsTourProps {
+interface TourEvents {
   onClose: () => void;
   onEvent?: (event: { type: string; label: string }) => void;
 }
 
-export const NewsTour: React.FC<NewsTourProps> = ({ onClose, onEvent }) => {
+interface GuidedTourProps extends TourEvents {
+  steps: TourStep[];
+  // Etiqueta naranja encima del titulo ("Nuevo"); sin ella no sale.
+  badge?: string;
+  ariaLabel: string;
+  eventType: string;
+  // Al terminar o saltar la visita (no al cerrar la pagina a medias).
+  onFinish?: () => void;
+}
+
+// Visita generica: va paso a paso por los apartados que existan en la pagina.
+export const GuidedTour: React.FC<GuidedTourProps> = ({ steps: allSteps, badge, ariaLabel, eventType, onFinish, onClose, onEvent }) => {
   const [steps, setSteps] = useState<TourStep[] | null>(null);
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
@@ -133,11 +144,11 @@ export const NewsTour: React.FC<NewsTourProps> = ({ onClose, onEvent }) => {
     const check = () => {
       if (cancelled) return;
       tries += 1;
-      const ready = document.querySelector('[data-tour="patrimonio"]') || document.querySelector('[data-tour="justificante"]');
+      const ready = allSteps.some((step) => document.querySelector(step.target));
       if (ready && !isModalOpen()) {
         window.setTimeout(() => {
           if (cancelled) return;
-          const available = STEPS.filter((step) => document.querySelector(step.target));
+          const available = allSteps.filter((step) => document.querySelector(step.target));
           if (available.length === 0) onClose();
           else setSteps(available);
         }, 500);
@@ -151,7 +162,7 @@ export const NewsTour: React.FC<NewsTourProps> = ({ onClose, onEvent }) => {
     };
     check();
     return () => { cancelled = true; };
-  }, [onClose]);
+  }, [allSteps, onClose]);
 
   const step = steps?.[index] ?? null;
 
@@ -189,10 +200,10 @@ export const NewsTour: React.FC<NewsTourProps> = ({ onClose, onEvent }) => {
   });
 
   const finish = useCallback((reason: 'done' | 'skip') => {
-    markNewsTourSeen();
-    onEvent?.({ type: 'news_tour', label: reason === 'done' ? 'Terminada' : `Saltada en ${steps?.[index]?.id ?? ''}` });
+    onFinish?.();
+    onEvent?.({ type: eventType, label: reason === 'done' ? 'Terminada' : `Saltada en ${steps?.[index]?.id ?? ''}` });
     onClose();
-  }, [index, onClose, onEvent, steps]);
+  }, [eventType, index, onClose, onEvent, onFinish, steps]);
 
   useEffect(() => {
     if (!step || paused) return undefined;
@@ -238,7 +249,7 @@ export const NewsTour: React.FC<NewsTourProps> = ({ onClose, onEvent }) => {
   const tryIt = () => {
     if (!step.tryTarget) return;
     const element = document.querySelector<HTMLElement>(step.tryTarget);
-    onEvent?.({ type: 'news_tour', label: `Probar ${step.id}` });
+    onEvent?.({ type: eventType, label: `Probar ${step.id}` });
     element?.click();
   };
 
@@ -257,7 +268,7 @@ export const NewsTour: React.FC<NewsTourProps> = ({ onClose, onEvent }) => {
         className={`nt-bubble${mobile ? ' is-sheet' : ''}`}
         role="dialog"
         aria-modal="false"
-        aria-label="Novedades de la web"
+        aria-label={ariaLabel}
         style={bubbleStyle}
       >
         {arrow ? <span className={`nt-arrow is-${arrow.side}`} style={{ left: arrow.x }} aria-hidden="true" /> : null}
@@ -266,7 +277,7 @@ export const NewsTour: React.FC<NewsTourProps> = ({ onClose, onEvent }) => {
           <div className="nt-copy">
             <div className="nt-top">
               <span className="nt-badges">
-                <span className="nt-new">Nuevo</span>
+                {badge ? <span className="nt-new">{badge}</span> : null}
                 <span className="nt-count">{index + 1} de {steps.length}</span>
               </span>
               <button type="button" className="nt-skip" onClick={() => finish('skip')}>Saltar ✕</button>
@@ -294,3 +305,16 @@ export const NewsTour: React.FC<NewsTourProps> = ({ onClose, onEvent }) => {
     </div>
   );
 };
+
+// Visita de novedades del area de cliente (de momento solo demo1).
+export const NewsTour: React.FC<TourEvents> = ({ onClose, onEvent }) => (
+  <GuidedTour
+    steps={STEPS}
+    badge="Nuevo"
+    ariaLabel="Novedades de la web"
+    eventType="news_tour"
+    onFinish={markNewsTourSeen}
+    onClose={onClose}
+    onEvent={onEvent}
+  />
+);

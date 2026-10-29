@@ -12,6 +12,13 @@ const LEGACY_DEMO_CLIENT_ID = 'client-demo';
 export const isDemoClient = (clientId: string) =>
   clientId === DEMO_CLIENT_ID || clientId === LEGACY_DEMO_CLIENT_ID;
 
+// Demostracion /invitado: cliente ficticio que nunca existe en la cartera ni en la base de datos.
+export const GUEST_CLIENT_ID = 'invitado';
+
+// Funciones nuevas que de momento solo ven demo1 y la demostracion /invitado.
+export const hasPreviewFeatures = (clientId: string) =>
+  clientId === DEMO_CLIENT_ID || clientId === GUEST_CLIENT_ID;
+
 // Clientes que cuentan en el total de la cartera pero no para calcular la participacion del resto.
 const PARTICIPATION_EXCLUDED_CLIENT_IDS = new Set(['client-003']);
 export const isExcludedFromParticipation = (clientId: string) => PARTICIPATION_EXCLUDED_CLIENT_IDS.has(clientId);

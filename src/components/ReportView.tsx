@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { getReportByToken, isValidReportToken, ReportData } from '../services/reportLinks';
+// reportLinks (Firebase) se carga solo al abrir un enlace con token, asi la demostracion /invitado no lo carga.
+import type { ReportData } from '../services/reportLinks';
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 import type { GeneralReferenceMonth } from '../services/cloudPortfolio';
-import { DEMO_CLIENT_ID } from '../constants/clients';
+import { DEMO_CLIENT_ID, hasPreviewFeatures } from '../constants/clients';
 import { getViewportTooltipPosition, ViewportTooltipPlacement } from '../utils/viewportTooltip';
 import { ContributionJourneyModule } from './ContributionJourneyModule';
 import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio';
 import { PatrimonyTrendChart, type PatrimonyTrendPoint } from './PatrimonyTrendChart';
+import { applyPdfWatermark } from '../utils/pdfWatermark';
 import './WideReportPage.css';
 
 const MovementReceiptDialog = React.lazy(() => import('./MovementReceipt').then((module) => ({ default: module.MovementReceiptDialog })));
@@ -29,6 +31,8 @@ interface ReportViewProps {
   }) => void;
   analyticsEnabled?: boolean;
   pendingCashMovements?: PendingCashMovement[];
+  // Comisiones ya conocidas (demostracion /invitado): los justificantes no las piden a la base de datos.
+  knownCommissions?: { rate: number | null; paidWithdrawalIsos: string[] } | null;
   onAnalyticsEvent?: (event: {
     type: string;
     label: string;
@@ -302,6 +306,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   onDownloaded,
   analyticsEnabled = false,
   pendingCashMovements = [],
+  knownCommissions,
   onAnalyticsEvent
 }) => {
   const [report, setReport] = useState<ReportData | null>(reportData ?? null);
@@ -395,6 +400,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       return;
     }
     const loadReport = async () => {
+      const { getReportByToken, isValidReportToken } = await import('../services/reportLinks');
       if (!isValidReportToken(token)) {
         setExpired(true);
         setLoading(false);
@@ -1324,7 +1330,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     fallbackTooltip: string,
     extraClassName = ''
   ) => {
-    const isDemoClient = report.clientId === DEMO_CLIENT_ID;
+    const isDemoClient = hasPreviewFeatures(report.clientId);
     const movements = type === 'increment' ? visibleContributionMovements : visibleWithdrawalMovements;
     const tooltipContent = (
       <div className="report-pro-capital-history-tooltip-content">
@@ -2050,6 +2056,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     }
 
     const filename = `informe-${currentReport.clientCode}-${rangeStart || 'todo'}-${rangeEnd || 'todo'}.pdf`;
+    applyPdfWatermark(doc);
     return { blob: doc.output('blob'), filename };
   }
 
@@ -2420,7 +2427,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           <div className="report-pro-client-tag">{report.clientCode}</div>
         </header>
 
-        <section className="report-pro-executive report-pro-executive-demo">
+        <section className="report-pro-executive report-pro-executive-demo" data-tour="resumen">
           <div
             className="report-pro-info-card"
             tabIndex={0}
@@ -2454,7 +2461,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         </section>
 
         {pendingMovementRows.length > 0 ? (
-          <section className="report-pro-pending-cash" aria-label="Movimientos de capital posteriores al ultimo cierre">
+          <section className="report-pro-pending-cash" data-tour="en-curso" aria-label="Movimientos de capital posteriores al ultimo cierre">
             <div className="report-pro-pending-cash-head">
               <div>
                 <span>Actualizaci&oacute;n de capital</span>
@@ -2481,7 +2488,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </section>
         ) : null}
 
-        <section className="report-pro-kpis report-pro-kpis-demo">
+        <section className="report-pro-kpis report-pro-kpis-demo" data-tour="capital">
           {renderCapitalHistoryCard('Capital aportado', visibleIncrements, 'increment', `Suma total de todas tus aportaciones registradas desde ${firstRegisteredDateLabel}.`, 'report-pro-kpi')}
           <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
           <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Beneficio acumulado generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
@@ -2880,7 +2887,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           ) : renderPatrimonyChart(false)}
         </section>
 
-        <section className="report-pro-panel report-pro-closing-panel">
+        <section className="report-pro-panel report-pro-closing-panel" data-tour="historial">
           <div className="report-pro-panel-head">
             <span className="report-pro-closing-eyebrow">Trazabilidad mensual</span>
             <h4>Cierres y composici&oacute;n del resultado</h4>
@@ -3002,7 +3009,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     <th>Tipo</th>
                     <th className="text-right">Importe</th>
                     <th className="text-right">Capital neto aportado</th>
-                    {report.clientId === DEMO_CLIENT_ID ? <th className="text-right">Justificante</th> : null}
+                    {hasPreviewFeatures(report.clientId) ? <th className="text-right">Justificante</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -3019,7 +3026,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                           {isIncrement ? '+' : '-'}{formatCurrency(mov.amount ?? 0)}
                         </td>
                         <td className="text-right">{formatCurrency(mov.netCapital)}</td>
-                        {report.clientId === DEMO_CLIENT_ID ? (
+                        {hasPreviewFeatures(report.clientId) ? (
                           <td className="text-right">
                             <button
                               type="button"
@@ -3044,7 +3051,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </section>
         )}
 
-        {receiptMovement && report.clientId === DEMO_CLIENT_ID ? (
+        {receiptMovement && hasPreviewFeatures(report.clientId) ? (
           <React.Suspense fallback={null}>
             <MovementReceiptDialog
               clientId={report.clientId}
@@ -3052,6 +3059,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               clientCode={report.clientCode || report.clientId}
               movements={allVisibleCapitalMovements}
               movement={receiptMovement}
+              knownCommissions={knownCommissions}
               onClose={() => setReceiptMovement(null)}
               onDownloaded={(details) => onAnalyticsEvent?.({ type: 'movement_receipt_download', label: details.filename, metadata: { format: details.format } })}
             />
