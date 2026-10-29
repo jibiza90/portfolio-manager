@@ -224,6 +224,10 @@ export const AnnualReturnsPanel: React.FC<PanelProps> = ({ source, commissions, 
     iso: movement.iso, type: movement.type, amount: movement.amount, ...(movement.returnPct !== undefined ? { returnPct: movement.returnPct } : {})
   })), [source.movements]);
   const years = useMemo(() => availableReportYears(months), [months]);
+  const provisionalYears = useMemo(() => {
+    const closedKeys = new Set(months.map((month) => monthLabelToKey(month.month)));
+    return new Set(years.filter((value) => !closedKeys.has(`${value}-12`)));
+  }, [months, years]);
   const [year, setYear] = useState<number | null>(years[0] ?? null);
   const [mode, setMode] = useState<AnnualMode>('withdrawn');
   const [method, setMethod] = useState<WithdrawnMethod>('proportional');
@@ -263,11 +267,18 @@ export const AnnualReturnsPanel: React.FC<PanelProps> = ({ source, commissions, 
   return (
     <div className="ar-panel">
       <form className="ar-controls" onSubmit={(event) => { event.preventDefault(); void download(); }}>
-        <label htmlFor={`ar-year-${clientId}`}>Año
-          <select id={`ar-year-${clientId}`} value={year ?? ''} onChange={(event) => setYear(Number(event.target.value))}>
-            {years.map((value) => <option key={value} value={value}>{value}</option>)}
-          </select>
-        </label>
+        <fieldset>
+          <legend>Año</legend>
+          <div className="ar-years">
+            {years.map((value) => (
+              <button key={value} type="button" aria-pressed={value === year} onClick={() => setYear(value)}>
+                {value}
+                {provisionalYears.has(value) ? <small>Provisional</small> : null}
+              </button>
+            ))}
+          </div>
+          {years.length === 1 ? <span className="ar-years-note">Solo hay cierres publicados de {years[0]}.</span> : null}
+        </fieldset>
         <fieldset>
           <legend>Qué quieres que conste</legend>
           <label><input type="radio" name={`ar-mode-${clientId}`} checked={mode === 'withdrawn'} onChange={() => setMode('withdrawn')} />Solo lo retirado</label>
@@ -281,7 +292,7 @@ export const AnnualReturnsPanel: React.FC<PanelProps> = ({ source, commissions, 
           </fieldset>
         ) : null}
         <p className="ar-controls-notice">{DISCLAIMER}</p>
-        <label className="ar-accept"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />He leído el aviso y entiendo que la parte fiscal es responsabilidad mía.</label>
+        <label className="ar-accept"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />He leído y acepto el aviso. La declaración y tributación de estos rendimientos son de mi exclusiva responsabilidad.</label>
         <button type="submit" disabled={!accepted || busy}>{busy ? 'Generando PDF…' : 'Descargar PDF'}</button>
         {error ? <p className="ar-error" role="alert">{error}</p> : null}
       </form>

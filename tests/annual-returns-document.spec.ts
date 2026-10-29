@@ -61,10 +61,15 @@ test('requires accepting the notice before downloading the annual returns PDF', 
   test.skip(testInfo.project.name !== 'ipad-mini', 'Download is checked once on a representative viewport.');
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1300, height: 1100 });
-  await mountPanel(page, 12, 3);
+  await mountPanel(page, 18, 3);
+  // Se puede elegir cualquier año con cierres publicados; el que no tiene diciembre sale como provisional.
+  await expect(page.locator('.ar-years button')).toHaveText(['2021Provisional', '2020']);
+  await expect(page.getByRole('button', { name: /2021/ })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: '2020' }).click();
+  await expect(page.getByRole('button', { name: '2020' })).toHaveAttribute('aria-pressed', 'true');
   const download = page.getByRole('button', { name: 'Descargar PDF' });
   await expect(download).toBeDisabled();
-  await page.getByLabel(/He leído el aviso/).check();
+  await page.getByLabel(/He leído y acepto el aviso/).check();
   await expect(download).toBeEnabled();
   const downloadPromise = page.waitForEvent('download');
   await download.click();

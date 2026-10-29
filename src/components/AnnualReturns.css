@@ -88,6 +88,27 @@
   cursor: not-allowed;
 }
 
+.ar-years { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.ar-controls .ar-years button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 72px;
+  padding: 8px 12px;
+  border: 1px solid #cfdadd;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0a2037;
+  font-weight: 600;
+}
+
+.ar-controls .ar-years button small { font-size: 10px; font-weight: 600; color: #b45309; }
+.ar-controls .ar-years button[aria-pressed='true'] { border-color: #087b83; background: #087b83; color: #ffffff; }
+.ar-controls .ar-years button[aria-pressed='true'] small { color: #d9f2ef; }
+.ar-years-note { font-size: 12px; font-weight: 400; color: #5a6e83; }
+
 .ar-error { margin: 0; color: #c2410c; font-size: 13px; }
 .ar-panel-empty { margin: 0; color: #5a6e83; }
 
