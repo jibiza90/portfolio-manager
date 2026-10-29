@@ -2853,7 +2853,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </div>
         </section>
 
-        <section className="report-pro-panel report-pro-panel-xl report-pro-patrimony-section">
+        <section className="report-pro-panel report-pro-panel-xl report-pro-patrimony-section" data-tour="patrimonio">
           <div className="report-pro-panel-head">
             <div>
               <h4>Evolucion patrimonio</h4>
@@ -3024,6 +3024,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                             <button
                               type="button"
                               className="report-pro-receipt-button"
+                              data-tour="justificante"
                               aria-label={`Descargar justificante de la ${isIncrement ? 'aportación' : 'retirada'} del ${dd}/${mm}/${yy}`}
                               onClick={() => {
                                 setReceiptMovement({ iso: mov.iso, type: isIncrement ? 'increment' : 'decrement', amount: mov.amount ?? 0 });

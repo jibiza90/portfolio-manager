@@ -164,7 +164,7 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
 
   return (
     <section className="report-pro-contribution-journey" aria-labelledby="contribution-journey-title">
-      <header className="contribution-journey-heading">
+      <header className="contribution-journey-heading" data-tour="retiradas">
         <div>
           <span className="contribution-journey-eyebrow">Recorrido del capital</span>
           <h4 id="contribution-journey-title">Qué ocurrió con cada aportación</h4>

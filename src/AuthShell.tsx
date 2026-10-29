@@ -39,6 +39,8 @@ const CONTRIBUTION_BREAKDOWN_START_MONTH = '2026-04';
 const AdminApp = React.lazy(() => import('./App'));
 // Informe anual de rendimientos: de momento solo para demo1.
 const AnnualReturnsPanel = React.lazy(() => import('./components/AnnualReturns').then((module) => ({ default: module.AnnualReturnsPanel })));
+// Visita guiada de novedades: de momento solo para demo1.
+const NewsTour = React.lazy(() => import('./components/NewsTour').then((module) => ({ default: module.NewsTour })));
 
 type Role = 'admin' | 'client';
 
@@ -1360,6 +1362,7 @@ const ClientPortal = ({
   const [liveProfileDisplayName, setLiveProfileDisplayName] = useState<string | null>(displayName);
   const [supportOpen, setSupportOpen] = useState(false);
   const [fiscalOpen, setFiscalOpen] = useState(false);
+  const [newsTourOpen, setNewsTourOpen] = useState(false);
   const [fiscalCommissions, setFiscalCommissions] = useState<{ rate: number | null; paidWithdrawalIsos: string[] } | null>(null);
   const [supportText, setSupportText] = useState('');
   const [supportBusy, setSupportBusy] = useState(false);
@@ -1521,6 +1524,14 @@ const ClientPortal = ({
 
   const report = overview?.report ?? null;
   const initialPosition = getInitialPositionFromOverview(overview);
+  const showNewsTour = clientId === DEMO_CLIENT_ID && Boolean(report) && !initialPosition;
+  const closeNewsTour = useCallback(() => setNewsTourOpen(false), []);
+  useEffect(() => {
+    if (!showNewsTour) return;
+    void import('./components/NewsTour').then(({ hasSeenNewsTour }) => {
+      if (!hasSeenNewsTour()) setNewsTourOpen(true);
+    });
+  }, [showNewsTour]);
   const pendingCashMovements = useMemo(
     () => getPendingCashMovements(overview),
     [overview]
@@ -2457,10 +2468,32 @@ const ClientPortal = ({
           >
             {!shouldUseModernReportPdf && pdfBusy ? 'Generando PDF...' : 'Descargar PDF'}
           </button>
+          {showNewsTour ? (
+            <button
+              type="button"
+              className="client-portal-action"
+              onClick={() => {
+                setNewsTourOpen(true);
+                trackClientUsage({ type: 'news_tour', label: 'Ver novedades' });
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 10,
+                border: '1px solid #f59e0b',
+                background: '#fff7e6',
+                color: '#92400e',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Novedades
+            </button>
+          ) : null}
           {clientId === DEMO_CLIENT_ID && report ? (
             <button
               type="button"
               className="client-portal-action"
+              data-tour="fiscal"
               onClick={() => {
                 setFiscalOpen(true);
                 trackClientUsage({ type: 'fiscal_open', label: 'Información fiscal' });
@@ -2527,6 +2560,12 @@ const ClientPortal = ({
         <p style={{ color: palette.muted }}>
           Aun no hay resumen publicado para tu cuenta. El administrador debe sincronizar tus datos.
         </p>
+      ) : null}
+
+      {newsTourOpen && showNewsTour ? (
+        <React.Suspense fallback={null}>
+          <NewsTour onClose={closeNewsTour} onEvent={trackClientUsage} />
+        </React.Suspense>
       ) : null}
 
       {fiscalOpen && report ? (
