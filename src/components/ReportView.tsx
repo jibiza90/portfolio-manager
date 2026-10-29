@@ -11,6 +11,8 @@ import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio'
 import { PatrimonyTrendChart, type PatrimonyTrendPoint } from './PatrimonyTrendChart';
 import './WideReportPage.css';
 
+const MovementReceiptDialog = React.lazy(() => import('./MovementReceipt').then((module) => ({ default: module.MovementReceiptDialog })));
+
 
 interface ReportViewProps {
   token?: string;
@@ -307,6 +309,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [expired, setExpired] = useState(false);
   const [viewportTooltip, setViewportTooltip] = useState<ViewportTooltipState | null>(null);
   const [expandedContributionMonths, setExpandedContributionMonths] = useState<Record<string, boolean>>({});
+  // Justificante del movimiento elegido (de momento solo demo1).
+  const [receiptMovement, setReceiptMovement] = useState<{ iso: string; type: 'increment' | 'decrement'; amount: number } | null>(null);
   const [periodPreset, setPeriodPreset] = useState('all');
   const [periodStartMonth, setPeriodStartMonth] = useState('');
   const [periodEndMonth, setPeriodEndMonth] = useState('');
@@ -2998,6 +3002,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     <th>Tipo</th>
                     <th className="text-right">Importe</th>
                     <th className="text-right">Capital neto aportado</th>
+                    {report.clientId === DEMO_CLIENT_ID ? <th className="text-right">Justificante</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -3014,6 +3019,21 @@ export const ReportView: React.FC<ReportViewProps> = ({
                           {isIncrement ? '+' : '-'}{formatCurrency(mov.amount ?? 0)}
                         </td>
                         <td className="text-right">{formatCurrency(mov.netCapital)}</td>
+                        {report.clientId === DEMO_CLIENT_ID ? (
+                          <td className="text-right">
+                            <button
+                              type="button"
+                              className="report-pro-receipt-button"
+                              aria-label={`Descargar justificante de la ${isIncrement ? 'aportación' : 'retirada'} del ${dd}/${mm}/${yy}`}
+                              onClick={() => {
+                                setReceiptMovement({ iso: mov.iso, type: isIncrement ? 'increment' : 'decrement', amount: mov.amount ?? 0 });
+                                onAnalyticsEvent?.({ type: 'movement_receipt_open', label: `${mov.type} ${mov.iso}` });
+                              }}
+                            >
+                              Descargar
+                            </button>
+                          </td>
+                        ) : null}
                       </tr>
                     );
                   })}
@@ -3022,6 +3042,20 @@ export const ReportView: React.FC<ReportViewProps> = ({
             </div>
           </section>
         )}
+
+        {receiptMovement && report.clientId === DEMO_CLIENT_ID ? (
+          <React.Suspense fallback={null}>
+            <MovementReceiptDialog
+              clientId={report.clientId}
+              holderName={report.clientName || report.clientCode}
+              clientCode={report.clientCode || report.clientId}
+              movements={allVisibleCapitalMovements}
+              movement={receiptMovement}
+              onClose={() => setReceiptMovement(null)}
+              onDownloaded={(details) => onAnalyticsEvent?.({ type: 'movement_receipt_download', label: details.filename, metadata: { format: details.format } })}
+            />
+          </React.Suspense>
+        ) : null}
 
         {report.showContributionJourney ? (
           <ContributionJourneyModule

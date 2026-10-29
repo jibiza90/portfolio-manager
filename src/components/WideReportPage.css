@@ -916,3 +916,18 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Boton de justificante en el historial de movimientos (de momento solo demo1). */
+.report-pro-receipt-button {
+  padding: 5px 12px;
+  border: 1px solid #087b83;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #087b83;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.report-pro-receipt-button:hover { background: #e3f2f1; }
