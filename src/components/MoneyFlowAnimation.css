@@ -1,0 +1,116 @@
+/* demo1: animacion "Como se ha formado tu saldo" (panel oscuro con depositos de liquido). */
+.mfa-panel.report-pro-panel {
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+}
+
+.mfa {
+  position: relative;
+  padding: 24px 24px 14px;
+  border-radius: 24px;
+  color: #eaf2f7;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  background:
+    radial-gradient(110% 80% at 80% 0%, #123a52 0%, rgba(18, 58, 82, 0) 55%),
+    linear-gradient(160deg, #081a2c, #0a2236 55%, #071624);
+  box-shadow: 0 24px 60px rgba(4, 16, 28, 0.28);
+}
+
+.mfa-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.mfa-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #5fd3c4;
+}
+
+.mfa-month {
+  margin-top: 8px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.mfa-event {
+  min-height: 20px;
+  margin-top: 4px;
+  font-size: 14px;
+  color: #9fb7c7;
+}
+
+.mfa-event b { font-weight: 600; }
+.mfa-event .is-in { color: #7cb4ff; }
+.mfa-event .is-out { color: #f5b25c; }
+.mfa-event .is-gain { color: #3fd09a; }
+.mfa-event .is-loss { color: #f8a39a; }
+.mfa-event .is-today { color: #5fd3c4; }
+
+.mfa-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  width: min(100%, 620px);
+}
+
+.mfa-stat {
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mfa-stat small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8fa7b8;
+}
+
+.mfa-stat small i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.mfa-stat b {
+  display: block;
+  margin-top: 5px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mfa-canvas {
+  margin-top: 6px;
+}
+
+.mfa-canvas canvas {
+  display: block;
+  width: 100%;
+}
+
+@container report-sheet (max-width: 700px) {
+  .mfa {
+    padding: 18px 14px 10px;
+  }
+
+  .mfa-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

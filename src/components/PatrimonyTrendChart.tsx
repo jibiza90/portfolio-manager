@@ -252,15 +252,15 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
               />
             ) : null}
 
-            <path d={areaPath} fill="url(#pmTrendArea)" />
-            <path d={linePath} className="pm-trend-line" stroke="url(#pmTrendLine)" />
+            <path d={areaPath} className="pm-trend-area" fill="url(#pmTrendArea)" />
+            <path d={linePath} className="pm-trend-line" stroke="url(#pmTrendLine)" pathLength={1} />
 
             {coords.map((point, index) => {
               const label = labels[index];
               const isLast = index === coords.length - 1;
               const isActive = index === activeIndex;
               return (
-                <g key={point.key}>
+                <g key={point.key} style={{ '--i': index } as React.CSSProperties}>
                   {isLast ? <circle className="pm-trend-halo" cx={point.x} cy={point.y} r={12} /> : null}
                   <circle className={`pm-trend-dot${isLast || isActive ? ' is-strong' : ''}`} cx={point.x} cy={point.y} r={isLast || isActive ? 5.5 : 4} />
                   <g className={`pm-trend-label${isLast ? ' is-last' : ''}${label.below ? ' is-below' : ''}`}>

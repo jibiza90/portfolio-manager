@@ -1424,3 +1424,90 @@
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-capital-panel.is-demo-capital .report-pro-capital-grid > div strong {
   font-size: min(clamp(20px, 1.5vw, 26px), 11cqi);
 }
+
+/* demo1: los graficos se dibujan solos cada vez que aparecen en pantalla (data-reveal + is-revealed). */
+@keyframes revealDraw { to { stroke-dashoffset: 0; } }
+@keyframes revealFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes revealGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* Evolucion patrimonio: la linea se traza de izquierda a derecha y despues aparecen area, puntos y cifras. */
+[data-reveal='patrimony'] .pm-trend-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+[data-reveal='patrimony'].is-revealed .pm-trend-line {
+  animation: revealDraw 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+[data-reveal='patrimony'] .pm-trend-area,
+[data-reveal='patrimony'] .pm-trend-dot,
+[data-reveal='patrimony'] .pm-trend-halo,
+[data-reveal='patrimony'] .pm-trend-label,
+[data-reveal='patrimony'] .pm-trend-flows {
+  opacity: 0;
+}
+
+[data-reveal='patrimony']:not(.is-revealed) .pm-trend-halo {
+  animation: none;
+}
+
+[data-reveal='patrimony'].is-revealed .pm-trend-area {
+  animation: revealFade 0.9s ease 0.6s forwards;
+}
+
+[data-reveal='patrimony'].is-revealed :is(.pm-trend-dot, .pm-trend-label, .pm-trend-flows) {
+  animation: revealFade 0.45s ease forwards;
+  animation-delay: calc(0.2s + var(--i, 0) * 0.09s);
+}
+
+[data-reveal='patrimony'].is-revealed .pm-trend-halo {
+  animation: revealFade 0.5s ease 1.4s forwards, pm-trend-pulse 2.4s ease-in-out 1.9s infinite;
+}
+
+/* Rentabilidad mensual: las barras crecen una tras otra. */
+[data-reveal='bars'] .report-pro-bar {
+  transform: scaleY(0);
+  transform-origin: bottom center;
+}
+
+[data-reveal='bars'] .report-pro-bar.negative {
+  transform-origin: top center;
+}
+
+[data-reveal='bars'] .report-pro-bars:not(.has-negative) .report-pro-bar.negative {
+  transform-origin: bottom center;
+}
+
+[data-reveal='bars'].is-revealed .report-pro-bar {
+  animation: revealGrow 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 0.055s);
+}
+
+[data-reveal='bars'] .report-pro-bar-value {
+  opacity: 0;
+}
+
+[data-reveal='bars'].is-revealed .report-pro-bar-value {
+  animation: revealFade 0.5s ease 0.6s forwards;
+}
+
+/* Resumen financiero: las barras de la cascada suben una tras otra. */
+[data-reveal='waterfall'] .report-pro-waterfall-bar span {
+  animation: none;
+  transform: scaleY(0);
+}
+
+[data-reveal='waterfall'].is-revealed .report-pro-waterfall-bar span {
+  animation: reportWaterfallGrow 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+[data-reveal='waterfall'].is-revealed .report-pro-waterfall-step:nth-of-type(4) .report-pro-waterfall-bar span { animation-delay: 0.18s; }
+[data-reveal='waterfall'].is-revealed .report-pro-waterfall-step:nth-of-type(6) .report-pro-waterfall-bar span { animation-delay: 0.36s; }
+[data-reveal='waterfall'].is-revealed .report-pro-waterfall-step:nth-of-type(8) .report-pro-waterfall-bar span { animation-delay: 0.54s; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] .pm-trend-line { stroke-dashoffset: 0; animation: none !important; }
+  [data-reveal] :is(.pm-trend-area, .pm-trend-dot, .pm-trend-halo, .pm-trend-label, .pm-trend-flows, .report-pro-bar-value) { opacity: 1; animation: none !important; }
+  [data-reveal] :is(.report-pro-bar, .report-pro-waterfall-bar span) { transform: none; animation: none !important; }
+}

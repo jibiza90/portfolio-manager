@@ -11,6 +11,7 @@ import { ContributionJourneyModule } from './ContributionJourneyModule';
 import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio';
 import { PatrimonyTrendChart, type PatrimonyTrendPoint } from './PatrimonyTrendChart';
 import { applyPdfWatermark } from '../utils/pdfWatermark';
+import { MoneyFlowAnimation, type MoneyFlowPoint } from './MoneyFlowAnimation';
 import './WideReportPage.css';
 
 const MovementReceiptDialog = React.lazy(() => import('./MovementReceipt').then((module) => ({ default: module.MovementReceiptDialog })));
@@ -589,6 +590,19 @@ export const ReportView: React.FC<ReportViewProps> = ({
       window.clearTimeout(settledTimer);
     };
   }, [report?.clientId, report?.createdAt, report?.monthlyStats.length, periodPreset, periodStartMonth, periodEndMonth, closingYear]);
+
+  // demo1: los graficos marcados con data-reveal se dibujan solos cada vez que entran en pantalla.
+  useEffect(() => {
+    if (report?.clientId !== DEMO_CLIENT_ID || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.15) entry.target.classList.add('is-revealed');
+        else if (!entry.isIntersecting) entry.target.classList.remove('is-revealed');
+      });
+    }, { threshold: [0, 0.15] });
+    document.querySelectorAll('[data-reveal]').forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [report?.clientId, report?.createdAt, chartView, periodPreset, periodStartMonth, periodEndMonth]);
 
   // demo1: beneficios y movimientos se abren mostrando lo mas reciente (abajo del todo).
   useEffect(() => {
@@ -1369,6 +1383,33 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const tableMovementRows = isDemoClosingLayout ? demoMovementRows : screenMovementCapitalSeries;
   const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const monthKeyLabel = (key: string) => `${SHORT_MONTHS[Number(key.slice(5, 7)) - 1] ?? key.slice(5, 7)} ${key.slice(0, 4)}`;
+  // demo1: datos de la animacion "Como se ha formado tu saldo" (capital paso a paso, igual que las comisiones).
+  const moneyFlowPoints: MoneyFlowPoint[] = [];
+  if (isDemoClosingLayout && monthlyWithData.length > 0) {
+    let flowCapital = 0;
+    let flowCobrado = 0;
+    const addPoint = (label: string, value: number, movements: Array<{ type: string; amount: number }>) => {
+      const contributed = movements.filter((movement) => movement.type === 'increment').reduce((sum, movement) => sum + movement.amount, 0);
+      const withdrawn = movements.filter((movement) => movement.type !== 'increment').reduce((sum, movement) => sum + movement.amount, 0);
+      flowCapital = Math.max(0, flowCapital + contributed - withdrawn);
+      flowCobrado += withdrawn;
+      moneyFlowPoints.push({ label, value, capital: flowCapital, contributed, withdrawn, cobrado: flowCobrado });
+    };
+    moneyFlowPoints.push({ label: 'Inicio', value: 0, capital: 0, contributed: 0, withdrawn: 0, cobrado: 0 });
+    monthlyWithData.forEach((month, index) => {
+      const key = reportMonthToKey(month.month);
+      const monthMovements = (report.movements ?? []).filter((movement) => movement.iso.slice(0, 7) === key);
+      // El saldo con el que empieza el historial (anterior a los movimientos registrados) cuenta como capital inicial.
+      if (index === 0) {
+        const increments = monthMovements.filter((movement) => movement.type === 'increment').reduce((sum, movement) => sum + movement.amount, 0);
+        const decrements = monthMovements.filter((movement) => movement.type !== 'increment').reduce((sum, movement) => sum + movement.amount, 0);
+        const opening = (month.endBalance ?? 0) - (month.profit ?? 0) - increments + decrements;
+        if (opening > 0.5) monthMovements.unshift({ iso: `${key}-01`, type: 'increment', amount: opening, balance: opening });
+      }
+      addPoint(month.month, month.endBalance ?? 0, monthMovements);
+    });
+    if (pendingMovementRows.length > 0) addPoint('Hoy', visibleBalance, pendingMovementRows);
+  }
   const monthlyClosingRows = closingSourceMonths.map((month) => {
     const monthKey = reportMonthToKey(month.month);
     const historyIndex = monthlyWithData.findIndex((item) => reportMonthToKey(item.month) === monthKey);
@@ -2949,7 +2990,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </section>
         )}
 
-        <section className="report-pro-panel report-pro-panel-xl">
+        <section className="report-pro-panel report-pro-panel-xl" data-reveal={isDemoClosingLayout ? 'bars' : undefined}>
           <div className="report-pro-panel-head">
             <h4>{chartTitle}</h4>
             <p>{chartSubtitle}</p>
@@ -2992,7 +3033,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 minWidth: monthlyChartMinWidth
               }}
             >
-              {chartMonthlyData.map((m) => {
+              {chartMonthlyData.map((m, barIndex) => {
               const maxBarHeight = hasNegativeMonth ? 46 : 92;
               const chartValue = getChartValue(m);
               const height = Math.min(maxBarHeight, Math.max(4, (Math.abs(chartValue) / maxMonthPct) * maxBarHeight));
@@ -3028,6 +3069,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                       className={`report-pro-bar ${chartValue >= 0 ? 'positive' : 'negative'}`}
                       style={{
                         height: `${height}%`,
+                        ...({ '--i': barIndex } as React.CSSProperties),
                         ...(hasNegativeMonth
                           ? (chartValue >= 0 ? { bottom: '50%' } : { top: '50%' })
                           : { bottom: 0 })
@@ -3215,7 +3257,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           )}
         </section>
 
-        <section className="report-pro-panel report-pro-panel-xl report-pro-patrimony-section" data-tour="patrimonio">
+        <section className="report-pro-panel report-pro-panel-xl report-pro-patrimony-section" data-tour="patrimonio" data-reveal={isDemoClosingLayout ? 'patrimony' : undefined}>
           <div className="report-pro-panel-head">
             <div>
               <h4>Evolucion patrimonio</h4>
@@ -3407,7 +3449,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         ) : null}
 
 
-        <section className="report-pro-waterfall-panel" aria-label="Composicion financiera de la cartera">
+        <section className="report-pro-waterfall-panel" aria-label="Composicion financiera de la cartera" data-reveal={isDemoClosingLayout ? 'waterfall' : undefined}>
             <div className="report-pro-panel-head report-pro-waterfall-head">
               <div>
                 <span className="report-pro-waterfall-eyebrow">Resumen financiero</span>
@@ -3458,6 +3500,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="total">{formatCurrency(visibleBalance)}</span>
             </div>
         </section>
+
+        {isDemoClosingLayout && moneyFlowPoints.length > 1 ? <MoneyFlowAnimation points={moneyFlowPoints} /> : null}
 
       </article>
       )}

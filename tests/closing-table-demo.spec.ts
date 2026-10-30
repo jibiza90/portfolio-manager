@@ -157,3 +157,21 @@ test('contributions in the patrimony chart are blue only for demo1', async ({ pa
   expect(await inflowFill()).not.toBe('rgb(37, 99, 235)');
   await expect(page.locator('.report-pro-benefits-panel .report-pro-closing-years')).toHaveCount(0);
 });
+
+test('demo1 shows the animated money flow and charts that draw themselves; other clients do not', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mount(page, 'client-001');
+  const flow = page.locator('.mfa-panel');
+  await expect(flow).toHaveCount(1);
+  await flow.scrollIntoViewIfNeeded();
+  // Las cifras van subiendo: al principio de la animacion el valor es menor que al final.
+  const first = await flow.locator('.mfa-stat b').first().innerText();
+  await expect.poll(() => flow.locator('.mfa-stat b').first().innerText(), { timeout: 20_000 }).not.toBe(first);
+  await expect(page.locator('[data-reveal]')).toHaveCount(3);
+
+  await mount(page, 'client-004');
+  await expect(page.locator('.mfa-panel')).toHaveCount(0);
+  await expect(page.locator('[data-reveal]')).toHaveCount(0);
+});
