@@ -1407,3 +1407,20 @@
     grid-column: auto;
   }
 }
+
+/* demo1: las 5 tarjetas de "Capital y beneficio acumulado" iguales que las 5 de arriba (mismo ancho, alto y cifra). */
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-capital-panel.is-demo-capital .report-pro-capital-grid {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-kpis.is-demo-kpis > .report-pro-kpi,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-capital-panel.is-demo-capital .report-pro-capital-grid > div {
+  min-height: 104px;
+  padding: 18px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-kpis.is-demo-kpis > .report-pro-kpi strong,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-capital-panel.is-demo-capital .report-pro-capital-grid > div strong {
+  font-size: min(clamp(20px, 1.5vw, 26px), 11cqi);
+}

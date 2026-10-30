@@ -2717,7 +2717,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </section>
         ) : null}
 
-        <section className="report-pro-kpis report-pro-kpis-demo" data-tour="capital">
+        <section className={`report-pro-kpis report-pro-kpis-demo${isDemoClosingLayout ? ' is-demo-kpis' : ''}`} data-tour="capital">
           {renderCapitalHistoryCard('Capital aportado', visibleIncrements, 'increment', `Suma total de todas tus aportaciones registradas desde ${firstRegisteredDateLabel}.`, 'report-pro-kpi')}
           <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
           <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Beneficio acumulado generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
@@ -2744,7 +2744,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
         </section>
 
-        <section className="report-pro-capital-panel">
+        <section className={`report-pro-capital-panel${isDemoClosingLayout ? ' is-demo-capital' : ''}`}>
             <div className="report-pro-panel-head">
               <h4>Capital y beneficio acumulado</h4>
               <p>Separacion entre capital aportado, retiradas y beneficio obtenido.</p>
