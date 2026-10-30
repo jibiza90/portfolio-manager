@@ -942,3 +942,47 @@
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-capital-grid strong {
   font-size: min(clamp(19px, 1.4vw, 25px), 11cqi);
 }
+
+/* Bloques de tarjetas: filas equilibradas segun el espacio real que tienen (tambien con la letra ampliada).
+   5 tarjetas: 5 / 3+2 / 2+2+1 (la ultima ocupa toda la fila) / 1 por fila.
+   6 tarjetas: 6 / 3+3 / 2+2+2 / 1 por fila.  4 tarjetas: 4 / 2+2 / 1 por fila. */
+.report-pro-page-wide .report-pro-wide-sheet {
+  container: report-sheet / inline-size;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary) > * {
+  grid-column: auto;
+}
+
+@container report-sheet (min-width: 1150px) {
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(5):last-child) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(4):last-child) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@container report-sheet (min-width: 1250px) {
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(6):last-child) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+@container report-sheet (min-width: 620px) and (max-width: 1249.98px) {
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(6):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@container report-sheet (min-width: 620px) and (max-width: 1149.98px) {
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(5):last-child) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(5):last-child) > * { grid-column: span 2; }
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(5):last-child) > :nth-child(4) { grid-column: 2 / span 2; }
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(4):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container report-sheet (min-width: 440px) and (max-width: 619.98px) {
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(4):last-child),
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(5):last-child),
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(6):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(5):last-child) > :last-child { grid-column: 1 / -1; }
+}
+
+@container report-sheet (max-width: 439.98px) {
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(4):last-child),
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(5):last-child),
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(6):last-child) { grid-template-columns: minmax(0, 1fr); }
+}

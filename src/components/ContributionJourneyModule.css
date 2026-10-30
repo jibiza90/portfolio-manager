@@ -728,3 +728,43 @@
     text-align: left;
   }
 }
+
+/* Mismas distribuciones que en tablet y movil, pero segun el espacio real del modulo
+   (asi con la letra ampliada se reordena igual en vez de dejar piezas sueltas). */
+.report-pro-contribution-journey {
+  container: journey / inline-size;
+}
+
+@container journey (max-width: 980px) {
+  .contribution-journey-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .contribution-journey-map > button { grid-template-columns: 150px repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, auto); }
+  .contribution-journey-map > button > b { display: none; }
+  .contribution-journey-identity { grid-column: 1; grid-row: 1 / 3; }
+  .contribution-journey-map-step.is-origin { grid-column: 2; grid-row: 1; }
+  .contribution-journey-map-step.is-withdrawal { grid-column: 3; grid-row: 1; }
+  .contribution-journey-map-step.is-result { grid-column: 2; grid-row: 2; }
+  .contribution-journey-map-step.is-current { grid-column: 3; grid-row: 2; }
+  .contribution-journey-map-formula { grid-column: 2 / 4; grid-row: 3; }
+  .contribution-journey-map-action { grid-column: 1; grid-row: 3; justify-self: start; }
+  .contribution-journey-layout { grid-template-columns: 1fr; }
+}
+
+@container journey (max-width: 690px) {
+  .contribution-journey-map > button { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; padding: 10px; }
+  .contribution-journey-identity { grid-column: 1 / 3; grid-row: 1; border-right: 0; border-bottom: 1px solid var(--journey-line); }
+  .contribution-journey-map-step.is-origin { grid-column: 1; grid-row: 2; }
+  .contribution-journey-map-step.is-withdrawal { grid-column: 2; grid-row: 2; }
+  .contribution-journey-map-step.is-result { grid-column: 1; grid-row: 3; }
+  .contribution-journey-map-step.is-current { grid-column: 2; grid-row: 3; }
+  .contribution-journey-map-formula { grid-column: 1 / 3; grid-row: 4; line-height: 1.5; }
+  .contribution-journey-map-action { grid-column: 1 / 3; grid-row: 5; justify-self: stretch; text-align: center; }
+  .contribution-journey-filters { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .contribution-journey-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .contribution-journey-equation { grid-template-columns: 1fr; }
+  .contribution-journey-equation > b { display: none; }
+}
+
+@container journey (max-width: 430px) {
+  .contribution-journey-summary { grid-template-columns: 1fr; }
+  .contribution-journey-facts { grid-template-columns: 1fr; }
+}

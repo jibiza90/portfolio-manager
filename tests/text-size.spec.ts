@@ -98,3 +98,37 @@ for (const width of [360, 768, 1024, 1600, 1920]) {
     expect(await page.evaluate(findOverflowingText)).toEqual([]);
   });
 }
+
+// Las tarjetas se reparten en filas equilibradas: nunca 5+1 o 4+2.
+const rowsOf = (selector: string) => {
+  const grid = document.querySelector(selector);
+  if (!grid) return '';
+  const tops: number[] = [];
+  const counts: number[] = [];
+  [...grid.children].forEach((child) => {
+    const top = Math.round(child.getBoundingClientRect().top);
+    const index = tops.findIndex((value) => Math.abs(value - top) < 6);
+    if (index === -1) { tops.push(top); counts.push(1); } else counts[index] += 1;
+  });
+  return counts.join('+');
+};
+
+for (const { width, level } of [
+  { width: 768, level: 'muy-grande' },
+  { width: 1024, level: 'grande' },
+  { width: 1280, level: 'normal' },
+  { width: 1600, level: 'muy-grande' },
+  { width: 1920, level: 'normal' }
+]) {
+  test(`card blocks stay balanced at ${width}px with ${level} text`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'ipad-mini', 'Checked on chosen viewports.');
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width, height: 1000 });
+    await page.addInitScript((value) => window.localStorage.setItem('jigsa-text-size', value), level);
+    await open(page);
+    expect(['6', '3+3', '2+2+2', '1+1+1+1+1+1']).toContain(await page.evaluate(rowsOf, '.report-pro-period-summary'));
+    for (const selector of ['.report-pro-kpis-demo', '.report-pro-capital-grid']) {
+      expect(['5', '3+2', '2+2+1', '1+1+1+1+1']).toContain(await page.evaluate(rowsOf, selector));
+    }
+  });
+}
