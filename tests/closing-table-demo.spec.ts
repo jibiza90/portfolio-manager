@@ -1,0 +1,63 @@
+import { expect, test, type Page } from '@playwright/test';
+
+// demo1: la tabla de cierres va justo debajo de "Capital y beneficio acumulado", con titulos fijos,
+// aportaciones en verde, retiradas en rojo y el total de cada año mas marcado. El resto de clientes, igual.
+
+const mount = async (page: Page, clientId: string) => {
+  await page.goto('/');
+  await page.evaluate(async ({ id }) => {
+    const harness = await import(/* @vite-ignore */ '/tests/fixtures/report-view-harness.tsx' as string);
+    harness.mountReportView(13, id, true);
+  }, { id: clientId });
+  await expect(page.locator('.report-pro-closing-panel')).toBeVisible();
+};
+
+const sectionTitles = (page: Page) => page.evaluate(() =>
+  [...document.querySelectorAll('.report-pro-wide-sheet > section')].map((section) => section.querySelector('h4')?.textContent?.trim() ?? '').filter(Boolean)
+);
+
+test('demo1 shows the closing table under capital and profit with sticky headings and coloured movements', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mount(page, 'client-001');
+
+  const titles = await sectionTitles(page);
+  expect(titles.indexOf('Cierres y composición del resultado')).toBe(titles.indexOf('Capital y beneficio acumulado') + 1);
+
+  const colours = await page.evaluate(() => {
+    const row = [...document.querySelectorAll('.report-pro-closing-table > tbody > tr')].find((tr) => tr.textContent?.includes('Ago 2025'))!;
+    const cells = row.querySelectorAll('td');
+    const withdrawalRow = [...document.querySelectorAll('.report-pro-closing-table > tbody > tr')].find((tr) => tr.textContent?.includes('Dic 2025'))!;
+    return {
+      contribution: getComputedStyle(cells[3]).color,
+      emptyWithdrawal: getComputedStyle(cells[4]).color,
+      withdrawal: getComputedStyle(withdrawalRow.querySelectorAll('td')[4]).color,
+      result: getComputedStyle(cells[5]).color
+    };
+  });
+  expect(colours.contribution).toBe('rgb(21, 128, 61)');
+  expect(colours.withdrawal).toBe('rgb(185, 28, 28)');
+  expect(colours.emptyWithdrawal).not.toBe('rgb(185, 28, 28)');
+  expect(colours.result).not.toBe('rgb(21, 128, 61)');
+
+  const total = page.locator('.report-pro-closing-year-total').first();
+  expect(await total.locator('td').nth(2).evaluate((cell) => getComputedStyle(cell).fontSize)).toBe('15px');
+
+  const gap = await page.evaluate(() => {
+    const scroller = document.querySelector('.report-pro-closing-scroll') as HTMLElement;
+    scroller.scrollTop = 250;
+    return Math.round(scroller.querySelector('thead th')!.getBoundingClientRect().top - scroller.getBoundingClientRect().top);
+  });
+  expect(gap).toBeLessThanOrEqual(2);
+});
+
+test('other clients keep the closing table in its usual place', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mount(page, 'client-004');
+  const titles = await sectionTitles(page);
+  expect(titles.indexOf('Cierres y composición del resultado')).toBeGreaterThan(titles.indexOf('Evolucion patrimonio'));
+  await expect(page.locator('.report-pro-closing-panel.is-demo-closing')).toHaveCount(0);
+});

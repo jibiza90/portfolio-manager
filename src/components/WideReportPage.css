@@ -986,3 +986,57 @@
   .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(5):last-child),
   .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(6):last-child) { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* demo1: tabla de cierres con titulos fijos al desplazarse, aportaciones en verde, retiradas en rojo
+   y la linea de total de cada año mas marcada. */
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-scroll {
+  max-height: min(72vh, 660px);
+  /* Sin hueco arriba: si no, las filas asoman por encima de los titulos fijos. */
+  padding-top: 0;
+  overflow: auto !important;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-table {
+  overflow: visible;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-table > thead > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #e8f4f4;
+  box-shadow: inset 0 -1px 0 rgba(8, 123, 131, 0.24);
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-table > thead > tr > th:first-child {
+  border-top-left-radius: 16px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-table > thead > tr > th:last-child {
+  border-top-right-radius: 16px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-table > tbody > tr:not(.report-pro-expanded-row) > td.text-right:nth-child(4):not(.is-empty) {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-table > tbody > tr:not(.report-pro-expanded-row) > td.text-right:nth-child(5):not(.is-empty) {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-year-total > td {
+  padding-top: 19px;
+  padding-bottom: 19px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-year-total > td strong {
+  font-weight: 900;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-year-total td:nth-child(2) > strong {
+  font-size: 16px;
+}

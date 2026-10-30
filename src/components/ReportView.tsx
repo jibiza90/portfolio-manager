@@ -1269,7 +1269,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (hasDecrement) return 'Retirada';
     return '';
   };
-  const monthlyClosingRows = effectiveMonthlyWithData.map((month) => {
+  // demo1: la tabla de cierres va justo debajo de "Capital y beneficio acumulado", encima del filtro de
+  // periodo, asi que muestra siempre todos los cierres publicados.
+  const isDemoClosingLayout = report.clientId === DEMO_CLIENT_ID;
+  const closingSourceMonths = isDemoClosingLayout ? monthlyWithData : effectiveMonthlyWithData;
+  const monthlyClosingRows = closingSourceMonths.map((month) => {
     const monthKey = reportMonthToKey(month.month);
     const historyIndex = monthlyWithData.findIndex((item) => reportMonthToKey(item.month) === monthKey);
     const previousBalance = historyIndex > 0 ? monthlyWithData[historyIndex - 1].endBalance : undefined;
@@ -2373,6 +2377,116 @@ export const ReportView: React.FC<ReportViewProps> = ({
     return (!rangeStart || key >= rangeStart) && (!rangeEnd || key <= rangeEnd);
   });
 
+  const closingPanel = (
+    <section className={`report-pro-panel report-pro-closing-panel${isDemoClosingLayout ? ' is-demo-closing' : ''}`} data-tour="historial">
+      <div className="report-pro-panel-head">
+        <span className="report-pro-closing-eyebrow">Trazabilidad mensual</span>
+        <h4>Cierres y composici&oacute;n del resultado</h4>
+        <p>Saldo inicial, movimientos de capital, resultado y saldo final de cada cierre mensual.</p>
+      </div>
+      <div className="report-pro-detail-hint">
+        <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
+        <span>Pulsa el bot&oacute;n <strong>+</strong> de cualquier mes para consultar la composici&oacute;n completa del resultado.</span>
+      </div>
+      <div ref={closingTableScrollRef} className="table-scroll report-pro-closing-scroll">
+        <table className="monthly-table report-pro-table report-pro-closing-table">
+          <thead>
+            <tr>
+              <th aria-label="Abrir detalle" />
+              <th>Mes</th>
+              <th className="text-right">Saldo inicial</th>
+              <th className="text-right">Aportaciones</th>
+              <th className="text-right">Retiradas</th>
+              <th className="text-right">Resultado</th>
+              <th className="text-right">Rentabilidad</th>
+              <th className="text-right">Saldo final</th>
+            </tr>
+          </thead>
+          <tbody>
+            {monthlyClosingRows.map((row, index) => {
+              const expansionKey = detailExpansionKey('monthly', row.monthKey);
+              const expanded = !!expandedContributionMonths[expansionKey];
+              const movementTag = monthlyMovementType(row.monthKey);
+              const nextRow = monthlyClosingRows[index + 1];
+              const isYearEnd = !nextRow || nextRow.year !== row.year;
+              const yearSummary = isYearEnd ? closingYearSummary(row.year) : null;
+
+              return (
+                <React.Fragment key={row.monthKey}>
+                  <tr className={expanded ? 'is-open' : ''}>
+                    <td>
+                      <button
+                        type="button"
+                        className="report-pro-closing-toggle"
+                        aria-expanded={expanded}
+                        aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de ${row.month.month}`}
+                        title={expanded ? 'Ocultar composicion del resultado' : 'Ver composicion del resultado'}
+                        onClick={() => toggleMonthlyBreakdown(row.monthKey, 'monthly')}
+                      >
+                        {expanded ? '-' : '+'}
+                      </button>
+                    </td>
+                    <td>
+                      <strong>{row.month.month}</strong>
+                      {movementTag ? <span className="report-pro-closing-movement">{movementTag}</span> : null}
+                    </td>
+                    <td className="text-right">{formatCurrency(row.opening)}</td>
+                    <td className={`text-right positive${row.increments ? '' : ' is-empty'}`}>{row.increments ? `+${formatCurrency(row.increments)}` : '\u2014'}</td>
+                    <td className={`text-right negative${row.decrements ? '' : ' is-empty'}`}>{row.decrements ? `-${formatCurrency(row.decrements)}` : '\u2014'}</td>
+                    <td className={`text-right ${row.profit >= 0 ? 'positive' : 'negative'}`}>{formatSignedCurrency(row.profit)}</td>
+                    <td className={`text-right ${row.returnPct >= 0 ? 'positive' : 'negative'}`}>{formatSignedPercent(row.returnPct)}</td>
+                    <td className="text-right"><strong>{formatCurrency(row.balance)}</strong></td>
+                  </tr>
+                  {expanded && row.breakdown
+                    ? renderMonthlyBreakdownRow(row.month, row.breakdown, 8, 'monthly')
+                    : expanded ? (
+                      <tr id={`report-month-detail-monthly-${row.monthKey}`} className="report-pro-expanded-row report-pro-closing-detail-row">
+                        <td colSpan={8}>
+                          <div className="report-pro-closing-simple-detail">
+                            <div>
+                              <span>Composici&oacute;n del cierre</span>
+                              <strong>{row.month.month}</strong>
+                              <p>{row.increments || row.decrements
+                                ? 'Los movimientos de capital del mes ya estan incorporados en el saldo final. Este cierre no dispone de un desglose intramensual adicional.'
+                                : 'El mes no contiene aportaciones ni retiradas. El resultado corresponde a la evolucion de la posicion durante el periodo.'}</p>
+                            </div>
+                            <div className="report-pro-closing-equation">
+                              <span>{formatCurrency(row.opening)}</span>
+                              {row.increments ? <><b>+</b><span>{formatCurrency(row.increments)}</span></> : null}
+                              {row.decrements ? <><b>-</b><span>{formatCurrency(row.decrements)}</span></> : null}
+                              <b>{row.profit >= 0 ? '+' : '-'}</b>
+                              <span>{formatCurrency(Math.abs(row.profit))}</span>
+                              <b>=</b>
+                              <strong>{formatCurrency(row.balance)}</strong>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  {yearSummary ? (
+                    <tr className="report-pro-closing-year-total">
+                      <td />
+                      <td>
+                        <strong>{yearSummary.isComplete ? `Total ${row.year}` : `Subtotal ${row.year}`}</strong>
+                        {!yearSummary.isComplete ? <span>Periodo mostrado</span> : null}
+                      </td>
+                      <td className="text-right">{formatCurrency(yearSummary.opening)}</td>
+                      <td className={`text-right positive${yearSummary.increments ? '' : ' is-empty'}`}>{yearSummary.increments ? `+${formatCurrency(yearSummary.increments)}` : '\u2014'}</td>
+                      <td className={`text-right negative${yearSummary.decrements ? '' : ' is-empty'}`}>{yearSummary.decrements ? `-${formatCurrency(yearSummary.decrements)}` : '\u2014'}</td>
+                      <td className={`text-right ${yearSummary.profit >= 0 ? 'positive' : 'negative'}`}>{formatSignedCurrency(yearSummary.profit)}</td>
+                      <td className={`text-right ${yearSummary.returnPct >= 0 ? 'positive' : 'negative'}`}>{formatSignedPercent(yearSummary.returnPct)}</td>
+                      <td className="text-right"><strong>{formatCurrency(yearSummary.balance)}</strong></td>
+                    </tr>
+                  ) : null}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+
   return (
     <div className={`informes-container informes-pro-page fade-in report-pro-page-demo${isImmersiveDemoPage ? ' report-pro-page-premium' : ''}${isWideReportPage ? ' report-pro-page-wide' : ''}`}>
       {viewportTooltip ? (
@@ -2530,6 +2644,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <div className="report-pro-info-card" tabIndex={0} data-tooltip="Saldo actual de la cartera del cliente."><span>Saldo actual</span><strong>{formatCurrency(visibleBalance)}</strong></div>
             </div>
         </section>
+
+        {isDemoClosingLayout ? closingPanel : null}
 
         <section className="report-pro-demo-control-panel">
             <div className="report-pro-panel-head">
@@ -2889,113 +3005,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           ) : renderPatrimonyChart(false)}
         </section>
 
-        <section className="report-pro-panel report-pro-closing-panel" data-tour="historial">
-          <div className="report-pro-panel-head">
-            <span className="report-pro-closing-eyebrow">Trazabilidad mensual</span>
-            <h4>Cierres y composici&oacute;n del resultado</h4>
-            <p>Saldo inicial, movimientos de capital, resultado y saldo final de cada cierre mensual.</p>
-          </div>
-          <div className="report-pro-detail-hint">
-            <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
-            <span>Pulsa el bot&oacute;n <strong>+</strong> de cualquier mes para consultar la composici&oacute;n completa del resultado.</span>
-          </div>
-          <div ref={closingTableScrollRef} className="table-scroll report-pro-closing-scroll">
-            <table className="monthly-table report-pro-table report-pro-closing-table">
-              <thead>
-                <tr>
-                  <th aria-label="Abrir detalle" />
-                  <th>Mes</th>
-                  <th className="text-right">Saldo inicial</th>
-                  <th className="text-right">Aportaciones</th>
-                  <th className="text-right">Retiradas</th>
-                  <th className="text-right">Resultado</th>
-                  <th className="text-right">Rentabilidad</th>
-                  <th className="text-right">Saldo final</th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthlyClosingRows.map((row, index) => {
-                  const expansionKey = detailExpansionKey('monthly', row.monthKey);
-                  const expanded = !!expandedContributionMonths[expansionKey];
-                  const movementTag = monthlyMovementType(row.monthKey);
-                  const nextRow = monthlyClosingRows[index + 1];
-                  const isYearEnd = !nextRow || nextRow.year !== row.year;
-                  const yearSummary = isYearEnd ? closingYearSummary(row.year) : null;
-
-                  return (
-                    <React.Fragment key={row.monthKey}>
-                      <tr className={expanded ? 'is-open' : ''}>
-                        <td>
-                          <button
-                            type="button"
-                            className="report-pro-closing-toggle"
-                            aria-expanded={expanded}
-                            aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de ${row.month.month}`}
-                            title={expanded ? 'Ocultar composicion del resultado' : 'Ver composicion del resultado'}
-                            onClick={() => toggleMonthlyBreakdown(row.monthKey, 'monthly')}
-                          >
-                            {expanded ? '-' : '+'}
-                          </button>
-                        </td>
-                        <td>
-                          <strong>{row.month.month}</strong>
-                          {movementTag ? <span className="report-pro-closing-movement">{movementTag}</span> : null}
-                        </td>
-                        <td className="text-right">{formatCurrency(row.opening)}</td>
-                        <td className="text-right positive">{row.increments ? `+${formatCurrency(row.increments)}` : '\u2014'}</td>
-                        <td className="text-right negative">{row.decrements ? `-${formatCurrency(row.decrements)}` : '\u2014'}</td>
-                        <td className={`text-right ${row.profit >= 0 ? 'positive' : 'negative'}`}>{formatSignedCurrency(row.profit)}</td>
-                        <td className={`text-right ${row.returnPct >= 0 ? 'positive' : 'negative'}`}>{formatSignedPercent(row.returnPct)}</td>
-                        <td className="text-right"><strong>{formatCurrency(row.balance)}</strong></td>
-                      </tr>
-                      {expanded && row.breakdown
-                        ? renderMonthlyBreakdownRow(row.month, row.breakdown, 8, 'monthly')
-                        : expanded ? (
-                          <tr id={`report-month-detail-monthly-${row.monthKey}`} className="report-pro-expanded-row report-pro-closing-detail-row">
-                            <td colSpan={8}>
-                              <div className="report-pro-closing-simple-detail">
-                                <div>
-                                  <span>Composici&oacute;n del cierre</span>
-                                  <strong>{row.month.month}</strong>
-                                  <p>{row.increments || row.decrements
-                                    ? 'Los movimientos de capital del mes ya estan incorporados en el saldo final. Este cierre no dispone de un desglose intramensual adicional.'
-                                    : 'El mes no contiene aportaciones ni retiradas. El resultado corresponde a la evolucion de la posicion durante el periodo.'}</p>
-                                </div>
-                                <div className="report-pro-closing-equation">
-                                  <span>{formatCurrency(row.opening)}</span>
-                                  {row.increments ? <><b>+</b><span>{formatCurrency(row.increments)}</span></> : null}
-                                  {row.decrements ? <><b>-</b><span>{formatCurrency(row.decrements)}</span></> : null}
-                                  <b>{row.profit >= 0 ? '+' : '-'}</b>
-                                  <span>{formatCurrency(Math.abs(row.profit))}</span>
-                                  <b>=</b>
-                                  <strong>{formatCurrency(row.balance)}</strong>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : null}
-                      {yearSummary ? (
-                        <tr className="report-pro-closing-year-total">
-                          <td />
-                          <td>
-                            <strong>{yearSummary.isComplete ? `Total ${row.year}` : `Subtotal ${row.year}`}</strong>
-                            {!yearSummary.isComplete ? <span>Periodo mostrado</span> : null}
-                          </td>
-                          <td className="text-right">{formatCurrency(yearSummary.opening)}</td>
-                          <td className="text-right positive">{yearSummary.increments ? `+${formatCurrency(yearSummary.increments)}` : '\u2014'}</td>
-                          <td className="text-right negative">{yearSummary.decrements ? `-${formatCurrency(yearSummary.decrements)}` : '\u2014'}</td>
-                          <td className={`text-right ${yearSummary.profit >= 0 ? 'positive' : 'negative'}`}>{formatSignedCurrency(yearSummary.profit)}</td>
-                          <td className={`text-right ${yearSummary.returnPct >= 0 ? 'positive' : 'negative'}`}>{formatSignedPercent(yearSummary.returnPct)}</td>
-                          <td className="text-right"><strong>{formatCurrency(yearSummary.balance)}</strong></td>
-                        </tr>
-                      ) : null}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        {isDemoClosingLayout ? null : closingPanel}
 
         {screenMovementCapitalSeries.length > 0 && (
           <section className="report-pro-panel">
