@@ -10189,3 +10189,77 @@ select {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Tamaño de letra ampliado (y pantallas estrechas): la cascada del resumen financiero se adapta
+   al espacio real que tiene, no al ancho de la pantalla, para que nada se salga de su casilla. */
+.report-pro-waterfall-panel {
+  container: report-waterfall / inline-size;
+}
+
+@container report-waterfall (max-width: 860px) {
+  .report-pro-waterfall-panel .report-pro-waterfall-visual {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .report-pro-waterfall-panel .report-pro-waterfall-axis,
+  .report-pro-waterfall-panel .report-pro-waterfall-connector {
+    display: none;
+  }
+
+  .report-pro-waterfall-panel .report-pro-waterfall-step {
+    height: auto;
+    min-height: 205px;
+    padding: 12px 7px 10px;
+    border: 1px solid rgba(30, 64, 99, 0.10);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.76);
+  }
+
+  .report-pro-waterfall-panel .report-pro-waterfall-bar {
+    width: min(70px, 68%);
+    height: 112px;
+  }
+
+  .report-pro-waterfall-panel .report-pro-waterfall-value {
+    width: 100%;
+    padding: 6px 5px;
+    font-size: 13px;
+    letter-spacing: -0.025em;
+    text-align: center;
+  }
+
+  .report-pro-waterfall-panel .report-pro-waterfall-step strong {
+    font-size: 13px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .report-pro-waterfall-panel .report-pro-waterfall-step small {
+    min-height: 0;
+    font-size: 11px;
+    line-height: 1.25;
+    text-align: center;
+  }
+}
+
+/* Muy poco espacio (movil con letra grande): una columna para que las cifras se lean enteras. */
+@container report-waterfall (max-width: 300px) {
+  .report-pro-waterfall-panel .report-pro-waterfall-visual {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* "Ver detalle" en celdas estrechas: el texto pasa a dos lineas en vez de salirse del boton. */
+.report-pro-detail-button {
+  max-width: 100%;
+}
+
+.report-pro-detail-button > span:last-child {
+  min-width: 0;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.15;
+}

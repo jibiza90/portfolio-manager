@@ -931,3 +931,14 @@
 }
 
 .report-pro-receipt-button:hover { background: #e3f2f1; }
+
+/* Tamaño de letra ampliado: las cifras de las tarjetas pequeñas se ajustan al ancho de su tarjeta. */
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-kpi,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-capital-grid > div {
+  container-type: inline-size;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-kpi strong,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-capital-grid strong {
+  font-size: min(clamp(19px, 1.4vw, 25px), 11cqi);
+}

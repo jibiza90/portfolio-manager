@@ -696,3 +696,35 @@
   .contribution-journey-selector > button,
   .contribution-journey-map > button { transition: none; }
 }
+
+/* Tamaño de letra ampliado: las retiradas imputadas se ordenan segun el espacio real. */
+.contribution-journey-withdrawals {
+  container: journey-withdrawals / inline-size;
+}
+
+@container journey-withdrawals (max-width: 420px) {
+  .contribution-journey-withdrawal-list > div {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .contribution-journey-withdrawal-list strong {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .contribution-journey-withdrawal-list em,
+  .contribution-journey-withdrawal-list small {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+}
+
+@container journey-withdrawals (max-width: 230px) {
+  .contribution-journey-withdrawal-list > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contribution-journey-withdrawal-list strong {
+    text-align: left;
+  }
+}
