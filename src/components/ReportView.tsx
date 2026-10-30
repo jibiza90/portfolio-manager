@@ -314,6 +314,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [expired, setExpired] = useState(false);
   const [viewportTooltip, setViewportTooltip] = useState<ViewportTooltipState | null>(null);
   const [expandedContributionMonths, setExpandedContributionMonths] = useState<Record<string, boolean>>({});
+  // demo1: año elegido en la tabla de cierres ('all' = todos).
+  const [closingYear, setClosingYear] = useState<string>('all');
   // Justificante del movimiento elegido (de momento solo demo1).
   const [receiptMovement, setReceiptMovement] = useState<{ iso: string; type: 'increment' | 'decrement'; amount: number } | null>(null);
   const [periodPreset, setPeriodPreset] = useState('all');
@@ -575,7 +577,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       window.cancelAnimationFrame(settledFrame);
       window.clearTimeout(settledTimer);
     };
-  }, [report?.clientId, report?.createdAt, report?.monthlyStats.length, periodPreset, periodStartMonth, periodEndMonth]);
+  }, [report?.clientId, report?.createdAt, report?.monthlyStats.length, periodPreset, periodStartMonth, periodEndMonth, closingYear]);
 
   useEffect(() => {
     if (!analyticsEnabled) return undefined;
@@ -1272,7 +1274,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
   // demo1: la tabla de cierres va justo debajo de "Capital y beneficio acumulado", encima del filtro de
   // periodo, asi que muestra siempre todos los cierres publicados.
   const isDemoClosingLayout = report.clientId === DEMO_CLIENT_ID;
-  const closingSourceMonths = isDemoClosingLayout ? monthlyWithData : effectiveMonthlyWithData;
+  // Años con cierres publicados (el mas reciente primero); un año nuevo aparece solo con su primer cierre.
+  const closingYears = [...new Set(monthlyWithData.map((month) => reportMonthToKey(month.month).slice(0, 4)))]
+    .filter((year) => /^\d{4}$/.test(year))
+    .sort((a, b) => b.localeCompare(a));
+  const selectedClosingYear = closingYears.includes(closingYear) ? closingYear : 'all';
+  const closingSourceMonths = isDemoClosingLayout
+    ? monthlyWithData.filter((month) => selectedClosingYear === 'all' || reportMonthToKey(month.month).startsWith(`${selectedClosingYear}-`))
+    : effectiveMonthlyWithData;
   const monthlyClosingRows = closingSourceMonths.map((month) => {
     const monthKey = reportMonthToKey(month.month);
     const historyIndex = monthlyWithData.findIndex((item) => reportMonthToKey(item.month) === monthKey);
@@ -2384,6 +2393,23 @@ export const ReportView: React.FC<ReportViewProps> = ({
         <h4>Cierres y composici&oacute;n del resultado</h4>
         <p>Saldo inicial, movimientos de capital, resultado y saldo final de cada cierre mensual.</p>
       </div>
+      {isDemoClosingLayout && closingYears.length > 1 ? (
+        <div className="report-pro-closing-years" role="group" aria-label="Elegir año de los cierres">
+          {['all', ...closingYears].map((year) => (
+            <button
+              key={year}
+              type="button"
+              aria-pressed={selectedClosingYear === year}
+              onClick={() => {
+                setClosingYear(year);
+                onAnalyticsEvent?.({ type: 'closing_year', label: year });
+              }}
+            >
+              {year === 'all' ? 'Todo' : year}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="report-pro-detail-hint">
         <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
         <span>Pulsa el bot&oacute;n <strong>+</strong> de cualquier mes para consultar la composici&oacute;n completa del resultado.</span>

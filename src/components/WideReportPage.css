@@ -1040,3 +1040,40 @@
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-year-total td:nth-child(2) > strong {
   font-size: 16px;
 }
+
+/* demo1: botones para elegir el año de la tabla de cierres (Todo por defecto). */
+.report-pro-closing-panel .report-pro-closing-years {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.report-pro-closing-panel .report-pro-closing-years button {
+  min-width: 76px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid #cfdadd;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0a2037;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.report-pro-closing-panel .report-pro-closing-years button:hover {
+  border-color: #087b83;
+}
+
+.report-pro-closing-panel .report-pro-closing-years button[aria-pressed='true'] {
+  border-color: #087b83;
+  background: #087b83;
+  color: #ffffff;
+}
+
+.report-pro-closing-panel .report-pro-closing-years button:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}

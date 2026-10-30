@@ -61,3 +61,28 @@ test('other clients keep the closing table in its usual place', async ({ page },
   expect(titles.indexOf('Cierres y composición del resultado')).toBeGreaterThan(titles.indexOf('Evolucion patrimonio'));
   await expect(page.locator('.report-pro-closing-panel.is-demo-closing')).toHaveCount(0);
 });
+
+test('demo1 closing table shows every year by default and can show a single year', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mount(page, 'client-001');
+
+  const years = page.getByRole('group', { name: 'Elegir año de los cierres' });
+  await expect(years.getByRole('button')).toHaveText(['Todo', '2026', '2025']);
+  await expect(years.getByRole('button', { name: 'Todo' })).toHaveAttribute('aria-pressed', 'true');
+  const totals = page.locator('.report-pro-closing-year-total td:nth-child(2) strong');
+  await expect(totals).toHaveText(['Total 2025', 'Total 2026']);
+
+  await years.getByRole('button', { name: '2025' }).click();
+  await expect(years.getByRole('button', { name: '2025' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(totals).toHaveText(['Total 2025']);
+  const months2025 = await page.locator('.report-pro-closing-table > tbody > tr:not(.report-pro-closing-year-total) td:nth-child(2) strong').allTextContents();
+  expect(months2025.length).toBeGreaterThan(0);
+  expect(months2025.every((month) => month.endsWith('2025'))).toBe(true);
+
+  await years.getByRole('button', { name: '2026' }).click();
+  await expect(totals).toHaveText(['Total 2026']);
+  await years.getByRole('button', { name: 'Todo' }).click();
+  await expect(totals).toHaveText(['Total 2025', 'Total 2026']);
+});
