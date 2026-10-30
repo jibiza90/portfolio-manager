@@ -316,6 +316,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [expandedContributionMonths, setExpandedContributionMonths] = useState<Record<string, boolean>>({});
   // demo1: año elegido en la tabla de cierres ('all' = todos).
   const [closingYear, setClosingYear] = useState<string>('all');
+  // demo1: que meses ve la tabla de beneficios: 'all', un año ('2026') o 'range' (Desde / Hasta).
+  const [benefitsSelection, setBenefitsSelection] = useState<string>('all');
+  const [benefitsFrom, setBenefitsFrom] = useState('');
+  const [benefitsTo, setBenefitsTo] = useState('');
   // Justificante del movimiento elegido (de momento solo demo1).
   const [receiptMovement, setReceiptMovement] = useState<{ iso: string; type: 'increment' | 'decrement'; amount: number } | null>(null);
   const [periodPreset, setPeriodPreset] = useState('all');
@@ -1282,6 +1286,24 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const closingSourceMonths = isDemoClosingLayout
     ? monthlyWithData.filter((month) => selectedClosingYear === 'all' || reportMonthToKey(month.month).startsWith(`${selectedClosingYear}-`))
     : effectiveMonthlyWithData;
+  // demo1: la tabla de beneficios tiene su propio selector (Todo, un año o un periodo) y no depende del filtro.
+  const benefitMonthKeys = monthlyWithData.map((month) => reportMonthToKey(month.month));
+  const benefitsYear = closingYears.includes(benefitsSelection) ? benefitsSelection : null;
+  const benefitsIsRange = benefitsSelection === 'range';
+  const benefitsFromKey = benefitMonthKeys.includes(benefitsFrom) ? benefitsFrom : benefitMonthKeys[0] ?? '';
+  const benefitsToKey = benefitMonthKeys.includes(benefitsTo) ? benefitsTo : benefitMonthKeys[benefitMonthKeys.length - 1] ?? '';
+  const [benefitsRangeStart, benefitsRangeEnd] = benefitsFromKey <= benefitsToKey
+    ? [benefitsFromKey, benefitsToKey]
+    : [benefitsToKey, benefitsFromKey];
+  const benefitsMonths = isDemoClosingLayout
+    ? monthlyWithData.filter((month) => {
+      const key = reportMonthToKey(month.month);
+      if (benefitsIsRange) return key >= benefitsRangeStart && key <= benefitsRangeEnd;
+      if (benefitsYear) return key.startsWith(`${benefitsYear}-`);
+      return true;
+    })
+    : effectiveMonthlyWithData;
+  const sumProfits = (months: typeof monthlyWithData) => months.reduce((sum, month) => sum + (month.profit ?? 0), 0);
   const monthlyClosingRows = closingSourceMonths.map((month) => {
     const monthKey = reportMonthToKey(month.month);
     const historyIndex = monthlyWithData.findIndex((item) => reportMonthToKey(item.month) === monthKey);
@@ -2955,11 +2977,46 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </div>
         </section>
 
-        <section className="report-pro-panel">
+        <section className={`report-pro-panel report-pro-benefits-panel${isDemoClosingLayout ? ' is-demo-benefits' : ''}`}>
           <div className="report-pro-panel-head">
             <h4>Beneficios mensuales</h4>
             <p>Beneficio generado en cada cierre de mes</p>
           </div>
+          {isDemoClosingLayout ? (
+            <div className="report-pro-benefits-filter">
+              <div className="report-pro-closing-years" role="group" aria-label="Elegir qué beneficios ver">
+                {['all', ...closingYears, 'range'].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={option === 'all' ? !benefitsYear && !benefitsIsRange : option === 'range' ? benefitsIsRange : benefitsYear === option}
+                    onClick={() => {
+                      setBenefitsSelection(option);
+                      onAnalyticsEvent?.({ type: 'benefits_period', label: option });
+                    }}
+                  >
+                    {option === 'all' ? 'Todo' : option === 'range' ? 'Elegir periodo' : option}
+                  </button>
+                ))}
+              </div>
+              {benefitsIsRange ? (
+                <div className="report-pro-benefits-range">
+                  <label>
+                    <span>Desde</span>
+                    <select value={benefitsFromKey} onChange={(event) => setBenefitsFrom(event.target.value)}>
+                      {monthlyWithData.map((month) => <option key={month.month} value={reportMonthToKey(month.month)}>{month.month}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Hasta</span>
+                    <select value={benefitsToKey} onChange={(event) => setBenefitsTo(event.target.value)}>
+                      {monthlyWithData.map((month) => <option key={month.month} value={reportMonthToKey(month.month)}>{month.month}</option>)}
+                    </select>
+                  </label>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {hasVisibleMonthlyBreakdowns ? (
             <div className="report-pro-detail-hint">
               <span className="report-pro-detail-hint-icon" aria-hidden="true">+</span>
@@ -2979,9 +3036,18 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {effectiveMonthlyWithData.map((m) => {
+                {benefitsMonths.map((m, index) => {
                   const monthKey = reportMonthToKey(m.month);
                   const breakdown = tableContributionByMonth.get(monthKey);
+                  const nextMonth = benefitsMonths[index + 1];
+                  const year = monthKey.slice(0, 4);
+                  const showYearTotal = isDemoClosingLayout && !benefitsIsRange
+                    && (!nextMonth || reportMonthToKey(nextMonth.month).slice(0, 4) !== year);
+                  const yearProfit = showYearTotal
+                    ? sumProfits(benefitsMonths.filter((month) => reportMonthToKey(month.month).startsWith(`${year}-`)))
+                    : 0;
+                  const showRangeTotal = isDemoClosingLayout && benefitsIsRange && !nextMonth;
+                  const rangeProfit = showRangeTotal ? sumProfits(benefitsMonths) : 0;
                   return (
                     <React.Fragment key={`${m.month}-benefit`}>
                       <tr>
@@ -2996,6 +3062,21 @@ export const ReportView: React.FC<ReportViewProps> = ({
                         </td>
                       </tr>
                       {breakdown ? renderMonthlyBreakdownRow(m, breakdown, 2, 'benefits') : null}
+                      {showYearTotal ? (
+                        <tr className="report-pro-benefits-total">
+                          <td><strong>Total {year}</strong></td>
+                          <td className={`text-right ${yearProfit >= 0 ? 'positive' : 'negative'}`}><strong>{formatCurrency(yearProfit)}</strong></td>
+                        </tr>
+                      ) : null}
+                      {showRangeTotal ? (
+                        <tr className="report-pro-benefits-total">
+                          <td>
+                            <strong>Total del periodo</strong>
+                            <span>{benefitsMonths[0]?.month} – {m.month}</span>
+                          </td>
+                          <td className={`text-right ${rangeProfit >= 0 ? 'positive' : 'negative'}`}><strong>{formatCurrency(rangeProfit)}</strong></td>
+                        </tr>
+                      ) : null}
                     </React.Fragment>
                   );
                 })}
@@ -3026,6 +3107,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           {usePatrimonyTrendPreview && patrimonyTrendPoints.length > 0 ? (
             <PatrimonyTrendChart
               points={patrimonyTrendPoints}
+              blueContributions={isDemoClosingLayout}
               onHoverMonth={(label) => onAnalyticsEvent?.({ type: 'patrimony_trend_hover', label })}
             />
           ) : renderPatrimonyChart(false)}

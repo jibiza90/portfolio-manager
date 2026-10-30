@@ -319,3 +319,17 @@
     border-left: 0;
   }
 }
+
+/* demo1: aportaciones en azul para distinguirlas de la rentabilidad. */
+.pm-trend.is-blue-inflow .pm-trend-flow.is-in {
+  fill: #2563eb;
+}
+
+.pm-trend.is-blue-inflow .is-inflow,
+.pm-trend.is-blue-inflow .pm-trend-in-mark {
+  color: #2563eb;
+}
+
+.pm-trend.is-blue-inflow .pm-trend-out-mark {
+  color: var(--pm-negative);
+}

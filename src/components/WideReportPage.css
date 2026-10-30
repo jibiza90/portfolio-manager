@@ -1042,14 +1042,14 @@
 }
 
 /* demo1: botones para elegir el año de la tabla de cierres (Todo por defecto). */
-.report-pro-closing-panel .report-pro-closing-years {
+:is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin: 12px 0 4px;
 }
 
-.report-pro-closing-panel .report-pro-closing-years button {
+:is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years button {
   min-width: 76px;
   min-height: 40px;
   padding: 8px 14px;
@@ -1063,17 +1063,100 @@
   cursor: pointer;
 }
 
-.report-pro-closing-panel .report-pro-closing-years button:hover {
+:is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years button:hover {
   border-color: #087b83;
 }
 
-.report-pro-closing-panel .report-pro-closing-years button[aria-pressed='true'] {
+:is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years button[aria-pressed='true'] {
   border-color: #087b83;
   background: #087b83;
   color: #ffffff;
 }
 
-.report-pro-closing-panel .report-pro-closing-years button:focus-visible {
+:is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years button:focus-visible {
   outline: 3px solid #f59e0b;
   outline-offset: 2px;
+}
+
+/* demo1: tabla de beneficios mas estrecha (fecha y cifra cerca), selector de año o periodo y totales marcados. */
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .table-scroll {
+  max-width: 600px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .report-pro-benefits-range {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: 4px 0 8px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .report-pro-benefits-range label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #26485d;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .report-pro-benefits-range select {
+  width: auto;
+  min-width: 140px;
+  min-height: 40px;
+  padding: 8px 34px 8px 12px;
+  border: 1px solid #cfdadd;
+  border-radius: 10px;
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23087b83' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center;
+  color: #0a2037;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .report-pro-benefits-total > td {
+  padding-top: 16px;
+  padding-bottom: 16px;
+  border-top: 2px solid rgba(8, 123, 131, 0.3);
+  background: #e4f3f2;
+  color: #0a3542;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .report-pro-benefits-total > td.positive {
+  color: #0f7a5c;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .report-pro-benefits-total > td.negative {
+  color: #b4372f;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .report-pro-benefits-total > td strong {
+  font-weight: 900;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .report-pro-benefits-total > td:first-child strong {
+  color: #075d63;
+  font-size: 16px;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .report-pro-benefits-total > td:first-child span {
+  display: block;
+  margin-top: 3px;
+  color: #587487;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Botones de año en pantallas estrechas: dos por fila y, si sobra uno, ocupa toda la fila (nunca uno suelto). */
+@container report-sheet (max-width: 560px) {
+  :is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  :is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years > button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }

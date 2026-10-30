@@ -86,3 +86,36 @@ test('demo1 closing table shows every year by default and can show a single year
   await years.getByRole('button', { name: 'Todo' }).click();
   await expect(totals).toHaveText(['Total 2025', 'Total 2026']);
 });
+
+test('demo1 monthly profits: year or period selector with bold totals', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mount(page, 'client-001');
+  const panel = page.locator('.report-pro-benefits-panel');
+  const options = panel.getByRole('group', { name: 'Elegir qué beneficios ver' });
+  await expect(options.getByRole('button')).toHaveText(['Todo', '2026', '2025', 'Elegir periodo']);
+  const totals = panel.locator('.report-pro-benefits-total');
+  await expect(totals).toHaveText([/Total 2025\s*10\.532,42\s€/, /Total 2026\s*10\.088,35\s€/]);
+
+  await options.getByRole('button', { name: '2026' }).click();
+  await expect(totals).toHaveText([/Total 2026\s*10\.088,35\s€/]);
+
+  await options.getByRole('button', { name: 'Elegir periodo' }).click();
+  await panel.getByLabel('Desde').selectOption('2025-10');
+  await panel.getByLabel('Hasta').selectOption('2026-02');
+  await expect(totals).toHaveText([/Total del periodo\s*Oct 2025 – Feb 2026\s*8947,46\s€/]);
+  expect(await totals.locator('td').first().evaluate((cell) => getComputedStyle(cell).fontWeight)).toBe('800');
+});
+
+test('contributions in the patrimony chart are blue only for demo1', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const inflowFill = () => page.locator('.pm-trend-flow.is-in').first().evaluate((el) => getComputedStyle(el).fill);
+  await mount(page, 'client-001');
+  expect(await inflowFill()).toBe('rgb(37, 99, 235)');
+  await mount(page, 'client-004');
+  expect(await inflowFill()).not.toBe('rgb(37, 99, 235)');
+  await expect(page.locator('.report-pro-benefits-panel .report-pro-closing-years')).toHaveCount(0);
+});

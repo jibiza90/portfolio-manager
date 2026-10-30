@@ -15,6 +15,8 @@ export interface PatrimonyTrendPoint {
 interface PatrimonyTrendChartProps {
   points: PatrimonyTrendPoint[];
   onHoverMonth?: (label: string) => void;
+  // demo1: aportaciones en azul para no confundirlas con la rentabilidad (verde).
+  blueContributions?: boolean;
 }
 
 const HEIGHT = 440;
@@ -98,7 +100,7 @@ const monotonePath = (pts: Array<{ x: number; y: number }>) => {
   return d;
 };
 
-export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points, onHoverMonth }) => {
+export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points, onHoverMonth, blueContributions = false }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const [wrapWidth, setWrapWidth] = useState(1100);
@@ -189,7 +191,7 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
   };
 
   return (
-    <div className="pm-trend">
+    <div className={`pm-trend${blueContributions ? ' is-blue-inflow' : ''}`}>
       <div className="pm-trend-summary">
         <div>
           <span>Saldo actual</span>
@@ -331,7 +333,7 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
               {active.returnPct !== undefined ? (
                 <div><span>Rentabilidad del mes</span><b className={active.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{formatSignedPct(active.returnPct)}</b></div>
               ) : null}
-              {active.inflow > 0 ? <div><span>Aportaciones</span><b className="is-positive">{formatSignedEuro(active.inflow)}</b></div> : null}
+              {active.inflow > 0 ? <div><span>Aportaciones</span><b className={blueContributions ? 'is-inflow' : 'is-positive'}>{formatSignedEuro(active.inflow)}</b></div> : null}
               {active.outflow > 0 ? <div><span>Retiradas</span><b className="is-negative">{formatSignedEuro(-active.outflow)}</b></div> : null}
             </div>
           ) : null}
@@ -347,7 +349,7 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
       </svg>
       </div>
       <p className="pm-trend-footnote">
-        Debajo de cada mes: rentabilidad del mes y, si las hubo, ▲ aportaciones y ▼ retiradas.
+        Debajo de cada mes: rentabilidad del mes y, si las hubo, <span className="pm-trend-in-mark">▲ aportaciones</span> y <span className="pm-trend-out-mark">▼ retiradas</span>.
         {isScrollable ? ' Desliza para ver todos los meses.' : ''}
       </p>
     </div>
