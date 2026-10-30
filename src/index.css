@@ -6627,7 +6627,8 @@ select {
   display: block;
   max-width: 100%;
   font-size: clamp(24px, 1.95vw, 30px);
-  line-height: 1.05;
+  /* Un poco de aire para que la parte de arriba de los numeros no quede justa. */
+  line-height: 1.18;
   letter-spacing: -0.035em;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
