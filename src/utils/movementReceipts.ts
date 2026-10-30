@@ -35,15 +35,20 @@ export interface MovementReceiptData {
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
-// Numero estable y con aspecto aleatorio: siempre el mismo para el mismo movimiento.
-export const receiptNumber = (clientId: string, iso: string, type: 'increment' | 'decrement') => {
+// Numero de 8 cifras estable y con aspecto aleatorio: siempre el mismo para el mismo texto de partida
+// y sin el numero de cliente a la vista.
+export const stableDocumentDigits = (seed: string) => {
   let hash = 0x811c9dc5;
-  for (const char of `${clientId}|${iso}|${type}`) {
+  for (const char of seed) {
     hash ^= char.charCodeAt(0);
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
-  return `JO-${iso.slice(0, 4)}-${10_000_000 + (hash % 90_000_000)}`;
+  return 10_000_000 + (hash % 90_000_000);
 };
+
+// Siempre el mismo para el mismo movimiento.
+export const receiptNumber = (clientId: string, iso: string, type: 'increment' | 'decrement') =>
+  `JO-${iso.slice(0, 4)}-${stableDocumentDigits(`${clientId}|${iso}|${type}`)}`;
 
 export const buildMovementReceipt = (
   clientId: string,

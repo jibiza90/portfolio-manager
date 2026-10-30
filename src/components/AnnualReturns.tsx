@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import sealUrl from '../assets/jigsa-sello.png';
 import signatureUrl from '../assets/jigsa-firma.png';
 import { applyPdfWatermark } from '../utils/pdfWatermark';
+import { stableDocumentDigits } from '../utils/movementReceipts';
 import {
   availableReportYears,
   buildAnnualReport,
@@ -244,8 +245,9 @@ export const AnnualReturnsPanel: React.FC<PanelProps> = ({ source, commissions, 
 
   const openingCapital = Math.max(0, source.saldo + source.decrementos - source.incrementos - source.beneficioTotal);
   const report = useMemo(() => (year === null ? null : buildAnnualReport({ months, movements, openingCapital, commissions, year, mode, method })), [commissions, method, mode, months, movements, openingCapital, year]);
-  const clientNumber = clientId.replace(/\D/g, '').padStart(3, '0');
-  const documentNumber = report ? `IR-${report.year}-${clientNumber}-${report.mode === 'all' ? 'T' : report.method === 'proportional' ? 'P' : 'C'}` : '';
+  // Numero con aspecto aleatorio (no muestra el numero de cliente): el mismo para el mismo cliente, año y tipo de informe.
+  const documentKind = report ? (report.mode === 'all' ? 'T' : report.method === 'proportional' ? 'P' : 'C') : '';
+  const documentNumber = report ? `IR-${report.year}-${stableDocumentDigits(`${clientId}|fiscal|${report.year}|${documentKind}`)}-${documentKind}` : '';
 
   const download = async () => {
     if (!report || !accepted || busy) return;

@@ -75,3 +75,23 @@ test('requires accepting the notice before downloading the annual returns PDF', 
   await download.click();
   expect((await downloadPromise).suggestedFilename()).toBe('informe-rendimientos-2020-demo1.pdf');
 });
+
+test('document number looks random, does not show the client number and is stable', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1300, height: 1100 });
+  await mountPanel(page, 12, 3);
+  const numberCell = page.locator('.ar-meta div').filter({ hasText: 'Documento nº' }).locator('dd');
+  await page.getByLabel('Todo lo ganado en el año').check();
+  const total = (await numberCell.textContent())!;
+  expect(total).toMatch(/^IR-2020-[1-9]\d{7}-T$/);
+  expect(total).not.toContain('-001-');
+  await page.getByLabel('Solo lo retirado').check();
+  const withdrawn = (await numberCell.textContent())!;
+  expect(withdrawn).toMatch(/^IR-2020-[1-9]\d{7}-[PC]$/);
+  expect(withdrawn.slice(8, 16)).not.toBe(total.slice(8, 16));
+  // Siempre el mismo para el mismo informe.
+  await mountPanel(page, 12, 3);
+  await page.getByLabel('Todo lo ganado en el año').check();
+  await expect(numberCell).toHaveText(total);
+});

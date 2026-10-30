@@ -14,6 +14,10 @@ export const NUMBER_LOCALE = supportsAlwaysGrouping ? 'es-ES' : 'de-DE';
 export const withGrouping = (options: Intl.NumberFormatOptions = {}): Intl.NumberFormatOptions =>
   (supportsAlwaysGrouping ? { ...options, useGrouping: 'always' } as unknown as Intl.NumberFormatOptions : { ...options, useGrouping: true });
 
+// Porcentaje con coma decimal y espacio fijo antes del simbolo, como se escribe en España: 22,55 %.
+export const formatPercentValue = (value: number) =>
+  `${(Number.isFinite(value) ? value : 0).toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 2, maximumFractionDigits: 2 }))}\u00a0%`;
+
 export const esNumberFormat = (options?: Intl.NumberFormatOptions) => new Intl.NumberFormat(NUMBER_LOCALE, withGrouping(options));
 
 const currencyFormatter = esNumberFormat({

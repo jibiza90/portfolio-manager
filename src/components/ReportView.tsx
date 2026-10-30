@@ -14,7 +14,7 @@ import { applyPdfWatermark } from '../utils/pdfWatermark';
 import { getCapitalPendingToRecover } from '../utils/commissions';
 import type { Movement } from '../types';
 import './WideReportPage.css';
-import { esNumberFormat, NUMBER_LOCALE, withGrouping } from '../utils/format';
+import { formatPercentValue, esNumberFormat, NUMBER_LOCALE, withGrouping } from '../utils/format';
 
 const MovementReceiptDialog = React.lazy(() => import('./MovementReceipt').then((module) => ({ default: module.MovementReceiptDialog })));
 
@@ -142,8 +142,8 @@ const formatSignedCurrency = (value: number) => {
 };
 const formatSignedPercent = (value: number) => {
   const safeValue = Number.isFinite(value) ? value : 0;
-  if (Math.abs(safeValue) < 0.005) return '0.00%';
-  return `${safeValue > 0 ? '+' : '-'}${Math.abs(safeValue).toFixed(2)}%`;
+  if (Math.abs(safeValue) < 0.005) return formatPercentValue(0);
+  return `${safeValue > 0 ? '+' : '-'}${formatPercentValue(Math.abs(safeValue))}`;
 };
 
 const getNiceStep = (rawStep: number) => {
@@ -1103,9 +1103,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
   };
   const isPercentageChart = chartView === 'return' || chartView === 'general';
   const formatChartValue = (value: number) =>
-    isPercentageChart ? `${value.toFixed(2)}%` : formatCurrencyNoCents(value);
+    isPercentageChart ? `${formatPercentValue(value)}` : formatCurrencyNoCents(value);
   const formatChartTooltipValue = (value: number) =>
-    isPercentageChart ? `${value.toFixed(2)}%` : formatCurrency(value);
+    isPercentageChart ? `${formatPercentValue(value)}` : formatCurrency(value);
   const showMonthlyChartTooltip = (anchor: Element, month: string, value: number) => {
     showViewportTooltip(
       anchor,
@@ -1752,7 +1752,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   <td>{withdrawals.length > 0 ? 'Capital mantenido hasta final de mes' : 'Posición inicial del mes'}</td>
                   <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
                   <td className={`text-right ${visibleInitialPct >= 0 ? 'positive' : 'negative'}`}>
-                    {visibleInitialPct.toFixed(2)}%
+                    {formatPercentValue(visibleInitialPct)}
                   </td>
                   <td className={`text-right ${visibleInitialProfit >= 0 ? 'positive' : 'negative'}`}>
                     {formatCurrency(visibleInitialProfit)}
@@ -1763,7 +1763,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     <td>Aportaci&oacute;n incorporada el {getShortDateLabel(contribution.iso)}</td>
                     <td className="text-right">{formatCurrency(contribution.amount)}</td>
                     <td className={`text-right ${contribution.returnPct >= 0 ? 'positive' : 'negative'}`}>
-                      {(contribution.returnPct * 100).toFixed(2)}%
+                      {formatPercentValue((contribution.returnPct * 100))}
                     </td>
                     <td className={`text-right ${contribution.profit >= 0 ? 'positive' : 'negative'}`}>
                       {formatCurrency(contribution.profit)}
@@ -1775,7 +1775,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     <td>Capital retirado el {getShortDateLabel(withdrawal.iso)}</td>
                     <td className="text-right">{formatCurrency(withdrawal.amount)}</td>
                     <td className={`text-right ${(withdrawal.returnPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                      {withdrawal.returnPct === undefined ? '—' : `${(withdrawal.returnPct * 100).toFixed(2)}%`}
+                      {withdrawal.returnPct === undefined ? '—' : `${formatPercentValue((withdrawal.returnPct * 100))}`}
                     </td>
                     <td className={`text-right ${withdrawal.profit >= 0 ? 'positive' : 'negative'}`}>
                       {formatCurrency(withdrawal.profit)}
@@ -1836,7 +1836,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const setDraw = (color: readonly [number, number, number]) => doc.setDrawColor(color[0], color[1], color[2]);
     const money = (value: number) => formatCurrency(Number.isFinite(value) ? value : 0);
     const money0 = (value: number) => `${Math.round(Number.isFinite(value) ? value : 0).toLocaleString(NUMBER_LOCALE, withGrouping())} \u20ac`;
-    const pct = (value: number) => `${(Number.isFinite(value) ? value : 0).toFixed(2)}%`;
+    const pct = (value: number) => `${formatPercentValue((Number.isFinite(value) ? value : 0))}`;
     const selectedMonthLabel = selectedPeriodLabel;
 
     const addPage = () => {
@@ -2971,7 +2971,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                           <td>{withdrawals.length > 0 ? 'Posición mantenida durante todo el mes' : 'Posición inicial del mes'}</td>
                           <td className="text-right">{formatCurrency(breakdown.initialCapital)}</td>
                           <td className={`text-right ${visibleInitialPct >= 0 ? 'positive' : 'negative'}`}>
-                            {visibleInitialPct.toFixed(2)}%
+                            {formatPercentValue(visibleInitialPct)}
                           </td>
                           <td className={`text-right ${visibleInitialProfit >= 0 ? 'positive' : 'negative'}`}>
                             {formatCurrency(visibleInitialProfit)}
@@ -2982,7 +2982,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                             <td>Aportaci&oacute;n incorporada el {getShortDateLabel(contribution.iso)}</td>
                             <td className="text-right">{formatCurrency(contribution.amount)}</td>
                             <td className={`text-right ${contribution.returnPct >= 0 ? 'positive' : 'negative'}`}>
-                              {(contribution.returnPct * 100).toFixed(2)}%
+                              {formatPercentValue((contribution.returnPct * 100))}
                             </td>
                             <td className={`text-right ${contribution.profit >= 0 ? 'positive' : 'negative'}`}>
                               {formatCurrency(contribution.profit)}
@@ -2994,7 +2994,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                             <td>Posici&oacute;n retirada el {getShortDateLabel(withdrawal.iso)}</td>
                             <td className="text-right">{formatCurrency(withdrawal.amount)}</td>
                             <td className={`text-right ${(withdrawal.returnPct ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                              {withdrawal.returnPct === undefined ? '—' : `${(withdrawal.returnPct * 100).toFixed(2)}%`}
+                              {withdrawal.returnPct === undefined ? '—' : `${formatPercentValue((withdrawal.returnPct * 100))}`}
                             </td>
                             <td className={`text-right ${withdrawal.profit >= 0 ? 'positive' : 'negative'}`}>
                               {formatCurrency(withdrawal.profit)}

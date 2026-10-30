@@ -38,7 +38,7 @@ const formatCompactEuro = (value: number) => {
   return formatEuro(value);
 };
 const formatSignedPct = (value: number) =>
-  `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 2, maximumFractionDigits: 2 }))}%`;
+  `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 2, maximumFractionDigits: 2 }))}\u00a0%`;
 const formatSignedEuro = (value: number) =>
   `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatEuro(Math.abs(value))}`;
 
