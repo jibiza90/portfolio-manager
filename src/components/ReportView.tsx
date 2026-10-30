@@ -320,6 +320,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [benefitsSelection, setBenefitsSelection] = useState<string>('all');
   const [benefitsFrom, setBenefitsFrom] = useState('');
   const [benefitsTo, setBenefitsTo] = useState('');
+  // demo1: tabla de capital aportado y retirado con selector de año/periodo y de tipo de movimiento.
+  const [movementsSelection, setMovementsSelection] = useState<string>('all');
+  const [movementsFrom, setMovementsFrom] = useState('');
+  const [movementsTo, setMovementsTo] = useState('');
+  const [movementsType, setMovementsType] = useState<'all' | 'increment' | 'decrement'>('all');
+  const benefitsScrollRef = useRef<HTMLDivElement>(null);
+  const movementsScrollRef = useRef<HTMLDivElement>(null);
   // Justificante del movimiento elegido (de momento solo demo1).
   const [receiptMovement, setReceiptMovement] = useState<{ iso: string; type: 'increment' | 'decrement'; amount: number } | null>(null);
   const [periodPreset, setPeriodPreset] = useState('all');
@@ -582,6 +589,21 @@ export const ReportView: React.FC<ReportViewProps> = ({
       window.clearTimeout(settledTimer);
     };
   }, [report?.clientId, report?.createdAt, report?.monthlyStats.length, periodPreset, periodStartMonth, periodEndMonth, closingYear]);
+
+  // demo1: beneficios y movimientos se abren mostrando lo mas reciente (abajo del todo).
+  useEffect(() => {
+    const scrollToEnd = () => {
+      [benefitsScrollRef.current, movementsScrollRef.current].forEach((element) => {
+        if (element) element.scrollTop = element.scrollHeight;
+      });
+    };
+    const frame = window.requestAnimationFrame(scrollToEnd);
+    const timer = window.setTimeout(scrollToEnd, 120);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [report?.clientId, report?.createdAt, benefitsSelection, benefitsFrom, benefitsTo, movementsSelection, movementsFrom, movementsTo, movementsType]);
 
   useEffect(() => {
     if (!analyticsEnabled) return undefined;
@@ -1304,6 +1326,49 @@ export const ReportView: React.FC<ReportViewProps> = ({
     })
     : effectiveMonthlyWithData;
   const sumProfits = (months: typeof monthlyWithData) => months.reduce((sum, month) => sum + (month.profit ?? 0), 0);
+  const compoundReturn = (months: typeof monthlyWithData) =>
+    (months.reduce((factor, month) => factor * (1 + getDisplayedMonthReturnPct(month) / 100), 1) - 1) * 100;
+  const benefitsMaxProfit = Math.max(1, ...benefitsMonths.map((month) => Math.abs(month.profit ?? 0)));
+  let benefitsRunning = 0;
+  const benefitRows = benefitsMonths.map((month, index) => {
+    const monthKey = reportMonthToKey(month.month);
+    const year = monthKey.slice(0, 4);
+    const previous = benefitsMonths[index - 1];
+    // Acumulado: desde el inicio (Todo), dentro de cada año, o dentro del periodo elegido.
+    if (!benefitsIsRange && previous && reportMonthToKey(previous.month).slice(0, 4) !== year) benefitsRunning = 0;
+    benefitsRunning += month.profit ?? 0;
+    const next = benefitsMonths[index + 1];
+    const closesYear = !benefitsIsRange && (!next || reportMonthToKey(next.month).slice(0, 4) !== year);
+    const yearMonths = closesYear ? benefitsMonths.filter((item) => reportMonthToKey(item.month).startsWith(`${year}-`)) : [];
+    return { month, monthKey, year, profit: month.profit ?? 0, running: benefitsRunning, closesYear, yearMonths, isLast: !next };
+  });
+  // Movimientos de capital (demo1): todo el historico + los posteriores al ultimo cierre, con su capital neto.
+  let demoNetCapital = movementCapitalSeries[movementCapitalSeries.length - 1]?.netCapital ?? 0;
+  const allMovementRows = [
+    ...movementCapitalSeries,
+    ...pendingMovementRows.map((movement) => {
+      demoNetCapital += movement.type === 'increment' ? movement.amount : -movement.amount;
+      return { iso: movement.iso, type: movement.type, amount: movement.amount, netCapital: demoNetCapital };
+    })
+  ];
+  const movementMonthKeys = [...new Set(allMovementRows.map((row) => row.iso.slice(0, 7)))].sort();
+  const movementYears = [...new Set(allMovementRows.map((row) => row.iso.slice(0, 4)))].sort((a, b) => b.localeCompare(a));
+  const movementsYear = movementYears.includes(movementsSelection) ? movementsSelection : null;
+  const movementsIsRange = movementsSelection === 'range';
+  const movementsFromKey = movementMonthKeys.includes(movementsFrom) ? movementsFrom : movementMonthKeys[0] ?? '';
+  const movementsToKey = movementMonthKeys.includes(movementsTo) ? movementsTo : movementMonthKeys[movementMonthKeys.length - 1] ?? '';
+  const [movementsRangeStart, movementsRangeEnd] = movementsFromKey <= movementsToKey
+    ? [movementsFromKey, movementsToKey]
+    : [movementsToKey, movementsFromKey];
+  const demoMovementRows = allMovementRows.filter((row) => {
+    const key = row.iso.slice(0, 7);
+    if (movementsIsRange && (key < movementsRangeStart || key > movementsRangeEnd)) return false;
+    if (movementsYear && !row.iso.startsWith(`${movementsYear}-`)) return false;
+    return movementsType === 'all' || row.type === movementsType;
+  });
+  const tableMovementRows = isDemoClosingLayout ? demoMovementRows : screenMovementCapitalSeries;
+  const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const monthKeyLabel = (key: string) => `${SHORT_MONTHS[Number(key.slice(5, 7)) - 1] ?? key.slice(5, 7)} ${key.slice(0, 4)}`;
   const monthlyClosingRows = closingSourceMonths.map((month) => {
     const monthKey = reportMonthToKey(month.month);
     const historyIndex = monthlyWithData.findIndex((item) => reportMonthToKey(item.month) === monthKey);
@@ -3023,66 +3088,131 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span>Los meses con aportaciones o retiradas desglosadas permiten ver c&oacute;mo se reparte la rentabilidad y el beneficio. Pulsa <strong>Ver detalle</strong>.</span>
             </div>
           ) : null}
-          <div className="table-scroll">
-            <table className="monthly-table report-pro-table report-pro-benefits-table">
-              <colgroup>
-                <col style={{ width: '50%' }} />
-                <col style={{ width: '50%' }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th className="text-right">Beneficio</th>
-                </tr>
-              </thead>
-              <tbody>
-                {benefitsMonths.map((m, index) => {
-                  const monthKey = reportMonthToKey(m.month);
-                  const breakdown = tableContributionByMonth.get(monthKey);
-                  const nextMonth = benefitsMonths[index + 1];
-                  const year = monthKey.slice(0, 4);
-                  const showYearTotal = isDemoClosingLayout && !benefitsIsRange
-                    && (!nextMonth || reportMonthToKey(nextMonth.month).slice(0, 4) !== year);
-                  const yearProfit = showYearTotal
-                    ? sumProfits(benefitsMonths.filter((month) => reportMonthToKey(month.month).startsWith(`${year}-`)))
-                    : 0;
-                  const showRangeTotal = isDemoClosingLayout && benefitsIsRange && !nextMonth;
-                  const rangeProfit = showRangeTotal ? sumProfits(benefitsMonths) : 0;
-                  return (
-                    <React.Fragment key={`${m.month}-benefit`}>
-                      <tr>
-                        <td>
-                          <span className="report-pro-benefit-month-cell">
-                            <span>{getMonthEndLabel(m.month)}</span>
-                            {breakdown ? renderMonthlyDetailButton(monthKey, m.month, 'benefits') : null}
-                          </span>
-                        </td>
-                        <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
-                          {formatCurrency(m.profit ?? 0)}
-                        </td>
-                      </tr>
-                      {breakdown ? renderMonthlyBreakdownRow(m, breakdown, 2, 'benefits') : null}
-                      {showYearTotal ? (
-                        <tr className="report-pro-benefits-total">
-                          <td><strong>Total {year}</strong></td>
-                          <td className={`text-right ${yearProfit >= 0 ? 'positive' : 'negative'}`}><strong>{formatCurrency(yearProfit)}</strong></td>
-                        </tr>
-                      ) : null}
-                      {showRangeTotal ? (
-                        <tr className="report-pro-benefits-total">
+          {isDemoClosingLayout ? (
+            <div ref={benefitsScrollRef} className="table-scroll report-pro-benefits-scroll">
+              <table className="monthly-table report-pro-table report-pro-benefits-table is-demo-benefits-table">
+                <colgroup>
+                  <col style={{ width: '24%' }} />
+                  <col style={{ width: '38%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '22%' }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Mes</th>
+                    <th className="text-right">Beneficio del mes</th>
+                    <th className="text-right">Rentabilidad</th>
+                    <th className="text-right">{benefitsIsRange ? 'Acumulado del periodo' : 'Acumulado del año'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {benefitRows.map((row) => {
+                    const breakdown = tableContributionByMonth.get(row.monthKey);
+                    const returnPct = getDisplayedMonthReturnPct(row.month);
+                    const showRangeTotal = benefitsIsRange && row.isLast;
+                    const totalMonths = showRangeTotal ? benefitsMonths : row.yearMonths;
+                    const totalProfit = sumProfits(totalMonths);
+                    const totalReturn = compoundReturn(totalMonths);
+                    return (
+                      <React.Fragment key={`${row.month.month}-benefit`}>
+                        <tr>
                           <td>
-                            <strong>Total del periodo</strong>
-                            <span>{benefitsMonths[0]?.month} – {m.month}</span>
+                            <span className="report-pro-benefit-month-cell">
+                              <span>{getMonthEndLabel(row.month.month)}</span>
+                              {breakdown ? renderMonthlyDetailButton(row.monthKey, row.month.month, 'benefits') : null}
+                            </span>
                           </td>
-                          <td className={`text-right ${rangeProfit >= 0 ? 'positive' : 'negative'}`}><strong>{formatCurrency(rangeProfit)}</strong></td>
+                          <td className="text-right">
+                            <span className="report-pro-benefit-bar-cell">
+                              <span className="report-pro-benefit-bar" aria-hidden="true">
+                                <i className={row.profit >= 0 ? 'is-up' : 'is-down'} style={{ width: `${Math.max(3, (Math.abs(row.profit) / benefitsMaxProfit) * 100)}%` }} />
+                              </span>
+                              <b className={row.profit >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(row.profit)}</b>
+                            </span>
+                          </td>
+                          <td className={`text-right ${returnPct >= 0 ? 'positive' : 'negative'}`}>{formatSignedPercent(returnPct)}</td>
+                          <td className="text-right"><strong>{formatCurrency(row.running)}</strong></td>
                         </tr>
-                      ) : null}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        {breakdown ? renderMonthlyBreakdownRow(row.month, breakdown, 4, 'benefits') : null}
+                        {row.closesYear || showRangeTotal ? (
+                          <tr className="report-pro-strong-total">
+                            <td>
+                              <strong>{showRangeTotal ? 'Total del periodo' : `Total ${row.year}`}</strong>
+                              {showRangeTotal ? <span>{benefitsMonths[0]?.month} – {row.month.month}</span> : null}
+                            </td>
+                            <td className={`text-right ${totalProfit >= 0 ? 'positive' : 'negative'}`}><strong>{formatSignedCurrency(totalProfit)}</strong></td>
+                            <td className={`text-right ${totalReturn >= 0 ? 'positive' : 'negative'}`}><strong>{formatSignedPercent(totalReturn)}</strong></td>
+                            <td className="text-right"><strong>{formatCurrency(totalProfit)}</strong></td>
+                          </tr>
+                        ) : null}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="table-scroll">
+              <table className="monthly-table report-pro-table report-pro-benefits-table">
+                <colgroup>
+                  <col style={{ width: '50%' }} />
+                  <col style={{ width: '50%' }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th className="text-right">Beneficio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {benefitsMonths.map((m, index) => {
+                    const monthKey = reportMonthToKey(m.month);
+                    const breakdown = tableContributionByMonth.get(monthKey);
+                    const nextMonth = benefitsMonths[index + 1];
+                    const year = monthKey.slice(0, 4);
+                    const showYearTotal = isDemoClosingLayout && !benefitsIsRange
+                      && (!nextMonth || reportMonthToKey(nextMonth.month).slice(0, 4) !== year);
+                    const yearProfit = showYearTotal
+                      ? sumProfits(benefitsMonths.filter((month) => reportMonthToKey(month.month).startsWith(`${year}-`)))
+                      : 0;
+                    const showRangeTotal = isDemoClosingLayout && benefitsIsRange && !nextMonth;
+                    const rangeProfit = showRangeTotal ? sumProfits(benefitsMonths) : 0;
+                    return (
+                      <React.Fragment key={`${m.month}-benefit`}>
+                        <tr>
+                          <td>
+                            <span className="report-pro-benefit-month-cell">
+                              <span>{getMonthEndLabel(m.month)}</span>
+                              {breakdown ? renderMonthlyDetailButton(monthKey, m.month, 'benefits') : null}
+                            </span>
+                          </td>
+                          <td className={`text-right ${(m.profit ?? 0) >= 0 ? 'positive' : 'negative'}`}>
+                            {formatCurrency(m.profit ?? 0)}
+                          </td>
+                        </tr>
+                        {breakdown ? renderMonthlyBreakdownRow(m, breakdown, 2, 'benefits') : null}
+                        {showYearTotal ? (
+                          <tr className="report-pro-benefits-total">
+                            <td><strong>Total {year}</strong></td>
+                            <td className={`text-right ${yearProfit >= 0 ? 'positive' : 'negative'}`}><strong>{formatCurrency(yearProfit)}</strong></td>
+                          </tr>
+                        ) : null}
+                        {showRangeTotal ? (
+                          <tr className="report-pro-benefits-total">
+                            <td>
+                              <strong>Total del periodo</strong>
+                              <span>{benefitsMonths[0]?.month} – {m.month}</span>
+                            </td>
+                            <td className={`text-right ${rangeProfit >= 0 ? 'positive' : 'negative'}`}><strong>{formatCurrency(rangeProfit)}</strong></td>
+                          </tr>
+                        ) : null}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section className="report-pro-panel report-pro-panel-xl report-pro-patrimony-section" data-tour="patrimonio">
@@ -3115,13 +3245,64 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
         {isDemoClosingLayout ? null : closingPanel}
 
-        {screenMovementCapitalSeries.length > 0 && (
-          <section className="report-pro-panel">
+        {(isDemoClosingLayout ? allMovementRows.length : screenMovementCapitalSeries.length) > 0 && (
+          <section className={`report-pro-panel report-pro-movements-panel${isDemoClosingLayout ? ' is-demo-movements' : ''}`}>
             <div className="report-pro-panel-head">
               <h4>Capital aportado y retirado</h4>
               <p>Detalle de aportaciones y retiradas</p>
             </div>
-            <div className="table-scroll">
+            {isDemoClosingLayout ? (
+              <div className="report-pro-benefits-filter">
+                <div className="report-pro-closing-years" role="group" aria-label="Elegir qué movimientos ver">
+                  {['all', ...movementYears, 'range'].map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      aria-pressed={option === 'all' ? !movementsYear && !movementsIsRange : option === 'range' ? movementsIsRange : movementsYear === option}
+                      onClick={() => {
+                        setMovementsSelection(option);
+                        onAnalyticsEvent?.({ type: 'movements_period', label: option });
+                      }}
+                    >
+                      {option === 'all' ? 'Todo' : option === 'range' ? 'Elegir periodo' : option}
+                    </button>
+                  ))}
+                </div>
+                {movementsIsRange ? (
+                  <div className="report-pro-benefits-range">
+                    <label>
+                      <span>Desde</span>
+                      <select value={movementsFromKey} onChange={(event) => setMovementsFrom(event.target.value)}>
+                        {movementMonthKeys.map((key) => <option key={key} value={key}>{monthKeyLabel(key)}</option>)}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Hasta</span>
+                      <select value={movementsToKey} onChange={(event) => setMovementsTo(event.target.value)}>
+                        {movementMonthKeys.map((key) => <option key={key} value={key}>{monthKeyLabel(key)}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                ) : null}
+                <div className="report-pro-closing-years report-pro-movement-types" role="group" aria-label="Elegir tipo de movimiento">
+                  {([['all', 'Todos'], ['increment', 'Aportaciones'], ['decrement', 'Retiradas']] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`is-${value}`}
+                      aria-pressed={movementsType === value}
+                      onClick={() => {
+                        setMovementsType(value);
+                        onAnalyticsEvent?.({ type: 'movements_type', label: value });
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <div ref={isDemoClosingLayout ? movementsScrollRef : undefined} className="table-scroll report-pro-movements-scroll">
               <table className="movements-table report-pro-table">
                 <thead>
                   <tr>
@@ -3133,11 +3314,24 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {screenMovementCapitalSeries.map((mov, i) => {
+                  {isDemoClosingLayout && tableMovementRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="report-pro-movements-empty">No hay movimientos con esta selección.</td>
+                    </tr>
+                  ) : null}
+                  {tableMovementRows.map((mov, i) => {
                     const [yy, mm, dd] = mov.iso.split('-');
                     const isIncrement = mov.type === 'increment';
+                    const nextMovement = tableMovementRows[i + 1];
+                    const movementYear = mov.iso.slice(0, 4);
+                    const closesYear = isDemoClosingLayout && !movementsIsRange && (!nextMovement || nextMovement.iso.slice(0, 4) !== movementYear);
+                    const closesRange = isDemoClosingLayout && movementsIsRange && !nextMovement;
+                    const totalRows = closesRange ? tableMovementRows : closesYear ? tableMovementRows.filter((row) => row.iso.startsWith(`${movementYear}-`)) : [];
+                    const totalIn = totalRows.filter((row) => row.type === 'increment').reduce((sum, row) => sum + (row.amount ?? 0), 0);
+                    const totalOut = totalRows.filter((row) => row.type !== 'increment').reduce((sum, row) => sum + (row.amount ?? 0), 0);
                     return (
-                      <tr key={`${mov.iso}-${i}`}>
+                      <React.Fragment key={`${mov.iso}-${i}`}>
+                      <tr>
                         <td>{`${dd}.${mm}.${yy}`}</td>
                         <td className={isIncrement ? 'positive' : 'negative'}>
                           {isIncrement ? 'Aportacion' : 'Retirada'}
@@ -3163,6 +3357,24 @@ export const ReportView: React.FC<ReportViewProps> = ({
                           </td>
                         ) : null}
                       </tr>
+                      {closesYear || closesRange ? (
+                        <tr className="report-pro-strong-total">
+                          <td>
+                            <strong>{closesRange ? 'Total del periodo' : `Total ${movementYear}`}</strong>
+                            {closesRange ? <span>{monthKeyLabel(movementsRangeStart)} – {monthKeyLabel(movementsRangeEnd)}</span> : null}
+                          </td>
+                          <td>{movementsType === 'all' ? 'Aportado / retirado' : movementsType === 'increment' ? 'Aportado' : 'Retirado'}</td>
+                          <td className="text-right">
+                            <span className="report-pro-total-lines">
+                              {movementsType !== 'decrement' ? <strong className="positive">+{formatCurrency(totalIn)}</strong> : null}
+                              {movementsType !== 'increment' ? <strong className="negative">-{formatCurrency(totalOut)}</strong> : null}
+                            </span>
+                          </td>
+                          <td className="text-right">{movementsType === 'all' ? <strong>{formatCurrency(mov.netCapital)}</strong> : null}</td>
+                          {hasPreviewFeatures(report.clientId) ? <td /> : null}
+                        </tr>
+                      ) : null}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>

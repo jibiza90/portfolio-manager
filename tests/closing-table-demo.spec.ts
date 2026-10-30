@@ -42,7 +42,7 @@ test('demo1 shows the closing table under capital and profit with sticky heading
   expect(colours.result).not.toBe('rgb(21, 128, 61)');
 
   const total = page.locator('.report-pro-closing-year-total').first();
-  expect(await total.locator('td').nth(2).evaluate((cell) => getComputedStyle(cell).fontSize)).toBe('15px');
+  expect(await total.locator('td').nth(2).evaluate((cell) => getComputedStyle(cell).fontSize)).toBe('16px');
 
   const gap = await page.evaluate(() => {
     const scroller = document.querySelector('.report-pro-closing-scroll') as HTMLElement;
@@ -95,17 +95,55 @@ test('demo1 monthly profits: year or period selector with bold totals', async ({
   const panel = page.locator('.report-pro-benefits-panel');
   const options = panel.getByRole('group', { name: 'Elegir qué beneficios ver' });
   await expect(options.getByRole('button')).toHaveText(['Todo', '2026', '2025', 'Elegir periodo']);
-  const totals = panel.locator('.report-pro-benefits-total');
-  await expect(totals).toHaveText([/Total 2025\s*10\.532,42\s€/, /Total 2026\s*10\.088,35\s€/]);
+  await expect(panel.locator('thead th')).toHaveText(['Mes', 'Beneficio del mes', 'Rentabilidad', 'Acumulado del año']);
+  const totals = panel.locator('.report-pro-strong-total');
+  await expect(totals).toHaveText([/Total 2025\s*\+10\.532,42\s€.*10\.532,42\s€/, /Total 2026\s*\+10\.088,35\s€.*10\.088,35\s€/]);
+
+  // Se abre mostrando lo mas reciente (abajo del todo).
+  const distanceToEnd = await page.evaluate(() => {
+    const scroller = document.querySelector('.report-pro-benefits-scroll') as HTMLElement;
+    return scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop;
+  });
+  expect(distanceToEnd).toBeLessThanOrEqual(2);
 
   await options.getByRole('button', { name: '2026' }).click();
-  await expect(totals).toHaveText([/Total 2026\s*10\.088,35\s€/]);
+  await expect(totals).toHaveText([/Total 2026\s*\+10\.088,35\s€/]);
 
   await options.getByRole('button', { name: 'Elegir periodo' }).click();
   await panel.getByLabel('Desde').selectOption('2025-10');
   await panel.getByLabel('Hasta').selectOption('2026-02');
-  await expect(totals).toHaveText([/Total del periodo\s*Oct 2025 – Feb 2026\s*8947,46\s€/]);
-  expect(await totals.locator('td').first().evaluate((cell) => getComputedStyle(cell).fontWeight)).toBe('800');
+  await expect(panel.locator('thead th').last()).toHaveText('Acumulado del periodo');
+  await expect(totals).toHaveText([/Total del periodo\s*Oct 2025 – Feb 2026\s*\+8947,46\s€/]);
+  expect(await totals.locator('td').first().evaluate((cell) => getComputedStyle(cell).backgroundColor)).toBe('rgb(11, 85, 96)');
+});
+
+test('demo1 capital movements: period and type selectors with totals', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mount(page, 'client-001');
+  const panel = page.locator('.report-pro-movements-panel');
+  const periods = panel.getByRole('group', { name: 'Elegir qué movimientos ver' });
+  const types = panel.getByRole('group', { name: 'Elegir tipo de movimiento' });
+  await expect(types.getByRole('button')).toHaveText(['Todos', 'Aportaciones', 'Retiradas']);
+  const totals = panel.locator('.report-pro-strong-total');
+  await expect(totals).toHaveText([
+    /Total 2025.*\+50\.000,00\s€.*-5000,00\s€.*45\.000,00\s€/,
+    /Total 2026.*\+65\.000,00\s€.*-5000,00\s€.*105\.000,00\s€/
+  ]);
+
+  await types.getByRole('button', { name: 'Retiradas' }).click();
+  await expect(panel.locator('tbody tr:not(.report-pro-strong-total) td:nth-child(2)')).toHaveText(['Retirada', 'Retirada']);
+  await expect(totals).toHaveText([/Total 2025\s*Retirado\s*-5000,00\s€/, /Total 2026\s*Retirado\s*-5000,00\s€/]);
+
+  await types.getByRole('button', { name: 'Todos' }).click();
+  await periods.getByRole('button', { name: '2026' }).click();
+  await expect(totals).toHaveText([/Total 2026/]);
+
+  await periods.getByRole('button', { name: 'Elegir periodo' }).click();
+  await panel.getByLabel('Desde').selectOption('2025-12');
+  await panel.getByLabel('Hasta').selectOption('2026-03');
+  await expect(totals).toHaveText([/Total del periodo\s*Dic 2025 – Mar 2026.*\+50\.000,00\s€.*-10\.000,00\s€/]);
 });
 
 test('contributions in the patrimony chart are blue only for demo1', async ({ page }, testInfo) => {

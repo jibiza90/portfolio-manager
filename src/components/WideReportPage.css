@@ -1042,14 +1042,14 @@
 }
 
 /* demo1: botones para elegir el año de la tabla de cierres (Todo por defecto). */
-:is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years {
+:is(.report-pro-closing-panel, .report-pro-benefits-panel, .report-pro-movements-panel) .report-pro-closing-years {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin: 12px 0 4px;
 }
 
-:is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years button {
+:is(.report-pro-closing-panel, .report-pro-benefits-panel, .report-pro-movements-panel) .report-pro-closing-years button {
   min-width: 76px;
   min-height: 40px;
   padding: 8px 14px;
@@ -1063,25 +1063,22 @@
   cursor: pointer;
 }
 
-:is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years button:hover {
+:is(.report-pro-closing-panel, .report-pro-benefits-panel, .report-pro-movements-panel) .report-pro-closing-years button:hover {
   border-color: #087b83;
 }
 
-:is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years button[aria-pressed='true'] {
+:is(.report-pro-closing-panel, .report-pro-benefits-panel, .report-pro-movements-panel) .report-pro-closing-years button[aria-pressed='true'] {
   border-color: #087b83;
   background: #087b83;
   color: #ffffff;
 }
 
-:is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years button:focus-visible {
+:is(.report-pro-closing-panel, .report-pro-benefits-panel, .report-pro-movements-panel) .report-pro-closing-years button:focus-visible {
   outline: 3px solid #f59e0b;
   outline-offset: 2px;
 }
 
 /* demo1: tabla de beneficios mas estrecha (fecha y cifra cerca), selector de año o periodo y totales marcados. */
-.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .table-scroll {
-  max-width: 600px;
-}
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-panel.is-demo-benefits .report-pro-benefits-range {
   display: flex;
@@ -1151,12 +1148,247 @@
 
 /* Botones de año en pantallas estrechas: dos por fila y, si sobra uno, ocupa toda la fila (nunca uno suelto). */
 @container report-sheet (max-width: 560px) {
-  :is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years {
+  :is(.report-pro-closing-panel, .report-pro-benefits-panel, .report-pro-movements-panel) .report-pro-closing-years {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  :is(.report-pro-closing-panel, .report-pro-benefits-panel) .report-pro-closing-years > button:last-child:nth-child(odd) {
+  :is(.report-pro-closing-panel, .report-pro-benefits-panel, .report-pro-movements-panel) .report-pro-closing-years > button:last-child:nth-child(odd) {
     grid-column: 1 / -1;
+  }
+}
+
+/* demo1: beneficios y movimientos con titulos fijos al desplazarse (se abren mostrando lo mas reciente). */
+.report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-benefits-panel.is-demo-benefits, .report-pro-movements-panel.is-demo-movements) .table-scroll {
+  max-height: min(72vh, 660px);
+  padding-top: 0;
+  overflow: auto;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-benefits-panel.is-demo-benefits, .report-pro-movements-panel.is-demo-movements) .table-scroll > table {
+  overflow: visible;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-benefits-panel.is-demo-benefits, .report-pro-movements-panel.is-demo-movements) .table-scroll > table > thead > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #e8f4f4;
+  color: #163f54;
+  box-shadow: inset 0 -1px 0 rgba(8, 123, 131, 0.24);
+}
+
+/* Barra del beneficio de cada mes: se ve de un vistazo que meses fueron mejores. */
+.report-pro-benefit-bar-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.report-pro-benefit-bar {
+  display: block;
+  flex: 1;
+  max-width: 260px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(8, 123, 131, 0.08);
+}
+
+.report-pro-benefit-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #5dcaa5, #0f7a5c);
+}
+
+.report-pro-benefit-bar > i.is-down {
+  background: linear-gradient(90deg, #f8a39a, #b4372f);
+}
+
+.report-pro-benefit-bar-cell > b {
+  min-width: 110px;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* Botones Aportaciones / Retiradas con su color cuando estan elegidos. */
+:is(.report-pro-movements-panel) .report-pro-movement-types {
+  margin-top: 6px;
+}
+
+:is(.report-pro-movements-panel) .report-pro-movement-types > button.is-increment[aria-pressed='true'] {
+  border-color: #15803d;
+  background: #15803d;
+}
+
+:is(.report-pro-movements-panel) .report-pro-movement-types > button.is-decrement[aria-pressed='true'] {
+  border-color: #b91c1c;
+  background: #b91c1c;
+}
+
+.report-pro-movements-empty {
+  padding: 22px 14px !important;
+  color: #5a6e83;
+  text-align: center;
+}
+
+.report-pro-total-lines {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+/* Fila de total muy marcada (demo1): fondo oscuro, letra blanca, grande y en negrita. */
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total > td,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-table > tbody > tr.report-pro-closing-year-total > td {
+  padding-top: 18px;
+  padding-bottom: 18px;
+  border-top: 0;
+  border-bottom: 3px solid #ffffff;
+  background: #0b5560;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total:hover > td,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-year-total:hover > td {
+  background: #0b5560;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total > td strong,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-year-total > td strong {
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total > td:first-child strong,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-year-total td:nth-child(2) > strong {
+  font-size: 18px;
+  letter-spacing: 0.01em;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total > td span,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-year-total td:nth-child(2) > span {
+  color: #bfe3e1;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total > td:first-child span {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total .positive,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total td.positive strong,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-year-total > td.positive:nth-child(4):not(.is-empty) {
+  color: #86efac !important;
+}
+
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total .negative,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total td.negative strong,
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-closing-panel.is-demo-closing .report-pro-closing-year-total > td.negative:nth-child(5):not(.is-empty) {
+  color: #fca5a5 !important;
+}
+
+/* La fila de total siempre con su fondo oscuro (en movil la primera columna fija ponia fondo blanco). */
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-strong-total > td {
+  background: #0b5560 !important;
+}
+
+/* demo1 en pantallas estrechas: la tabla de beneficios se desliza de lado, sin barras, para no montarse. */
+@container report-sheet (max-width: 700px) {
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table {
+    display: block;
+    min-width: 0;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > colgroup,
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > thead {
+    display: none;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody {
+    display: block;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    padding: 13px 14px;
+    border-bottom: 1px solid rgba(12, 70, 93, 0.08);
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td {
+    display: block;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    white-space: normal;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(3),
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(4) {
+    font-size: 13px;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(3),
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(4) {
+    display: flex;
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(3)::before {
+    content: 'Rentabilidad ';
+    color: #5a6e83;
+    font-weight: 600;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(4)::before {
+    content: 'Acumulado ';
+    color: #5a6e83;
+    font-weight: 600;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr.report-pro-strong-total {
+    background: #0b5560;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr.report-pro-strong-total > td:nth-child(3)::before,
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr.report-pro-strong-total > td:nth-child(4)::before {
+    color: #bfe3e1;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table .report-pro-benefit-bar {
+    display: none;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table .report-pro-benefit-bar-cell > b {
+    min-width: 0;
+  }
+}
+
+/* Aportaciones / Retiradas: los tres botones en una fila tambien en movil. */
+@container report-sheet (max-width: 560px) {
+  .report-pro-movements-panel .report-pro-movement-types {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr);
+    margin-top: 10px;
+  }
+
+  .report-pro-movements-panel .report-pro-movement-types > button {
+    min-width: 0;
+    padding-inline: 4px;
+    font-size: 12px;
+  }
+
+  .report-pro-movements-panel .report-pro-movement-types > button:last-child:nth-child(odd) {
+    grid-column: auto;
   }
 }
