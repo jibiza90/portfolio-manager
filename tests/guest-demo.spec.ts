@@ -55,7 +55,7 @@ test('guest withdrawal receipt shows the 8 % commission and the documents carry 
   await page.setViewportSize({ width: 1300, height: 900 });
   await openGuest(page);
 
-  await expect(page.locator('.report-pro-pending-cash')).toContainText('+5000,00 €');
+  await expect(page.locator('.report-pro-pending-cash')).toContainText('+5.000,00 €');
   await page.getByRole('button', { name: 'Descargar justificante de la retirada del 20/03/2026' }).click();
   const receipt = page.getByRole('dialog', { name: 'Justificante de operación' });
   await expect(receipt.locator('.mr-compact')).toContainText('Comisión de éxito (8 %)');

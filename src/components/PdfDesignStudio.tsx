@@ -3,6 +3,7 @@ import type { ReportData } from '../services/reportLinks';
 import { Pdf3SignalDocument } from './Pdf3SignalDocument';
 import { Pdf4Document } from './Pdf4Document';
 import './PdfDesignStudio.css';
+import { esNumberFormat } from '../utils/format';
 
 export type PdfDesignId = 'pdf1' | 'pdf2' | 'pdf3' | 'pdf4';
 
@@ -47,21 +48,21 @@ interface PdfDesignStudioProps {
   periodEnd: string;
 }
 
-const moneyFormatter = new Intl.NumberFormat('es-ES', {
+const moneyFormatter = esNumberFormat({
   style: 'currency',
   currency: 'EUR',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
 });
 
-const wholeMoneyFormatter = new Intl.NumberFormat('es-ES', {
+const wholeMoneyFormatter = esNumberFormat({
   style: 'currency',
   currency: 'EUR',
   minimumFractionDigits: 0,
   maximumFractionDigits: 0
 });
 
-const compactMoneyFormatter = new Intl.NumberFormat('es-ES', {
+const compactMoneyFormatter = esNumberFormat({
   notation: 'compact',
   style: 'currency',
   currency: 'EUR',

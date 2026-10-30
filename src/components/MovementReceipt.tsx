@@ -6,6 +6,7 @@ import { ISSUER } from './AnnualReturns';
 import { buildMovementReceipt, type MovementReceiptData, type ReceiptMovementInput } from '../utils/movementReceipts';
 import { applyPdfWatermark } from '../utils/pdfWatermark';
 import './MovementReceipt.css';
+import { esNumberFormat } from '../utils/format';
 
 // Justificante de cada aportacion o retirada: version extendida (A4) y resumida (un tercio de A4).
 
@@ -16,7 +17,7 @@ const SIZES: Record<ReceiptFormat, { width: number; height: number }> = {
   compact: { width: 794, height: 374 }
 };
 
-const amountFormat = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const amountFormat = esNumberFormat({ minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const eur = (value: number) => `${amountFormat.format(Math.abs(value)).replace(/^(\d{1,3})(\d{3})(?=,)/, '$1.$2')} €`;
 const percent = (rate: number | null) => (rate === null ? '' : `${amountFormat.format(rate * 100).replace(/,00$/, '')} %`);
 const shortDate = (iso: string) => {

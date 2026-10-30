@@ -3,6 +3,7 @@ import type { ReportData } from '../services/reportLinks';
 import type { PdfStudioMonth, PdfStudioSummary } from './PdfDesignStudio';
 import { buildCapitalModel, type FlowMonth } from './capitalModel';
 import './Pdf4Document.css';
+import { esNumberFormat, NUMBER_LOCALE, withGrouping } from '../utils/format';
 
 interface Pdf4DocumentProps {
   report: ReportData;
@@ -21,8 +22,8 @@ const MOVEMENTS_PER_PAGE = 24;
 const LOTS_PER_PAGE = 5;
 const BREAKDOWNS_PER_PAGE = 3;
 
-const money2 = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true });
-const money0 = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0, useGrouping: true });
+const money2 = esNumberFormat({ minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true });
+const money0 = esNumberFormat({ minimumFractionDigits: 0, maximumFractionDigits: 0, useGrouping: true });
 // es-ES no agrupa las cifras de 4 digitos: se fuerza el punto de miles.
 const group = (formatted: string) => formatted.replace(/^(-?)(\d{1,3})(\d{3})(?=[,]|$)/, '$1$2.$3');
 const eur = (value: number) => `${group(money2.format(Number.isFinite(value) ? value : 0))} €`;
@@ -31,13 +32,13 @@ const signedEur = (value: number) => (Math.abs(value) < 0.005 ? eur(0) : `${valu
 const signedPct = (value: number) => {
   const safe = Number.isFinite(value) ? value : 0;
   if (Math.abs(safe) < 0.005) return '0,00 %';
-  return `${safe > 0 ? '+' : '−'}${Math.abs(safe).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
+  return `${safe > 0 ? '+' : '−'}${Math.abs(safe).toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 2, maximumFractionDigits: 2 }))} %`;
 };
 const compactEur = (value: number) => {
   const abs = Math.abs(value);
-  if (abs >= 1_000_000) return `${(value / 1_000_000).toLocaleString('es-ES', { maximumFractionDigits: 1 })} M€`;
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toLocaleString(NUMBER_LOCALE, withGrouping({ maximumFractionDigits: 1 }))} M€`;
   if (abs >= 10000) return `${Math.round(value / 1000)}k €`;
-  if (abs >= 1000) return `${(value / 1000).toLocaleString('es-ES', { maximumFractionDigits: 1 })}k €`;
+  if (abs >= 1000) return `${(value / 1000).toLocaleString(NUMBER_LOCALE, withGrouping({ maximumFractionDigits: 1 }))}k €`;
   return `${Math.round(value)} €`;
 };
 const longDate = (iso: string) => {
@@ -131,7 +132,7 @@ const MonthlyBars: React.FC<{ rows: ClosingRow[]; mode: 'pct' | 'eur' }> = ({ ro
       {[...(low < 0 ? [low] : []), 0, top / 2, top].map((tick) => (
         <g key={tick}>
           <line x1={pad.left} x2={width - pad.right} y1={y(tick)} y2={y(tick)} className="p4-grid" />
-          <text x={width - pad.right + 8} y={y(tick) + 4} className="p4-axis">{mode === 'pct' ? `${tick.toLocaleString('es-ES', { maximumFractionDigits: 1 })} %` : compactEur(tick)}</text>
+          <text x={width - pad.right + 8} y={y(tick) + 4} className="p4-axis">{mode === 'pct' ? `${tick.toLocaleString(NUMBER_LOCALE, withGrouping({ maximumFractionDigits: 1 }))} %` : compactEur(tick)}</text>
         </g>
       ))}
       <line x1={pad.left} x2={width - pad.right} y1={y(0)} y2={y(0)} className="p4-zero" />
@@ -142,7 +143,7 @@ const MonthlyBars: React.FC<{ rows: ClosingRow[]; mode: 'pct' | 'eur' }> = ({ ro
         return (
           <g key={row.key}>
             <rect x={cx - barWidth / 2} y={Math.min(y(v), y(0))} width={barWidth} height={Math.max(1, Math.abs(y(v) - y(0)))} rx={2} className={`p4-bar${v < 0 ? ' is-negative' : ''}${isLast ? ' is-last' : ''}`} />
-            {showValues ? <text x={cx} y={(v >= 0 ? y(v) : y(0)) - 6} textAnchor="middle" className="p4-bar-label">{mode === 'pct' ? row.returnPct.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : compactEur(row.profit)}</text> : null}
+            {showValues ? <text x={cx} y={(v >= 0 ? y(v) : y(0)) - 6} textAnchor="middle" className="p4-bar-label">{mode === 'pct' ? row.returnPct.toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 1, maximumFractionDigits: 1 })) : compactEur(row.profit)}</text> : null}
             {(index % labelEvery === 0 && rows.length - 1 - index >= labelEvery / 2) || isLast ? <text x={cx} y={height - 6} textAnchor="middle" className="p4-axis">{row.label.split(' ')[0]}</text> : null}
           </g>
         );

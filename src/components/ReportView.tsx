@@ -14,6 +14,7 @@ import { applyPdfWatermark } from '../utils/pdfWatermark';
 import { getCapitalPendingToRecover } from '../utils/commissions';
 import type { Movement } from '../types';
 import './WideReportPage.css';
+import { esNumberFormat, NUMBER_LOCALE, withGrouping } from '../utils/format';
 
 const MovementReceiptDialog = React.lazy(() => import('./MovementReceipt').then((module) => ({ default: module.MovementReceiptDialog })));
 
@@ -125,7 +126,7 @@ const ViewportTooltip: React.FC<ViewportTooltipProps> = ({ tooltip, onMouseEnter
   );
 };
 
-const axisCurrencyFormatter = new Intl.NumberFormat('es-ES', {
+const axisCurrencyFormatter = esNumberFormat({
   style: 'currency',
   currency: 'EUR',
   maximumFractionDigits: 0,
@@ -1396,7 +1397,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   // De cada 100 € aportados, cuantos siguen invertidos (en positivo: el dinero que sigue trabajando).
   const explainInvestedPer100 = visibleIncrements > 0 ? Math.min(100, Math.max(0, Math.round((explainInvested / visibleIncrements) * 100))) : 0;
   const explainGainPer100 = visibleIncrements > 0 ? Math.round((report.beneficioTotal / visibleIncrements) * 100) : 0;
-  const formatWholeEuro = (value: number) => `${Math.round(value).toLocaleString('es-ES')} €`;
+  const formatWholeEuro = (value: number) => `${Math.round(value).toLocaleString(NUMBER_LOCALE, withGrouping())} €`;
   const monthlyClosingRows = closingSourceMonths.map((month) => {
     const monthKey = reportMonthToKey(month.month);
     const historyIndex = monthlyWithData.findIndex((item) => reportMonthToKey(item.month) === monthKey);
@@ -1812,7 +1813,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const setFill = (color: readonly [number, number, number]) => doc.setFillColor(color[0], color[1], color[2]);
     const setDraw = (color: readonly [number, number, number]) => doc.setDrawColor(color[0], color[1], color[2]);
     const money = (value: number) => formatCurrency(Number.isFinite(value) ? value : 0);
-    const money0 = (value: number) => `${Math.round(Number.isFinite(value) ? value : 0).toLocaleString('es-ES')} \u20ac`;
+    const money0 = (value: number) => `${Math.round(Number.isFinite(value) ? value : 0).toLocaleString(NUMBER_LOCALE, withGrouping())} \u20ac`;
     const pct = (value: number) => `${(Number.isFinite(value) ? value : 0).toFixed(2)}%`;
     const selectedMonthLabel = selectedPeriodLabel;
 

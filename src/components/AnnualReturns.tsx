@@ -13,6 +13,7 @@ import {
   type WithdrawnMethod
 } from '../utils/annualReturns';
 import './AnnualReturns.css';
+import { esNumberFormat, NUMBER_LOCALE, withGrouping } from '../utils/format';
 
 // Datos publicados del cliente que necesita el informe (subconjunto del informe del area cliente).
 export interface AnnualReturnsSource {
@@ -44,11 +45,11 @@ const MIDDLE_PAGE_ROWS = 30;
 const LAST_PAGE_ROWS = 16;
 const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
-const amount = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const amount = esNumberFormat({ minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // es-ES no agrupa los miles en cifras de 4 digitos: se fuerza el punto.
 const eur = (value: number) => `${amount.format(Math.abs(value)).replace(/^(\d{1,3})(\d{3})(?=,)/, '$1.$2')} €`;
 const signed = (value: number) => (Math.abs(value) < 0.005 ? eur(0) : `${value > 0 ? '+' : '−'}${eur(value)}`);
-const pct = (value: number) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
+const pct = (value: number) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 2, maximumFractionDigits: 2 }))} %`;
 const dateEs = (iso: string) => {
   const [y, m, d] = iso.split('-');
   return y && m && d ? `${d}/${m}/${y}` : iso;

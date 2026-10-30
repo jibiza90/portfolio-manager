@@ -31,6 +31,7 @@ import {
 import { initializePortfolioStore, usePortfolioStore, waitForPendingPortfolioSave } from './store/portfolio';
 import type { ReportData } from './services/reportLinks';
 import type { ClientReportPayload } from './utils/clientReport';
+import { esNumberFormat } from './utils/format';
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const PRIMARY_ADMIN_EMAIL = 'jibiza90@gmail.com';
@@ -278,9 +279,9 @@ const palette = {
 };
 
 const formatEuro = (value: number) =>
-  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value);
+  esNumberFormat({ style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value);
 const formatEuroRounded = (value: number) =>
-  new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(value);
+  esNumberFormat({ style: 'currency', currency: 'EUR', maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(value);
 
 const formatPct = (value: number) => `${(value * 100).toFixed(2)}%`;
 const formatPctRounded = (value: number) => `${Math.round(value * 100)}%`;

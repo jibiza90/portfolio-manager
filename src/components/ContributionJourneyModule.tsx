@@ -8,6 +8,7 @@ import {
   type FlowPendingMovement
 } from './capitalModel';
 import './ContributionJourneyModule.css';
+import { NUMBER_LOCALE, withGrouping } from '../utils/format';
 
 interface ContributionJourneyModuleProps {
   report: ReportData;
@@ -80,10 +81,10 @@ const formatSignedCurrency = (value: number) => {
 const formatSignedPercent = (value: number) => {
   const safe = Number.isFinite(value) ? value : 0;
   if (Math.abs(safe) < 0.005) return '0,00 %';
-  return `${safe > 0 ? '+' : '-'}${Math.abs(safe).toLocaleString('es-ES', {
+  return `${safe > 0 ? '+' : '-'}${Math.abs(safe).toLocaleString(NUMBER_LOCALE, withGrouping({
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  })} %`;
+  }))} %`;
 };
 
 const lotStatus = (lot: CapitalLot) => {
@@ -236,7 +237,7 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
                   <span className="contribution-journey-map-step is-current">
                     <small>Valor actual atribuido</small>
                     <strong>{formatCurrency(lot.currentValue)}</strong>
-                    <em>{lot.sharePct.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} % del saldo</em>
+                    <em>{lot.sharePct.toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 1, maximumFractionDigits: 1 }))} % del saldo</em>
                   </span>
                   <span className="contribution-journey-map-formula">
                     {formatCurrency(lot.amount)} aportados
@@ -291,7 +292,7 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
                     <div className="contribution-journey-facts">
                       <div><span>Capital todavía activo</span><strong>{formatCurrency(lot.remainingCapital)}</strong></div>
                       <div><span>Rentabilidad atribuida</span><strong className={lot.accumulatedReturnPct >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(lot.accumulatedReturnPct)}</strong></div>
-                      <div><span>Peso sobre el saldo actual</span><strong>{lot.sharePct.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %</strong></div>
+                      <div><span>Peso sobre el saldo actual</span><strong>{lot.sharePct.toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 1, maximumFractionDigits: 1 }))} %</strong></div>
                       <div><span>Cierres con actividad</span><strong>{lot.activeMonths}</strong></div>
                     </div>
 

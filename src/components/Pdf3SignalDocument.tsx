@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import type { ReportData } from '../services/reportLinks';
 import type { PdfStudioMonth, PdfStudioSummary } from './PdfDesignStudio';
 import './Pdf3SignalDocument.css';
+import { esNumberFormat } from '../utils/format';
 
 interface Pdf3SignalDocumentProps {
   report: ReportData;
@@ -13,21 +14,21 @@ interface Pdf3SignalDocumentProps {
 
 type MovementRow = ReportData['movements'][number] & { netCapital: number };
 
-const money = new Intl.NumberFormat('es-ES', {
+const money = esNumberFormat({
   style: 'currency',
   currency: 'EUR',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
 });
 
-const wholeMoney = new Intl.NumberFormat('es-ES', {
+const wholeMoney = esNumberFormat({
   style: 'currency',
   currency: 'EUR',
   minimumFractionDigits: 0,
   maximumFractionDigits: 0
 });
 
-const compactMoney = new Intl.NumberFormat('es-ES', {
+const compactMoney = esNumberFormat({
   notation: 'compact',
   style: 'currency',
   currency: 'EUR',

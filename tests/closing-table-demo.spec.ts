@@ -113,7 +113,7 @@ test('demo1 monthly profits: year or period selector with bold totals', async ({
   await panel.getByLabel('Desde').selectOption('2025-10');
   await panel.getByLabel('Hasta').selectOption('2026-02');
   await expect(panel.locator('thead th').last()).toHaveText('Acumulado del periodo');
-  await expect(totals).toHaveText([/Total del periodo\s*Oct 2025 – Feb 2026\s*\+8947,46\s€/]);
+  await expect(totals).toHaveText([/Total del periodo\s*Oct 2025 – Feb 2026\s*\+8\.947,46\s€/]);
   expect(await totals.locator('td').first().evaluate((cell) => getComputedStyle(cell).backgroundColor)).toBe('rgb(11, 85, 96)');
 });
 
@@ -128,13 +128,13 @@ test('demo1 capital movements: period and type selectors with totals', async ({ 
   await expect(types.getByRole('button')).toHaveText(['Todos', 'Aportaciones', 'Retiradas']);
   const totals = panel.locator('.report-pro-strong-total');
   await expect(totals).toHaveText([
-    /Total 2025.*\+50\.000,00\s€.*-5000,00\s€.*45\.000,00\s€/,
-    /Total 2026.*\+65\.000,00\s€.*-5000,00\s€.*105\.000,00\s€/
+    /Total 2025.*\+50\.000,00\s€.*-5\.000,00\s€.*45\.000,00\s€/,
+    /Total 2026.*\+65\.000,00\s€.*-5\.000,00\s€.*105\.000,00\s€/
   ]);
 
   await types.getByRole('button', { name: 'Retiradas' }).click();
   await expect(panel.locator('tbody tr:not(.report-pro-strong-total) td:nth-child(2)')).toHaveText(['Retirada', 'Retirada']);
-  await expect(totals).toHaveText([/Total 2025\s*Retirado\s*-5000,00\s€/, /Total 2026\s*Retirado\s*-5000,00\s€/]);
+  await expect(totals).toHaveText([/Total 2025\s*Retirado\s*-5\.000,00\s€/, /Total 2026\s*Retirado\s*-5\.000,00\s€/]);
 
   await types.getByRole('button', { name: 'Todos' }).click();
   await periods.getByRole('button', { name: '2026' }).click();

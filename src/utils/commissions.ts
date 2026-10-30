@@ -1,4 +1,5 @@
 import type { Movement } from '../types';
+import { NUMBER_LOCALE, withGrouping } from '../utils/format';
 
 // Porcentaje de comision elegido por cliente (decimal: 0.05 = 5%). null = sin comision.
 export const COMMISSION_RATE_STORAGE_KEY = 'portfolio-comision-porcentaje';
@@ -99,4 +100,4 @@ export const getCapitalPendingToRecover = (movements: Record<string, Movement> =
 export const formatCommissionRate = (rate: number | null) =>
   rate === null
     ? 'Sin comisión'
-    : `${(rate * 100).toLocaleString('es-ES', { maximumFractionDigits: 2 })}%`;
+    : `${(rate * 100).toLocaleString(NUMBER_LOCALE, withGrouping({ maximumFractionDigits: 2 }))}%`;

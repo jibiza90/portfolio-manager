@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCurrency } from '../utils/format';
 import './PatrimonyTrendChart.css';
+import { NUMBER_LOCALE, withGrouping } from '../utils/format';
 
 export interface PatrimonyTrendPoint {
   key: string;
@@ -32,12 +33,12 @@ const groupThousands = (value: number) => {
 };
 const formatEuro = (value: number) => `${groupThousands(value)} €`;
 const formatCompactEuro = (value: number) => {
-  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toLocaleString('es-ES', { maximumFractionDigits: 2 })} M€`;
-  if (Math.abs(value) >= 10_000) return `${(value / 1000).toLocaleString('es-ES', { maximumFractionDigits: 1 })}k €`;
+  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toLocaleString(NUMBER_LOCALE, withGrouping({ maximumFractionDigits: 2 }))} M€`;
+  if (Math.abs(value) >= 10_000) return `${(value / 1000).toLocaleString(NUMBER_LOCALE, withGrouping({ maximumFractionDigits: 1 }))}k €`;
   return formatEuro(value);
 };
 const formatSignedPct = (value: number) =>
-  `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+  `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 2, maximumFractionDigits: 2 }))}%`;
 const formatSignedEuro = (value: number) =>
   `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatEuro(Math.abs(value))}`;
 
