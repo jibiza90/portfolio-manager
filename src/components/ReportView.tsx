@@ -11,7 +11,6 @@ import { ContributionJourneyModule } from './ContributionJourneyModule';
 import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio';
 import { PatrimonyTrendChart, type PatrimonyTrendPoint } from './PatrimonyTrendChart';
 import { applyPdfWatermark } from '../utils/pdfWatermark';
-import { MoneyFlowAnimation, type MoneyFlowPoint } from './MoneyFlowAnimation';
 import './WideReportPage.css';
 
 const MovementReceiptDialog = React.lazy(() => import('./MovementReceipt').then((module) => ({ default: module.MovementReceiptDialog })));
@@ -1383,33 +1382,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const tableMovementRows = isDemoClosingLayout ? demoMovementRows : screenMovementCapitalSeries;
   const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const monthKeyLabel = (key: string) => `${SHORT_MONTHS[Number(key.slice(5, 7)) - 1] ?? key.slice(5, 7)} ${key.slice(0, 4)}`;
-  // demo1: datos de la animacion "Como se ha formado tu saldo" (capital paso a paso, igual que las comisiones).
-  const moneyFlowPoints: MoneyFlowPoint[] = [];
-  if (isDemoClosingLayout && monthlyWithData.length > 0) {
-    let flowCapital = 0;
-    let flowCobrado = 0;
-    const addPoint = (label: string, value: number, movements: Array<{ type: string; amount: number }>) => {
-      const contributed = movements.filter((movement) => movement.type === 'increment').reduce((sum, movement) => sum + movement.amount, 0);
-      const withdrawn = movements.filter((movement) => movement.type !== 'increment').reduce((sum, movement) => sum + movement.amount, 0);
-      flowCapital = Math.max(0, flowCapital + contributed - withdrawn);
-      flowCobrado += withdrawn;
-      moneyFlowPoints.push({ label, value, capital: flowCapital, contributed, withdrawn, cobrado: flowCobrado });
-    };
-    moneyFlowPoints.push({ label: 'Inicio', value: 0, capital: 0, contributed: 0, withdrawn: 0, cobrado: 0 });
-    monthlyWithData.forEach((month, index) => {
-      const key = reportMonthToKey(month.month);
-      const monthMovements = (report.movements ?? []).filter((movement) => movement.iso.slice(0, 7) === key);
-      // El saldo con el que empieza el historial (anterior a los movimientos registrados) cuenta como capital inicial.
-      if (index === 0) {
-        const increments = monthMovements.filter((movement) => movement.type === 'increment').reduce((sum, movement) => sum + movement.amount, 0);
-        const decrements = monthMovements.filter((movement) => movement.type !== 'increment').reduce((sum, movement) => sum + movement.amount, 0);
-        const opening = (month.endBalance ?? 0) - (month.profit ?? 0) - increments + decrements;
-        if (opening > 0.5) monthMovements.unshift({ iso: `${key}-01`, type: 'increment', amount: opening, balance: opening });
-      }
-      addPoint(month.month, month.endBalance ?? 0, monthMovements);
-    });
-    if (pendingMovementRows.length > 0) addPoint('Hoy', visibleBalance, pendingMovementRows);
-  }
   const monthlyClosingRows = closingSourceMonths.map((month) => {
     const monthKey = reportMonthToKey(month.month);
     const historyIndex = monthlyWithData.findIndex((item) => reportMonthToKey(item.month) === monthKey);
@@ -3500,8 +3472,6 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="total">{formatCurrency(visibleBalance)}</span>
             </div>
         </section>
-
-        {isDemoClosingLayout && moneyFlowPoints.length > 1 ? <MoneyFlowAnimation points={moneyFlowPoints} /> : null}
 
       </article>
       )}

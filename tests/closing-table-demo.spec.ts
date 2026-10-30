@@ -158,20 +158,19 @@ test('contributions in the patrimony chart are blue only for demo1', async ({ pa
   await expect(page.locator('.report-pro-benefits-panel .report-pro-closing-years')).toHaveCount(0);
 });
 
-test('demo1 shows the animated money flow and charts that draw themselves; other clients do not', async ({ page }, testInfo) => {
+test('demo1 charts draw themselves when they come into view; other clients do not', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await mount(page, 'client-001');
-  const flow = page.locator('.mfa-panel');
-  await expect(flow).toHaveCount(1);
-  await flow.scrollIntoViewIfNeeded();
-  // Las cifras van subiendo: al principio de la animacion el valor es menor que al final.
-  const first = await flow.locator('.mfa-stat b').first().innerText();
-  await expect.poll(() => flow.locator('.mfa-stat b').first().innerText(), { timeout: 20_000 }).not.toBe(first);
   await expect(page.locator('[data-reveal]')).toHaveCount(3);
+  const waterfall = page.locator('[data-reveal="waterfall"]');
+  await waterfall.scrollIntoViewIfNeeded();
+  await expect(waterfall).toHaveClass(/is-revealed/);
+  // Los vasos se llenan hasta su altura y la superficie se mueve en ondas.
+  await expect.poll(() => waterfall.locator('.report-pro-waterfall-bar span').first().evaluate((el) => el.getBoundingClientRect().height), { timeout: 10_000 }).toBeGreaterThan(40);
+  expect(await waterfall.locator('.report-pro-waterfall-bar span').first().evaluate((el) => getComputedStyle(el, '::before').animationName)).toBe('liquidWave');
 
   await mount(page, 'client-004');
-  await expect(page.locator('.mfa-panel')).toHaveCount(0);
   await expect(page.locator('[data-reveal]')).toHaveCount(0);
 });
