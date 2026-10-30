@@ -33,7 +33,11 @@ test('news tour walks through every new feature and is not shown again after fin
   await page.setViewportSize({ width: 1300, height: 900 });
   await mountTour(page);
 
-  await expect(bubble(page)).toContainText('1 de 4');
+  await expect(bubble(page)).toContainText('1 de 5');
+  await expect(bubble(page)).toContainText('Rentabilidad total más clara');
+  await expect(page.locator('.nt-spot')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Siguiente' }).click();
   await expect(bubble(page)).toContainText('Nuevo gráfico de tu patrimonio');
   await expect(page.locator('.nt-spot')).toBeVisible();
 
@@ -49,7 +53,7 @@ test('news tour walks through every new feature and is not shown again after fin
   await expect(page.getByRole('dialog', { name: 'Justificante de operación' })).toBeVisible();
   await expect(bubble(page)).toHaveCount(0);
   await page.getByRole('button', { name: 'Cerrar' }).click();
-  await expect(bubble(page)).toContainText('3 de 4');
+  await expect(bubble(page)).toContainText('4 de 5');
 
   // El globo apunta al boton de la tabla: queda pegado a el.
   const target = await page.locator('[data-tour="justificante"]').first().boundingBox();
@@ -88,7 +92,7 @@ test('news tour can be skipped and shows as a bottom card on phones', async ({ p
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 390, height: 800 });
   await mountTour(page);
-  await expect(bubble(page)).toContainText('1 de 4');
+  await expect(bubble(page)).toContainText('1 de 5');
   const box = await bubble(page).boundingBox();
   expect(box!.y + box!.height).toBeGreaterThan(760);
   expect(box!.x).toBeGreaterThanOrEqual(10);

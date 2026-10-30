@@ -33,6 +33,14 @@ const STEPS: TourStep[] = [
     text: 'Si te cuesta leer, pulsa Grande o Muy grande y toda la página se verá más grande. Se queda guardado en este dispositivo.'
   },
   {
+    id: 'rentabilidad',
+    target: '[data-tour="rentabilidad"]',
+    color: '#0f7a5c',
+    icon: tourIcon(<path d="M4 19h16M6 15l4-4 3 3 6-7M15 7h4v4" />),
+    title: 'Rentabilidad total más clara',
+    text: 'Ahora se calcula sobre todo lo que has aportado. Tu dinero y tu beneficio no cambian.'
+  },
+  {
     id: 'patrimonio',
     target: '[data-tour="patrimonio"]',
     tryTarget: '[data-tour="patrimonio"] .report-pro-expand-chart-button',

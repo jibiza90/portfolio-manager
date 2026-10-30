@@ -329,6 +329,15 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const [movementsTo, setMovementsTo] = useState('');
   const [movementsType, setMovementsType] = useState<'all' | 'increment' | 'decrement'>('all');
   const benefitsScrollRef = useRef<HTMLDivElement>(null);
+  // demo1: aviso de que la rentabilidad total se calcula ahora sobre todo lo aportado.
+  const [totalReturnNoticeOpen, setTotalReturnNoticeOpen] = useState(false);
+  const [totalReturnNoticeSeen, setTotalReturnNoticeSeen] = useState(() => {
+    try {
+      return window.localStorage.getItem('jigsa-total-return-notice') === '1';
+    } catch {
+      return false;
+    }
+  });
   const movementsScrollRef = useRef<HTMLDivElement>(null);
   // Justificante del movimiento elegido (de momento solo demo1).
   const [receiptMovement, setReceiptMovement] = useState<{ iso: string; type: 'increment' | 'decrement'; amount: number } | null>(null);
@@ -1396,8 +1405,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const explainInvested = getCapitalPendingToRecover(explainMovements);
   // De cada 100 € aportados, cuantos siguen invertidos (en positivo: el dinero que sigue trabajando).
   const explainInvestedPer100 = visibleIncrements > 0 ? Math.min(100, Math.max(0, Math.round((explainInvested / visibleIncrements) * 100))) : 0;
-  const explainGainPer100 = visibleIncrements > 0 ? Math.round((report.beneficioTotal / visibleIncrements) * 100) : 0;
-  const formatWholeEuro = (value: number) => `${Math.round(value).toLocaleString(NUMBER_LOCALE, withGrouping())} €`;
+  // demo1: rentabilidad total = beneficio / todo lo aportado (hasta el ultimo cierre publicado). Antes era
+  // beneficio / (aportado - retirado), que se disparaba al retirar mucho.
+  const demoTotalReturn = report.incrementos > 0 ? (report.beneficioTotal / report.incrementos) * 100 : null;
+  const previousTotalReturn = report.rentabilidadDisponible !== false ? report.rentabilidad : null;
+  const totalReturnChanged = isDemoClosingLayout && demoTotalReturn !== null
+    && (previousTotalReturn === null || Math.abs(previousTotalReturn - demoTotalReturn) >= 0.01);
+  const explainGainPer100 = demoTotalReturn !== null ? Math.round(demoTotalReturn) : 0;
+  const formatWholeEuro = (value: number) => `${Math.round(value).toLocaleString(NUMBER_LOCALE, withGrouping())} €`;
   const monthlyClosingRows = closingSourceMonths.map((month) => {
     const monthKey = reportMonthToKey(month.month);
     const historyIndex = monthlyWithData.findIndex((item) => reportMonthToKey(item.month) === monthKey);
@@ -1517,7 +1532,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
       <p>La rentabilidad se actualizará con la próxima publicación.</p>
     </div>
   ) : null;
-  const returnExampleTooltipContent = (
+  const returnExampleTooltipContent = isDemoClosingLayout ? (
+    <div className="report-pro-note-tooltip-content">
+      <strong>TWR · ¿Lo ha hecho bien la gestión?</strong>
+      <p>Ejemplo: si la cartera gana un 10 % en un año, el TWR es +10 %, tanto si tenías 10.000 € como si añadiste 20.000 € a mitad de año.</p>
+      <strong>Rentabilidad total · ¿Cuánto has ganado tú?</strong>
+      <p>Ejemplo: has aportado 30.000 € en total y has ganado 1.000 €: +3,33 %. Si después retiras dinero, se sigue calculando sobre los 30.000 € que aportaste.</p>
+    </div>
+  ) : (
     <div className="report-pro-note-tooltip-content">
       <strong>TWR:</strong>
       <p>Mide la rentabilidad de la inversión sin contar aportaciones ni retiradas.</p>
@@ -2751,7 +2773,17 @@ export const ReportView: React.FC<ReportViewProps> = ({
           <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Rentabilidad acumulada de la estrategia desde ${firstRegisteredDateLabel}. No se ve afectada por aportaciones o retiradas.`}><span>TWR acumulado</span><strong className={(report.twrYtd ?? 0) >= 0 ? 'positive' : 'negative'}>{formatSignedPercent((report.twrYtd ?? 0) * 100)}</strong></div>
           <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={`Beneficio acumulado generado desde ${firstRegisteredDateLabel} hasta la fecha del informe.`}><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
           {renderCapitalHistoryCard('Capital retirado', visibleDecrements, 'decrement', `Suma total de todas tus retiradas registradas desde ${firstRegisteredDateLabel}.`, 'report-pro-kpi')}
+          {isDemoClosingLayout ? (
+            <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tour="rentabilidad" data-tooltip="Beneficio acumulado dividido entre todo lo que has aportado desde el inicio.">
+              <span>Rentabilidad total</span>
+              <strong className={demoTotalReturn !== null ? (demoTotalReturn >= 0 ? 'positive' : 'negative') : ''}>{demoTotalReturn !== null ? formatSignedPercent(demoTotalReturn) : 'No aplicable'}</strong>
+              {totalReturnChanged && !totalReturnNoticeSeen ? (
+                <button type="button" className="report-pro-new-calc" onClick={() => setTotalReturnNoticeOpen(true)}>Nuevo cálculo</button>
+              ) : null}
+            </div>
+          ) : (
           <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip="Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, si depende de aportaciones y retiradas."><span>Rentabilidad total</span><strong className={report.rentabilidadDisponible !== false ? (report.rentabilidad >= 0 ? 'positive' : 'negative') : ''}>{report.rentabilidadDisponible !== false ? formatSignedPercent(report.rentabilidad) : 'No aplicable'}</strong></div>
+          )}
         </section>
 
         <section className="report-pro-note">
@@ -2769,8 +2801,17 @@ export const ReportView: React.FC<ReportViewProps> = ({
               Ejemplo
             </button>
           </div>
-          <p><strong>TWR (rentabilidad ponderada por el tiempo):</strong> {twrExplanation}</p>
-          <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
+          {isDemoClosingLayout ? (
+            <>
+              <p><strong>TWR (rentabilidad ponderada por el tiempo):</strong> Lo que ha rendido la inversión, sin que influya cuándo has metido o sacado dinero. Sirve para saber si la gestión lo ha hecho bien y es la cifra que se compara con otros fondos.</p>
+              <p><strong>Rentabilidad total:</strong> Lo que has ganado sobre todo lo que has aportado desde el inicio. Responde a: de todo lo que he puesto, ¿cuánto he ganado?</p>
+            </>
+          ) : (
+            <>
+              <p><strong>TWR (rentabilidad ponderada por el tiempo):</strong> {twrExplanation}</p>
+              <p><strong>Rentabilidad total:</strong> {totalReturnExplanation}</p>
+            </>
+          )}
         </section>
 
         <section className={`report-pro-capital-panel${isDemoClosingLayout ? ' is-demo-capital' : ''}`}>
@@ -3502,10 +3543,36 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <div className="report-pro-explain-number">{explainGainPer100 >= 0 ? '+' : '−'}{Math.abs(explainGainPer100)} € <small>por cada 100 €</small></div>
               <h5>{explainGainPer100 >= 0 ? `Has ganado ${explainGainPer100} € por cada 100 € que pusiste` : `Has perdido ${Math.abs(explainGainPer100)} € por cada 100 € que pusiste`}</h5>
               <div className="report-pro-explain-track" aria-hidden="true"><i style={{ '--w': `${Math.min(100, Math.abs(explainGainPer100))}%` } as React.CSSProperties} /></div>
-              <div className="report-pro-explain-scale"><span>{explainGainPer100 >= 0 ? 'Ganado' : 'Perdido'}: {formatWholeEuro(Math.abs(report.beneficioTotal))}</span><span>Pusiste: {formatWholeEuro(visibleIncrements)}</span></div>
-              <p>Es tu {explainGainPer100 >= 0 ? 'ganancia' : 'pérdida'} total: el <b>{Math.abs(explainGainPer100)} %</b> de lo que has aportado.</p>
+              <div className="report-pro-explain-scale"><span>{explainGainPer100 >= 0 ? 'Ganado' : 'Perdido'}: {formatWholeEuro(Math.abs(report.beneficioTotal))}</span><span>{pendingIncrements > 0 ? 'Pusiste hasta el último cierre' : 'Pusiste'}: {formatWholeEuro(report.incrementos)}</span></div>
+              <p>Es tu rentabilidad total: <b>{demoTotalReturn !== null ? formatSignedPercent(demoTotalReturn) : 'No aplicable'}</b>.</p>
+              {pendingIncrements > 0 ? <p>Lo que has aportado después del último cierre ({formatWholeEuro(pendingIncrements)}) cuenta a partir del próximo cierre.</p> : null}
             </article>
           </section>
+        ) : null}
+
+        {totalReturnNoticeOpen && typeof document !== 'undefined' ? createPortal(
+          <div className="report-pro-notice-overlay" role="dialog" aria-modal="true" aria-label="Nuevo cálculo de la rentabilidad total" onClick={(event) => { if (event.target === event.currentTarget) setTotalReturnNoticeOpen(false); }}>
+            <div className="report-pro-notice">
+              <h3>¿Por qué ha cambiado tu rentabilidad total?</h3>
+              <p>{previousTotalReturn !== null
+                ? <>Antes se calculaba sobre el dinero que tenías dentro (lo aportado menos lo retirado). Como habías retirado parte, salía más alta: <b>{formatSignedPercent(previousTotalReturn)}</b>.</>
+                : <>Antes no se podía calcular, porque habías retirado todo lo que aportaste.</>}</p>
+              <p>Ahora se calcula sobre todo lo que has aportado: <b>{demoTotalReturn !== null ? formatSignedPercent(demoTotalReturn) : ''}</b>.</p>
+              <p className="report-pro-notice-key">Tu dinero y tu beneficio no cambian: sigues teniendo <b>{formatCurrency(report.beneficioTotal)}</b> de beneficio.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setTotalReturnNoticeOpen(false);
+                  setTotalReturnNoticeSeen(true);
+                  try { window.localStorage.setItem('jigsa-total-return-notice', '1'); } catch { /* sin almacenamiento */ }
+                  onAnalyticsEvent?.({ type: 'total_return_notice', label: 'Entendido' });
+                }}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>,
+          document.body
         ) : null}
 
       </article>

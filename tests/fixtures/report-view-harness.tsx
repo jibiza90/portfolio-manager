@@ -69,7 +69,8 @@ const buildReportData = (monthCount: number): ReportData => {
 export const mountReportView = (
   monthCount = 12,
   clientId = 'client-001',
-  showContributionJourney = false
+  showContributionJourney = false,
+  overrides: Partial<ReportData> = {}
 ) => {
   const root = document.getElementById('root');
   if (!root) throw new Error('Missing root element');
@@ -78,7 +79,7 @@ export const mountReportView = (
   const reportData = buildReportData(monthCount);
   createRoot(root).render(
     <ReportView
-      reportData={{ ...reportData, clientId, showContributionJourney }}
+      reportData={{ ...reportData, clientId, showContributionJourney, ...overrides }}
       pendingCashMovements={[{ iso: '2026-04-10', type: 'increment', amount: 15000 }]}
     />
   );
