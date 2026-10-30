@@ -1241,11 +1241,19 @@
   text-align: center;
 }
 
+/* Aportado y retirado del total en una sola linea: +50.000,00 € / -5000,00 € */
 .report-pro-total-lines {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.report-pro-total-lines > strong + strong::before {
+  content: '/';
+  margin: 0 8px;
+  color: #bfe3e1;
+  font-weight: 700;
 }
 
 /* Fila de total muy marcada (demo1): fondo oscuro, letra blanca, grande y en negrita. */
