@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ReportView } from '../components/ReportView';
 import { GuidedTour, tourIcon, type TourStep } from '../components/NewsTour';
 import { GuestIntro } from './GuestIntro';
+import { TextSizeControl, useTextSize } from '../components/TextSizeControl';
 import {
   GUEST_CODE,
   GUEST_HOLDER_NAME,
@@ -46,6 +47,14 @@ const markIntroSeen = () => {
 };
 
 const GUEST_STEPS: TourStep[] = [
+  {
+    id: 'letra',
+    target: '[data-tour="letra"]',
+    color: '#087b83',
+    icon: tourIcon(<path d="M4 19l5-14h2l5 14M6.5 13h7M17 8h4M19 6v4" />),
+    title: 'Tamaño de letra',
+    text: 'Si te cuesta leer, pulsa Grande o Muy grande y toda la página se verá más grande. Se queda guardado en este dispositivo.'
+  },
   {
     id: 'resumen',
     target: '[data-tour="resumen"]',
@@ -151,6 +160,7 @@ export const GuestApp: React.FC = () => {
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [fiscalOpen, setFiscalOpen] = useState(false);
   const [downloadSignal, setDownloadSignal] = useState(0);
+  const textSize = useTextSize();
 
   useEffect(() => {
     document.title = 'Demostración · Área Cliente';
@@ -204,7 +214,8 @@ export const GuestApp: React.FC = () => {
           border: `1px solid ${palette.border}`,
           background: palette.card,
           borderRadius: 14,
-          padding: '12px 14px'
+          padding: '12px 14px',
+          ...textSize.zoomStyle
         }}
       >
         <div className="client-portal-toolbar-title">
@@ -224,8 +235,10 @@ export const GuestApp: React.FC = () => {
         </div>
       </header>
 
+      <TextSizeControl level={textSize.level} onChange={textSize.setLevel} />
+
       {messagesOpen ? (
-        <section className="client-portal-support gx-messages" aria-label="Mensajes con administración">
+        <section className="client-portal-support gx-messages" aria-label="Mensajes con administración" style={textSize.zoomStyle}>
           <div className="gx-messages-head">
             <strong>Mensajes con administración</strong>
             <span>Respuesta en el mismo hilo.</span>
@@ -264,14 +277,16 @@ export const GuestApp: React.FC = () => {
         </div>
       ) : null}
 
-      <ReportView
-        reportData={guestReport}
-        downloadSignal={downloadSignal}
-        pendingCashMovements={guestPendingMovements}
-        knownCommissions={guestCommissions}
-      />
+      <div className="client-portal-text-zoom" style={textSize.zoomStyle}>
+        <ReportView
+          reportData={guestReport}
+          downloadSignal={downloadSignal}
+          pendingCashMovements={guestPendingMovements}
+          knownCommissions={guestCommissions}
+        />
+      </div>
 
-      <footer className="gx-disclaimer">
+      <footer className="gx-disclaimer" style={textSize.zoomStyle}>
         El cliente y los importes son ficticios. Las rentabilidades son las reales de la cartera.
         Rentabilidades pasadas no garantizan rentabilidades futuras.
       </footer>

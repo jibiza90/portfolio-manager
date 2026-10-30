@@ -1,0 +1,92 @@
+/* Selector de tamaño de letra: grande, con mucho contraste y facil de pulsar. */
+.tsc-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px 20px;
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  border: 2px solid #b9dcdf;
+  border-radius: 16px;
+  background: #eef8f8;
+  color: #0a2037;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.tsc-text { display: flex; align-items: center; gap: 12px; }
+
+.tsc-icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #087b83;
+  color: #ffffff;
+}
+
+.tsc-text strong { display: block; font-size: 18px; font-weight: 700; line-height: 1.25; }
+.tsc-text span:not(.tsc-icon) { display: block; font-size: 15px; line-height: 1.35; color: #2d4656; }
+
+.tsc-options { display: flex; gap: 10px; }
+
+.tsc-bar .tsc-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 96px;
+  min-height: 72px;
+  padding: 8px 12px 9px;
+  border: 2px solid #9fc4c8;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #0a2037;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.tsc-bar .tsc-option:hover { border-color: #087b83; }
+.tsc-bar .tsc-option:focus-visible { outline: 3px solid #f59e0b; outline-offset: 2px; }
+
+.tsc-bar .tsc-option.is-selected {
+  border-color: #087b83;
+  background: #087b83;
+  color: #ffffff;
+}
+
+.tsc-letter { font-family: Georgia, 'Times New Roman', serif; font-weight: 700; line-height: 1; }
+.tsc-letter.is-0 { font-size: 20px; }
+.tsc-letter.is-1 { font-size: 28px; }
+.tsc-letter.is-2 { font-size: 36px; }
+.tsc-label { font-size: 15px; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+
+.tsc-check {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .tsc-bar { padding: 12px; }
+  .tsc-options { width: 100%; }
+  .tsc-bar .tsc-option { flex: 1; min-width: 0; padding: 8px 4px; }
+  .tsc-label { font-size: 14px; }
+}

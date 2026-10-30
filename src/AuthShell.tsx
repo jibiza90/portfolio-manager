@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ReportView, type PendingCashMovement } from './components/ReportView';
+import { TextSizeControl, useTextSize } from './components/TextSizeControl';
 import { LegalPrivacyNotice } from './components/LegalPrivacyNotice';
 import { CLIENTS, DEMO_CLIENT_ID, isDemoClient } from './constants/clients';
 import {
@@ -1363,6 +1364,8 @@ const ClientPortal = ({
   const [supportOpen, setSupportOpen] = useState(false);
   const [fiscalOpen, setFiscalOpen] = useState(false);
   const [newsTourOpen, setNewsTourOpen] = useState(false);
+  // Tamaño de letra elegido por el cliente (Normal, Grande, Muy grande).
+  const textSize = useTextSize();
   const [fiscalCommissions, setFiscalCommissions] = useState<{ rate: number | null; paidWithdrawalIsos: string[] } | null>(null);
   const [supportText, setSupportText] = useState('');
   const [supportBusy, setSupportBusy] = useState(false);
@@ -2399,7 +2402,8 @@ const ClientPortal = ({
           border: `1px solid ${palette.border}`,
           background: palette.card,
           borderRadius: 14,
-          padding: '12px 14px'
+          padding: '12px 14px',
+          ...textSize.zoomStyle
         }}
       >
         <div className="client-portal-toolbar-title">
@@ -2554,6 +2558,14 @@ const ClientPortal = ({
         </div>
       ) : null}
 
+      <TextSizeControl
+        level={textSize.level}
+        onChange={(level) => {
+          textSize.setLevel(level);
+          trackClientUsage({ type: 'text_size', label: level });
+        }}
+      />
+
       {error ? <p style={{ color: palette.error, fontWeight: 600 }}>{error}</p> : null}
       {!loaded ? <p style={{ color: palette.muted }}>Cargando tu resumen...</p> : null}
       {loaded && !overview ? (
@@ -2590,7 +2602,7 @@ const ClientPortal = ({
       ) : null}
 
       {supportOpen ? (
-        <section className="client-portal-support" style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, overflow: 'hidden', marginBottom: 16 }}>
+        <section className="client-portal-support" style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, overflow: 'hidden', marginBottom: 16, ...textSize.zoomStyle }}>
           <div className="client-portal-support-head" style={{ padding: 14, borderBottom: `1px solid ${palette.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <strong>Mensajes con administración</strong>
             <span style={{ fontSize: 12, color: palette.muted }}>Si hay respuesta nueva, veras aviso hasta abrir esta seccion.</span>
@@ -2640,22 +2652,24 @@ const ClientPortal = ({
         </section>
       ) : null}
 
-      {initialPosition ? (
-        <InitialClientPositionView
-          clientCode={loginId ?? clientId}
-          position={initialPosition}
-        />
-      ) : clientReportData ? (
-        <ReportView
-          reportData={clientReportData}
-          downloadSignal={reportDownloadSignal}
-          generalReferenceMonthly={overview?.generalReferenceMonthly}
-          pendingCashMovements={pendingCashMovements}
-          onDownloaded={trackClientPdfDownload}
-          analyticsEnabled={analyticsReady}
-          onAnalyticsEvent={trackClientUsage}
-        />
-      ) : null}
+      <div className="client-portal-text-zoom" style={textSize.zoomStyle}>
+        {initialPosition ? (
+          <InitialClientPositionView
+            clientCode={loginId ?? clientId}
+            position={initialPosition}
+          />
+        ) : clientReportData ? (
+          <ReportView
+            reportData={clientReportData}
+            downloadSignal={reportDownloadSignal}
+            generalReferenceMonthly={overview?.generalReferenceMonthly}
+            pendingCashMovements={pendingCashMovements}
+            onDownloaded={trackClientPdfDownload}
+            analyticsEnabled={analyticsReady}
+            onAnalyticsEvent={trackClientUsage}
+          />
+        ) : null}
+      </div>
       <footer className="client-portal-legal-footer">
         <button type="button" onClick={() => setLegalNoticeOpen(true)}>Privacidad y cookies</button>
       </footer>

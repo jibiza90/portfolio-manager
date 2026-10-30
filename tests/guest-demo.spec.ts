@@ -25,15 +25,15 @@ test('guest demo opens with the presentation, never talks to the database and wa
   await intro.getByRole('button', { name: 'Ver la web por dentro' }).click();
 
   const tour = page.getByRole('dialog', { name: 'Visita guiada' });
-  await expect(tour).toContainText('1 de 10', { timeout: 20_000 });
-  await expect(tour).toContainText('Tu resumen');
+  await expect(tour).toContainText('1 de 11', { timeout: 20_000 });
+  await expect(tour).toContainText('Tamaño de letra');
   const titles: string[] = [];
-  for (let step = 0; step < 10; step += 1) {
+  for (let step = 0; step < 11; step += 1) {
     titles.push((await tour.locator('.nt-title').innerText()).trim());
-    await tour.getByRole('button', { name: step === 9 ? '¡Entendido!' : 'Siguiente' }).click();
+    await tour.getByRole('button', { name: step === 10 ? '¡Entendido!' : 'Siguiente' }).click();
   }
   expect(titles).toEqual([
-    'Tu resumen', 'Movimientos en curso', 'Tu capital y tu beneficio', 'Evolución de tu patrimonio', 'Mes a mes',
+    'Tamaño de letra', 'Tu resumen', 'Movimientos en curso', 'Tu capital y tu beneficio', 'Evolución de tu patrimonio', 'Mes a mes',
     'Justificante de cada movimiento', 'Qué ocurrió con cada aportación', 'Tu informe en PDF', 'Información fiscal', 'Mensajes con administración'
   ]);
   await expect(tour).toHaveCount(0);

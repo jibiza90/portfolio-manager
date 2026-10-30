@@ -25,6 +25,14 @@ export const tourIcon = (path: React.ReactNode) => (
 
 const STEPS: TourStep[] = [
   {
+    id: 'letra',
+    target: '[data-tour="letra"]',
+    color: '#087b83',
+    icon: tourIcon(<path d="M4 19l5-14h2l5 14M6.5 13h7M17 8h4M19 6v4" />),
+    title: 'Tamaño de letra',
+    text: 'Si te cuesta leer, pulsa Grande o Muy grande y toda la página se verá más grande. Se queda guardado en este dispositivo.'
+  },
+  {
     id: 'patrimonio',
     target: '[data-tour="patrimonio"]',
     tryTarget: '[data-tour="patrimonio"] .report-pro-expand-chart-button',

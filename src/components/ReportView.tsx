@@ -1444,8 +1444,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
           : detailRect.top < visibleTop
             ? detailRect.top - visibleTop
             : 0;
+      // Con el tamaño de letra ampliado (zoom) las medidas en pantalla son mayores que las de desplazamiento.
+      const scale = scrollContainer.offsetHeight > 0 ? containerRect.height / scrollContainer.offsetHeight : 1;
       const maxScrollTop = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight);
-      const targetScrollTop = Math.max(0, Math.min(maxScrollTop, scrollContainer.scrollTop + delta));
+      const targetScrollTop = Math.max(0, Math.min(maxScrollTop, scrollContainer.scrollTop + delta / (scale || 1)));
       animateScroll(scrollContainer.scrollTop, targetScrollTop, (value) => {
         scrollContainer.scrollTop = value;
       });
