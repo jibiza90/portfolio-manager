@@ -60,12 +60,17 @@ export const buildMovementReceipt = (
   });
 
   // Totales hasta el movimiento incluido (en el mismo dia la aportacion va antes que la retirada).
+  // El capital pendiente se lleva paso a paso, igual que las comisiones: nunca baja de 0.
   let contributedAfter = 0;
   let withdrawnAfter = 0;
+  let capitalPendingAfter = 0;
   Object.keys(record).sort().forEach((iso) => {
     if (iso > target.iso) return;
-    contributedAfter += record[iso].increment ?? 0;
-    if (iso < target.iso || target.type === 'decrement') withdrawnAfter += record[iso].decrement ?? 0;
+    const increment = record[iso].increment ?? 0;
+    const decrement = iso < target.iso || target.type === 'decrement' ? record[iso].decrement ?? 0 : 0;
+    contributedAfter += increment;
+    withdrawnAfter += decrement;
+    capitalPendingAfter = Math.max(0, capitalPendingAfter + increment - decrement);
   });
 
   let commission: MovementReceiptData['commission'] = null;
@@ -90,6 +95,6 @@ export const buildMovementReceipt = (
     net: round2(target.amount - (commission?.amount ?? 0)),
     contributedAfter: round2(contributedAfter),
     withdrawnAfter: round2(withdrawnAfter),
-    capitalPendingAfter: round2(Math.max(0, contributedAfter - withdrawnAfter))
+    capitalPendingAfter: round2(capitalPendingAfter)
   };
 };

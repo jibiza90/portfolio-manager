@@ -54,13 +54,15 @@ export interface WithdrawalCommission {
 }
 
 // La comision solo se cobra sobre lo que se retira una vez el cliente ha recuperado
-// todo el capital aportado desde el principio (no por año).
+// todo su capital (no por año). Si despues vuelve a aportar, ese dinero nuevo no paga
+// comision hasta que lo haya recuperado entero.
 export const getWithdrawalCommissions = (
   movements: Record<string, Movement> = {},
   rate: number | null
 ): WithdrawalCommission[] => {
-  let contributed = 0;
-  let withdrawn = 0;
+  // Capital del cliente que sigue dentro, paso a paso: si una retirada se lo lleva todo se queda en 0
+  // (el resto ya era beneficio y paga comision) y lo que aporte despues cuenta entero como capital nuevo.
+  let capitalPending = 0;
   const result: WithdrawalCommission[] = [];
 
   Object.entries(movements)
@@ -68,12 +70,12 @@ export const getWithdrawalCommissions = (
     .forEach(([iso, movement]) => {
       const increment = Math.max(0, movement.increment ?? 0);
       const decrement = Math.max(0, movement.decrement ?? 0);
-      contributed += increment;
+      capitalPending += increment;
       if (decrement <= 0) return;
 
-      const capitalPendingBefore = Math.max(0, contributed - withdrawn);
+      const capitalPendingBefore = capitalPending;
       const commissionableAmount = Math.max(0, decrement - capitalPendingBefore);
-      withdrawn += decrement;
+      capitalPending = Math.max(0, capitalPending - decrement);
       result.push({
         iso,
         amount: decrement,
@@ -86,16 +88,13 @@ export const getWithdrawalCommissions = (
   return result;
 };
 
-export const getCapitalPendingToRecover = (movements: Record<string, Movement> = {}) => {
-  const totals = Object.values(movements).reduce(
-    (acc, movement) => ({
-      contributed: acc.contributed + Math.max(0, movement.increment ?? 0),
-      withdrawn: acc.withdrawn + Math.max(0, movement.decrement ?? 0)
-    }),
-    { contributed: 0, withdrawn: 0 }
-  );
-  return Math.max(0, totals.contributed - totals.withdrawn);
-};
+// Mismo calculo paso a paso que getWithdrawalCommissions, hasta el ultimo movimiento.
+export const getCapitalPendingToRecover = (movements: Record<string, Movement> = {}) =>
+  Object.entries(movements)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .reduce((pending, [, movement]) => (
+      Math.max(0, pending + Math.max(0, movement.increment ?? 0) - Math.max(0, movement.decrement ?? 0))
+    ), 0);
 
 export const formatCommissionRate = (rate: number | null) =>
   rate === null
