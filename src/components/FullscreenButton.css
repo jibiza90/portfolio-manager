@@ -1,0 +1,51 @@
+/* Boton de pantalla completa y aviso en el centro de la pantalla. */
+.fsb-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.fsb-hint {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 4000;
+  max-width: min(90vw, 460px);
+  padding: 18px 26px;
+  border-radius: 18px;
+  background: rgba(10, 32, 55, 0.92);
+  box-shadow: 0 24px 60px rgba(4, 16, 28, 0.35);
+  color: #ffffff;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: fsb-hint 2.4s ease forwards;
+}
+
+.fsb-hint kbd {
+  display: inline-block;
+  margin: 0 3px;
+  padding: 2px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-bottom-width: 3px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  font: inherit;
+  font-weight: 700;
+}
+
+@keyframes fsb-hint {
+  0% { opacity: 0; transform: translate(-50%, -46%) scale(0.96); }
+  10% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  82% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fsb-hint { animation: none; }
+}

@@ -3,6 +3,7 @@ import { ReportView } from '../components/ReportView';
 import { GuidedTour, tourIcon, type TourStep } from '../components/NewsTour';
 import { GuestIntro } from './GuestIntro';
 import { TextSizeControl, useTextSize } from '../components/TextSizeControl';
+import { FullscreenButton } from '../components/FullscreenButton';
 import {
   GUEST_CODE,
   GUEST_HOLDER_NAME,
@@ -232,6 +233,7 @@ export const GuestApp: React.FC = () => {
           <button type="button" className="client-portal-action" data-tour="fiscal" onClick={() => setFiscalOpen(true)} style={actionStyle}>
             Información fiscal
           </button>
+          <FullscreenButton className="client-portal-action" style={actionStyle} />
         </div>
       </header>
 

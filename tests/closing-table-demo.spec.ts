@@ -171,9 +171,11 @@ test('demo1 charts draw themselves when they come into view; other clients do no
   await expect.poll(() => waterfall.locator('.report-pro-waterfall-bar span').first().evaluate((el) => el.getBoundingClientRect().height), { timeout: 10_000 }).toBeGreaterThan(40);
   expect(await waterfall.locator('.report-pro-waterfall-bar span').first().evaluate((el) => getComputedStyle(el, '::before').animationName)).toBe('liquidWave');
 
-  // Explicacion final: 10.000 de 115.000 recuperados (9 de cada 100) y 22.548 ganados (20 de cada 100).
+  // Explicacion final: 105.000 de 115.000 siguen invertidos (91 de cada 100) y 22.548 ganados (20 de cada 100).
   const explain = page.locator('.report-pro-explain-panel');
-  await expect(explain).toContainText('Ya has recuperado 9 € de cada 100 € que pusiste');
+  await expect(explain).toContainText('De cada 100 € que pusiste, 91 € siguen trabajando para ti');
+  await expect(explain).toContainText('Has retirado 10.000 € desde el inicio.');
+  await expect(explain).not.toContainText('recuperado');
   await expect(explain).toContainText('Has ganado 20 € por cada 100 € que pusiste');
 
   await mount(page, 'client-004');

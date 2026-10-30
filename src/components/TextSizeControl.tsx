@@ -9,10 +9,10 @@ export type TextSizeLevel = 'normal' | 'grande' | 'muy-grande';
 
 const STORAGE_KEY = 'jigsa-text-size';
 
-const LEVELS: Array<{ id: TextSizeLevel; label: string; desktop: number; phone: number }> = [
-  { id: 'normal', label: 'Normal', desktop: 1, phone: 1 },
-  { id: 'grande', label: 'Grande', desktop: 1.15, phone: 1.08 },
-  { id: 'muy-grande', label: 'Muy grande', desktop: 1.3, phone: 1.16 }
+const LEVELS: Array<{ id: TextSizeLevel; label: string; desktop: number; phone: number; tinyPhone: number }> = [
+  { id: 'normal', label: 'Normal', desktop: 1, phone: 1, tinyPhone: 1 },
+  { id: 'grande', label: 'Grande', desktop: 1.15, phone: 1.08, tinyPhone: 1.04 },
+  { id: 'muy-grande', label: 'Muy grande', desktop: 1.3, phone: 1.16, tinyPhone: 1.08 }
 ];
 
 // En portatiles (13-15") la letra se veia pequeña: un poco mas grande por defecto.
@@ -20,6 +20,8 @@ const LAPTOP_MIN_WIDTH = 1024;
 const LAPTOP_MAX_WIDTH = 1599;
 const LAPTOP_BOOST = 1.08;
 const PHONE_MAX_WIDTH = 640;
+// Moviles muy pequeños (320-340 px): aumento mas contenido para que nada se salga.
+const TINY_PHONE_MAX_WIDTH = 340;
 
 const readLevel = (): TextSizeLevel => {
   try {
@@ -32,6 +34,7 @@ const readLevel = (): TextSizeLevel => {
 
 export const getTextZoom = (level: TextSizeLevel, viewportWidth: number) => {
   const entry = LEVELS.find((item) => item.id === level) ?? LEVELS[0];
+  if (viewportWidth <= TINY_PHONE_MAX_WIDTH) return entry.tinyPhone;
   if (viewportWidth <= PHONE_MAX_WIDTH) return entry.phone;
   const boost = viewportWidth >= LAPTOP_MIN_WIDTH && viewportWidth <= LAPTOP_MAX_WIDTH ? LAPTOP_BOOST : 1;
   return Math.round(entry.desktop * boost * 1000) / 1000;

@@ -1393,7 +1393,8 @@ export const ReportView: React.FC<ReportViewProps> = ({
     explainMovements[movement.iso] = entry;
   });
   const explainInvested = getCapitalPendingToRecover(explainMovements);
-  const explainRecoveredPer100 = visibleIncrements > 0 ? Math.round((visibleDecrements / visibleIncrements) * 100) : 0;
+  // De cada 100 € aportados, cuantos siguen invertidos (en positivo: el dinero que sigue trabajando).
+  const explainInvestedPer100 = visibleIncrements > 0 ? Math.min(100, Math.max(0, Math.round((explainInvested / visibleIncrements) * 100))) : 0;
   const explainGainPer100 = visibleIncrements > 0 ? Math.round((report.beneficioTotal / visibleIncrements) * 100) : 0;
   const formatWholeEuro = (value: number) => `${Math.round(value).toLocaleString('es-ES')} €`;
   const monthlyClosingRows = closingSourceMonths.map((month) => {
@@ -3120,10 +3121,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
             <div ref={benefitsScrollRef} className="table-scroll report-pro-benefits-scroll">
               <table className="monthly-table report-pro-table report-pro-benefits-table is-demo-benefits-table">
                 <colgroup>
-                  <col style={{ width: '24%' }} />
-                  <col style={{ width: '38%' }} />
-                  <col style={{ width: '16%' }} />
                   <col style={{ width: '22%' }} />
+                  <col style={{ width: '36%' }} />
+                  <col style={{ width: '19%' }} />
+                  <col style={{ width: '23%' }} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -3489,12 +3490,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
         {isDemoClosingLayout && visibleIncrements > 0 ? (
           <section className="report-pro-explain-panel" data-reveal="explain" aria-label="Lo que ha hecho tu dinero">
-            <article className="report-pro-explain-card is-recovered">
-              <div className="report-pro-explain-number">{Math.min(100, explainRecoveredPer100)} € <small>de cada 100 €</small></div>
-              <h5>{explainRecoveredPer100 >= 100 ? 'Ya has recuperado todo lo que pusiste' : `Ya has recuperado ${explainRecoveredPer100} € de cada 100 € que pusiste`}</h5>
-              <div className="report-pro-explain-track" aria-hidden="true"><i style={{ '--w': `${Math.min(100, Math.max(0, explainRecoveredPer100))}%` } as React.CSSProperties} /></div>
-              <div className="report-pro-explain-scale"><span>Recuperado: {formatWholeEuro(visibleDecrements)}</span><span>Pusiste: {formatWholeEuro(visibleIncrements)}</span></div>
-              <p>Tu dinero que sigue invertido: <b>{formatWholeEuro(explainInvested)}</b>.</p>
+            <article className="report-pro-explain-card is-invested">
+              <div className="report-pro-explain-number">{explainInvestedPer100} € <small>de cada 100 €</small></div>
+              <h5>{explainInvestedPer100 > 0 ? `De cada 100 € que pusiste, ${explainInvestedPer100} € siguen trabajando para ti` : 'Todo lo que tienes hoy es beneficio de tu inversión'}</h5>
+              <div className="report-pro-explain-track" aria-hidden="true"><i style={{ '--w': `${explainInvestedPer100}%` } as React.CSSProperties} /></div>
+              <div className="report-pro-explain-scale"><span>Sigue invertido: {formatWholeEuro(explainInvested)}</span><span>Pusiste: {formatWholeEuro(visibleIncrements)}</span></div>
+              {visibleDecrements > 0 ? <p>Has retirado {formatWholeEuro(visibleDecrements)} desde el inicio.</p> : <p>No has retirado nada: todo tu dinero sigue invertido.</p>}
             </article>
             <article className={`report-pro-explain-card ${explainGainPer100 >= 0 ? 'is-gain' : 'is-loss'}`}>
               <div className="report-pro-explain-number">{explainGainPer100 >= 0 ? '+' : '−'}{Math.abs(explainGainPer100)} € <small>por cada 100 €</small></div>

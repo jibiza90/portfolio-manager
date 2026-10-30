@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ReportView, type PendingCashMovement } from './components/ReportView';
 import { TextSizeControl, useTextSize } from './components/TextSizeControl';
+import { FullscreenButton } from './components/FullscreenButton';
 import { LegalPrivacyNotice } from './components/LegalPrivacyNotice';
 import { CLIENTS, DEMO_CLIENT_ID, isDemoClient } from './constants/clients';
 import {
@@ -2515,6 +2516,12 @@ const ClientPortal = ({
             >
               Información fiscal
             </button>
+          ) : null}
+          {clientId === DEMO_CLIENT_ID ? (
+            <FullscreenButton
+              className="client-portal-action"
+              style={{ padding: '8px 12px', borderRadius: 10, border: `1px solid ${palette.border}`, background: '#ffffff', color: palette.text, fontWeight: 600 }}
+            />
           ) : null}
           <button
             type="button"

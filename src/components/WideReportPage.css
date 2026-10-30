@@ -1341,6 +1341,8 @@
 
   .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td {
     display: block;
+    width: auto !important;
+    min-width: 0;
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;
@@ -1656,7 +1658,7 @@
   color: #0a2037;
 }
 
-.report-pro-explain-card.is-recovered { --tone: #c2410c; --fill: linear-gradient(90deg, #fdba74, #ea580c); }
+.report-pro-explain-card.is-invested { --tone: #087b83; --fill: linear-gradient(90deg, #5fd3c4, #087b83); }
 .report-pro-explain-card.is-gain { --tone: #0f7a5c; --fill: linear-gradient(90deg, #86efac, #0f7a5c); }
 .report-pro-explain-card.is-loss { --tone: #b91c1c; --fill: linear-gradient(90deg, #fca5a5, #b91c1c); }
 
@@ -1738,5 +1740,66 @@
   .report-pro-explain-track > i {
     width: var(--w);
     transition: none;
+  }
+}
+
+/* 7 tarjetas (resumen del periodo con valor inicial): 4+3 / 2+2+2 y la ultima a lo ancho / 1 por fila. */
+@container report-sheet (min-width: 900px) {
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(7):last-child) { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(7):last-child) > * { grid-column: span 3; }
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(7):last-child) > :nth-child(n + 5) { grid-column: span 4; }
+}
+
+@container report-sheet (min-width: 440px) and (max-width: 899.98px) {
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(7):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(7):last-child) > :last-child { grid-column: 1 / -1; }
+}
+
+@container report-sheet (max-width: 439.98px) {
+  .report-pro-page-wide .report-pro-wide-sheet :is(.report-pro-kpis-demo.report-pro-kpis-demo, .report-pro-capital-grid.report-pro-capital-grid, .report-pro-period-summary.report-pro-period-summary):has(> :nth-child(7):last-child) { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Titulos de la tabla de beneficios: si no caben, en dos lineas (no se salen de su columna). */
+.report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > thead > tr > th {
+  white-space: normal;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+
+/* Pantallas muy estrechas (o letra muy grande en movil). */
+@container report-sheet (max-width: 380px) {
+  .report-pro-movements-panel .report-pro-movement-types {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-pro-movements-panel .report-pro-movement-types > button {
+    font-size: 14px;
+  }
+}
+
+@container report-sheet (max-width: 330px) {
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(2) {
+    text-align: left;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table .report-pro-benefit-bar-cell {
+    justify-content: flex-start;
+  }
+
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(3),
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-benefits-table.is-demo-benefits-table > tbody > tr:not(.report-pro-expanded-row) > td:nth-child(4) {
+    flex-wrap: wrap;
+    gap: 0 12px;
+  }
+}
+
+/* Muy poco sitio (movil pequeño con letra ampliada): la cifra grande del saldo cabe en su tarjeta. */
+@container report-sheet (max-width: 300px) {
+  .report-pro-page-wide .report-pro-wide-sheet .report-pro-executive strong {
+    font-size: 24px;
   }
 }

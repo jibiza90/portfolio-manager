@@ -132,3 +132,47 @@ for (const { width, level } of [
     }
   });
 }
+
+// demo1 (tablas y apartados propios) con la letra ampliada: nada se sale y las tarjetas no quedan sueltas.
+for (const { width, zoom } of [
+  { width: 360, zoom: 1.16 },
+  { width: 1024, zoom: 1.242 },
+  { width: 1280, zoom: 1.404 },
+  { width: 1920, zoom: 1.3 }
+]) {
+  test(`demo1 report keeps everything inside its box at ${width}px with zoom ${zoom}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'ipad-mini', 'Checked on chosen viewports.');
+    test.setTimeout(120_000);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await page.evaluate(async (z) => {
+      const harness = await import(/* @vite-ignore */ '/tests/fixtures/report-view-harness.tsx' as string);
+      harness.mountReportView(13, 'client-001', true);
+      const root = document.getElementById('root') as HTMLElement;
+      root.classList.add('client-portal-text-zoom');
+      root.style.zoom = String(z);
+    }, zoom);
+    await expect(page.locator('.report-pro-explain-panel')).toBeVisible();
+    await page.evaluate(() => document.querySelectorAll('[data-reveal]').forEach((element) => element.classList.add('is-revealed')));
+    await page.waitForTimeout(1600);
+    expect(await page.evaluate(findOverflowingText)).toEqual([]);
+    expect(['6+1', '3+3+1', '2+2+2+1', '4+3', '2+2+2+1', '1+1+1+1+1+1+1']).toContain(await page.evaluate(rowsOf, '.report-pro-period-summary'));
+    expect(await page.evaluate(rowsOf, '.report-pro-period-summary')).not.toMatch(/^(6\+1|3\+3\+1)$/);
+  });
+}
+
+test('full screen button enters full screen, shows how to leave and can exit', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once.');
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  const button = page.getByRole('button', { name: 'Pantalla completa' });
+  await expect(button).toBeVisible();
+  await button.click();
+  await expect.poll(() => page.evaluate(() => Boolean(document.fullscreenElement))).toBe(true);
+  // En pantallas tactiles el aviso indica el boton; con teclado, la tecla Esc.
+  await expect(page.locator('.fsb-hint')).toContainText(/Esc para volver a la pantalla normal|Para volver, pulsa Salir de pantalla completa/);
+  await expect(page.locator('.fsb-hint')).toHaveCount(0, { timeout: 5000 });
+  await page.getByRole('button', { name: 'Salir de pantalla completa' }).click();
+  await expect.poll(() => page.evaluate(() => Boolean(document.fullscreenElement))).toBe(false);
+});
