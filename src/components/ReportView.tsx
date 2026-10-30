@@ -11,6 +11,8 @@ import { ContributionJourneyModule } from './ContributionJourneyModule';
 import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio';
 import { PatrimonyTrendChart, type PatrimonyTrendPoint } from './PatrimonyTrendChart';
 import { applyPdfWatermark } from '../utils/pdfWatermark';
+import { getCapitalPendingToRecover } from '../utils/commissions';
+import type { Movement } from '../types';
 import './WideReportPage.css';
 
 const MovementReceiptDialog = React.lazy(() => import('./MovementReceipt').then((module) => ({ default: module.MovementReceiptDialog })));
@@ -1382,6 +1384,18 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const tableMovementRows = isDemoClosingLayout ? demoMovementRows : screenMovementCapitalSeries;
   const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
   const monthKeyLabel = (key: string) => `${SHORT_MONTHS[Number(key.slice(5, 7)) - 1] ?? key.slice(5, 7)} ${key.slice(0, 4)}`;
+  // demo1: explicacion final "de cada 100 €" (recuperado y ganado sobre lo aportado).
+  const explainMovements: Record<string, Movement> = {};
+  [...(report.movements ?? []), ...pendingMovementRows].forEach((movement) => {
+    const entry = explainMovements[movement.iso] ?? {};
+    if (movement.type === 'increment') entry.increment = (entry.increment ?? 0) + movement.amount;
+    else entry.decrement = (entry.decrement ?? 0) + movement.amount;
+    explainMovements[movement.iso] = entry;
+  });
+  const explainInvested = getCapitalPendingToRecover(explainMovements);
+  const explainRecoveredPer100 = visibleIncrements > 0 ? Math.round((visibleDecrements / visibleIncrements) * 100) : 0;
+  const explainGainPer100 = visibleIncrements > 0 ? Math.round((report.beneficioTotal / visibleIncrements) * 100) : 0;
+  const formatWholeEuro = (value: number) => `${Math.round(value).toLocaleString('es-ES')} €`;
   const monthlyClosingRows = closingSourceMonths.map((month) => {
     const monthKey = reportMonthToKey(month.month);
     const historyIndex = monthlyWithData.findIndex((item) => reportMonthToKey(item.month) === monthKey);
@@ -3472,6 +3486,25 @@ export const ReportView: React.FC<ReportViewProps> = ({
               <span className="total">{formatCurrency(visibleBalance)}</span>
             </div>
         </section>
+
+        {isDemoClosingLayout && visibleIncrements > 0 ? (
+          <section className="report-pro-explain-panel" data-reveal="explain" aria-label="Lo que ha hecho tu dinero">
+            <article className="report-pro-explain-card is-recovered">
+              <div className="report-pro-explain-number">{Math.min(100, explainRecoveredPer100)} € <small>de cada 100 €</small></div>
+              <h5>{explainRecoveredPer100 >= 100 ? 'Ya has recuperado todo lo que pusiste' : `Ya has recuperado ${explainRecoveredPer100} € de cada 100 € que pusiste`}</h5>
+              <div className="report-pro-explain-track" aria-hidden="true"><i style={{ '--w': `${Math.min(100, Math.max(0, explainRecoveredPer100))}%` } as React.CSSProperties} /></div>
+              <div className="report-pro-explain-scale"><span>Recuperado: {formatWholeEuro(visibleDecrements)}</span><span>Pusiste: {formatWholeEuro(visibleIncrements)}</span></div>
+              <p>Tu dinero que sigue invertido: <b>{formatWholeEuro(explainInvested)}</b>.</p>
+            </article>
+            <article className={`report-pro-explain-card ${explainGainPer100 >= 0 ? 'is-gain' : 'is-loss'}`}>
+              <div className="report-pro-explain-number">{explainGainPer100 >= 0 ? '+' : '−'}{Math.abs(explainGainPer100)} € <small>por cada 100 €</small></div>
+              <h5>{explainGainPer100 >= 0 ? `Has ganado ${explainGainPer100} € por cada 100 € que pusiste` : `Has perdido ${Math.abs(explainGainPer100)} € por cada 100 € que pusiste`}</h5>
+              <div className="report-pro-explain-track" aria-hidden="true"><i style={{ '--w': `${Math.min(100, Math.abs(explainGainPer100))}%` } as React.CSSProperties} /></div>
+              <div className="report-pro-explain-scale"><span>{explainGainPer100 >= 0 ? 'Ganado' : 'Perdido'}: {formatWholeEuro(Math.abs(report.beneficioTotal))}</span><span>Pusiste: {formatWholeEuro(visibleIncrements)}</span></div>
+              <p>Es tu {explainGainPer100 >= 0 ? 'ganancia' : 'pérdida'} total: el <b>{Math.abs(explainGainPer100)} %</b> de lo que has aportado.</p>
+            </article>
+          </section>
+        ) : null}
 
       </article>
       )}
