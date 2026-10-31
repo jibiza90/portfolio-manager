@@ -52,14 +52,14 @@ test('demo1 shows the closing table under capital and profit with sticky heading
   expect(gap).toBeLessThanOrEqual(2);
 });
 
-test('other clients keep the closing table in its usual place', async ({ page }, testInfo) => {
+test('every client gets the closing table under capital and profit', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await mount(page, 'client-004');
   const titles = await sectionTitles(page);
-  expect(titles.indexOf('Cierres y composición del resultado')).toBeGreaterThan(titles.indexOf('Evolucion patrimonio'));
-  await expect(page.locator('.report-pro-closing-panel.is-demo-closing')).toHaveCount(0);
+  expect(titles.indexOf('Cierres y composición del resultado')).toBe(titles.indexOf('Capital y beneficio acumulado') + 1);
+  await expect(page.locator('.report-pro-closing-panel.is-demo-closing')).toHaveCount(1);
 });
 
 test('demo1 closing table shows every year by default and can show a single year', async ({ page }, testInfo) => {
@@ -146,7 +146,7 @@ test('demo1 capital movements: period and type selectors with totals', async ({ 
   await expect(totals).toHaveText([/Total del periodo\s*Dic 2025 – Mar 2026.*\+50\.000,00\s€.*-10\.000,00\s€/]);
 });
 
-test('contributions in the patrimony chart are blue only for demo1', async ({ page }, testInfo) => {
+test('contributions in the patrimony chart are blue for every client', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -154,11 +154,10 @@ test('contributions in the patrimony chart are blue only for demo1', async ({ pa
   await mount(page, 'client-001');
   expect(await inflowFill()).toBe('rgb(37, 99, 235)');
   await mount(page, 'client-004');
-  expect(await inflowFill()).not.toBe('rgb(37, 99, 235)');
-  await expect(page.locator('.report-pro-benefits-panel .report-pro-closing-years')).toHaveCount(0);
+  expect(await inflowFill()).toBe('rgb(37, 99, 235)');
 });
 
-test('demo1 charts draw themselves when they come into view; other clients do not', async ({ page }, testInfo) => {
+test('charts draw themselves when they come into view, for every client', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -181,6 +180,6 @@ test('demo1 charts draw themselves when they come into view; other clients do no
   await expect(explain).toContainText('Lo que has aportado después del último cierre (15.000 €) cuenta a partir del próximo cierre.');
 
   await mount(page, 'client-004');
-  await expect(page.locator('[data-reveal]')).toHaveCount(0);
-  await expect(page.locator('.report-pro-explain-panel')).toHaveCount(0);
+  await expect(page.locator('[data-reveal]')).toHaveCount(4);
+  await expect(page.locator('.report-pro-explain-panel')).toHaveCount(1);
 });

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
   buildMonthlyStatsForMonths,
+  getClientMonthReturnPct,
   getStandaloneContributionReturnForMonth
 } from '../src/utils/monthlyHistory';
 import { buildSnapshot } from '../src/utils/snapshot';
@@ -114,4 +115,15 @@ test('keeps the general return for existing capital and the custom return for a 
   expect(stats?.profit).toBeCloseTo(2_800, 8);
   expect(stats?.profitPct).toBeCloseTo(5, 8);
   expect(stats?.endBalance).toBeCloseTo(67_800, 8);
+});
+
+test('admin client page uses the own return of a client who started that month, not the general one', () => {
+  // Cliente que entra el 8 de octubre con 4,42 % propio; el historico del mes tiene la general (5,18 %).
+  const movements = { '2026-10-08': { increment: 30_000, incrementReturnPct: 0.0442 } };
+  const history = { '2026-10': { returnPct: 0.0518 } };
+  expect(getClientMonthReturnPct(movements, history, '2026-10')).toBeCloseTo(0.0442, 10);
+  // El mes siguiente ya no es su primer mes: manda la del historico.
+  expect(getClientMonthReturnPct(movements, { ...history, '2026-11': { returnPct: 0.03 } }, '2026-11')).toBeCloseTo(0.03, 10);
+  // Cliente con meses anteriores: la general del historico.
+  expect(getClientMonthReturnPct({ '2026-09-01': { increment: 10_000 }, ...movements }, history, '2026-10')).toBeCloseTo(0.0518, 10);
 });

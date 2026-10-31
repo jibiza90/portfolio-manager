@@ -106,7 +106,7 @@ const mountReport = async (page: Page, clientId: string) => {
   }, { modulePath: '/tests/fixtures/report-view-harness.tsx', requestedClientId: clientId });
 };
 
-test('receipt buttons only appear in the demo1 movement history', async ({ page }, testInfo) => {
+test('every client has receipt buttons in the movement history', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1300, height: 1000 });
@@ -120,6 +120,6 @@ test('receipt buttons only appear in the demo1 movement history', async ({ page 
 
   await mountReport(page, 'client-004');
   await expect(page.locator('.movements-table').first()).toBeVisible();
-  await expect(page.getByRole('button', { name: /Descargar justificante/ })).toHaveCount(0);
-  await expect(page.locator('.movements-table th', { hasText: 'Justificante' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Descargar justificante/ }).first()).toBeVisible();
+  await expect(page.locator('.movements-table th', { hasText: 'Justificante' })).toHaveCount(1);
 });

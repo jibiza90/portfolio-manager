@@ -15,9 +15,10 @@ export const isDemoClient = (clientId: string) =>
 // Demostracion /invitado: cliente ficticio que nunca existe en la cartera ni en la base de datos.
 export const GUEST_CLIENT_ID = 'invitado';
 
-// Funciones nuevas que de momento solo ven demo1 y la demostracion /invitado.
-export const hasPreviewFeatures = (clientId: string) =>
-  clientId === DEMO_CLIENT_ID || clientId === GUEST_CLIENT_ID;
+// Novedades del informe (tablas por año, justificantes, informacion fiscal, pantalla completa, globo de novedades,
+// rentabilidad total sobre todo lo aportado...). Se probaron en demo1 y desde el 31/10/2026 las ven todos los clientes.
+// Si hubiera que quitarselas a alguien, se hace aqui.
+export const hasNewReportFeatures = (_clientId: string) => true;
 
 // Clientes que cuentan en el total de la cartera pero no para calcular la participacion del resto.
 const PARTICIPATION_EXCLUDED_CLIENT_IDS = new Set(['client-003']);

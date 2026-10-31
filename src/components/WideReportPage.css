@@ -190,6 +190,10 @@
 }
 
 .report-pro-page-wide .report-pro-wide-sheet .report-pro-bar-col {
+  /* Con pocos meses (clientes nuevos) cada barra no ocupa todo el ancho: se queda centrada y de tamaño normal. */
+  width: 100%;
+  max-width: 150px;
+  justify-self: center;
   gap: 11px;
   transition: transform 180ms ease;
 }

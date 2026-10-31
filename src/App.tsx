@@ -15,6 +15,7 @@ import { ClientActivityView } from './components/ClientActivityView';
 import { calculateTWR, calculateAllMonthsTWR } from './utils/twr';
 import {
   buildMonthlyStatsForMonths,
+  getClientMonthReturnPct,
   getDominantMonthlyReturn,
   getStandaloneContributionReturnForMonth,
   hasMonthlyHistoryValue,
@@ -1869,6 +1870,10 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage, canPrevie
   const popupRef = useRef<HTMLDivElement>(null);
   const analyticsScrollRef = useRef<HTMLDivElement>(null);
 
+  // Igual que el informe del cliente: si empezo ese mes y su aportacion tiene rentabilidad propia, manda la suya
+  // (no la general guardada en el historico del mes).
+  const getClientMonthReturn = (month: string) => getClientMonthReturnPct(clientMovements ?? {}, monthlyHistory, month);
+
   const getClientDisplayProfitPct = (row?: (typeof statsRows)[number] | null) => {
     if (!row) return undefined;
     const month = row.iso.slice(0, 7);
@@ -1877,7 +1882,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage, canPrevie
     const manualReturnAdjustment = statsRows
       .filter((item) => item.iso.startsWith(month))
       .reduce((sum, item) => sum + (normalizeMonthlyReturnPct(item.manualProfitPct) ?? 0), 0);
-    const historyReturn = normalizeMonthlyReturnPct(monthlyHistory[month]?.returnPct);
+    const historyReturn = getClientMonthReturn(month);
     return historyReturn !== undefined ? historyReturn + manualReturnAdjustment : row.profitPct;
   };
 
@@ -1894,7 +1899,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage, canPrevie
     const totalIncrements = statsRows.reduce((sum, r) => sum + (r.increment ?? 0), 0);
     const totalDecrements = statsRows.reduce((sum, r) => sum + (r.decrement ?? 0), 0);
     return { estimatedBalance, totalProfit, dailyProfit, participation, profitPct, totalIncrements, totalDecrements };
-  }, [statsRows, monthlyHistory]);
+  }, [statsRows, monthlyHistory, clientMovements]);
 
   const movementDetails = useMemo(
     () =>
@@ -1976,7 +1981,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage, canPrevie
         .filter((row) => row.iso.startsWith(item.month))
         .reduce((sum, row) => sum + (normalizeMonthlyReturnPct(row.manualProfitPct) ?? 0), 0);
       const historyReturn = overrideMonths.has(item.month) || manualReturnAdjustment !== 0
-        ? normalizeMonthlyReturnPct(monthlyHistory[item.month]?.returnPct)
+        ? getClientMonthReturn(item.month)
         : undefined;
       return historyReturn === undefined ? item : { ...item, twr: historyReturn + manualReturnAdjustment };
     });
@@ -1984,7 +1989,7 @@ function ClientPanel({ clientId, focusDate, contacts, setAlertMessage, canPrevie
       ? monthlyTWR.reduce((factor, item) => factor * (1 + item.twr), 1) - 1
       : ytdResult.twr;
     return { ytd: { ...ytdResult, twr: adjustedTwr }, monthly: monthlyTWR };
-  }, [statsRows, monthlyHistory]);
+  }, [statsRows, monthlyHistory, clientMovements]);
 
   const handleMouseMove = (e: React.MouseEvent, text: string) => {
     const rect = e.currentTarget.getBoundingClientRect();

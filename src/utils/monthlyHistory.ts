@@ -108,6 +108,17 @@ export function getStandaloneContributionReturnForMonth(
   return profit / invested;
 }
 
+// Rentabilidad del mes de un cliente: si empezo ese mes y su aportacion tiene rentabilidad propia, manda la suya;
+// si no, la guardada en su historico mensual. Es la misma regla que usa el informe del cliente.
+export function getClientMonthReturnPct(
+  movements: Record<string, Movement>,
+  monthlyHistory: Record<string, MonthlyHistoryEntry>,
+  monthKey: string
+) {
+  return getStandaloneContributionReturnForMonth(movements, monthlyHistory, monthKey) ??
+    normalizeMonthlyReturnPct(monthlyHistory[monthKey]?.returnPct);
+}
+
 export function canHonorMonthlyHistoryReturn(baseStart: number | undefined, entry?: MonthlyHistoryEntry) {
   const normalizedReturn = normalizeMonthlyReturnPct(entry?.returnPct);
   if (entry?.finalBalance === undefined || normalizedReturn === undefined || normalizedReturn <= -1) {

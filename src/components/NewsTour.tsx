@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './NewsTour.css';
 
-// Visita guiada de novedades del area de cliente (de momento solo demo1).
+// Visita guiada de novedades del area de cliente (todos los clientes).
 // Solo lee la pagina: lleva al cliente a cada apartado y lo ilumina. No guarda nada en la base de datos.
 
 export interface TourStep {
@@ -16,7 +16,7 @@ export interface TourStep {
 }
 
 // Cambiar la version cuando haya novedades nuevas para que la visita vuelva a salir.
-const TOUR_VERSION = '2026-10';
+const TOUR_VERSION = '2026-11';
 const STORAGE_KEY = 'jigsa-news-tour-seen';
 
 export const tourIcon = (path: React.ReactNode) => (
@@ -29,8 +29,17 @@ const STEPS: TourStep[] = [
     target: '[data-tour="letra"]',
     color: '#087b83',
     icon: tourIcon(<path d="M4 19l5-14h2l5 14M6.5 13h7M17 8h4M19 6v4" />),
-    title: 'Tamaño de letra',
-    text: 'Si te cuesta leer, pulsa Grande o Muy grande y toda la página se verá más grande. Se queda guardado en este dispositivo.'
+    title: 'Tamaño de letra y pantalla completa',
+    text: 'Si te cuesta leer, pulsa Grande o Muy grande. Con «Pantalla completa», arriba, el informe ocupa toda la pantalla.'
+  },
+  {
+    id: 'fiscal',
+    target: '[data-tour="fiscal"]',
+    tryTarget: '[data-tour="fiscal"]',
+    color: '#7c3aed',
+    icon: tourIcon(<path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h4" />),
+    title: 'Información fiscal',
+    text: 'Descarga el informe de rendimientos del año que quieras para tu declaración de la renta.'
   },
   {
     id: 'rentabilidad',
@@ -39,6 +48,22 @@ const STEPS: TourStep[] = [
     icon: tourIcon(<path d="M4 19h16M6 15l4-4 3 3 6-7M15 7h4v4" />),
     title: 'Rentabilidad total más clara',
     text: 'Ahora se calcula sobre todo lo que has aportado. Tu dinero y tu beneficio no cambian.'
+  },
+  {
+    id: 'cierres',
+    target: '[data-tour="historial"]',
+    color: '#0b5560',
+    icon: tourIcon(<path d="M4 5h16v15H4zM4 10h16M9 5V3M15 5V3M8 14h3M8 17h6" />),
+    title: 'Cierres mensuales por año',
+    text: 'Elige un año para ver sus cierres de cada mes. Cada año termina con su total.'
+  },
+  {
+    id: 'beneficios',
+    target: '[data-tour="beneficios"]',
+    color: '#15803d',
+    icon: tourIcon(<path d="M5 20V12M10 20V8M15 20v-6M20 20V5" />),
+    title: 'Beneficios mensuales renovados',
+    text: 'Lo que has ganado cada mes, por año o por el periodo que elijas, con el total al final.'
   },
   {
     id: 'patrimonio',
@@ -50,12 +75,12 @@ const STEPS: TourStep[] = [
     text: 'Mira cómo ha evolucionado tu patrimonio mes a mes, con el saldo, el beneficio y la rentabilidad de cada mes.'
   },
   {
-    id: 'retiradas',
-    target: '[data-tour="retiradas"]',
-    color: '#ea580c',
-    icon: tourIcon(<path d="M12 21V11M12 11L6 4M12 11l6-7M6 4v4M6 4h4M18 4v4M18 4h-4" />),
-    title: 'Rentabilidad de cada retirada',
-    text: 'Elige una aportación y verás sus retiradas, cuánto ha rendido cada una y de qué aportación sale el dinero.'
+    id: 'movimientos',
+    target: '[data-tour="movimientos"]',
+    color: '#2563eb',
+    icon: tourIcon(<path d="M7 7h12M15 3l4 4-4 4M17 17H5M9 13l-4 4 4 4" />),
+    title: 'Aportaciones y retiradas',
+    text: 'Míralas por año o por periodo, todas o solo aportaciones o solo retiradas, con su total.'
   },
   {
     id: 'justificantes',
@@ -67,13 +92,28 @@ const STEPS: TourStep[] = [
     text: 'Pulsa Descargar en cualquier aportación o retirada y elige el justificante extendido o el resumido.'
   },
   {
-    id: 'fiscal',
-    target: '[data-tour="fiscal"]',
-    tryTarget: '[data-tour="fiscal"]',
-    color: '#7c3aed',
-    icon: tourIcon(<path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h4" />),
-    title: 'Información fiscal',
-    text: 'Descarga el informe de rendimientos del año que quieras para tu declaración de la renta.'
+    id: 'retiradas',
+    target: '[data-tour="retiradas"]',
+    color: '#ea580c',
+    icon: tourIcon(<path d="M12 21V11M12 11L6 4M12 11l6-7M6 4v4M6 4h4M18 4v4M18 4h-4" />),
+    title: 'Rentabilidad de cada retirada',
+    text: 'Elige una aportación y verás sus retiradas, cuánto ha rendido cada una y de qué aportación sale el dinero.'
+  },
+  {
+    id: 'composicion',
+    target: '[data-tour="composicion"]',
+    color: '#0e7490',
+    icon: tourIcon(<path d="M4 20h16M6 20V10M11 20V6M16 20v-8" />),
+    title: 'Cómo se forma tu saldo',
+    text: 'De un vistazo: lo que has aportado, lo que has retirado y lo que has ganado.'
+  },
+  {
+    id: 'cada100',
+    target: '[data-tour="cada100"]',
+    color: '#b45309',
+    icon: tourIcon(<path d="M12 3v18M16 7H10a3 3 0 000 6h4a3 3 0 010 6H8" />),
+    title: 'De cada 100 €…',
+    text: 'Al final del informe, explicado fácil: cuánto sigue invertido y cuánto has ganado por cada 100 € que pusiste.'
   }
 ];
 
@@ -322,7 +362,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ steps: allSteps, badge, 
   );
 };
 
-// Visita de novedades del area de cliente (de momento solo demo1).
+// Visita de novedades del area de cliente.
 export const NewsTour: React.FC<TourEvents> = ({ onClose, onEvent }) => (
   <GuidedTour
     steps={STEPS}

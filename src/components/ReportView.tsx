@@ -5,7 +5,7 @@ import type { ReportData } from '../services/reportLinks';
 import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 import type { GeneralReferenceMonth } from '../services/cloudPortfolio';
-import { DEMO_CLIENT_ID, hasPreviewFeatures } from '../constants/clients';
+import { DEMO_CLIENT_ID, hasNewReportFeatures } from '../constants/clients';
 import { getViewportTooltipPosition, ViewportTooltipPlacement } from '../utils/viewportTooltip';
 import { ContributionJourneyModule } from './ContributionJourneyModule';
 import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio';
@@ -604,7 +604,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
   // demo1: los graficos marcados con data-reveal se dibujan solos cada vez que entran en pantalla.
   useEffect(() => {
-    if (report?.clientId !== DEMO_CLIENT_ID || typeof IntersectionObserver === 'undefined') return undefined;
+    if (!report || !hasNewReportFeatures(report.clientId) || typeof IntersectionObserver === 'undefined') return undefined;
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.15) entry.target.classList.add('is-revealed');
@@ -1324,7 +1324,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   };
   // demo1: la tabla de cierres va justo debajo de "Capital y beneficio acumulado", encima del filtro de
   // periodo, asi que muestra siempre todos los cierres publicados.
-  const isDemoClosingLayout = report.clientId === DEMO_CLIENT_ID;
+  const isDemoClosingLayout = hasNewReportFeatures(report.clientId);
   // Años con cierres publicados (el mas reciente primero); un año nuevo aparece solo con su primer cierre.
   const closingYears = [...new Set(monthlyWithData.map((month) => reportMonthToKey(month.month).slice(0, 4)))]
     .filter((year) => /^\d{4}$/.test(year))
@@ -1474,7 +1474,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     fallbackTooltip: string,
     extraClassName = ''
   ) => {
-    const isDemoClient = hasPreviewFeatures(report.clientId);
+    const isDemoClient = hasNewReportFeatures(report.clientId);
     const movements = type === 'increment' ? visibleContributionMovements : visibleWithdrawalMovements;
     const tooltipContent = (
       <div className="report-pro-capital-history-tooltip-content">
@@ -3113,7 +3113,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </div>
         </section>
 
-        <section className={`report-pro-panel report-pro-benefits-panel${isDemoClosingLayout ? ' is-demo-benefits' : ''}`}>
+        <section className={`report-pro-panel report-pro-benefits-panel${isDemoClosingLayout ? ' is-demo-benefits' : ''}`} data-tour="beneficios">
           <div className="report-pro-panel-head">
             <h4>Beneficios mensuales</h4>
             <p>Beneficio generado en cada cierre de mes</p>
@@ -3317,7 +3317,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         {isDemoClosingLayout ? null : closingPanel}
 
         {(isDemoClosingLayout ? allMovementRows.length : screenMovementCapitalSeries.length) > 0 && (
-          <section className={`report-pro-panel report-pro-movements-panel${isDemoClosingLayout ? ' is-demo-movements' : ''}`}>
+          <section className={`report-pro-panel report-pro-movements-panel${isDemoClosingLayout ? ' is-demo-movements' : ''}`} data-tour="movimientos">
             <div className="report-pro-panel-head">
               <h4>Capital aportado y retirado</h4>
               <p>Detalle de aportaciones y retiradas</p>
@@ -3381,7 +3381,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     <th>Tipo</th>
                     <th className="text-right">Importe</th>
                     <th className="text-right">Capital neto aportado</th>
-                    {hasPreviewFeatures(report.clientId) ? <th className="text-right">Justificante</th> : null}
+                    {hasNewReportFeatures(report.clientId) ? <th className="text-right">Justificante</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -3411,7 +3411,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                           {isIncrement ? '+' : '-'}{formatCurrency(mov.amount ?? 0)}
                         </td>
                         <td className="text-right">{formatCurrency(mov.netCapital)}</td>
-                        {hasPreviewFeatures(report.clientId) ? (
+                        {hasNewReportFeatures(report.clientId) ? (
                           <td className="text-right">
                             <button
                               type="button"
@@ -3442,7 +3442,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                             </span>
                           </td>
                           <td className="text-right">{movementsType === 'all' ? <strong>{formatCurrency(mov.netCapital)}</strong> : null}</td>
-                          {hasPreviewFeatures(report.clientId) ? <td /> : null}
+                          {hasNewReportFeatures(report.clientId) ? <td /> : null}
                         </tr>
                       ) : null}
                       </React.Fragment>
@@ -3454,7 +3454,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </section>
         )}
 
-        {receiptMovement && hasPreviewFeatures(report.clientId) ? (
+        {receiptMovement && hasNewReportFeatures(report.clientId) ? (
           <React.Suspense fallback={null}>
             <MovementReceiptDialog
               clientId={report.clientId}
@@ -3478,7 +3478,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         ) : null}
 
 
-        <section className="report-pro-waterfall-panel" aria-label="Composicion financiera de la cartera" data-reveal={isDemoClosingLayout ? 'waterfall' : undefined}>
+        <section className="report-pro-waterfall-panel" data-tour="composicion" aria-label="Composicion financiera de la cartera" data-reveal={isDemoClosingLayout ? 'waterfall' : undefined}>
             <div className="report-pro-panel-head report-pro-waterfall-head">
               <div>
                 <span className="report-pro-waterfall-eyebrow">Resumen financiero</span>
@@ -3531,7 +3531,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         </section>
 
         {isDemoClosingLayout && visibleIncrements > 0 ? (
-          <section className="report-pro-explain-panel" data-reveal="explain" aria-label="Lo que ha hecho tu dinero">
+          <section className="report-pro-explain-panel" data-tour="cada100" data-reveal="explain" aria-label="Lo que ha hecho tu dinero">
             <article className="report-pro-explain-card is-invested">
               <div className="report-pro-explain-number">{explainInvestedPer100} € <small>de cada 100 €</small></div>
               <h5>{explainInvestedPer100 > 0 ? `De cada 100 € que pusiste, ${explainInvestedPer100} € siguen trabajando para ti` : 'Todo lo que tienes hoy es beneficio de tu inversión'}</h5>

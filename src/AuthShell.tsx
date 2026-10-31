@@ -3,7 +3,7 @@ import { ReportView, type PendingCashMovement } from './components/ReportView';
 import { TextSizeControl, useTextSize } from './components/TextSizeControl';
 import { FullscreenButton } from './components/FullscreenButton';
 import { LegalPrivacyNotice } from './components/LegalPrivacyNotice';
-import { CLIENTS, DEMO_CLIENT_ID, isDemoClient } from './constants/clients';
+import { CLIENTS, DEMO_CLIENT_ID, hasNewReportFeatures, isDemoClient } from './constants/clients';
 import {
   buildClientAuthEmail,
   fetchClientAccessProfile,
@@ -1529,7 +1529,7 @@ const ClientPortal = ({
 
   const report = overview?.report ?? null;
   const initialPosition = getInitialPositionFromOverview(overview);
-  const showNewsTour = clientId === DEMO_CLIENT_ID && Boolean(report) && !initialPosition;
+  const showNewsTour = hasNewReportFeatures(clientId) && Boolean(report) && !initialPosition;
   const closeNewsTour = useCallback(() => setNewsTourOpen(false), []);
   useEffect(() => {
     if (!showNewsTour) return;
@@ -2495,7 +2495,7 @@ const ClientPortal = ({
               Novedades
             </button>
           ) : null}
-          {clientId === DEMO_CLIENT_ID && report ? (
+          {hasNewReportFeatures(clientId) && report ? (
             <button
               type="button"
               className="client-portal-action"
@@ -2518,7 +2518,7 @@ const ClientPortal = ({
               Información fiscal
             </button>
           ) : null}
-          {clientId === DEMO_CLIENT_ID ? (
+          {hasNewReportFeatures(clientId) ? (
             <FullscreenButton
               className="client-portal-action"
               style={{ padding: '8px 12px', borderRadius: 10, border: `1px solid ${palette.border}`, background: '#ffffff', color: palette.text, fontWeight: 600 }}
