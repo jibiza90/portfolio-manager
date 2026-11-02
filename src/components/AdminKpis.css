@@ -169,3 +169,38 @@
   .kp-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
   .kp-value { font-size: 19px; }
 }
+
+.kp-field {
+  display: grid;
+  gap: 6px;
+  max-width: 420px;
+  font-size: 13px;
+  color: #5f5a52;
+}
+
+.kp-field.is-inline {
+  grid-auto-flow: column;
+  align-items: center;
+}
+
+.kp-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d7d2c8;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  color: #1f1d1b;
+}
+
+.kp-table .kp-year-row td {
+  font-weight: 700;
+  background: #fbfaf7;
+}
+
+.kp-table .kp-indent {
+  padding-left: 22px;
+}

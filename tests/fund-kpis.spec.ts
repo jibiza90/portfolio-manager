@@ -115,7 +115,7 @@ test('KPIs tab shows the fund figures by section', async ({ page }, testInfo) =>
   test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
   await page.setViewportSize({ width: 1300, height: 1000 });
   await mountKpis(page);
-  const section = (name: string) => page.getByRole('region', { name });
+  const section = (name: string) => page.getByRole('region', { name, exact: true });
   await expect(section('Ahora')).toContainText('Clientes activos3');
   await expect(section('Rentabilidad del fondo')).toContainText('Último mes · octubre 2026+2,00 %');
   await expect(section('Rentabilidad del fondo')).toContainText('Meses positivos12 de 12');
@@ -138,4 +138,25 @@ test('KPIs tab fits on a phone', async ({ page }, testInfo) => {
   await expect(page.getByRole('heading', { name: 'KPIs del fondo' })).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('KPIs tab: client search, fund at a month end and new sections', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  await page.setViewportSize({ width: 1300, height: 1000 });
+  await mountKpis(page);
+  const search = page.getByRole('region', { name: 'Buscar cliente' });
+  await search.getByLabel('Cliente').selectOption({ label: 'Bruno Prueba' });
+  await expect(search).toContainText('Cliente desde05/11/2025');
+  await expect(search).toContainText('1 aportación');
+  await expect(search).toContainText('Retiradas fijas500,00 €');
+  const at = page.getByRole('region', { name: 'Foto a una fecha' });
+  await expect(at.getByLabel('Mes')).toHaveValue('2026-10');
+  await at.getByLabel('Mes').selectOption('2025-12');
+  await expect(at).toContainText('Clientes activos1');
+  await expect(at).toContainText('Aportado hasta entonces51.000,00 €');
+  for (const name of ['Beneficio y capital', 'Riesgo', 'Distribución de clientes', 'Rentabilidad de los clientes', 'Récords', 'Por año de entrada']) {
+    await expect(page.getByRole('region', { name })).toBeVisible();
+  }
+  await expect(page.getByRole('region', { name: 'Riesgo' })).toContainText('Máxima caídaNinguna');
+  await expect(page.getByRole('region', { name: 'Récords' })).toContainText('Mayor aportación50.000,00 €');
 });
