@@ -3,7 +3,7 @@ import type { MouseEvent } from 'react';
 import dayjs from 'dayjs';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
-import { addClientProfile, CLIENTS, isDemoClient, removeClientProfile } from './constants/clients';
+import { addClientProfile, CLIENTS, isDemoClient, PUBLICATION_CHECK_EXCLUDED_CLIENT_IDS, removeClientProfile } from './constants/clients';
 import { GENERAL_OPTION } from './constants/generalOption';
 import { usePortfolioStore, waitForPendingPortfolioSave } from './store/portfolio';
 import { formatCurrency, formatPercent, formatNumberEs, parseNumberEs } from './utils/format';
@@ -25,6 +25,7 @@ import {
   fetchClientAccessProfile,
   fetchClientContributionJourneyVisibility,
   fetchClientPublicationState,
+  fetchPublishedReports,
   ensureClientPublicationBaseline,
   isValidLoginId,
   listClientAccessProfiles,
@@ -44,6 +45,8 @@ import { AdminFiscalInfo } from './components/AdminFiscalInfo';
 import { AdminWithdrawalsView } from './components/AdminWithdrawals';
 import { useRecurringWithdrawals } from './services/recurringWithdrawalsCloud';
 import { getPendingOccurrences, toIso } from './utils/recurringWithdrawals';
+import { PublicationCheckDialog } from './components/PublicationCheckDialog';
+import { buildPublicationCheck, type PublicationCheck, type PublishedReport } from './utils/publicationCheck';
 import {
   COMMISSION_RATE_PRESETS,
   formatCommissionRate,
@@ -3748,6 +3751,9 @@ export default function App() {
   const [publicationState, setPublicationState] = useState<ClientPublicationState | null>(null);
   const [publicationLoading, setPublicationLoading] = useState(true);
   const [publicationBusy, setPublicationBusy] = useState(false);
+  const [publishCheckOpen, setPublishCheckOpen] = useState(false);
+  const [publishCheck, setPublishCheck] = useState<(PublicationCheck & { revision: string }) | null>(null);
+  const [publishCheckError, setPublishCheckError] = useState<string | null>(null);
   const [publicationError, setPublicationError] = useState<string | null>(null);
   const initialOverviewSyncRef = useRef<string>('');
 
@@ -4255,12 +4261,36 @@ export default function App() {
     publicationBusy
   ]);
 
-  const handlePublishClientUpdates = async () => {
+  // Comprobacion antes de publicar: calcula lo que vera cada cliente con los datos ya guardados y solo enseña lo raro.
+  const openPublishCheck = async () => {
     if (!isPrimaryAdmin || publicationBusy || publicationLoading || !publicationPending) return;
-    const confirmed = window.confirm(
-      'Se publicarán para todos los clientes los datos que tienes guardados actualmente. ¿Quieres continuar?'
-    );
-    if (!confirmed) return;
+    setPublishCheck(null);
+    setPublishCheckError(null);
+    setPublishCheckOpen(true);
+    try {
+      await waitForPendingPortfolioSave();
+      const state = usePortfolioStore.getState();
+      if (state.saveStatus === 'error') throw new Error('El autoguardado tiene un error pendiente.');
+      const published = await fetchPublishedReports();
+      // Deja pintar el "Comprobando…" antes del calculo.
+      await new Promise((resolve) => window.setTimeout(resolve, 30));
+      const check = buildPublicationCheck({
+        clientIds: CLIENTS.filter((client) => !isDemoClient(client.id)).map((client) => client.id),
+        snapshot: state.snapshot,
+        monthlyHistoryByClient: state.monthlyHistoryByClient,
+        movementsByClient: state.movementsByClient,
+        published: published as Record<string, PublishedReport | null>,
+        excluded: PUBLICATION_CHECK_EXCLUDED_CLIENT_IDS
+      });
+      setPublishCheck({ ...check, revision: state.revision });
+    } catch (error) {
+      console.error('No se pudo hacer la comprobacion antes de publicar', error);
+      setPublishCheckError('No se pudo hacer la comprobación. No se ha publicado nada.');
+    }
+  };
+
+  const handlePublishClientUpdates = async () => {
+    if (!isPrimaryAdmin || publicationBusy || publicationLoading || !publicationPending || !publishCheck) return;
 
     setPublicationBusy(true);
     setPublicationError(null);
@@ -4270,6 +4300,12 @@ export default function App() {
       if (state.saveStatus === 'error') {
         throw new Error('El autoguardado tiene un error pendiente.');
       }
+      // Si ha cambiado algo mientras miraba la comprobacion, se vuelve a comprobar antes de publicar.
+      if (state.revision !== publishCheck.revision) {
+        setPublicationBusy(false);
+        void openPublishCheck();
+        return;
+      }
       const published = await publishClientOverviews(
         state.snapshot,
         CLIENTS,
@@ -4278,9 +4314,11 @@ export default function App() {
         { revision: state.revision, contactsRevision }
       );
       setPublicationState(published);
+      setPublishCheckOpen(false);
       window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Actualización publicada para todos los clientes.' }));
     } catch (error) {
       console.error('No se pudieron publicar las actualizaciones', error);
+      setPublishCheckOpen(false);
       setPublicationError('No se pudo publicar. Tus cambios siguen guardados y pendientes.');
     } finally {
       setPublicationBusy(false);
@@ -4717,7 +4755,7 @@ export default function App() {
           <button
             type="button"
             className="client-publication-button"
-            onClick={() => { void handlePublishClientUpdates(); }}
+            onClick={() => { void openPublishCheck(); }}
             disabled={
               publicationLoading ||
               publicationBusy ||
@@ -4732,6 +4770,17 @@ export default function App() {
                 : 'Clientes actualizados'}
           </button>
         </section>
+      ) : null}
+
+      {publishCheckOpen && isPrimaryAdmin ? (
+        <PublicationCheckDialog
+          check={publishCheck}
+          error={publishCheckError}
+          busy={publicationBusy}
+          nameOf={(clientId) => getClientDisplayName(clientId, contacts)}
+          onConfirm={() => { void handlePublishClientUpdates(); }}
+          onCancel={() => setPublishCheckOpen(false)}
+        />
       ) : null}
 
       {reportToken ? (

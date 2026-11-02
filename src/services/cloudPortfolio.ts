@@ -153,6 +153,12 @@ export const setClientContributionJourneyVisibility = async (
   }, { merge: true });
 };
 
+// Lo publicado la ultima vez para cada cliente (para la comprobacion antes de publicar). Solo lee.
+export const fetchPublishedReports = async (): Promise<Record<string, Record<string, unknown> | null>> => {
+  const snapshot = await db.collection(CLIENT_OVERVIEW_COLLECTION).get();
+  return Object.fromEntries(snapshot.docs.map((doc) => [doc.id, (doc.data().report as Record<string, unknown> | null | undefined) ?? null]));
+};
+
 export const fetchClientPublicationState = async (): Promise<ClientPublicationState | null> => {
   const doc = await db.doc(PUBLICATION_DOC_PATH).get();
   if (!doc.exists) return null;

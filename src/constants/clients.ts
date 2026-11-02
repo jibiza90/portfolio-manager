@@ -20,6 +20,9 @@ export const GUEST_CLIENT_ID = 'invitado';
 // Si hubiera que quitarselas a alguien, se hace aqui.
 export const hasNewReportFeatures = (_clientId: string) => true;
 
+// Clientes especiales que la comprobacion antes de publicar no revisa (llevan su propio calculo).
+export const PUBLICATION_CHECK_EXCLUDED_CLIENT_IDS = new Set(['client-012']);
+
 // Clientes que cuentan en el total de la cartera pero no para calcular la participacion del resto.
 const PARTICIPATION_EXCLUDED_CLIENT_IDS = new Set(['client-003']);
 export const isExcludedFromParticipation = (clientId: string) => PARTICIPATION_EXCLUDED_CLIENT_IDS.has(clientId);
