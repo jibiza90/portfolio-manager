@@ -204,3 +204,65 @@
 .kp-table .kp-indent {
   padding-left: 22px;
 }
+
+/* Pestaña Auditoría (usa los mismos estilos de KPIs). */
+.kp-status {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.kp-status.is-ok { background: #dcfce7; color: #166534; }
+.kp-status.is-bad { background: #fef3c7; color: #92400e; }
+
+.kp-link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #0f6d7a;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kp-table .kp-why {
+  color: #92400e;
+  font-size: 12px;
+  background: #fffbeb;
+}
+
+.kp-downloads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.kp-download {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 12px 14px;
+  border: 1px solid #ebe6dd;
+  border-radius: 10px;
+  background: #fbfaf7;
+  color: #1f1d1b;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kp-download small {
+  color: #5f5a52;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.kp-download.is-with-select {
+  cursor: default;
+  gap: 8px;
+}

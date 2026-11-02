@@ -44,6 +44,7 @@ import { schedulePushCommissionsMirror } from './services/commissionCloud';
 import { AdminFiscalInfo } from './components/AdminFiscalInfo';
 import { AdminWithdrawalsView } from './components/AdminWithdrawals';
 import { AdminKpisView } from './components/AdminKpis';
+import { AdminAuditView } from './components/AdminAudit';
 import { useRecurringWithdrawals } from './services/recurringWithdrawalsCloud';
 import { getPendingOccurrences, toIso } from './utils/recurringWithdrawals';
 import { PublicationCheckDialog } from './components/PublicationCheckDialog';
@@ -93,6 +94,7 @@ const BACKUP_VIEW = 'BACKUP_VIEW';
 const FISCAL_VIEW = 'FISCAL_VIEW';
 const RETIRADAS_VIEW = 'RETIRADAS_VIEW';
 const KPIS_VIEW = 'KPIS_VIEW';
+const AUDIT_VIEW = 'AUDIT_VIEW';
 const CONTACTS_REVISION_STORAGE_KEY = 'portfolio-contacts-revision';
 const createLocalRevision = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 const getPortfolioClients = () => CLIENTS.filter((client) => !isDemoClient(client.id));
@@ -4648,6 +4650,12 @@ export default function App() {
           KPIs
         </button>
         <button
+          className={clsx('side-link', activeView === AUDIT_VIEW && 'active')}
+          onClick={() => { setActiveView(AUDIT_VIEW); setMenuOpen(false); }}
+        >
+          Auditoría
+        </button>
+        <button
           className={clsx('side-link', activeView === INFORMES_VIEW && 'active')}
           onClick={() => { setActiveView(INFORMES_VIEW); setMenuOpen(false); }}
         >
@@ -4833,6 +4841,14 @@ export default function App() {
           state={recurringWithdrawals.state}
           onUpdate={recurringWithdrawals.update}
           error={recurringWithdrawals.error}
+        />
+      ) : activeView === AUDIT_VIEW ? (
+        <AdminAuditView
+          clients={kpiClients}
+          snapshot={snapshot}
+          movementsByClient={realMovementsByClient}
+          monthlyHistoryByClient={monthlyHistoryByClient}
+          contacts={contacts}
         />
       ) : activeView === KPIS_VIEW ? (
         <AdminKpisView
