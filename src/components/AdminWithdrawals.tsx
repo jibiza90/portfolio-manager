@@ -189,7 +189,7 @@ export const AdminWithdrawalsView: React.FC<Props> = ({ clients, movementsByClie
           <h3 id="aw-rules-title">Retiradas fijas</h3>
           <button type="button" className="info-add-btn aw-add" onClick={openNew}>+ Añadir</button>
         </div>
-        <p className="aw-help">Clientes que retiran cada mes. Si el día cae en fin de semana o festivo, toca el siguiente día laborable. Se da por hecha sola cuando la apuntas en el registro del cliente.</p>
+        <p className="aw-help">Clientes que retiran cada mes. Si el día cae en sábado o domingo, toca el lunes. Se da por hecha sola cuando la apuntas en el registro del cliente.</p>
 
         {form ? (
           <form className="aw-form" onSubmit={(event) => { event.preventDefault(); void saveForm(); }}>

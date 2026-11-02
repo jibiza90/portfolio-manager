@@ -52,38 +52,13 @@ export const addMonths = (month: string, delta: number) => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
 };
 
-// Domingo de Pascua (algoritmo de Meeus/Butcher).
-const easterSunday = (year: number) => {
-  const a = year % 19;
-  const b = Math.floor(year / 100);
-  const c = year % 100;
-  const d = Math.floor(b / 4);
-  const e = b % 4;
-  const f = Math.floor((b + 8) / 25);
-  const g = Math.floor((b - f + 1) / 3);
-  const h = (19 * a + b - d - g + 15) % 30;
-  const i = Math.floor(c / 4);
-  const k = c % 4;
-  const l = (32 + 2 * e + 2 * i - h - k) % 7;
-  const m = Math.floor((a + 11 * h + 22 * l) / 451);
-  const month = Math.floor((h + l - 7 * m + 114) / 31);
-  const day = ((h + l - 7 * m + 114) % 31) + 1;
-  return toIso(new Date(year, month - 1, day));
-};
-
-// Festivos de Cataluña: fijos + Viernes Santo y Lunes de Pascua.
-const FIXED_HOLIDAYS = ['01-01', '01-06', '05-01', '06-24', '08-15', '09-11', '10-12', '11-01', '12-06', '12-08', '12-25', '12-26'];
-export const isHoliday = (iso: string) => {
-  if (FIXED_HOLIDAYS.includes(iso.slice(5))) return true;
-  const easter = easterSunday(Number(iso.slice(0, 4)));
-  return iso === addDays(easter, -2) || iso === addDays(easter, 1);
-};
+// Solo cuentan los fines de semana (no los festivos).
 export const isWorkingDay = (iso: string) => {
   const weekday = fromIso(iso).getDay();
-  return weekday !== 0 && weekday !== 6 && !isHoliday(iso);
+  return weekday !== 0 && weekday !== 6;
 };
 
-// Dia en que toca la retirada ese mes: si cae en fin de semana o festivo, el siguiente dia laborable.
+// Dia en que toca la retirada ese mes: si cae en sabado o domingo, el lunes siguiente.
 export const scheduledDate = (day: number, month: string) => {
   const lastDay = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
   let iso = `${month}-${pad(Math.min(Math.max(1, Math.round(day)), lastDay))}`;
@@ -92,7 +67,7 @@ export const scheduledDate = (day: number, month: string) => {
 };
 
 // Cuenta como apuntada una retirada del mismo cliente desde unos dias antes del dia fijado hasta final de mes
-// (o hasta el dia fijado, si por fin de semana o festivo pasa al mes siguiente).
+// (o hasta el dia fijado, si por fin de semana pasa al mes siguiente).
 const MATCH_DAYS_BEFORE = 7;
 const sameAmount = (a: number, b: number) => Math.abs(a - b) < 0.005;
 export const isVisibleRule = (rule: RecurringWithdrawal) => !rule.removedAt;

@@ -3,7 +3,6 @@ import {
   getMonthWithdrawals,
   getOccurrencesForMonth,
   getPendingOccurrences,
-  isHoliday,
   scheduledDate,
   type RecurringWithdrawal,
   type RecurringWithdrawalsState
@@ -22,17 +21,15 @@ const rule = (overrides: Partial<RecurringWithdrawal> = {}): RecurringWithdrawal
 });
 const state = (rules: RecurringWithdrawal[], checks: RecurringWithdrawalsState['checks'] = {}): RecurringWithdrawalsState => ({ rules, checks });
 
-test('weekends and Catalan holidays move the day to the next working day', () => {
+test('weekends move the day to the next Monday; holidays do not count', () => {
   expect(scheduledDate(15, '2026-10')).toBe('2026-10-15'); // jueves
   expect(scheduledDate(15, '2026-11')).toBe('2026-11-16'); // domingo -> lunes
   expect(scheduledDate(14, '2026-11')).toBe('2026-11-16'); // sabado -> lunes
-  expect(scheduledDate(8, '2026-12')).toBe('2026-12-09'); // Inmaculada (martes) -> miercoles
-  expect(scheduledDate(25, '2026-12')).toBe('2026-12-28'); // Navidad, San Esteban y domingo -> lunes
+  expect(scheduledDate(8, '2026-12')).toBe('2026-12-08'); // festivo entre semana: se queda
+  expect(scheduledDate(25, '2026-12')).toBe('2026-12-25'); // Navidad (viernes): se queda
+  expect(scheduledDate(26, '2026-12')).toBe('2026-12-28'); // sabado -> lunes
+  expect(scheduledDate(31, '2026-10')).toBe('2026-11-02'); // sabado 31 -> lunes del mes siguiente
   expect(scheduledDate(31, '2026-11')).toBe('2026-11-30'); // mes de 30 dias
-  expect(isHoliday('2027-03-26')).toBe(true); // Viernes Santo
-  expect(isHoliday('2027-03-29')).toBe(true); // Lunes de Pascua
-  expect(isHoliday('2026-09-11')).toBe(true); // Diada
-  expect(isHoliday('2026-09-10')).toBe(false);
 });
 
 test('a fixed withdrawal is upcoming, due today and overdue the next day when not recorded or ticked', () => {
