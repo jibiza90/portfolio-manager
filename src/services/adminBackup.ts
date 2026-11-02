@@ -74,6 +74,7 @@ export const createAndDownloadAdminBackup = async (localData: AdminBackupLocalDa
   const [
     remotePortfolioDoc,
     clientPublicationDoc,
+    recurringWithdrawalsDoc,
     accessProfilesSnapshot,
     clientOverviewsSnapshot,
     archivedClientsSnapshot,
@@ -84,6 +85,7 @@ export const createAndDownloadAdminBackup = async (localData: AdminBackupLocalDa
   ] = await Promise.all([
     db.doc('portfolio/state').get(),
     db.doc('portfolio/client-publication').get(),
+    db.doc('portfolio/recurring-withdrawals').get(),
     db.collection('access_profiles').get(),
     db.collection('portfolio_client_overviews').get(),
     db.collection('portfolio_archived_clients').get(),
@@ -157,6 +159,7 @@ export const createAndDownloadAdminBackup = async (localData: AdminBackupLocalDa
     firestore: {
       portfolioState: serialiseDoc(remotePortfolioDoc),
       clientPublication: serialiseDoc(clientPublicationDoc),
+      recurringWithdrawals: serialiseDoc(recurringWithdrawalsDoc),
       accessProfiles: serialiseSnapshot(accessProfilesSnapshot),
       clientOverviews: serialiseSnapshot(clientOverviewsSnapshot),
       archivedClients: serialiseSnapshot(archivedClientsSnapshot),
@@ -293,6 +296,10 @@ export const parseAdminBackup = (text: string): AdminBackupRestorePlan => {
   ];
   if (isRecord(firestore.clientPublication) && isRecord(firestore.clientPublication.data)) {
     coreWrites.push({ path: 'portfolio/client-publication', data: firestore.clientPublication.data });
+  }
+  // Retiradas fijas (copias antiguas no las tienen).
+  if (isRecord(firestore.recurringWithdrawals) && isRecord(firestore.recurringWithdrawals.data)) {
+    coreWrites.push({ path: 'portfolio/recurring-withdrawals', data: firestore.recurringWithdrawals.data });
   }
   coreWrites.push(...rowsToWrites(firestore.accessProfiles));
   coreWrites.push(...rowsToWrites(firestore.clientOverviews));

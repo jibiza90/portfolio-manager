@@ -41,6 +41,9 @@ import {
 import { auth } from './services/firebaseApp';
 import { schedulePushCommissionsMirror } from './services/commissionCloud';
 import { AdminFiscalInfo } from './components/AdminFiscalInfo';
+import { AdminWithdrawalsView } from './components/AdminWithdrawals';
+import { useRecurringWithdrawals } from './services/recurringWithdrawalsCloud';
+import { getPendingOccurrences, toIso } from './utils/recurringWithdrawals';
 import {
   COMMISSION_RATE_PRESETS,
   formatCommissionRate,
@@ -84,6 +87,7 @@ const ACCESOS_VIEW = 'ACCESOS_VIEW';
 const ACTIVIDAD_VIEW = 'ACTIVIDAD_VIEW';
 const BACKUP_VIEW = 'BACKUP_VIEW';
 const FISCAL_VIEW = 'FISCAL_VIEW';
+const RETIRADAS_VIEW = 'RETIRADAS_VIEW';
 const CONTACTS_REVISION_STORAGE_KEY = 'portfolio-contacts-revision';
 const createLocalRevision = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 const getPortfolioClients = () => CLIENTS.filter((client) => !isDemoClient(client.id));
@@ -4158,6 +4162,13 @@ export default function App() {
   }, []);
 
   const isPrimaryAdmin = currentUserEmail === 'jibiza90@gmail.com';
+  // Retiradas fijas: lista del admin y cuantas hay pendientes (hoy, atrasadas u otra cantidad).
+  const recurringWithdrawals = useRecurringWithdrawals(portfolioInitialized);
+  const realMovementsByClient = useMemo(
+    () => Object.fromEntries(Object.entries(movementsByClient).filter(([clientId]) => !isDemoClient(clientId))),
+    [movementsByClient]
+  );
+  const recurringPendingCount = getPendingOccurrences(recurringWithdrawals.state, realMovementsByClient, toIso(new Date())).length;
   const publicationPending = publicationState
     ? publicationState.revision !== portfolioRevision ||
       publicationState.contactsRevision !== contactsRevision ||
@@ -4581,6 +4592,12 @@ export default function App() {
           Comisiones
         </button>
         <button
+          className={clsx('side-link', activeView === RETIRADAS_VIEW && 'active')}
+          onClick={() => { setActiveView(RETIRADAS_VIEW); setMenuOpen(false); }}
+        >
+          Retiradas {recurringPendingCount > 0 ? `(${recurringPendingCount})` : ''}
+        </button>
+        <button
           className={clsx('side-link', activeView === INFORMES_VIEW && 'active')}
           onClick={() => { setActiveView(INFORMES_VIEW); setMenuOpen(false); }}
         >
@@ -4747,6 +4764,14 @@ export default function App() {
           setComisionesCobradas={setComisionesCobradas}
           comisionEstado={comisionEstado}
           setComisionEstado={setComisionEstado}
+        />
+      ) : activeView === RETIRADAS_VIEW ? (
+        <AdminWithdrawalsView
+          clients={CLIENTS.filter((client) => !isDemoClient(client.id)).map((client) => ({ id: client.id, label: getClientDisplayName(client.id, contacts) }))}
+          movementsByClient={realMovementsByClient}
+          state={recurringWithdrawals.state}
+          onUpdate={recurringWithdrawals.update}
+          error={recurringWithdrawals.error}
         />
       ) : activeView === INFORMES_VIEW ? (
         <InformesView contacts={contacts} />

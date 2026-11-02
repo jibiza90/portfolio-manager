@@ -1,0 +1,244 @@
+/* Pestaña "Retiradas" del admin. */
+.aw-root {
+  display: grid;
+  gap: 18px;
+}
+
+.aw-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #d7d2c8;
+  border-radius: 12px;
+  background: #fff;
+  min-width: 0;
+}
+
+.aw-card h3,
+.aw-card h4 {
+  margin: 0;
+}
+
+.aw-card h4 {
+  margin-top: 4px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.aw-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.aw-help,
+.aw-empty {
+  margin: 0;
+  color: #5f5a52;
+  font-size: 13px;
+}
+
+.aw-error {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.aw-add,
+.aw-save {
+  min-height: 34px;
+  font-size: 13px;
+}
+
+.aw-ghost {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #d7d2c8;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f1d1b;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.aw-ghost.is-danger {
+  color: #b91c1c;
+}
+
+.aw-ghost:disabled,
+.aw-tick:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.aw-tick {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #15803d;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.aw-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aw-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #ebe6dd;
+  border-radius: 10px;
+  background: #fbfaf7;
+}
+
+.aw-item.is-overdue { border-color: #fecaca; background: #fef2f2; }
+.aw-item.is-today { border-color: #bfdbfe; background: #eff6ff; }
+.aw-item.is-different { border-color: #fde68a; background: #fffbeb; }
+
+.aw-item-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.aw-item-main span {
+  color: #5f5a52;
+  font-size: 13px;
+}
+
+.aw-chip {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.aw-chip.is-done { background: #dcfce7; color: #166534; }
+.aw-chip.is-overdue { background: #fee2e2; color: #b91c1c; }
+.aw-chip.is-today { background: #dbeafe; color: #1d4ed8; }
+.aw-chip.is-different { background: #fef3c7; color: #92400e; }
+.aw-chip.is-upcoming,
+.aw-chip.is-paused,
+.aw-chip.is-once { background: #f3f4f6; color: #4b5563; }
+.aw-chip.is-fixed { background: #e0f2fe; color: #075985; }
+
+.aw-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #ebe6dd;
+  border-radius: 10px;
+  background: #fbfaf7;
+}
+
+.aw-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: #5f5a52;
+}
+
+.aw-form input,
+.aw-form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #d7d2c8;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  color: #1f1d1b;
+}
+
+.aw-form-note,
+.aw-form .aw-error,
+.aw-form-actions {
+  grid-column: 1 / -1;
+}
+
+.aw-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.aw-month-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aw-table-wrap {
+  overflow-x: auto;
+}
+
+.aw-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.aw-table th,
+.aw-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #ebe6dd;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.aw-table th {
+  color: #5f5a52;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fbfaf7;
+}
+
+.aw-table .is-num {
+  text-align: right;
+}
+
+.aw-table tfoot td {
+  border-top: 2px solid #d7d2c8;
+  border-bottom: 0;
+}
+
+.aw-table tr.is-paused td {
+  color: #9ca3af;
+}
+
+.aw-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .aw-card { padding: 14px; }
+  .aw-item { grid-template-columns: minmax(0, 1fr) auto; }
+  .aw-item > .aw-chip { grid-column: 1 / -1; justify-self: start; }
+}
