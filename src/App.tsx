@@ -43,6 +43,7 @@ import { auth } from './services/firebaseApp';
 import { schedulePushCommissionsMirror } from './services/commissionCloud';
 import { AdminFiscalInfo } from './components/AdminFiscalInfo';
 import { AdminWithdrawalsView } from './components/AdminWithdrawals';
+import { AdminKpisView } from './components/AdminKpis';
 import { useRecurringWithdrawals } from './services/recurringWithdrawalsCloud';
 import { getPendingOccurrences, toIso } from './utils/recurringWithdrawals';
 import { PublicationCheckDialog } from './components/PublicationCheckDialog';
@@ -91,6 +92,7 @@ const ACTIVIDAD_VIEW = 'ACTIVIDAD_VIEW';
 const BACKUP_VIEW = 'BACKUP_VIEW';
 const FISCAL_VIEW = 'FISCAL_VIEW';
 const RETIRADAS_VIEW = 'RETIRADAS_VIEW';
+const KPIS_VIEW = 'KPIS_VIEW';
 const CONTACTS_REVISION_STORAGE_KEY = 'portfolio-contacts-revision';
 const createLocalRevision = () => `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
 const getPortfolioClients = () => CLIENTS.filter((client) => !isDemoClient(client.id));
@@ -4174,6 +4176,10 @@ export default function App() {
     () => Object.fromEntries(Object.entries(movementsByClient).filter(([clientId]) => !isDemoClient(clientId))),
     [movementsByClient]
   );
+  const kpiClients = useMemo(
+    () => CLIENTS.filter((client) => !isDemoClient(client.id)).map((client) => ({ id: client.id, label: getClientDisplayName(client.id, contacts) })),
+    [contacts]
+  );
   const recurringPendingCount = getPendingOccurrences(recurringWithdrawals.state, realMovementsByClient, toIso(new Date())).length;
   const publicationPending = publicationState
     ? publicationState.revision !== portfolioRevision ||
@@ -4636,6 +4642,12 @@ export default function App() {
           Ingresos y retiradas {recurringPendingCount > 0 ? `(${recurringPendingCount})` : ''}
         </button>
         <button
+          className={clsx('side-link', activeView === KPIS_VIEW && 'active')}
+          onClick={() => { setActiveView(KPIS_VIEW); setMenuOpen(false); }}
+        >
+          KPIs
+        </button>
+        <button
           className={clsx('side-link', activeView === INFORMES_VIEW && 'active')}
           onClick={() => { setActiveView(INFORMES_VIEW); setMenuOpen(false); }}
         >
@@ -4821,6 +4833,14 @@ export default function App() {
           state={recurringWithdrawals.state}
           onUpdate={recurringWithdrawals.update}
           error={recurringWithdrawals.error}
+        />
+      ) : activeView === KPIS_VIEW ? (
+        <AdminKpisView
+          clients={kpiClients}
+          snapshot={snapshot}
+          movementsByClient={realMovementsByClient}
+          monthlyHistoryByClient={monthlyHistoryByClient}
+          recurring={recurringWithdrawals.state}
         />
       ) : activeView === INFORMES_VIEW ? (
         <InformesView contacts={contacts} />
