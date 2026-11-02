@@ -984,7 +984,8 @@ input[type='number'] {
   letter-spacing: 0.04em;
 }
 
-.info-form input {
+.info-form input,
+.info-form select {
   padding: 10px 14px;
   border-radius: 10px;
   border: 1px solid rgba(15,109,122,0.15);
@@ -993,7 +994,8 @@ input[type='number'] {
   transition: all 0.15s ease;
 }
 
-.info-form input:focus {
+.info-form input:focus,
+.info-form select:focus {
   outline: none;
   border-color: #0ea5e9;
   box-shadow: 0 0 0 3px rgba(14,165,233,0.12);

@@ -154,9 +154,9 @@ test('KPIs tab: client search, fund at a month end and new sections', async ({ p
   await at.getByLabel('Mes').selectOption('2025-12');
   await expect(at).toContainText('Clientes activos1');
   await expect(at).toContainText('Aportado hasta entonces51.000,00 €');
-  for (const name of ['Beneficio y capital', 'Riesgo', 'Distribución de clientes', 'Rentabilidad de los clientes', 'Récords', 'Por año de entrada']) {
-    await expect(page.getByRole('region', { name })).toBeVisible();
+  for (const name of ['Beneficio y capital', 'Riesgo', 'Distribución de clientes', 'Rentabilidad de los clientes', 'Récords', 'Por año de entrada', 'Ingresos del negocio', 'Crecimiento', 'Retención', 'Condiciones especiales', 'Rentabilidad frente a riesgo', 'Lista de espera', 'Origen de los clientes']) {
+    await expect(page.getByRole('region', { name, exact: true })).toBeVisible();
   }
-  await expect(page.getByRole('region', { name: 'Riesgo' })).toContainText('Máxima caídaNinguna');
+  await expect(page.getByRole('region', { name: 'Riesgo', exact: true })).toContainText('Máxima caídaNinguna');
   await expect(page.getByRole('region', { name: 'Récords' })).toContainText('Mayor aportación50.000,00 €');
 });

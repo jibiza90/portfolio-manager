@@ -49,6 +49,7 @@ import { useRecurringWithdrawals } from './services/recurringWithdrawalsCloud';
 import { getPendingOccurrences, toIso } from './utils/recurringWithdrawals';
 import { PublicationCheckDialog } from './components/PublicationCheckDialog';
 import { buildPublicationCheck, type PublicationCheck, type PublishedReport } from './utils/publicationCheck';
+import { CLIENT_ORIGINS } from './utils/fundBuyerKpis';
 import {
   COMMISSION_RATE_PRESETS,
   formatCommissionRate,
@@ -106,6 +107,8 @@ type ContactInfo = {
   waitlistAmount: string;
   waitlistNote: string;
   notes: string;
+  // Como llego el cliente (solo para el admin): relacion personal, recomendacion u otro.
+  origin: string;
   showContributionJourney: boolean;
 };
 type FollowUpTask = {
@@ -123,6 +126,7 @@ const EMPTY_CONTACT: ContactInfo = {
   waitlistAmount: '',
   waitlistNote: '',
   notes: '',
+  origin: '',
   showContributionJourney: false
 };
 const normalizeContact = (input?: Partial<ContactInfo>): ContactInfo => ({
@@ -132,7 +136,8 @@ const normalizeContact = (input?: Partial<ContactInfo>): ContactInfo => ({
 
 const serializeContactsForPublicationRevision = (contacts: Record<string, ContactInfo>) => JSON.stringify(
   Object.fromEntries(Object.entries(contacts).map(([clientId, contact]) => {
-    const { showContributionJourney: _uiSetting, ...publishableContact } = contact;
+    // El origen es solo para el admin: cambiarlo no deja cambios pendientes de publicar.
+    const { showContributionJourney: _uiSetting, origin: _adminOnly, ...publishableContact } = contact;
     return [clientId, publishableContact];
   }))
 );
@@ -4857,6 +4862,7 @@ export default function App() {
           movementsByClient={realMovementsByClient}
           monthlyHistoryByClient={monthlyHistoryByClient}
           recurring={recurringWithdrawals.state}
+          contacts={contacts}
         />
       ) : activeView === INFORMES_VIEW ? (
         <InformesView contacts={contacts} />
@@ -5619,6 +5625,18 @@ function InfoClientes({
                 value={firstIncrementDate}
                 disabled
               />
+            </label>
+            <label>
+              <span>Origen del cliente</span>
+              <select
+                id="contact-origin"
+                name="contact-origin"
+                value={contact.origin}
+                onChange={(e) => { updateField('origin', e.target.value); window.dispatchEvent(new CustomEvent('show-toast', { detail: 'Guardado' })); }}
+              >
+                <option value="">Sin indicar</option>
+                {CLIENT_ORIGINS.map((origin) => <option key={origin} value={origin}>{origin}</option>)}
+              </select>
             </label>
             <label>
               <span>Interes de ampliacion (€)</span>

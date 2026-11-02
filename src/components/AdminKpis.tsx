@@ -4,6 +4,7 @@ import { loadCommissionRates } from '../utils/commissions';
 import { formatCurrency, formatPercentValue } from '../utils/format';
 import { buildFundKpis, type FundMonth } from '../utils/fundKpis';
 import { buildFundDetails, getClientSummary, getFundAt } from '../utils/fundKpisDetails';
+import { buildBuyerKpis, type BuyerContact } from '../utils/fundBuyerKpis';
 import { toIso, type RecurringWithdrawalsState } from '../utils/recurringWithdrawals';
 import './AdminKpis.css';
 
@@ -33,6 +34,8 @@ interface Props {
   monthlyHistoryByClient: Record<string, Record<string, MonthlyHistoryEntry>>;
   recurring: RecurringWithdrawalsState;
   excluded?: Set<string>;
+  // Ficha de cada cliente: origen y lista de espera (interes de ampliacion).
+  contacts?: Record<string, BuyerContact | undefined>;
   todayIso?: string;
 }
 
@@ -44,7 +47,7 @@ const Card: React.FC<{ label: string; value: string; sub?: React.ReactNode; tone
   </div>
 );
 
-export const AdminKpisView: React.FC<Props> = ({ clients, snapshot, movementsByClient, monthlyHistoryByClient, recurring, excluded, todayIso = toIso(new Date()) }) => {
+export const AdminKpisView: React.FC<Props> = ({ clients, snapshot, movementsByClient, monthlyHistoryByClient, recurring, excluded, contacts = {}, todayIso = toIso(new Date()) }) => {
   const commissionRates = useMemo(() => loadCommissionRates(), []);
   const paidWithdrawals = useMemo(() => readPaidWithdrawals(), []);
   const kpis = useMemo(() => buildFundKpis({
@@ -61,6 +64,10 @@ export const AdminKpisView: React.FC<Props> = ({ clients, snapshot, movementsByC
   const details = useMemo(
     () => buildFundDetails({ kpis, movementsByClient, commissionRates, paidWithdrawals, recurring }),
     [commissionRates, kpis, movementsByClient, paidWithdrawals, recurring]
+  );
+  const buyer = useMemo(
+    () => buildBuyerKpis({ kpis, details, snapshot, movementsByClient, monthlyHistoryByClient, commissionRates, contacts, recurring }),
+    [commissionRates, contacts, details, kpis, monthlyHistoryByClient, movementsByClient, recurring, snapshot]
   );
   const nameOf = (clientId: string) => clients.find((client) => client.id === clientId)?.label ?? clientId;
   const searchable = [...kpis.clients].sort((left, right) => nameOf(left.clientId).localeCompare(nameOf(right.clientId), 'es'));
@@ -451,6 +458,146 @@ export const AdminKpisView: React.FC<Props> = ({ clients, snapshot, movementsByC
           <Card label="Mayor retirada" value={details.records.biggestWithdrawal ? eur(details.records.biggestWithdrawal.amount) : '—'} sub={details.records.biggestWithdrawal ? `${nameOf(details.records.biggestWithdrawal.clientId)} · ${dateLabel(details.records.biggestWithdrawal.iso)}` : undefined} />
           <Card label="Mejor mes de captación" value={details.records.bestInflowMonth ? eur(details.records.bestInflowMonth.net) : '—'} sub={details.records.bestInflowMonth ? monthLabel(details.records.bestInflowMonth.month) : undefined} />
         </div>
+      </section>
+
+      <div className="kp-divider">
+        <h2>Visión de comprador</h2>
+        <p className="kp-note">Lo que miraría alguien que quiere comprar el fondo: ingresos, crecimiento, si los clientes se quedan y compromisos.</p>
+      </div>
+
+      <section className="kp-section" aria-label="Ingresos del negocio">
+        <h3>Ingresos del negocio</h3>
+        <div className="kp-grid">
+          <Card label="Comisiones últimos 12 meses" value={eur(buyer.revenue.last12)} />
+          <Card label="Comisión efectiva" value={buyer.revenue.takeOnTotalProfit !== undefined ? pct(buyer.revenue.takeOnTotalProfit) : '—'} sub={`De todo el beneficio de los clientes${buyer.revenue.takeOnWithdrawnProfit !== undefined ? ` · ${pct(buyer.revenue.takeOnWithdrawnProfit)} del beneficio ya retirado` : ''}`} />
+          <Card label="Comisión media por cliente" value={buyer.revenue.perClientLast12 !== undefined ? eur(buyer.revenue.perClientLast12) : '—'} sub="Últimos 12 meses" />
+          <Card label="Comisión latente por cliente" value={buyer.revenue.latentPerClient !== undefined ? eur(buyer.revenue.latentPerClient) : '—'} sub="Si retiraran todo hoy" />
+          <Card label="Previsión 12 meses" value={eur(buyer.revenue.fixedForecast12)} sub="Solo por las retiradas fijas" />
+          <Card label="Estimación anual al ritmo actual" value={buyer.revenue.paceEstimate !== undefined ? eur(buyer.revenue.paceEstimate) : '—'} sub={buyer.annualWithdrawalRate !== undefined ? `Los clientes retiran el ${pct(buyer.annualWithdrawalRate)} al año de media` : 'Hace falta historial de retiradas'} />
+        </div>
+        {buyer.revenue.byYear.length > 0 ? (
+          <ul className="kp-list">
+            {buyer.revenue.byYear.map((item) => (
+              <li key={item.year}><span>Comisiones {item.year}</span><span>{eur(item.generated)} · cobradas {eur(item.paid)}{item.change !== undefined ? ` · ${signedPct(item.change)} frente al año anterior` : ''}</span></li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      <section className="kp-section" aria-label="Crecimiento">
+        <h3>De dónde sale el crecimiento</h3>
+        <div className="kp-table-wrap">
+          <table className="kp-table">
+            <thead>
+              <tr><th>Año</th><th className="is-num">Patrimonio al empezar</th><th className="is-num">Al acabar</th><th className="is-num">Ha crecido</th><th className="is-num">Por dinero nuevo</th><th className="is-num">Por rentabilidad</th><th className="is-num">Otros</th></tr>
+            </thead>
+            <tbody>
+              {buyer.growthByYear.map((row) => (
+                <tr key={row.year}>
+                  <td>{row.year}</td>
+                  <td className="is-num">{eur(row.start)}</td>
+                  <td className="is-num">{eur(row.end)}</td>
+                  <td className="is-num">{eur(row.growth)}</td>
+                  <td className="is-num">{eur(row.fromInflows)}</td>
+                  <td className="is-num">{eur(row.fromReturns)}</td>
+                  <td className="is-num">{Math.abs(row.other) >= 1 ? eur(row.other) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="kp-note">«Otros» es dinero que no está apuntado como aportación (se explica en la pestaña Auditoría).</p>
+        <div className="kp-grid">
+          <Card label="Primera aportación media" value={buyer.averageFirstContribution !== undefined ? eur(buyer.averageFirstContribution) : '—'} sub="Al entrar un cliente nuevo" />
+          <Card label="Vuelven a aportar" value={buyer.recontribution.share !== undefined ? pct(buyer.recontribution.share) : '—'} sub={`${buyer.recontribution.clients} clientes han hecho una segunda aportación`} />
+          <Card label="Hasta la segunda aportación" value={buyer.recontribution.averageDaysToSecond !== undefined ? `${Math.round(buyer.recontribution.averageDaysToSecond)} días` : '—'} sub="De media" />
+        </div>
+        <h4>Clientes nuevos por mes (últimos 12)</h4>
+        <div className="kp-months">
+          {buyer.newClientsByMonth.map((item) => (
+            <span key={item.month} className={item.count > 0 ? 'has-value' : ''}><b>{item.count}</b>{monthLabel(item.month).slice(0, 3)} {item.month.slice(2, 4)}</span>
+          ))}
+        </div>
+      </section>
+
+      <section className="kp-section" aria-label="Retención">
+        <h3>¿Se quedan los clientes?</h3>
+        <div className="kp-grid">
+          <Card label="Ritmo de retiradas" value={buyer.annualWithdrawalRate !== undefined ? pct(buyer.annualWithdrawalRate) : '—'} sub="Del patrimonio, al año (últimos 12 meses)" />
+        </div>
+        <div className="kp-table-wrap">
+          <table className="kp-table">
+            <thead>
+              <tr><th>Año</th><th className="is-num">Clientes al empezar</th><th className="is-num">Se han ido</th><th className="is-num">Abandono</th><th className="is-num">Retirado sobre el patrimonio inicial</th></tr>
+            </thead>
+            <tbody>
+              {buyer.retentionByYear.map((row) => (
+                <tr key={row.year}>
+                  <td>{row.year}</td>
+                  <td className="is-num">{row.clientsAtStart}</td>
+                  <td className="is-num">{row.lost}</td>
+                  <td className="is-num">{row.churn !== undefined ? pct(row.churn) : '—'}</td>
+                  <td className="is-num">{row.withdrawnOverStart !== undefined ? pct(row.withdrawnOverStart) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="kp-note">La retención por año de entrada está más abajo, en «Por año de entrada».</p>
+      </section>
+
+      <section className="kp-section" aria-label="Condiciones especiales">
+        <h3>Condiciones especiales</h3>
+        {buyer.specialConditions.length === 0 ? <p className="kp-note">Ningún cliente con condiciones distintas.</p> : (
+          <ul className="kp-list">
+            {buyer.specialConditions.map((item) => (
+              <li key={item.clientId}><span>{nameOf(item.clientId)}</span><span>{item.conditions.join(' · ')}</span></li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="kp-section" aria-label="Rentabilidad frente a riesgo">
+        <h3>Rentabilidad frente a riesgo</h3>
+        <div className="kp-grid">
+          <Card label="Ratio de Sharpe" value={buyer.sharpe !== undefined ? buyer.sharpe.toFixed(2).replace('.', ',') : '—'} sub="Rentabilidad por cada unidad de riesgo. Más de 1 es bueno" />
+          <Card label="Ratio de Sortino" value={buyer.sortino !== undefined ? buyer.sortino.toFixed(2).replace('.', ',') : 'Sin meses negativos'} sub="Igual, pero solo cuenta los meses en negativo" />
+        </div>
+        <p className="kp-note">Con los cierres mensuales y sin tipo de interés sin riesgo.</p>
+      </section>
+
+      <section className="kp-section" aria-label="Lista de espera">
+        <h3>Lista de espera</h3>
+        <div className="kp-grid">
+          <Card label="Dinero por entrar" value={eur(buyer.waitlistTotal)} sub={`${buyer.waitlist.length} ${buyer.waitlist.length === 1 ? 'cliente' : 'clientes'} con interés de ampliación`} />
+        </div>
+        {buyer.waitlist.length > 0 ? (
+          <ul className="kp-list">
+            {buyer.waitlist.map((item) => (
+              <li key={item.clientId}><span>{nameOf(item.clientId)}{item.note ? ` · ${item.note}` : ''}</span><span>{eur(item.amount)}</span></li>
+            ))}
+          </ul>
+        ) : <p className="kp-note">Se rellena con «Interés de ampliación» en la ficha de cada cliente.</p>}
+      </section>
+
+      <section className="kp-section" aria-label="Origen de los clientes">
+        <h3>Origen de los clientes</h3>
+        <div className="kp-table-wrap">
+          <table className="kp-table">
+            <thead><tr><th>Origen</th><th className="is-num">Clientes</th><th className="is-num">Patrimonio</th><th className="is-num">Del total</th></tr></thead>
+            <tbody>
+              {buyer.origins.map((item) => (
+                <tr key={item.origin}>
+                  <td>{item.origin}</td>
+                  <td className="is-num">{item.count}</td>
+                  <td className="is-num">{eur(item.aum)}</td>
+                  <td className="is-num">{kpis.aum > 0 ? pct(item.aum / kpis.aum) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="kp-note">Se indica con «Origen del cliente» en la ficha de cada cliente.</p>
       </section>
 
       <section className="kp-section" aria-label="Por año de entrada">
