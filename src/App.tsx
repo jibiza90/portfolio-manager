@@ -4633,7 +4633,7 @@ export default function App() {
           className={clsx('side-link', activeView === RETIRADAS_VIEW && 'active')}
           onClick={() => { setActiveView(RETIRADAS_VIEW); setMenuOpen(false); }}
         >
-          Retiradas {recurringPendingCount > 0 ? `(${recurringPendingCount})` : ''}
+          Ingresos y retiradas {recurringPendingCount > 0 ? `(${recurringPendingCount})` : ''}
         </button>
         <button
           className={clsx('side-link', activeView === INFORMES_VIEW && 'active')}

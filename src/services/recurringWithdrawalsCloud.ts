@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { sanitizeRecurringState, type RecurringWithdrawalsState } from '../utils/recurringWithdrawals';
+import { sanitizeRecurringState, toFirestoreRecurringState, type RecurringWithdrawalsState } from '../utils/recurringWithdrawals';
 import { db } from './firebaseApp';
 
 // Lista de retiradas fijas y ticks del admin. Va en la coleccion `portfolio`, que solo puede leer y escribir
@@ -17,7 +17,7 @@ export const updateRecurringWithdrawals = async (
     const snapshot = await transaction.get(ref);
     const current = snapshot.exists ? sanitizeRecurringState(snapshot.data()) : EMPTY;
     const next = change(current);
-    transaction.set(ref, { rules: next.rules, checks: next.checks, updatedAt: Date.now() });
+    transaction.set(ref, { ...toFirestoreRecurringState(next), updatedAt: Date.now() });
   });
 };
 

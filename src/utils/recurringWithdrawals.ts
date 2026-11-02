@@ -144,6 +144,27 @@ export const getMonthWithdrawals = (
     .map(([iso, movement]) => ({ clientId, iso, amount: movement.decrement ?? 0 })))
   .sort((left, right) => left.iso.localeCompare(right.iso) || left.clientId.localeCompare(right.clientId));
 
+// Firebase no acepta campos vacios (undefined): se quitan antes de guardar (por ejemplo, la nota sin rellenar).
+// Todas las aportaciones (ingresos) apuntadas en el registro ese mes. isFirst: es la primera aportacion del cliente.
+export const getMonthContributions = (
+  movementsByClient: Record<string, Record<string, Movement>>,
+  month: string,
+  includeClient: (clientId: string) => boolean = () => true
+) => Object.entries(movementsByClient)
+  .filter(([clientId]) => includeClient(clientId))
+  .flatMap(([clientId, movements]) => {
+    const first = Object.entries(movements).filter(([, movement]) => (movement.increment ?? 0) > 0).map(([iso]) => iso).sort()[0];
+    return Object.entries(movements)
+      .filter(([iso, movement]) => iso.startsWith(`${month}-`) && (movement.increment ?? 0) > 0)
+      .map(([iso, movement]) => ({ clientId, iso, amount: movement.increment ?? 0, isFirst: iso === first }));
+  })
+  .sort((left, right) => left.iso.localeCompare(right.iso) || left.clientId.localeCompare(right.clientId));
+
+export const toFirestoreRecurringState = (state: RecurringWithdrawalsState) => ({
+  rules: state.rules.map((rule) => Object.fromEntries(Object.entries(rule).filter(([, value]) => value !== undefined))),
+  checks: Object.fromEntries(Object.entries(state.checks).filter(([, value]) => value && typeof value.checkedAt === 'number'))
+});
+
 export const sanitizeRecurringState = (raw: unknown): RecurringWithdrawalsState => {
   const data = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
   const rules = Array.isArray(data.rules)

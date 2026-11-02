@@ -5,6 +5,7 @@ import { formatCurrency, parseNumberEs } from '../utils/format';
 import {
   addMonths,
   checkKey,
+  getMonthContributions,
   getMonthWithdrawals,
   getOccurrencesForMonth,
   getPendingOccurrences,
@@ -18,7 +19,8 @@ import {
 } from '../utils/recurringWithdrawals';
 import './AdminWithdrawals.css';
 
-// Pestaña "Retiradas" del admin: retiradas fijas de cada mes, lo pendiente y todas las retiradas apuntadas del mes.
+// Pestaña "Ingresos y retiradas" del admin. Retiradas: fijas de cada mes, lo pendiente y todas las apuntadas del mes.
+// Ingresos: todas las aportaciones apuntadas del mes y de quien.
 // Solo lee el registro de los clientes; lo que se guarda aqui es la lista de fijas y los ticks.
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -62,6 +64,7 @@ export const AdminWithdrawalsView: React.FC<Props> = ({ clients, movementsByClie
   const [form, setForm] = useState<FormState | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [section, setSection] = useState<'retiradas' | 'ingresos'>('retiradas');
 
   const clientIds = useMemo(() => new Set(clients.map((client) => client.id)), [clients]);
   const nameOf = (clientId: string) => clients.find((client) => client.id === clientId)?.label ?? clientId;
@@ -80,6 +83,9 @@ export const AdminWithdrawalsView: React.FC<Props> = ({ clients, movementsByClie
     return map;
   }, [monthWithdrawals, movementsByClient]);
   const fixedByKey = new Map(monthOccurrences.filter((item) => item.matched).map((item) => [`${item.rule.clientId}|${item.matched!.iso}`, item.rule]));
+  const monthContributions = useMemo(() => getMonthContributions(movementsByClient, month, (clientId) => clientIds.has(clientId)), [clientIds, month, movementsByClient]);
+  const contributionsTotal = monthContributions.reduce((sum, item) => sum + item.amount, 0);
+  const contributors = new Set(monthContributions.map((item) => item.clientId)).size;
   const monthTotal = monthWithdrawals.reduce((sum, item) => sum + item.amount, 0);
   const monthCommission = monthWithdrawals.reduce((sum, item) => sum + (commissionByKey.get(`${item.clientId}|${item.iso}`) ?? 0), 0);
 
@@ -160,9 +166,64 @@ export const AdminWithdrawalsView: React.FC<Props> = ({ clients, movementsByClie
     return 'Marcada como hecha';
   };
 
+  const monthNav = (
+    <div className="aw-month-nav" role="group" aria-label="Cambiar de mes">
+      <button type="button" className="aw-ghost" onClick={() => setMonth(addMonths(month, -1))}>‹ Anterior</button>
+      {month !== currentMonth ? <button type="button" className="aw-ghost" onClick={() => setMonth(currentMonth)}>Este mes</button> : null}
+      <button type="button" className="aw-ghost" onClick={() => setMonth(addMonths(month, 1))}>Siguiente ›</button>
+    </div>
+  );
+
   return (
     <div className="glass-card fade-in aw-root">
       {error ? <p className="aw-error" role="alert">{error}</p> : null}
+
+      <div className="aw-switch" role="tablist" aria-label="Ingresos o retiradas">
+        <button type="button" role="tab" aria-selected={section === 'retiradas'} className={section === 'retiradas' ? 'is-active' : ''} onClick={() => setSection('retiradas')}>
+          Retiradas{pending.length > 0 ? ` (${pending.length})` : ''}
+        </button>
+        <button type="button" role="tab" aria-selected={section === 'ingresos'} className={section === 'ingresos' ? 'is-active' : ''} onClick={() => setSection('ingresos')}>
+          Ingresos
+        </button>
+      </div>
+
+      {section === 'ingresos' ? (
+        <section className="aw-card" aria-labelledby="aw-income-title">
+          <div className="aw-head">
+            <h3 id="aw-income-title">Ingresos de {monthLabel(month)}</h3>
+            {monthNav}
+          </div>
+          {monthContributions.length === 0 ? (
+            <p className="aw-empty">No hay ingresos apuntados en {monthLabel(month)}.</p>
+          ) : (
+            <div className="aw-table-wrap">
+              <table className="aw-table">
+                <thead>
+                  <tr><th>Fecha</th><th>Cliente</th><th className="is-num">Cantidad</th><th>Tipo</th></tr>
+                </thead>
+                <tbody>
+                  {monthContributions.map((item) => (
+                    <tr key={`${item.clientId}|${item.iso}`}>
+                      <td>{dayLabel(item.iso)}</td>
+                      <td><strong>{nameOf(item.clientId)}</strong></td>
+                      <td className="is-num">{formatCurrency(item.amount)}</td>
+                      <td>{item.isFirst ? <span className="aw-chip is-fixed">Cliente nuevo</span> : <span className="aw-chip is-once">Aportación adicional</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={2}><strong>Total {monthLabel(month)} · {monthContributions.length} {monthContributions.length === 1 ? 'ingreso' : 'ingresos'} de {contributors} {contributors === 1 ? 'cliente' : 'clientes'}</strong></td>
+                    <td className="is-num"><strong>{formatCurrency(contributionsTotal)}</strong></td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </section>
+      ) : (
+      <>
 
       <section className="aw-card" aria-labelledby="aw-pending-title">
         <h3 id="aw-pending-title">Pendientes</h3>
@@ -266,11 +327,7 @@ export const AdminWithdrawalsView: React.FC<Props> = ({ clients, movementsByClie
       <section className="aw-card" aria-labelledby="aw-month-title">
         <div className="aw-head">
           <h3 id="aw-month-title">Retiradas de {monthLabel(month)}</h3>
-          <div className="aw-month-nav" role="group" aria-label="Cambiar de mes">
-            <button type="button" className="aw-ghost" onClick={() => setMonth(addMonths(month, -1))}>‹ Anterior</button>
-            {month !== currentMonth ? <button type="button" className="aw-ghost" onClick={() => setMonth(currentMonth)}>Este mes</button> : null}
-            <button type="button" className="aw-ghost" onClick={() => setMonth(addMonths(month, 1))}>Siguiente ›</button>
-          </div>
+          {monthNav}
         </div>
 
         {monthOccurrences.length > 0 ? (
@@ -330,6 +387,8 @@ export const AdminWithdrawalsView: React.FC<Props> = ({ clients, movementsByClie
           </div>
         )}
       </section>
+      </>
+      )}
     </div>
   );
 };

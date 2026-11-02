@@ -91,6 +91,26 @@ test('withdrawals tab: pending, tick, add a fixed withdrawal and month list', as
   await expect(october.locator('tbody tr')).toHaveCount(1);
 });
 
+test('the tab opens on withdrawals and shows the month contributions and who made them', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1300, height: 1000 });
+  await mountView(page);
+  await expect(page.getByRole('tab', { name: 'Retiradas (2)' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('tab', { name: 'Ingresos' }).click();
+  const income = page.locator('section', { has: page.getByRole('heading', { name: /Ingresos de/ }) });
+  await expect(income).toContainText('No hay ingresos apuntados en noviembre 2026.');
+  await income.getByRole('button', { name: '‹ Anterior' }).click();
+  await expect(income.locator('tbody tr')).toHaveCount(1);
+  await expect(income.locator('tbody tr')).toContainText('Ana Prueba');
+  await expect(income.locator('tbody tr')).toContainText('20.000,00 €');
+  await expect(income.locator('tbody tr')).toContainText('Cliente nuevo');
+  await expect(income.locator('tfoot')).toContainText('1 ingreso de 1 cliente');
+  // Al volver a Retiradas se mantiene el mes elegido.
+  await page.getByRole('tab', { name: 'Retiradas (2)' }).click();
+  await expect(page.getByRole('heading', { name: /Retiradas de octubre 2026/ })).toBeVisible();
+});
+
 test('withdrawals tab fits on a phone', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
   test.setTimeout(60_000);

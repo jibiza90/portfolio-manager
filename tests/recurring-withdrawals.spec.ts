@@ -4,6 +4,7 @@ import {
   getOccurrencesForMonth,
   getPendingOccurrences,
   scheduledDate,
+  toFirestoreRecurringState,
   type RecurringWithdrawal,
   type RecurringWithdrawalsState
 } from '../src/utils/recurringWithdrawals';
@@ -82,4 +83,14 @@ test('month list shows every recorded withdrawal of every client', () => {
     { clientId: 'client-031', iso: '2026-11-02', amount: 2000 },
     { clientId: 'client-030', iso: '2026-11-16', amount: 500 }
   ]);
+});
+
+test('what is saved to Firebase never has empty (undefined) fields, e.g. a fixed withdrawal without a note', () => {
+  const saved = toFirestoreRecurringState(state([rule({ note: undefined }), rule({ id: 'r2', note: 'Mensual' })], { 'r1|2026-11': { checkedAt: 3 } }));
+  const hasUndefined = (value: unknown): boolean => value === undefined ||
+    (value !== null && typeof value === 'object' && Object.values(value as Record<string, unknown>).some(hasUndefined));
+  expect(hasUndefined(saved)).toBe(false);
+  expect(saved.rules[0]).not.toHaveProperty('note');
+  expect(saved.rules[1]).toHaveProperty('note', 'Mensual');
+  expect(saved.checks).toEqual({ 'r1|2026-11': { checkedAt: 3 } });
 });

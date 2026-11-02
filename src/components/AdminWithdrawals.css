@@ -241,3 +241,31 @@
   .aw-item { grid-template-columns: minmax(0, 1fr) auto; }
   .aw-item > .aw-chip { grid-column: 1 / -1; justify-self: start; }
 }
+
+/* Botones Retiradas / Ingresos. */
+.aw-switch {
+  display: inline-flex;
+  justify-self: start;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #d7d2c8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.aw-switch button {
+  min-height: 38px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #1f1d1b;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.aw-switch button.is-active {
+  background: #0f6d7a;
+  color: #fff;
+}
