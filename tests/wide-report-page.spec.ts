@@ -174,7 +174,7 @@ test('uses page 20 as the standard client report with annual closing totals', as
     Math.abs(element.scrollHeight - element.clientHeight - element.scrollTop) <= 1
   ))).toBe(true);
 
-  await page.getByRole('button', { name: 'Ver detalle de Mar 2026' }).click();
+  await page.getByRole('button', { name: 'Ver detalle de Marzo 2026' }).click();
   await expect(page.locator('#report-month-detail-monthly-2026-03')).toBeVisible();
 
   const positiveBarStyle = await page.locator('.report-pro-bar.positive').first().evaluate((element) => {

@@ -7,7 +7,7 @@ test('shows unpublished cash movements for a regular client', async ({ page }) =
     harness.mountReportView(13, 'client-007');
   }, '/tests/fixtures/report-view-harness.tsx');
 
-  const pendingSection = page.getByLabel('Movimientos de capital posteriores al ultimo cierre');
+  const pendingSection = page.getByLabel('Movimientos de capital posteriores al último cierre');
   await expect(pendingSection).toBeVisible();
   await expect(pendingSection).toContainText('15.000,00');
   await expect(pendingSection).toContainText('127.548,34');

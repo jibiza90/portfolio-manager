@@ -6,6 +6,7 @@ import { formatCurrency } from '../utils/format';
 import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 import type { GeneralReferenceMonth } from '../services/cloudPortfolio';
 import { DEMO_CLIENT_ID, hasNewReportFeatures } from '../constants/clients';
+import { formatDay, formatMonth, formatMonthRange } from '../utils/dateLabels';
 import { getViewportTooltipPosition, ViewportTooltipPlacement } from '../utils/viewportTooltip';
 import { ContributionJourneyModule } from './ContributionJourneyModule';
 import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio';
@@ -295,11 +296,7 @@ const reportMonthToKey = (monthValue: string) => {
   return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
 };
 
-const getShortDateLabel = (iso: string) => {
-  const [year, month, day] = iso.split('-');
-  if (!year || !month || !day) return iso;
-  return `${day}.${month}.${year}`;
-};
+const getShortDateLabel = (iso: string) => formatDay(iso);
 
 export const ReportView: React.FC<ReportViewProps> = ({
   token,
@@ -685,60 +682,60 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const getSectionLabel = (section: HTMLElement) => {
       if (section.classList.contains('report-pro-executive')) return 'Resumen principal';
       if (section.classList.contains('report-pro-kpis')) return 'Indicadores acumulados';
-      if (section.classList.contains('report-pro-note')) return 'Explicacion de rentabilidad';
+      if (section.classList.contains('report-pro-note')) return 'Explicación de rentabilidad';
       if (section.classList.contains('report-pro-capital-panel')) return 'Capital y beneficio acumulado';
-      if (section.classList.contains('report-pro-demo-control-panel')) return 'Analisis por periodo';
+      if (section.classList.contains('report-pro-demo-control-panel')) return 'Análisis por periodo';
       if (section.classList.contains('report-pro-waterfall-panel')) return 'Resumen financiero';
       if (section.classList.contains('premium-v2-primary-kpis')) return 'Resumen principal premium';
       if (section.classList.contains('premium-v2-secondary-kpis')) return 'Indicadores acumulados premium';
-      if (section.classList.contains('premium-v2-period-panel')) return 'Analisis por periodo premium';
+      if (section.classList.contains('premium-v2-period-panel')) return 'Análisis por periodo premium';
       if (section.classList.contains('premium-v2-month-focus')) return 'Detalle mensual premium';
       if (section.classList.contains('pv3-overview')) return 'Resumen vision anual';
       if (section.classList.contains('pv3-matrix-section')) return 'Caleidoscopio anual';
       if (section.classList.contains('pv3-month-insight')) return 'Mes en contexto';
       if (section.classList.contains('pv3-year-digest')) return 'Lectura del periodo anual';
-      if (section.classList.contains('pf4-hero')) return 'Genealogia del saldo';
+      if (section.classList.contains('pf4-hero')) return 'Genealogía del saldo';
       if (section.classList.contains('pf4-engine-section')) return 'Recorrido de las aportaciones';
-      if (section.classList.contains('pf4-inspector')) return 'Detalle de la aportacion';
+      if (section.classList.contains('pf4-inspector')) return 'Detalle de la aportación';
       if (section.classList.contains('pf4-register')) return 'Registro del capital';
       if (section.classList.contains('pn5-opening')) return 'Carta patrimonial';
       if (section.classList.contains('pn5-chapter')) return section.querySelector('h2')?.textContent?.trim() || 'Capitulo narrativo';
       if (section.classList.contains('ledger-hero')) return 'Apertura del legajo';
       if (section.classList.contains('ledger-kpis')) return 'Resumen del legajo';
-      if (section.classList.contains('ledger-global-equation')) return 'Reconciliacion global';
+      if (section.classList.contains('ledger-global-equation')) return 'Reconciliación global';
       if (section.classList.contains('ledger-workspace')) return 'Extracto y dossier mensual';
       if (section.classList.contains('ledger-pending')) return 'Movimientos pendientes del legajo';
       if (section.classList.contains('river-hero')) return 'Apertura del rio patrimonial';
       if (section.classList.contains('river-kpis')) return 'Resumen del rio patrimonial';
       if (section.classList.contains('river-chart-section')) return 'Rio patrimonial';
-      if (section.classList.contains('river-station')) return 'Estacion de medicion mensual';
+      if (section.classList.contains('river-station')) return 'Estación de medición mensual';
       if (section.classList.contains('mosaic-hero')) return 'Apertura del mosaico patrimonial';
       if (section.classList.contains('mosaic-summary')) return 'Resumen del mosaico';
       if (section.classList.contains('mosaic-gallery')) return 'Mosaico de cierres mensuales';
       if (section.classList.contains('mosaic-detail')) return 'Detalle de la pieza mensual';
       if (section.classList.contains('mosaic-highlights')) return 'Piezas destacadas';
-      if (section.classList.contains('mosaic-twr-note')) return 'Explicacion TWR del mosaico';
+      if (section.classList.contains('mosaic-twr-note')) return 'Explicación TWR del mosaico';
       if (section.classList.contains('aura-executive')) return 'Resumen ejecutivo Aura Quantum';
-      if (section.classList.contains('aura-capital-core')) return 'Atribucion patrimonial Aura Quantum';
+      if (section.classList.contains('aura-capital-core')) return 'Atribución patrimonial Aura Quantum';
       if (section.classList.contains('aura-twr-bridge')) return 'Comparativa de rentabilidades Aura Quantum';
-      if (section.classList.contains('aura-quantum-canvas')) return 'Lienzo cuantico patrimonial';
-      if (section.classList.contains('aura-reconciliation')) return 'Mesa de conciliacion Aura Quantum';
+      if (section.classList.contains('aura-quantum-canvas')) return 'Lienzo cuántico patrimonial';
+      if (section.classList.contains('aura-reconciliation')) return 'Mesa de conciliación Aura Quantum';
       if (section.classList.contains('aura-movements')) return 'Registro de movimientos Aura Quantum';
-      if (section.classList.contains('aura-global-equation')) return 'Conciliacion integral Aura Quantum';
+      if (section.classList.contains('aura-global-equation')) return 'Conciliación integral Aura Quantum';
       if (section.classList.contains('strata-executive-grid')) return 'Resumen ejecutivo Aura Strata';
-      if (section.classList.contains('strata-metrics-strip')) return 'Atribucion patrimonial Aura Strata';
-      if (section.classList.contains('strata-didactic-box')) return 'Metodologia TWR Aura Strata';
+      if (section.classList.contains('strata-metrics-strip')) return 'Atribución patrimonial Aura Strata';
+      if (section.classList.contains('strata-didactic-box')) return 'Metodología TWR Aura Strata';
       if (section.classList.contains('strata-canvas-container')) return 'Cordillera patrimonial Aura Strata';
-      if (section.classList.contains('strata-audit-section')) return 'Mesa de conciliacion Aura Strata';
-      if (section.classList.contains('strata-movements-section')) return 'Tesoreria Aura Strata';
-      if (section.classList.contains('strata-footer')) return 'Conciliacion final Aura Strata';
+      if (section.classList.contains('strata-audit-section')) return 'Mesa de conciliación Aura Strata';
+      if (section.classList.contains('strata-movements-section')) return 'Tesorería Aura Strata';
+      if (section.classList.contains('strata-footer')) return 'Conciliación final Aura Strata';
       if (section.classList.contains('chronos-command-deck')) return 'Control temporal Chronos Orbit';
       if (section.classList.contains('chronos-orbit-panel')) return 'Orbita patrimonial Chronos Orbit';
-      if (section.classList.contains('chronos-telemetry')) return 'Telemetria Chronos Orbit';
+      if (section.classList.contains('chronos-telemetry')) return 'Telemetría Chronos Orbit';
       if (section.classList.contains('chronos-probe')) return 'Sonda temporal Chronos Orbit';
       if (section.classList.contains('chronos-flow-chronicle')) return 'Eventos de capital Chronos Orbit';
-      if (section.classList.contains('chronos-audit-footer')) return 'Conciliacion Chronos Orbit';
-      return section.querySelector('h4, h3, h2')?.textContent?.trim() || 'Seccion del informe';
+      if (section.classList.contains('chronos-audit-footer')) return 'Conciliación Chronos Orbit';
+      return section.querySelector('h4, h3, h2')?.textContent?.trim() || 'Sección del informe';
     };
 
     let currentSection: { label: string; durationMs: number; maxVisibilityPct: number } | null = null;
@@ -888,7 +885,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (accumulatedMs >= 1_000) {
         onAnalyticsEvent({
           type: 'chart_expanded_duration',
-          label: 'Evolucion patrimonio',
+          label: 'Evolución patrimonio',
           durationMs: accumulatedMs,
           metadata: { measurementVersion: 'active-v2' }
         });
@@ -911,7 +908,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       accumulatedMs += elapsedMs;
       if (accumulatedMs >= ANALYTICS_FLUSH_INTERVAL_MS) flush();
     };
-    onAnalyticsEvent({ type: 'chart_expand', label: 'Evolucion patrimonio' });
+    onAnalyticsEvent({ type: 'chart_expand', label: 'Evolución patrimonio' });
     const timer = window.setInterval(tick, ANALYTICS_TICK_MS);
     return () => {
       window.clearInterval(timer);
@@ -985,7 +982,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       <div className="informes-container informes-pro-page fade-in" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
         <div className="glass-card report-pro-panel" style={{ padding: 40, textAlign: 'center' }}>
           <h2>Enlace caducado</h2>
-          <p>Este enlace de informe ha caducado o no es valido.</p>
+          <p>Este enlace de informe ha caducado o no es válido.</p>
           <p className="muted">Los enlaces de informe tienen una validez de 24 horas.</p>
         </div>
       </div>
@@ -1049,7 +1046,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   const visibleContributionBreakdowns: typeof contributionBreakdowns = [];
   const periodOptions = monthlyWithData.map((m) => ({
     key: reportMonthToKey(m.month),
-    label: m.month
+    label: formatMonth(m.month)
   }));
   const firstPeriodKey = periodOptions[0]?.key ?? '';
   const lastPeriodKey = periodOptions[periodOptions.length - 1]?.key ?? '';
@@ -1125,7 +1122,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         : 'Rentabilidad mensual';
   const chartSubtitle = chartView === 'general'
     ? 'Referencia informativa de la rentabilidad mensual general'
-    : 'Comparativa mensual segun el periodo seleccionado';
+    : 'Comparativa mensual según el periodo seleccionado';
   const monthlyChartMinWidth = chartMonthlyData.length > 12 ? `${chartMonthlyData.length * 86}px` : '100%';
   const hasNegativeMonth = chartMonthlyData.some((m) => getChartValue(m) < 0);
   const maxMonthPct = Math.max(1, ...chartMonthlyData.map((m) => Math.abs(getChartValue(m))));
@@ -1294,7 +1291,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     1
   ) - 1;
   const selectedPeriodLabel = firstMonth && lastMonth
-    ? `${firstMonth.month} - ${lastMonth.month}`
+    ? formatMonthRange(firstMonth.month, lastMonth.month)
     : 'Todo el periodo';
   const accumulatedNetCapital = visibleIncrements - visibleDecrements;
   const firstMovementIso = (report.movements ?? [])
@@ -1307,7 +1304,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       ? getMonthEndLabel(monthlyWithData[0].month)
       : 'el inicio';
   const latestMonth = monthlyWithData[monthlyWithData.length - 1];
-  const latestMonthLabel = latestMonth ? getLongMonthLabel(latestMonth.month) : 'ultimo mes';
+  const latestMonthLabel = latestMonth ? getLongMonthLabel(latestMonth.month) : 'último mes';
   const latestPublishedCloseLabel = latestMonth ? getMonthEndLabel(latestMonth.month) : 'sin cierre publicado';
   const waterfallValues = [visibleIncrements, visibleDecrements, report.beneficioTotal, visibleBalance];
   const waterfallScaleMax = Math.max(...waterfallValues.map((value) => Math.abs(value)), 1);
@@ -1318,7 +1315,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     const hasIncrement = movements.some((movement) => movement.type === 'increment');
     const hasDecrement = movements.some((movement) => movement.type === 'decrement');
     if (hasIncrement && hasDecrement) return 'Movimientos';
-    if (hasIncrement) return 'Aportacion';
+    if (hasIncrement) return 'Aportación';
     if (hasDecrement) return 'Retirada';
     return '';
   };
@@ -1393,7 +1390,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
   });
   const tableMovementRows = isDemoClosingLayout ? demoMovementRows : screenMovementCapitalSeries;
   const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  const monthKeyLabel = (key: string) => `${SHORT_MONTHS[Number(key.slice(5, 7)) - 1] ?? key.slice(5, 7)} ${key.slice(0, 4)}`;
+  const monthKeyLabel = (key: string) => formatMonth(key);
   // demo1: explicacion final "de cada 100 €" (recuperado y ganado sobre lo aportado).
   const explainMovements: Record<string, Movement> = {};
   [...(report.movements ?? []), ...pendingMovementRows].forEach((movement) => {
@@ -1719,7 +1716,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         <td colSpan={colSpan}>
           <div className="report-pro-inline-breakdown">
             <div className="report-pro-inline-title">
-              <strong>Detalle de rentabilidad del mes - {month.month}</strong>
+              <strong>Detalle de rentabilidad del mes - {formatMonth(month.month)}</strong>
             </div>
             {totalWithdrawals > 0
               ? renderWithdrawalDistribution(
@@ -2071,11 +2068,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
     card(margin + (cardW + 15) * 2, y, cardW, secondaryCardHeight, 'Capital neto del periodo', money(periodIncrements - periodDecrements), periodIncrements - periodDecrements >= 0);
     y += isDemoPdf ? 72 : 86;
 
-    sectionTitle('Evolucion patrimonio', 'Saldo al cierre de cada mes del periodo seleccionado.', isDemoPdf ? 210 : 205);
+    sectionTitle('Evolución patrimonio', 'Saldo al cierre de cada mes del periodo seleccionado.', isDemoPdf ? 210 : 205);
     drawLineChart(effectivePatrimonioData, margin, y, contentWidth, isDemoPdf ? 205 : 190);
     y += isDemoPdf ? 226 : 216;
 
-    sectionTitle('Rentabilidad mensual', 'TWR mensual segun los meses visibles en pantalla.', 165);
+    sectionTitle('Rentabilidad mensual', 'TWR mensual según los meses visibles en pantalla.', 165);
     drawReturnBars(effectiveMonthlyWithData, margin, y, contentWidth, 150);
     y += isDemoPdf ? 192 : 178;
 
@@ -2095,7 +2092,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         doc.rect(margin, y - 13, contentWidth, monthlyRowHeight, 'F');
       }
       tableRow(
-        [getMonthEndLabel(month.month), money(month.profit ?? 0), pct(getDisplayedMonthReturnPct(month)), money(month.endBalance ?? 0)],
+        [formatMonth(month.month), money(month.profit ?? 0), pct(getDisplayedMonthReturnPct(month)), money(month.endBalance ?? 0)],
         widths,
         y,
         { positiveIndex: 1, positiveValue: month.profit ?? 0 }
@@ -2122,14 +2119,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
         y += 22;
         const visiblePct = getVisibleMonthReturnPct(reportMonthToKey(breakdown.month), breakdown.initialReturnPct * 100);
         const initialProfit = breakdown.initialCapital * (visiblePct / 100);
-        tableRow([withdrawals.length > 0 ? 'Posicion mantenida todo el mes' : 'Posicion inicial del mes', money(breakdown.initialCapital), pct(visiblePct), money(initialProfit)], widths, y, {
+        tableRow([withdrawals.length > 0 ? 'Posición mantenida todo el mes' : 'Posición inicial del mes', money(breakdown.initialCapital), pct(visiblePct), money(initialProfit)], widths, y, {
           positiveIndex: 3,
           positiveValue: initialProfit
         });
         y += 18;
         breakdown.contributions.forEach((contribution) => {
           tableRow(
-            [`Aportacion ${getShortDateLabel(contribution.iso)}`, money(contribution.amount), pct(contribution.returnPct * 100), money(contribution.profit)],
+            [`Aportación ${getShortDateLabel(contribution.iso)}`, money(contribution.amount), pct(contribution.returnPct * 100), money(contribution.profit)],
             widths,
             y,
             { positiveIndex: 3, positiveValue: contribution.profit }
@@ -2138,7 +2135,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         });
         withdrawals.forEach((withdrawal) => {
           tableRow(
-            [`Posicion retirada ${getShortDateLabel(withdrawal.iso)}`, money(withdrawal.amount), withdrawal.returnPct === undefined ? '-' : pct(withdrawal.returnPct * 100), money(withdrawal.profit)],
+            [`Posición retirada ${getShortDateLabel(withdrawal.iso)}`, money(withdrawal.amount), withdrawal.returnPct === undefined ? '-' : pct(withdrawal.returnPct * 100), money(withdrawal.profit)],
             widths,
             y,
             { positiveIndex: 3, positiveValue: withdrawal.profit }
@@ -2156,14 +2153,14 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (periodMovements.length > 0) {
       sectionTitle('Capital aportado y retirado', 'Capital aportado y capital retirado dentro del periodo seleccionado.', 54);
       const movementWidths = [18, 22, 22, 38];
-      tableRow(['Fecha', 'Aportacion', 'Retirada', 'Capital neto del periodo'], movementWidths, y, { header: true });
+      tableRow(['Fecha', 'Aportación', 'Retirada', 'Capital neto del periodo'], movementWidths, y, { header: true });
       const movementRowHeight = isDemoPdf ? 24 : 20;
       y += isDemoPdf ? 28 : 24;
       let runningNet = 0;
       periodMovements.forEach((movement, idx) => {
         const addedPage = ensure(movementRowHeight + 2);
         if (addedPage && isDemoPdf) {
-          tableRow(['Fecha', 'Aportacion', 'Retirada', 'Capital neto del periodo'], movementWidths, y, { header: true });
+          tableRow(['Fecha', 'Aportación', 'Retirada', 'Capital neto del periodo'], movementWidths, y, { header: true });
           y += 28;
         }
         runningNet += movement.type === 'increment' ? movement.amount : -movement.amount;
@@ -2204,7 +2201,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         doc.setFontSize(7.5);
         setText(colors.muted);
         doc.text(`Periodo: ${selectedMonthLabel}`, margin, pageHeight - 12);
-        doc.text(`Pagina ${pageNumber} de ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
+        doc.text(`Página ${pageNumber} de ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
       }
     }
 
@@ -2435,11 +2432,11 @@ export const ReportView: React.FC<ReportViewProps> = ({
 
   const expandedPatrimonyOverlay = isPatrimonyExpanded && typeof document !== 'undefined'
     ? createPortal(
-      <div className="report-pro-chart-overlay" role="dialog" aria-modal="true" aria-label="Grafico de evolucion de patrimonio ampliado">
+      <div className="report-pro-chart-overlay" role="dialog" aria-modal="true" aria-label="Gráfico de evolución de patrimonio ampliado">
         <section className="report-pro-panel report-pro-panel-xl report-pro-patrimony-section is-expanded">
           <div className="report-pro-panel-head">
             <div>
-              <h4>Evolucion patrimonio</h4>
+              <h4>Evolución patrimonio</h4>
               <p>Saldo al cierre de cada mes</p>
             </div>
             <button
@@ -2583,15 +2580,15 @@ export const ReportView: React.FC<ReportViewProps> = ({
                         type="button"
                         className="report-pro-closing-toggle"
                         aria-expanded={expanded}
-                        aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de ${row.month.month}`}
-                        title={expanded ? 'Ocultar composicion del resultado' : 'Ver composicion del resultado'}
+                        aria-label={`${expanded ? 'Ocultar' : 'Ver'} detalle de ${formatMonth(row.month.month)}`}
+                        title={expanded ? 'Ocultar composición del resultado' : 'Ver composición del resultado'}
                         onClick={() => toggleMonthlyBreakdown(row.monthKey, 'monthly')}
                       >
                         {expanded ? '-' : '+'}
                       </button>
                     </td>
                     <td>
-                      <strong>{row.month.month}</strong>
+                      <strong>{formatMonth(row.month.month)}</strong>
                       {movementTag ? <span className="report-pro-closing-movement">{movementTag}</span> : null}
                     </td>
                     <td className="text-right">{formatCurrency(row.opening)}</td>
@@ -2609,10 +2606,10 @@ export const ReportView: React.FC<ReportViewProps> = ({
                           <div className="report-pro-closing-simple-detail">
                             <div>
                               <span>Composici&oacute;n del cierre</span>
-                              <strong>{row.month.month}</strong>
+                              <strong>{formatMonth(row.month.month)}</strong>
                               <p>{row.increments || row.decrements
-                                ? 'Los movimientos de capital del mes ya estan incorporados en el saldo final. Este cierre no dispone de un desglose intramensual adicional.'
-                                : 'El mes no contiene aportaciones ni retiradas. El resultado corresponde a la evolucion de la posicion durante el periodo.'}</p>
+                                ? 'Los movimientos de capital del mes ya están incorporados en el saldo final. Este cierre no dispone de un desglose intramensual adicional.'
+                                : 'El mes no contiene aportaciones ni retiradas. El resultado corresponde a la evolución de la posición durante el periodo.'}</p>
                             </div>
                             <div className="report-pro-closing-equation">
                               <span>{formatCurrency(row.opening)}</span>
@@ -2661,12 +2658,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
         />
       ) : null}
       {report.clientId === DEMO_CLIENT_ID ? (
-        <nav className="demo-report-mode-switcher" aria-label="Seleccionar area de diseno">
+        <nav className="demo-report-mode-switcher" aria-label="Seleccionar área de diseño">
           <div>
             <span>Espacio de pruebas</span>
             <strong>{demoViewMode === 'pages' ? 'Experiencias web' : 'Documentos PDF'}</strong>
           </div>
-          <div role="tablist" aria-label="Cambiar entre paginas y PDF">
+          <div role="tablist" aria-label="Cambiar entre páginas y PDF">
             <button type="button" role="tab" aria-selected={demoViewMode === 'pages'} className={demoViewMode === 'pages' ? 'is-active' : ''} onClick={() => setDemoViewMode('pages')}><span>01</span>P&aacute;ginas del portal</button>
             <button type="button" role="tab" aria-selected={demoViewMode === 'pdfs'} className={demoViewMode === 'pdfs' ? 'is-active' : ''} onClick={() => setDemoViewMode('pdfs')}><span>02</span>Dise&ntilde;os PDF</button>
           </div>
@@ -2741,7 +2738,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         </section>
 
         {pendingMovementRows.length > 0 ? (
-          <section className="report-pro-pending-cash" data-tour="en-curso" aria-label="Movimientos de capital posteriores al ultimo cierre">
+          <section className="report-pro-pending-cash" data-tour="en-curso" aria-label="Movimientos de capital posteriores al último cierre">
             <div className="report-pro-pending-cash-head">
               <div>
                 <span>Actualizaci&oacute;n de capital</span>
@@ -2817,13 +2814,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
         <section className={`report-pro-capital-panel${isDemoClosingLayout ? ' is-demo-capital' : ''}`}>
             <div className="report-pro-panel-head">
               <h4>Capital y beneficio acumulado</h4>
-              <p>Separacion entre capital aportado, retiradas y beneficio obtenido.</p>
+              <p>Separación entre capital aportado, retiradas y beneficio obtenido.</p>
             </div>
             <div className="report-pro-capital-grid">
-              {renderCapitalHistoryCard('Capital aportado', visibleIncrements, 'increment', 'Total de dinero ingresado historicamente por el cliente.', 'report-pro-capital-history-summary')}
-              {renderCapitalHistoryCard('Capital retirado', visibleDecrements, 'decrement', 'Total de dinero retirado historicamente por el cliente.', 'report-pro-capital-history-summary')}
+              {renderCapitalHistoryCard('Capital aportado', visibleIncrements, 'increment', 'Total de dinero ingresado históricamente por el cliente.', 'report-pro-capital-history-summary')}
+              {renderCapitalHistoryCard('Capital retirado', visibleDecrements, 'decrement', 'Total de dinero retirado históricamente por el cliente.', 'report-pro-capital-history-summary')}
               <div className="report-pro-info-card" tabIndex={0} data-tooltip="Capital aportado menos capital retirado."><span>Capital neto aportado</span><strong>{formatCurrency(accumulatedNetCapital)}</strong></div>
-              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Beneficio acumulado generado desde el inicio de la relacion."><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
+              <div className="report-pro-info-card" tabIndex={0} data-tooltip="Beneficio acumulado generado desde el inicio de la relación."><span>Beneficio acumulado</span><strong className={report.beneficioTotal >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(report.beneficioTotal)}</strong></div>
               <div className="report-pro-info-card" tabIndex={0} data-tooltip="Saldo actual de la cartera del cliente."><span>Saldo actual</span><strong>{formatCurrency(visibleBalance)}</strong></div>
             </div>
         </section>
@@ -2850,12 +2847,12 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     setPeriodPreset(event.target.value);
                   }}
                 >
-                  <option value="last12">Ultimos 12 meses</option>
-                  <option value="all">Todo el historico</option>
+                  <option value="last12">Últimos 12 meses</option>
+                  <option value="all">Todo el histórico</option>
                   <option value="2025">Año 2025</option>
                   <option value="2026">Año 2026</option>
-                  <option value="last3">Ultimos 3 meses</option>
-                  <option value="last6">Ultimos 6 meses</option>
+                  <option value="last3">Últimos 3 meses</option>
+                  <option value="last6">Últimos 6 meses</option>
                   <option value="custom">Personalizado</option>
                 </select>
               </label>
@@ -2933,7 +2930,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           <section className="report-pro-panel">
             <div className="report-pro-panel-head">
               <h4>Detalle de meses con aportaciones</h4>
-              <p>Separamos el capital inicial del mes y cada aportacion para que veas que ha generado cada parte.</p>
+              <p>Separamos el capital inicial del mes y cada aportación para que veas qué ha generado cada parte.</p>
             </div>
             <div className="report-pro-breakdown-list">
               {visibleContributionBreakdowns.map((breakdown) => {
@@ -2947,7 +2944,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                 return (
                 <div className="report-pro-breakdown-card" key={breakdown.month}>
                   <div className="report-pro-breakdown-title">
-                    <strong>{breakdown.month}</strong>
+                    <strong>{formatMonth(breakdown.month)}</strong>
                     <span>Beneficio explicado: {formatCurrency(explainedTotalProfit)}</span>
                   </div>
                   <div className="table-scroll">
@@ -3026,7 +3023,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
           </div>
           <div className="report-pro-chart-toolbar">
             <label>
-              Vista de graficos
+              Vista de gráficos
               <select
                 value={chartView}
                 onChange={(event) => {
@@ -3140,13 +3137,13 @@ export const ReportView: React.FC<ReportViewProps> = ({
                   <label>
                     <span>Desde</span>
                     <select value={benefitsFromKey} onChange={(event) => setBenefitsFrom(event.target.value)}>
-                      {monthlyWithData.map((month) => <option key={month.month} value={reportMonthToKey(month.month)}>{month.month}</option>)}
+                      {monthlyWithData.map((month) => <option key={month.month} value={reportMonthToKey(month.month)}>{formatMonth(month.month)}</option>)}
                     </select>
                   </label>
                   <label>
                     <span>Hasta</span>
                     <select value={benefitsToKey} onChange={(event) => setBenefitsTo(event.target.value)}>
-                      {monthlyWithData.map((month) => <option key={month.month} value={reportMonthToKey(month.month)}>{month.month}</option>)}
+                      {monthlyWithData.map((month) => <option key={month.month} value={reportMonthToKey(month.month)}>{formatMonth(month.month)}</option>)}
                     </select>
                   </label>
                 </div>
@@ -3189,7 +3186,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                         <tr>
                           <td>
                             <span className="report-pro-benefit-month-cell">
-                              <span>{getMonthEndLabel(row.month.month)}</span>
+                              <span>{formatMonth(row.month.month)}</span>
                               {breakdown ? renderMonthlyDetailButton(row.monthKey, row.month.month, 'benefits') : null}
                             </span>
                           </td>
@@ -3209,7 +3206,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                           <tr className="report-pro-strong-total">
                             <td>
                               <strong>{showRangeTotal ? 'Total del periodo' : `Total ${row.year}`}</strong>
-                              {showRangeTotal ? <span>{benefitsMonths[0]?.month} – {row.month.month}</span> : null}
+                              {showRangeTotal ? <span>{formatMonthRange(benefitsMonths[0]?.month ?? row.month.month, row.month.month)}</span> : null}
                             </td>
                             <td className={`text-right ${totalProfit >= 0 ? 'positive' : 'negative'}`}><strong>{formatSignedCurrency(totalProfit)}</strong></td>
                             <td className={`text-right ${totalReturn >= 0 ? 'positive' : 'negative'}`}><strong>{formatSignedPercent(totalReturn)}</strong></td>
@@ -3253,7 +3250,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                         <tr>
                           <td>
                             <span className="report-pro-benefit-month-cell">
-                              <span>{getMonthEndLabel(m.month)}</span>
+                              <span>{formatMonth(m.month)}</span>
                               {breakdown ? renderMonthlyDetailButton(monthKey, m.month, 'benefits') : null}
                             </span>
                           </td>
@@ -3272,7 +3269,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
                           <tr className="report-pro-benefits-total">
                             <td>
                               <strong>Total del periodo</strong>
-                              <span>{benefitsMonths[0]?.month} – {m.month}</span>
+                              <span>{formatMonthRange(benefitsMonths[0]?.month ?? m.month, m.month)}</span>
                             </td>
                             <td className={`text-right ${rangeProfit >= 0 ? 'positive' : 'negative'}`}><strong>{formatCurrency(rangeProfit)}</strong></td>
                           </tr>
@@ -3289,20 +3286,20 @@ export const ReportView: React.FC<ReportViewProps> = ({
         <section className="report-pro-panel report-pro-panel-xl report-pro-patrimony-section" data-tour="patrimonio" data-reveal={isDemoClosingLayout ? 'patrimony' : undefined}>
           <div className="report-pro-panel-head">
             <div>
-              <h4>Evolucion patrimonio</h4>
+              <h4>Evolución patrimonio</h4>
               <p>Saldo al cierre de cada mes</p>
             </div>
             <button
               type="button"
               className="report-pro-expand-chart-button"
               onClick={() => {
-                onAnalyticsEvent?.({ type: 'chart_expand_request', label: 'Evolucion patrimonio' });
+                onAnalyticsEvent?.({ type: 'chart_expand_request', label: 'Evolución patrimonio' });
                 setExpandedStartMonth(rangeStart);
                 setExpandedEndMonth(rangeEnd);
                 setIsPatrimonyExpanded(true);
               }}
             >
-              Ampliar grafico
+              Ampliar gráfico
             </button>
           </div>
           {usePatrimonyTrendPreview && patrimonyTrendPoints.length > 0 ? (
@@ -3403,9 +3400,9 @@ export const ReportView: React.FC<ReportViewProps> = ({
                     return (
                       <React.Fragment key={`${mov.iso}-${i}`}>
                       <tr>
-                        <td>{`${dd}.${mm}.${yy}`}</td>
+                        <td>{`${dd}/${mm}/${yy}`}</td>
                         <td className={isIncrement ? 'positive' : 'negative'}>
-                          {isIncrement ? 'Aportacion' : 'Retirada'}
+                          {isIncrement ? 'Aportación' : 'Retirada'}
                         </td>
                         <td className={`text-right ${isIncrement ? 'positive' : 'negative'}`}>
                           {isIncrement ? '+' : '-'}{formatCurrency(mov.amount ?? 0)}
@@ -3478,7 +3475,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
         ) : null}
 
 
-        <section className="report-pro-waterfall-panel" data-tour="composicion" aria-label="Composicion financiera de la cartera" data-reveal={isDemoClosingLayout ? 'waterfall' : undefined}>
+        <section className="report-pro-waterfall-panel" data-tour="composicion" aria-label="Composición financiera de la cartera" data-reveal={isDemoClosingLayout ? 'waterfall' : undefined}>
             <div className="report-pro-panel-head report-pro-waterfall-head">
               <div>
                 <span className="report-pro-waterfall-eyebrow">Resumen financiero</span>

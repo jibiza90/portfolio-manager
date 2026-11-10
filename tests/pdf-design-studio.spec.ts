@@ -28,7 +28,7 @@ test('keeps PDF designs isolated and renders SIGNAL from real report data', asyn
   await expect(page.getByRole('tab', { name: /PDF 3/i })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.pdf3-document-page')).toHaveCount(5);
   await expect(page.locator('.pdf3-overview-page')).toContainText('112.548,34');
-  await expect(page.locator('.pdf3-overview-page')).toContainText('Mar 2025 - Mar 2026');
+  await expect(page.locator('.pdf3-overview-page')).toContainText('Marzo 2025 – Marzo 2026');
   await expect(page.locator('.pdf3-month-ledger .pdf3-ledger-row:not(.pdf3-ledger-head)')).toHaveCount(13);
   await expect(page.locator('.pdf3-movement-ledger .pdf3-ledger-row')).toHaveCount(5);
   await expect(page.locator('.pdf3-method-page')).toContainText('TWR');

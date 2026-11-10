@@ -30,9 +30,12 @@
     "@types/react-dom": "^18.2.22",
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "dictionary-ca": "^3.0.0",
+    "dictionary-es": "^4.0.0",
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "nspell": "^2.1.5",
     "typescript": "^5.4.2",
     "vite": "^5.0.12"
   }

@@ -120,7 +120,7 @@ const BalanceTrajectory = ({ months }: { months: PdfStudioMonth[] }) => {
   const valueEvery = months.length <= 8 ? 1 : Math.ceil(months.length / 7);
 
   return (
-    <svg className="pdf3-balance-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Evolucion mensual del valor de cartera">
+    <svg className="pdf3-balance-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Evolución mensual del valor de cartera">
       <defs>
         <linearGradient id="pdf3-balance-area" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#3e63dd" stopOpacity="0.2" />
@@ -363,7 +363,7 @@ export const Pdf3SignalDocument = React.forwardRef<HTMLDivElement, Pdf3SignalDoc
     );
   };
 
-  addPage('overview', 'SITUACION PATRIMONIAL', (
+  addPage('overview', 'SITUACIÓN PATRIMONIAL', (
     <>
       <div className="pdf3-overview-grid">
         <aside className="pdf3-index-rail">
@@ -415,7 +415,7 @@ export const Pdf3SignalDocument = React.forwardRef<HTMLDivElement, Pdf3SignalDoc
           <ReturnBars months={months} />
         </section>
         <section className="pdf3-panel">
-          <div className="pdf3-panel-title"><div><span>RESULTADO ECONOMICO</span><h2>Beneficio mensual</h2></div><strong className={summary.profit >= 0 ? 'is-positive' : 'is-negative'}>{formatSignedMoney(summary.profit)}</strong></div>
+          <div className="pdf3-panel-title"><div><span>RESULTADO ECONÓMICO</span><h2>Beneficio mensual</h2></div><strong className={summary.profit >= 0 ? 'is-positive' : 'is-negative'}>{formatSignedMoney(summary.profit)}</strong></div>
           <ProfitDots months={months} />
         </section>
       </div>
@@ -483,7 +483,7 @@ export const Pdf3SignalDocument = React.forwardRef<HTMLDivElement, Pdf3SignalDoc
   breakdownChunks.forEach((chunk, index) => {
     addPage(`breakdown-${index}`, 'MESES CON MOVIMIENTOS', (
       <>
-        <div className="pdf3-page-intro"><div><span>04 / EXPLICACION</span><h1>C&oacute;mo se gener&oacute;<br />el beneficio.</h1></div><p>Separaci&oacute;n del capital inicial y de cada movimiento con rentabilidad espec&iacute;fica.</p></div>
+        <div className="pdf3-page-intro"><div><span>04 / EXPLICACIÓN</span><h1>C&oacute;mo se gener&oacute;<br />el beneficio.</h1></div><p>Separaci&oacute;n del capital inicial y de cada movimiento con rentabilidad espec&iacute;fica.</p></div>
         <section className="pdf3-breakdown-list">{chunk.map((breakdown) => <BreakdownModule breakdown={breakdown} key={breakdown.month} />)}</section>
       </>
     ), 'pdf3-breakdown-page');

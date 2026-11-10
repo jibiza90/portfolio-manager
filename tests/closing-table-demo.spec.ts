@@ -26,9 +26,9 @@ test('demo1 shows the closing table under capital and profit with sticky heading
   expect(titles.indexOf('Cierres y composición del resultado')).toBe(titles.indexOf('Capital y beneficio acumulado') + 1);
 
   const colours = await page.evaluate(() => {
-    const row = [...document.querySelectorAll('.report-pro-closing-table > tbody > tr')].find((tr) => tr.textContent?.includes('Ago 2025'))!;
+    const row = [...document.querySelectorAll('.report-pro-closing-table > tbody > tr')].find((tr) => tr.textContent?.includes('Agosto 2025'))!;
     const cells = row.querySelectorAll('td');
-    const withdrawalRow = [...document.querySelectorAll('.report-pro-closing-table > tbody > tr')].find((tr) => tr.textContent?.includes('Dic 2025'))!;
+    const withdrawalRow = [...document.querySelectorAll('.report-pro-closing-table > tbody > tr')].find((tr) => tr.textContent?.includes('Diciembre 2025'))!;
     return {
       contribution: getComputedStyle(cells[3]).color,
       emptyWithdrawal: getComputedStyle(cells[4]).color,
@@ -113,7 +113,7 @@ test('demo1 monthly profits: year or period selector with bold totals', async ({
   await panel.getByLabel('Desde').selectOption('2025-10');
   await panel.getByLabel('Hasta').selectOption('2026-02');
   await expect(panel.locator('thead th').last()).toHaveText('Acumulado del periodo');
-  await expect(totals).toHaveText([/Total del periodo\s*Oct 2025 – Feb 2026\s*\+8\.947,46\s€/]);
+  await expect(totals).toHaveText([/Total del periodo\s*Octubre 2025 – Febrero 2026\s*\+8\.947,46\s€/]);
   expect(await totals.locator('td').first().evaluate((cell) => getComputedStyle(cell).backgroundColor)).toBe('rgb(11, 85, 96)');
 });
 
@@ -143,7 +143,7 @@ test('demo1 capital movements: period and type selectors with totals', async ({ 
   await periods.getByRole('button', { name: 'Elegir periodo' }).click();
   await panel.getByLabel('Desde').selectOption('2025-12');
   await panel.getByLabel('Hasta').selectOption('2026-03');
-  await expect(totals).toHaveText([/Total del periodo\s*Dic 2025 – Mar 2026.*\+50\.000,00\s€.*-10\.000,00\s€/]);
+  await expect(totals).toHaveText([/Total del periodo\s*Diciembre 2025 – Marzo 2026.*\+50\.000,00\s€.*-10\.000,00\s€/]);
 });
 
 test('contributions in the patrimony chart are blue for every client', async ({ page }, testInfo) => {

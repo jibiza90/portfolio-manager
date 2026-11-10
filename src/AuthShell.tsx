@@ -4,6 +4,7 @@ import { TextSizeControl, useTextSize } from './components/TextSizeControl';
 import { FullscreenButton } from './components/FullscreenButton';
 import { LegalPrivacyNotice } from './components/LegalPrivacyNotice';
 import { CLIENTS, DEMO_CLIENT_ID, hasNewReportFeatures, isDemoClient } from './constants/clients';
+import { formatDay, formatMonth } from './utils/dateLabels';
 import {
   buildClientAuthEmail,
   fetchClientAccessProfile,
@@ -335,31 +336,6 @@ const reportMonthToKey = (monthValue: string) => {
   const year = Number(parts[parts.length - 1]);
   if (monthIndex < 0 || !Number.isFinite(year)) return monthValue;
   return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
-};
-const formatMonthEndDate = (monthValue: string) => {
-  const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-  if (/^\d{4}-\d{2}$/.test(monthValue)) {
-    const [yearRaw, monthRaw] = monthValue.split('-');
-    const year = Number(yearRaw);
-    const month = Number(monthRaw);
-    if (Number.isFinite(year) && Number.isFinite(month)) {
-      return new Date(year, month, 0).toLocaleDateString('es-ES');
-    }
-  }
-  const parts = monthValue.trim().toLowerCase().split(/\s+/);
-  if (parts.length === 2) {
-    const monthIndex = monthNames.indexOf(parts[0].slice(0, 3));
-    const year = Number(parts[1]);
-    if (monthIndex >= 0 && Number.isFinite(year)) {
-      return new Date(year, monthIndex + 1, 0).toLocaleDateString('es-ES');
-    }
-  }
-  return monthValue;
-};
-const formatShortDate = (iso: string) => {
-  const [year, month, day] = iso.split('-');
-  if (!year || !month || !day) return iso;
-  return `${day}.${month}.${year}`;
 };
 const deriveContributionBreakdowns = (
   report: Pick<ReportData, 'monthlyStats' | 'movements'>,
@@ -1400,7 +1376,7 @@ const ClientPortal = ({
     setAnalyticsReady(false);
     void saveClientAnalyticsConsent(profileUid, clientId, 'all')
       .catch((analyticsError) => {
-        console.error('No se pudo registrar la autorizacion contractual de analitica', analyticsError);
+        console.error('No se pudo registrar la autorización contractual de analítica', analyticsError);
       })
       .finally(() => {
         if (!cancelled) setAnalyticsReady(true);
@@ -1427,7 +1403,7 @@ const ClientPortal = ({
         if (cancelled) return;
         setLegalNoticeRequired(true);
         setLegalNoticeOpen(true);
-        setLegalNoticeError('No se pudo comprobar la confirmacion anterior. Vuelve a intentarlo.');
+        setLegalNoticeError('No se pudo comprobar la confirmación anterior. Vuelve a intentarlo.');
         setLegalNoticeLoaded(true);
       });
     return () => {
@@ -1523,7 +1499,7 @@ const ClientPortal = ({
     if (!supportOpen) return;
     if (clientUnreadCount <= 0) return;
     void markMessagesReadByClient(clientId).catch(() => {
-      setSupportError('No se pudo marcar como leido.');
+      setSupportError('No se pudo marcar como leído.');
     });
   }, [clientId, clientUnreadCount, supportOpen]);
 
@@ -1777,7 +1753,7 @@ const ClientPortal = ({
         label: CLIENT_LEGAL_NOTICE_VERSION
       });
     } catch (noticeError) {
-      console.error('No se pudo guardar la confirmacion del aviso legal', noticeError);
+      console.error('No se pudo guardar la confirmación del aviso legal', noticeError);
       setLegalNoticeError('No se pudo guardar la confirmación. Comprueba la conexión e inténtalo de nuevo.');
     } finally {
       setLegalNoticeBusy(false);
@@ -1833,7 +1809,7 @@ const ClientPortal = ({
         doc.setFontSize(10);
         doc.text('Portfolio Manager', marginX + 34, 22);
         doc.setFontSize(18);
-        doc.text('Informe de inversion', marginX + 34, 46);
+        doc.text('Informe de inversión', marginX + 34, 46);
 
         doc.setFontSize(9);
         doc.text(`Emitido: ${now.toLocaleString('es-ES')}`, pageWidth - marginX, 22, { align: 'right' });
@@ -1942,7 +1918,7 @@ const ClientPortal = ({
         const last = coords[coords.length - 1];
         doc.setFontSize(9);
         doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
-        doc.text(`Ultimo dato: ${valueFormatter(last.value)}`, panelX + 16, panelY + panelH - 18);
+        doc.text(`Último dato: ${valueFormatter(last.value)}`, panelX + 16, panelY + panelH - 18);
         return panelY + panelH + 14;
       };
 
@@ -2047,7 +2023,7 @@ const ClientPortal = ({
         doc.setFontSize(9);
         doc.setTextColor(brand.text[0], brand.text[1], brand.text[2]);
         const last = data[data.length - 1];
-        doc.text(`Ultimo dato: ${formatPct(last?.value ?? 0)}`, panelX + 16, panelY + panelH - 18);
+        doc.text(`Último dato: ${formatPct(last?.value ?? 0)}`, panelX + 16, panelY + panelH - 18);
         return panelY + panelH + 14;
       };
 
@@ -2120,15 +2096,15 @@ const ClientPortal = ({
       };
 
       let cursorY = contentTop;
-      const latestProfitLabel = latestProfitMonth ? `${formatMonthLabel(latestProfitMonth.month)}: ${formatEuro(latestProfitMonth.profit)}` : '-';
-      const latestTwrLabel = latestTwrMonth ? `${formatMonthLabel(latestTwrMonth.month)}: ${formatPct(latestTwrMonth.twr)}` : '-';
+      const latestProfitLabel = latestProfitMonth ? `${formatMonth(latestProfitMonth.month)}: ${formatEuro(latestProfitMonth.profit)}` : '-';
+      const latestTwrLabel = latestTwrMonth ? `${formatMonth(latestTwrMonth.month)}: ${formatPct(latestTwrMonth.twr)}` : '-';
       const kpis = [
         { label: 'Saldo actual', value: formatEuro(report?.saldo ?? overview.currentBalance ?? 0) },
         { label: 'Beneficio acumulado', value: formatEuro(report?.beneficioTotal ?? overview.cumulativeProfit ?? 0) },
         { label: 'Capital aportado', value: formatEuro(report?.incrementos ?? overview.totalIncrements ?? 0) },
         { label: 'Capital retirado', value: formatEuro(report?.decrementos ?? overview.totalDecrements ?? 0) },
-        { label: 'Beneficio ultimo mes', value: latestProfitLabel },
-        { label: 'TWR ultimo mes', value: latestTwrLabel },
+        { label: 'Beneficio último mes', value: latestProfitLabel },
+        { label: 'TWR último mes', value: latestTwrLabel },
         { label: 'TWR acumulado anual (YTD)', value: formatPct(twrYtd) }
       ];
 
@@ -2158,7 +2134,7 @@ const ClientPortal = ({
           const twrCumulative = twrCumulativeByMonth.get(item.month) ?? 0;
           const monthBalance = monthEndBalance.get(item.month) ?? 0;
           return [
-            formatMonthLabel(item.month),
+            formatMonth(item.month),
             formatEuro(monthBalance),
             formatEuro(item.profit),
             formatPct(twr),
@@ -2228,7 +2204,7 @@ const ClientPortal = ({
                 { content: formatEuro(visibleInitialProfit), styles: { halign: 'right' } }
               ],
               ...breakdown.contributions.map((contribution) => [
-                `Aportacion ${formatShortDate(contribution.iso)}`,
+                `Aportación ${formatDay(contribution.iso)}`,
                 { content: formatEuro(contribution.amount), styles: { halign: 'right' } },
                 { content: formatPct(contribution.returnPct), styles: { halign: 'right' } },
                 { content: formatEuro(contribution.profit), styles: { halign: 'right' } }
@@ -2314,7 +2290,7 @@ const ClientPortal = ({
       doc.addPage();
       drawHeader();
       const balanceChartEndY = drawLineChartPanel({
-        title: 'Grafico - Evolucion del saldo mensual',
+        title: 'Gráfico - Evolución del saldo mensual',
         data: balanceSeries,
         startY: contentTop + space.xs,
         color: brand.teal,
@@ -2325,7 +2301,7 @@ const ClientPortal = ({
         margin: tableMargin,
         didDrawPage,
         head: [['Fecha', 'Saldo']],
-        body: balanceSeries.map((row) => [formatMonthEndDate(row.month), formatEuro(row.value)]),
+        body: balanceSeries.map((row) => [formatMonth(row.month), formatEuro(row.value)]),
         theme: 'grid',
         styles: { fontSize: 9, cellPadding: 6, textColor: brand.text, lineColor: brand.border, lineWidth: 0.6 },
         headStyles: { fillColor: brand.teal, textColor: 255, fontStyle: 'bold' },
@@ -2336,7 +2312,7 @@ const ClientPortal = ({
       doc.addPage();
       drawHeader();
       const twrChartEndY = drawTwrBarChartPanel({
-        title: 'Grafico - Rentabilidad mensual (TWR)',
+        title: 'Gráfico - Rentabilidad mensual (TWR)',
         data: twrSeries,
         startY: contentTop + space.xs
       });
@@ -2359,7 +2335,7 @@ const ClientPortal = ({
         doc.setPage(page);
         doc.setFontSize(9);
         doc.setTextColor(brand.muted[0], brand.muted[1], brand.muted[2]);
-        doc.text(`Pagina ${page} / ${totalPages}`, pageWidth - marginX, pageHeight - 18, { align: 'right' });
+        doc.text(`Página ${page} / ${totalPages}`, pageWidth - marginX, pageHeight - 18, { align: 'right' });
       }
 
       const filename = `portfolio-${safeName}-${now.toISOString().slice(0, 10)}.pdf`;
@@ -2613,12 +2589,12 @@ const ClientPortal = ({
         <section className="client-portal-support" style={{ borderRadius: 12, border: `1px solid ${palette.border}`, background: palette.card, overflow: 'hidden', marginBottom: 16, ...textSize.zoomStyle }}>
           <div className="client-portal-support-head" style={{ padding: 14, borderBottom: `1px solid ${palette.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <strong>Mensajes con administración</strong>
-            <span style={{ fontSize: 12, color: palette.muted }}>Si hay respuesta nueva, veras aviso hasta abrir esta seccion.</span>
+            <span style={{ fontSize: 12, color: palette.muted }}>Si hay respuesta nueva, verás un aviso hasta que abras esta sección.</span>
           </div>
           <div style={{ padding: 14, display: 'grid', gap: 10 }}>
             <div style={{ maxHeight: 240, overflowY: 'auto', border: `1px solid ${palette.border}`, borderRadius: 10, background: palette.cardAlt, padding: 10, display: 'grid', gap: 8 }}>
               {supportMessages.length === 0 ? (
-                <span style={{ color: palette.muted, fontSize: 13 }}>No hay mensajes todavia.</span>
+                <span style={{ color: palette.muted, fontSize: 13 }}>No hay mensajes todavía.</span>
               ) : supportMessages.map((row) => (
                 <div key={row.id} style={{
                   justifySelf: row.senderRole === 'client' ? 'end' : 'start',
@@ -3088,7 +3064,7 @@ const AuthShell = () => {
           if (currentUser) await markPresenceOffline(currentUser).catch(() => undefined);
           await auth.signOut();
         } catch (error) {
-          console.error('Error cerrando sesion por inactividad', error);
+          console.error('Error cerrando sesión por inactividad', error);
           inactivityLogoutRef.current = false;
           setSession((prev) => ({ ...prev, loading: false, error: 'No se pudo cerrar sesión por inactividad.' }));
         }
@@ -3155,7 +3131,7 @@ const AuthShell = () => {
       try {
         await user.getIdToken(true);
       } catch (error) {
-        console.error('No se pudo refrescar la sesion activa', error);
+        console.error('No se pudo refrescar la sesión activa', error);
       }
     };
 
@@ -3219,7 +3195,7 @@ const AuthShell = () => {
       if (currentUser) await markPresenceOffline(currentUser).catch(() => undefined);
       await auth.signOut();
     } catch (error) {
-      console.error('Error cerrando sesion', error);
+      console.error('Error cerrando sesión', error);
       manualLogoutRef.current = false;
       setSession((prev) => ({
         ...prev,

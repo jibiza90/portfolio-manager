@@ -152,7 +152,7 @@ const PatrimonyChart = ({ months }: { months: PdfStudioMonth[] }) => {
   const valueEvery = months.length <= 10 ? 1 : Math.ceil(months.length / 7);
 
   return (
-    <svg className="pdf2-patrimony-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Evolucion del valor de cartera">
+    <svg className="pdf2-patrimony-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Evolución del valor de cartera">
       <defs>
         <linearGradient id="pdf2Area" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#1d8c7d" stopOpacity="0.24" />
@@ -749,10 +749,10 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
   };
 
   return (
-    <section className="pdf-studio" ref={viewerRef} aria-label="Disenos PDF">
+    <section className="pdf-studio" ref={viewerRef} aria-label="Diseños PDF">
       <header className="pdf-studio-header">
         <div><span>LABORATORIO EDITORIAL &middot; DEMO1</span><h1>Dise&ntilde;os PDF</h1><p>Versiones documentales independientes de las p&aacute;ginas del portal.</p></div>
-        <div className="pdf-studio-designs" role="tablist" aria-label="Seleccionar diseno PDF">
+        <div className="pdf-studio-designs" role="tablist" aria-label="Seleccionar diseño PDF">
           <button type="button" role="tab" aria-selected={selectedDesign === 'pdf1'} className={selectedDesign === 'pdf1' ? 'is-active' : ''} onClick={() => onDesignChange('pdf1')}><span>PDF 1</span><strong>Actual</strong><small>Informe oficial existente</small></button>
           <button type="button" role="tab" aria-selected={selectedDesign === 'pdf2'} className={selectedDesign === 'pdf2' ? 'is-active' : ''} onClick={() => onDesignChange('pdf2')}><span>PDF 2</span><strong>ATLAS</strong><small>Dise&ntilde;ado por Codex &middot; GPT-5</small></button>
           <button type="button" role="tab" aria-selected={selectedDesign === 'pdf3'} className={selectedDesign === 'pdf3' ? 'is-active' : ''} onClick={() => onDesignChange('pdf3')}><span>PDF 3</span><strong>SIGNAL</strong><small>Dise&ntilde;ado por Codex &middot; GPT-5</small></button>
@@ -763,7 +763,7 @@ export const PdfDesignStudio: React.FC<PdfDesignStudioProps> = ({
       <div className="pdf-studio-toolbar">
         <div className="pdf-studio-document-name"><span>{selectedDesign === 'pdf1' ? 'PDF 1 / ACTUAL' : selectedDesign === 'pdf2' ? 'PDF 2 / ATLAS PATRIMONIAL' : selectedDesign === 'pdf3' ? 'PDF 3 / SIGNAL PATRIMONIAL' : 'PDF 4 / INFORME PATRIMONIAL'}</span><strong>{summary.periodLabel}</strong></div>
         {generatedDesign ? (
-          <div className="pdf-studio-pagination" aria-label="Navegacion de paginas">
+          <div className="pdf-studio-pagination" aria-label="Navegación de páginas">
             <button type="button" onClick={() => goToPage(currentPage - 1)} disabled={currentPage <= 1} aria-label="Pagina anterior">&larr;</button>
             <span>P&aacute;gina <strong>{currentPage}</strong> de <strong>{generatedPages || 1}</strong></span>
             <button type="button" onClick={() => goToPage(currentPage + 1)} disabled={currentPage >= (generatedPages || 1)} aria-label="Pagina siguiente">&rarr;</button>

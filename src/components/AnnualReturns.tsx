@@ -15,6 +15,7 @@ import {
 } from '../utils/annualReturns';
 import './AnnualReturns.css';
 import { esNumberFormat, NUMBER_LOCALE, withGrouping } from '../utils/format';
+import { formatMonth } from '../utils/dateLabels';
 
 // Datos publicados del cliente que necesita el informe (subconjunto del informe del area cliente).
 export interface AnnualReturnsSource {
@@ -96,7 +97,7 @@ export const AnnualReturnsDocument = React.forwardRef<HTMLDivElement, DocumentPr
       <thead><tr><th>Mes</th><th>Rentabilidad</th><th>Beneficio del mes</th></tr></thead>
       <tbody>
         {(pageRows as AnnualReport['monthRows']).map((row) => (
-          <tr key={row.key}><td>{row.label}</td><td>{pct(row.returnPct)}</td><td className={row.profit < 0 ? 'is-neg' : ''}>{signed(row.profit)}</td></tr>
+          <tr key={row.key}><td>{formatMonth(row.label)}</td><td>{pct(row.returnPct)}</td><td className={row.profit < 0 ? 'is-neg' : ''}>{signed(row.profit)}</td></tr>
         ))}
       </tbody>
     </table>

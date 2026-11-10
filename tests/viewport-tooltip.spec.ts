@@ -90,10 +90,10 @@ test('keeps every report tooltip visible inside the real page viewport', async (
     await assertVisibleInsideViewport();
   }
 
-  await page.getByRole('button', { name: 'Ampliar grafico' }).click();
-  await expect(page.getByRole('dialog', { name: 'Grafico de evolucion de patrimonio ampliado' })).toBeVisible();
+  await page.getByRole('button', { name: 'Ampliar gráfico' }).click();
+  await expect(page.getByRole('dialog', { name: 'Gráfico de evolución de patrimonio ampliado' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog', { name: 'Grafico de evolucion de patrimonio ampliado' })).toBeHidden();
+  await expect(page.getByRole('dialog', { name: 'Gráfico de evolución de patrimonio ampliado' })).toBeHidden();
 
   await page.reload();
   await page.evaluate(async (modulePath) => {
