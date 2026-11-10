@@ -4891,6 +4891,7 @@ export default function App() {
           clients={CLIENTS.map((client) => ({ id: client.id, label: getClientDisplayName(client.id, contacts) }))}
           accessProfiles={ownerAccessProfiles}
           downloadEvents={ownerReportDownloads}
+          loginEvents={ownerLoginEvents}
         />
       ) : activeView === BACKUP_VIEW && isPrimaryAdmin ? (
         <AdminBackupView

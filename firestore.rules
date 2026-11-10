@@ -289,7 +289,9 @@ service cloud.firestore {
       }
 
       match /devices/{deviceId} {
-        allow read: if isAdmin();
+        // El cliente lee sus propios equipos para saber si el acceso es desde uno nuevo
+        // (sin esto el registro de actividad no podia arrancar).
+        allow read: if isAdmin() || clientOwns(clientId);
         allow create: if clientOwns(clientId) &&
           request.resource.data.keys().hasOnly([
             'uid', 'clientId', 'deviceType', 'browser', 'operatingSystem',
