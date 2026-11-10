@@ -203,6 +203,19 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Idioma del area de cliente: el cliente solo puede guardar el suyo (castellano o catalan).
+    match /client_preferences/{clientId} {
+      allow read: if isAdmin() || clientOwns(clientId);
+      allow create, update: if isAdmin() || (
+        clientOwns(clientId) &&
+        request.resource.data.keys().hasOnly(['clientId', 'language', 'updatedAt']) &&
+        request.resource.data.clientId == clientId &&
+        (request.resource.data.language == 'es' || request.resource.data.language == 'ca') &&
+        request.resource.data.updatedAt is int
+      );
+      allow delete: if isAdmin();
+    }
+
     match /client_activity/{clientId} {
       allow read, write: if false;
 

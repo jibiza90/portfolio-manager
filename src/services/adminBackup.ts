@@ -108,12 +108,14 @@ export const createAndDownloadAdminBackup = async (localData: AdminBackupLocalDa
     presenceSnapshot,
     downloadEventsSnapshot,
     privacyConsentsSnapshot,
-    legalAcknowledgementsSnapshot
+    legalAcknowledgementsSnapshot,
+    clientPreferencesSnapshot
   ] = await Promise.all([
     db.collection('auth_presence').get(),
     db.collection('report_download_events').get(),
     db.collection('client_privacy_consents').get(),
-    db.collection('client_legal_acknowledgements').get()
+    db.collection('client_legal_acknowledgements').get(),
+    db.collection('client_preferences').get()
   ]);
 
   // La actividad cuelga de cada cliente: se recorre la lista de clientes y los
@@ -172,6 +174,7 @@ export const createAndDownloadAdminBackup = async (localData: AdminBackupLocalDa
       reportDownloadEvents: serialiseSnapshot(downloadEventsSnapshot),
       clientPrivacyConsents: serialiseSnapshot(privacyConsentsSnapshot),
       clientLegalAcknowledgements: serialiseSnapshot(legalAcknowledgementsSnapshot),
+      clientPreferences: serialiseSnapshot(clientPreferencesSnapshot),
       clientActivity
     },
     counts: {
@@ -304,6 +307,8 @@ export const parseAdminBackup = (text: string): AdminBackupRestorePlan => {
   coreWrites.push(...rowsToWrites(firestore.accessProfiles));
   coreWrites.push(...rowsToWrites(firestore.clientOverviews));
   coreWrites.push(...rowsToWrites(firestore.archivedClients));
+  // Idioma elegido por cada cliente (copias antiguas no lo tienen).
+  coreWrites.push(...rowsToWrites(firestore.clientPreferences));
 
   // Los enlaces de informe caducados no se pueden volver a crear (las reglas lo impiden) y ya no sirven.
   const now = Date.now();

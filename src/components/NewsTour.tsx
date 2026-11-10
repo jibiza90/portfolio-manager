@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import './NewsTour.css';
+import { useLang } from '../i18n';
 
 // Visita guiada de novedades del area de cliente (todos los clientes).
 // Solo lee la pagina: lleva al cliente a cada apartado y lo ilumina. No guarda nada en la base de datos.
@@ -184,6 +185,7 @@ interface GuidedTourProps extends TourEvents {
 
 // Visita generica: va paso a paso por los apartados que existan en la pagina.
 export const GuidedTour: React.FC<GuidedTourProps> = ({ steps: allSteps, badge, ariaLabel, eventType, onFinish, onClose, onEvent }) => {
+  const { t } = useLang();
   const [steps, setSteps] = useState<TourStep[] | null>(null);
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
@@ -324,7 +326,7 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ steps: allSteps, badge, 
         className={`nt-bubble${mobile ? ' is-sheet' : ''}`}
         role="dialog"
         aria-modal="false"
-        aria-label={ariaLabel}
+        aria-label={t(ariaLabel)}
         style={bubbleStyle}
       >
         {arrow ? <span className={`nt-arrow is-${arrow.side}`} style={{ left: arrow.x }} aria-hidden="true" /> : null}
@@ -333,27 +335,27 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ steps: allSteps, badge, 
           <div className="nt-copy">
             <div className="nt-top">
               <span className="nt-badges">
-                {badge ? <span className="nt-new">{badge}</span> : null}
-                <span className="nt-count">{index + 1} de {steps.length}</span>
+                {badge ? <span className="nt-new">{t(badge)}</span> : null}
+                <span className="nt-count">{t('{actual} de {total}', { actual: index + 1, total: steps.length })}</span>
               </span>
-              <button type="button" className="nt-skip" onClick={() => finish('skip')}>Saltar ✕</button>
+              <button type="button" className="nt-skip" onClick={() => finish('skip')}>{t('Saltar')} ✕</button>
             </div>
-            <p className="nt-title" aria-live="polite">{step.title}</p>
-            <p className="nt-text">{step.text}</p>
+            <p className="nt-title" aria-live="polite">{t(step.title)}</p>
+            <p className="nt-text">{t(step.text)}</p>
           </div>
         </div>
         <div className="nt-bar" aria-hidden="true"><i style={{ width: `${((index + 1) / steps.length) * 100}%` }} /></div>
         <div className="nt-actions">
-          {step.tryTarget ? <button type="button" className="nt-try" onClick={tryIt}>Probar</button> : <span />}
+          {step.tryTarget ? <button type="button" className="nt-try" onClick={tryIt}>{t('Probar')}</button> : <span />}
           <div>
-            {index > 0 ? <button type="button" className="nt-ghost" onClick={() => setIndex(index - 1)}>Anterior</button> : null}
+            {index > 0 ? <button type="button" className="nt-ghost" onClick={() => setIndex(index - 1)}>{t('Anterior')}</button> : null}
             <button
               ref={nextRef}
               type="button"
               className="nt-next"
               onClick={() => (isLast ? finish('done') : setIndex(index + 1))}
             >
-              {isLast ? '¡Entendido!' : 'Siguiente'}
+              {isLast ? t('¡Entendido!') : t('Siguiente')}
             </button>
           </div>
         </div>

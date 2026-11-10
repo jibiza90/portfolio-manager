@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './FullscreenButton.css';
+import { useLang } from '../i18n';
 
 // Boton de pantalla completa (demo1 e /invitado). Al entrar, un aviso en el centro durante unos segundos
 // explica como volver. No sale donde el navegador no lo permite (por ejemplo, el iPhone).
@@ -10,6 +11,7 @@ const HINT_MS = 2400;
 const canFullscreen = () => typeof document !== 'undefined' && document.fullscreenEnabled === true;
 
 export const FullscreenButton: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className, style }) => {
+  const { t } = useLang();
   const [active, setActive] = useState(() => typeof document !== 'undefined' && Boolean(document.fullscreenElement));
   const [hint, setHint] = useState(false);
   const timer = useRef(0);
@@ -49,14 +51,14 @@ export const FullscreenButton: React.FC<{ className?: string; style?: React.CSSP
             ? <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
             : <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />}
         </svg>
-        {active ? 'Salir de pantalla completa' : 'Pantalla completa'}
+        {active ? t('Salir de pantalla completa') : t('Pantalla completa')}
       </button>
       {hint && typeof document !== 'undefined'
         ? createPortal(
           <div className="fsb-hint" role="status">
             {touch
-              ? <>Para volver, pulsa <b>Salir de pantalla completa</b></>
-              : <>Pulsa <kbd>Esc</kbd> para volver a la pantalla normal</>}
+              ? <>{t('Para volver, pulsa')} <b>{t('Salir de pantalla completa')}</b></>
+              : <>{t('Pulsa')} <kbd>Esc</kbd> {t('para volver a la pantalla normal')}</>}
           </div>,
           document.body
         )

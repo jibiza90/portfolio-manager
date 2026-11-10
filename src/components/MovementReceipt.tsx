@@ -7,6 +7,8 @@ import { buildMovementReceipt, type MovementReceiptData, type ReceiptMovementInp
 import { applyPdfWatermark } from '../utils/pdfWatermark';
 import './MovementReceipt.css';
 import { esNumberFormat } from '../utils/format';
+import { useLang, type T } from '../i18n';
+import { formatLongDay } from '../utils/dateLabels';
 
 // Justificante de cada aportacion o retirada: version extendida (A4) y resumida (un tercio de A4).
 
@@ -24,7 +26,6 @@ const shortDate = (iso: string) => {
   const [year, month, day] = iso.split('-');
   return `${day}/${month}/${year}`;
 };
-const longDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
 const todayLabel = (date: Date) => date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 interface DocProps {
@@ -34,11 +35,13 @@ interface DocProps {
   issuedAt: Date;
 }
 
-const Marks: React.FC = () => (
-  <div className="mr-marks"><img src={sealUrl} alt="Sello de JIGSA Capital Brokering" /><img src={signatureUrl} alt="Firma" /></div>
-);
+const Marks: React.FC = () => {
+  const { t } = useLang();
+  return <div className="mr-marks"><img src={sealUrl} alt={t('Sello de JIGSA Capital Brokering')} /><img src={signatureUrl} alt={t('Firma')} /></div>;
+};
 
 const CommissionRows: React.FC<{ receipt: MovementReceiptData; detailed: boolean }> = ({ receipt, detailed }) => {
+  const { t } = useLang();
   const commission = receipt.commission;
   if (!commission) return null;
   const showBreakdown = detailed && commission.paid && commission.amount > 0;
@@ -46,13 +49,13 @@ const CommissionRows: React.FC<{ receipt: MovementReceiptData; detailed: boolean
     <>
       {showBreakdown ? (
         <>
-          <tr className="mr-sub"><td>Capital pendiente de recuperar antes de esta retirada</td><td>{eur(commission.capitalPendingBefore)}</td></tr>
-          <tr className="mr-sub"><td>Parte de la retirada sujeta a comisión</td><td>{eur(commission.commissionableAmount)}</td></tr>
+          <tr className="mr-sub"><td>{t('Capital pendiente de recuperar antes de esta retirada')}</td><td>{eur(commission.capitalPendingBefore)}</td></tr>
+          <tr className="mr-sub"><td>{t('Parte de la retirada sujeta a comisión')}</td><td>{eur(commission.commissionableAmount)}</td></tr>
         </>
       ) : null}
       <tr>
         <td className="mr-muted">
-          Comisión de éxito{commission.rate ? ` (${percent(commission.rate)}${showBreakdown ? ` sobre ${eur(commission.commissionableAmount)}` : ''})` : ''}
+          {t('Comisión de éxito')}{commission.rate ? ` (${percent(commission.rate)}${showBreakdown ? ` ${t('sobre {importe}', { importe: eur(commission.commissionableAmount) })}` : ''})` : ''}
         </td>
         <td className={commission.amount > 0 ? 'mr-neg' : undefined}>{commission.amount > 0 ? `-${eur(commission.amount)}` : eur(0)}</td>
       </tr>
@@ -60,60 +63,61 @@ const CommissionRows: React.FC<{ receipt: MovementReceiptData; detailed: boolean
   );
 };
 
-const commissionNote = (receipt: MovementReceiptData) => {
+const commissionNote = (receipt: MovementReceiptData, t: T) => {
   const commission = receipt.commission;
   if (!commission) return null;
   if (commission.paid && commission.amount > 0) {
     const recovered = commission.capitalPendingBefore > 0
-      ? 'Con esta retirada se recupera la totalidad del capital aportado.'
-      : 'El capital aportado ya se había recuperado con retiradas anteriores.';
-    return `La comisión de éxito solo se aplica a la parte retirada que supera el capital aportado. ${recovered}`;
+      ? t('Con esta retirada se recupera la totalidad del capital aportado.')
+      : t('El capital aportado ya se había recuperado con retiradas anteriores.');
+    return `${t('La comisión de éxito solo se aplica a la parte retirada que supera el capital aportado.')} ${recovered}`;
   }
   if (commission.commissionableAmount <= 0) {
-    return `Sin comisión: aún quedan ${eur(receipt.capitalPendingAfter)} de capital aportado por recuperar.`;
+    return t('Sin comisión: aún quedan {importe} de capital aportado por recuperar.', { importe: eur(receipt.capitalPendingAfter) });
   }
   return null;
 };
 
 export const ExtendedReceipt = React.forwardRef<HTMLDivElement, DocProps>(({ receipt, holderName, clientCode, issuedAt }, ref) => {
+  const { t, lang } = useLang();
   const isIncrement = receipt.type === 'increment';
-  const note = isIncrement ? null : commissionNote(receipt);
+  const note = isIncrement ? null : commissionNote(receipt, t);
   return (
     <div ref={ref} className="mr-page mr-extended" style={SIZES.extended}>
-      <div className="mr-head"><strong>JIGSA Capital Brokering - FZCO</strong><span>Justificante de operación</span></div>
-      <div className="mr-kicker">Justificante de operación</div>
-      <h1>{isIncrement ? 'Aportación de capital' : 'Retirada de capital'}</h1>
-      <span className={`mr-tag ${isIncrement ? 'is-in' : 'is-out'}`}>{isIncrement ? 'Aportación' : 'Retirada'}</span>
+      <div className="mr-head"><strong>JIGSA Capital Brokering - FZCO</strong><span>{t('Justificante de operación')}</span></div>
+      <div className="mr-kicker">{t('Justificante de operación')}</div>
+      <h1>{isIncrement ? t('Aportación de capital') : t('Retirada de capital')}</h1>
+      <span className={`mr-tag ${isIncrement ? 'is-in' : 'is-out'}`}>{isIncrement ? t('Aportación') : t('Retirada')}</span>
       <dl className="mr-meta">
-        <div><dt>Titular</dt><dd>{holderName}</dd></div>
-        <div><dt>Código de cliente</dt><dd>{clientCode}</dd></div>
-        <div><dt>Nº de justificante</dt><dd>{receipt.number}</dd></div>
-        <div><dt>Fecha de emisión</dt><dd>{todayLabel(issuedAt)}</dd></div>
+        <div><dt>{t('Titular')}</dt><dd>{holderName}</dd></div>
+        <div><dt>{t('Código de cliente')}</dt><dd>{clientCode}</dd></div>
+        <div><dt>{t('Nº de justificante')}</dt><dd>{receipt.number}</dd></div>
+        <div><dt>{t('Fecha de emisión')}</dt><dd>{todayLabel(issuedAt)}</dd></div>
       </dl>
       <div className="mr-amount">
-        <div><span>{isIncrement ? 'Importe aportado' : 'Importe retirado'}</span><strong>{eur(receipt.amount)}</strong></div>
-        <div className="mr-amount-side">Fecha de la operación<b>{longDate(receipt.iso)}</b></div>
+        <div><span>{isIncrement ? t('Importe aportado') : t('Importe retirado')}</span><strong>{eur(receipt.amount)}</strong></div>
+        <div className="mr-amount-side">{t('Fecha de la operación')}<b>{formatLongDay(receipt.iso, lang)}</b></div>
       </div>
-      <p className="mr-statement">JIGSA Capital Brokering - FZCO hace constar que, en la fecha indicada, ha registrado en la cuenta del titular la operación que se detalla a continuación.</p>
+      <p className="mr-statement">{t('JIGSA Capital Brokering - FZCO hace constar que, en la fecha indicada, ha registrado en la cuenta del titular la operación que se detalla a continuación.')}</p>
 
-      <h2>Detalle de la operación</h2>
+      <h2>{t('Detalle de la operación')}</h2>
       <table className="mr-table">
         <tbody>
-          <tr><td className="mr-muted">Tipo de operación</td><td>{isIncrement ? 'Aportación' : 'Retirada'}</td></tr>
-          <tr><td className="mr-muted">Fecha de la operación</td><td>{shortDate(receipt.iso)}</td></tr>
+          <tr><td className="mr-muted">{t('Tipo de operación')}</td><td>{isIncrement ? t('Aportación') : t('Retirada')}</td></tr>
+          <tr><td className="mr-muted">{t('Fecha de la operación')}</td><td>{shortDate(receipt.iso)}</td></tr>
           {isIncrement ? (
-            <tr className="mr-total"><td>Importe aportado</td><td>{eur(receipt.amount)}</td></tr>
+            <tr className="mr-total"><td>{t('Importe aportado')}</td><td>{eur(receipt.amount)}</td></tr>
           ) : (
             <>
               {receipt.commission ? (
                 <>
-                  <tr><td className="mr-muted">Importe retirado</td><td>{eur(receipt.amount)}</td></tr>
+                  <tr><td className="mr-muted">{t('Importe retirado')}</td><td>{eur(receipt.amount)}</td></tr>
                   <CommissionRows receipt={receipt} detailed />
-                  <tr className="mr-total"><td>Total entregado</td><td>{eur(receipt.net)}</td></tr>
+                  <tr className="mr-total"><td>{t('Total entregado')}</td><td>{eur(receipt.net)}</td></tr>
                 </>
               ) : (
                 // Sin datos de comisiones no se puede afirmar el total entregado.
-                <tr className="mr-total"><td>Importe retirado</td><td>{eur(receipt.amount)}</td></tr>
+                <tr className="mr-total"><td>{t('Importe retirado')}</td><td>{eur(receipt.amount)}</td></tr>
               )}
             </>
           )}
@@ -121,51 +125,52 @@ export const ExtendedReceipt = React.forwardRef<HTMLDivElement, DocProps>(({ rec
       </table>
       {note ? <p className="mr-note">{note}</p> : null}
 
-      <h2>Situación de la cuenta tras la operación</h2>
+      <h2>{t('Situación de la cuenta tras la operación')}</h2>
       <table className="mr-table">
         <tbody>
-          <tr><td className="mr-muted">Capital aportado total</td><td>{eur(receipt.contributedAfter)}</td></tr>
-          <tr><td className="mr-muted">Capital retirado total</td><td>{eur(receipt.withdrawnAfter)}</td></tr>
-          <tr className="mr-total"><td>Capital pendiente de recuperar</td><td>{eur(receipt.capitalPendingAfter)}</td></tr>
+          <tr><td className="mr-muted">{t('Capital aportado total')}</td><td>{eur(receipt.contributedAfter)}</td></tr>
+          <tr><td className="mr-muted">{t('Capital retirado total')}</td><td>{eur(receipt.withdrawnAfter)}</td></tr>
+          <tr className="mr-total"><td>{t('Capital pendiente de recuperar')}</td><td>{eur(receipt.capitalPendingAfter)}</td></tr>
         </tbody>
       </table>
 
       <div className="mr-sign">
-        <div className="mr-issuer"><strong>{ISSUER.name}</strong><span>Licencia n.º {ISSUER.license}</span><span>{ISSUER.address}</span></div>
+        <div className="mr-issuer"><strong>{ISSUER.name}</strong><span>{t('Licencia n.º {numero}', { numero: ISSUER.license })}</span><span>{ISSUER.address}</span></div>
         <Marks />
       </div>
-      <div className="mr-foot"><span>{receipt.number} · Versión extendida</span><span>Página 1 de 1</span></div>
+      <div className="mr-foot"><span>{receipt.number} · {t('Versión extendida')}</span><span>{t('Página 1 de 1')}</span></div>
     </div>
   );
 });
 ExtendedReceipt.displayName = 'ExtendedReceipt';
 
 export const CompactReceipt = React.forwardRef<HTMLDivElement, DocProps>(({ receipt, holderName, clientCode, issuedAt }, ref) => {
+  const { t, lang } = useLang();
   const isIncrement = receipt.type === 'increment';
   return (
     <div ref={ref} className="mr-page mr-compact" style={SIZES.compact}>
-      <div className="mr-top"><strong>JIGSA Capital Brokering - FZCO</strong><b>{isIncrement ? 'Justificante de aportación' : 'Justificante de retirada'}</b><span>{receipt.number}</span></div>
+      <div className="mr-top"><strong>JIGSA Capital Brokering - FZCO</strong><b>{isIncrement ? t('Justificante de aportación') : t('Justificante de retirada')}</b><span>{receipt.number}</span></div>
       <div className="mr-mid">
         <div>
-          <div className="mr-big"><span>{isIncrement ? 'Aportación' : 'Retirada'}</span><strong>{eur(receipt.amount)}</strong><small>{longDate(receipt.iso)}</small></div>
-          <div className="mr-who"><div>Titular: <b>{holderName}</b></div><div>Código de cliente: <b>{clientCode}</b></div><div>Emitido el {todayLabel(issuedAt)}</div></div>
+          <div className="mr-big"><span>{isIncrement ? t('Aportación') : t('Retirada')}</span><strong>{eur(receipt.amount)}</strong><small>{formatLongDay(receipt.iso, lang)}</small></div>
+          <div className="mr-who"><div>{t('Titular:')} <b>{holderName}</b></div><div>{t('Código de cliente:')} <b>{clientCode}</b></div><div>{t('Emitido el {fecha}', { fecha: todayLabel(issuedAt) })}</div></div>
         </div>
         <table className="mr-table">
           <tbody>
-            <tr><td className="mr-muted">Fecha de la operación</td><td>{shortDate(receipt.iso)}</td></tr>
+            <tr><td className="mr-muted">{t('Fecha de la operación')}</td><td>{shortDate(receipt.iso)}</td></tr>
             {isIncrement ? (
-              <tr className="mr-total"><td>Importe aportado</td><td>{eur(receipt.amount)}</td></tr>
+              <tr className="mr-total"><td>{t('Importe aportado')}</td><td>{eur(receipt.amount)}</td></tr>
             ) : (
               <>
                 {receipt.commission ? (
                   <>
-                    <tr><td className="mr-muted">Importe retirado</td><td>{eur(receipt.amount)}</td></tr>
+                    <tr><td className="mr-muted">{t('Importe retirado')}</td><td>{eur(receipt.amount)}</td></tr>
                     <CommissionRows receipt={receipt} detailed={false} />
-                    <tr className="mr-total"><td>Total entregado</td><td>{eur(receipt.net)}</td></tr>
+                    <tr className="mr-total"><td>{t('Total entregado')}</td><td>{eur(receipt.net)}</td></tr>
                   </>
                 ) : (
                   // Sin datos de comisiones no se puede afirmar el total entregado.
-                  <tr className="mr-total"><td>Importe retirado</td><td>{eur(receipt.amount)}</td></tr>
+                  <tr className="mr-total"><td>{t('Importe retirado')}</td><td>{eur(receipt.amount)}</td></tr>
                 )}
               </>
             )}
@@ -173,7 +178,7 @@ export const CompactReceipt = React.forwardRef<HTMLDivElement, DocProps>(({ rece
         </table>
       </div>
       <div className="mr-bottom">
-        <div className="mr-issuer"><strong>{ISSUER.name}</strong><span>Licencia n.º {ISSUER.license} · IFZA Business Park, DDP, Dubai, United Arab Emirates</span></div>
+        <div className="mr-issuer"><strong>{ISSUER.name}</strong><span>{t('Licencia n.º {numero}', { numero: ISSUER.license })} · IFZA Business Park, DDP, Dubai, United Arab Emirates</span></div>
         <Marks />
       </div>
     </div>
@@ -230,6 +235,7 @@ interface DialogProps {
 
 // Ventana para elegir formato, con la vista previa de los dos.
 export const MovementReceiptDialog: React.FC<DialogProps> = ({ clientId, holderName, clientCode, movements, movement, knownCommissions, onClose, onDownloaded }) => {
+  const { t } = useLang();
   const [format, setFormat] = useState<ReceiptFormat>('compact');
   const [commissions, setCommissions] = useState<{ rate: number | null; paidWithdrawalIsos: string[] } | null | undefined>(movement.type === 'decrement' ? knownCommissions : null);
   const [busy, setBusy] = useState(false);
@@ -280,31 +286,31 @@ export const MovementReceiptDialog: React.FC<DialogProps> = ({ clientId, holderN
   const docProps = receipt ? { receipt, holderName, clientCode, issuedAt } : null;
 
   return createPortal(
-    <div className="mr-overlay" role="dialog" aria-modal="true" aria-label="Justificante de operación" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div className="mr-overlay" role="dialog" aria-modal="true" aria-label={t('Justificante de operación')} onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="mr-box">
-        <h3>Justificante de la {isIncrement ? 'aportación' : 'retirada'} del {shortDate(movement.iso)}</h3>
-        <p>Elige el formato que prefieras. Puedes descargar los dos.</p>
-        {!docProps ? <p className="mr-loading">Preparando el justificante…</p> : (
+        <h3>{isIncrement ? t('Justificante de la aportación del {fecha}', { fecha: shortDate(movement.iso) }) : t('Justificante de la retirada del {fecha}', { fecha: shortDate(movement.iso) })}</h3>
+        <p>{t('Elige el formato que prefieras. Puedes descargar los dos.')}</p>
+        {!docProps ? <p className="mr-loading">{t('Preparando el justificante…')}</p> : (
           <div className="mr-options">
             <div className={`mr-option${format === 'extended' ? ' is-selected' : ''}`} onClick={() => setFormat('extended')}>
-              <button type="button" className="mr-option-title" aria-pressed={format === 'extended'}><span className="mr-radio" aria-hidden="true" />Extendido</button>
-              <small>Con el detalle del cálculo y la situación de tu cuenta.</small>
+              <button type="button" className="mr-option-title" aria-pressed={format === 'extended'}><span className="mr-radio" aria-hidden="true" />{t('Extendido')}</button>
+              <small>{t('Con el detalle del cálculo y la situación de tu cuenta.')}</small>
               <div className="mr-thumb"><div className="mr-thumb-frame is-extended"><div className="mr-thumb-scale"><ExtendedReceipt ref={extendedRef} {...docProps} /></div></div></div>
             </div>
             <div className={`mr-option${format === 'compact' ? ' is-selected' : ''}`} onClick={() => setFormat('compact')}>
-              <button type="button" className="mr-option-title" aria-pressed={format === 'compact'}><span className="mr-radio" aria-hidden="true" />Resumido</button>
-              <small>Tamaño recibo, como los del banco{isIncrement ? '.' : ': retirada, comisión y total.'}</small>
+              <button type="button" className="mr-option-title" aria-pressed={format === 'compact'}><span className="mr-radio" aria-hidden="true" />{t('Resumido')}</button>
+              <small>{isIncrement ? t('Tamaño recibo, como los del banco.') : t('Tamaño recibo, como los del banco: retirada, comisión y total.')}</small>
               <div className="mr-thumb"><div className="mr-thumb-frame is-compact"><div className="mr-thumb-scale"><CompactReceipt ref={compactRef} {...docProps} /></div></div></div>
             </div>
           </div>
         )}
-        {error ? <p className="mr-error" role="alert">{error}</p> : null}
+        {error ? <p className="mr-error" role="alert">{t(error)}</p> : null}
         <div className="mr-actions">
-          <span>PDF de una página con sello y firma de JIGSA.</span>
+          <span>{t('PDF de una página con sello y firma de JIGSA.')}</span>
           <div>
-            <button type="button" className="mr-ghost" onClick={onClose}>Cerrar</button>
+            <button type="button" className="mr-ghost" onClick={onClose}>{t('Cerrar')}</button>
             <button type="button" className="mr-download" disabled={!receipt || busy} onClick={() => { void download(); }}>
-              {busy ? 'Generando PDF…' : `Descargar ${format === 'extended' ? 'extendido' : 'resumido'}`}
+              {busy ? t('Generando PDF…') : format === 'extended' ? t('Descargar extendido') : t('Descargar resumido')}
             </button>
           </div>
         </div>

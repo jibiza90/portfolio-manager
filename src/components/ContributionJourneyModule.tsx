@@ -7,6 +7,7 @@ import {
   type FlowMonth,
   type FlowPendingMovement
 } from './capitalModel';
+import { useLang } from '../i18n';
 import './ContributionJourneyModule.css';
 import { NUMBER_LOCALE, withGrouping } from '../utils/format';
 
@@ -105,6 +106,7 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
   pendingCashMovements = [],
   onAnalyticsEvent
 }) => {
+  const { t } = useLang();
   const months = useMemo<FlowMonth[]>(() => {
     const validStats = report.monthlyStats
       .filter((item) => item.hasData && Number.isFinite(item.endBalance))
@@ -167,37 +169,36 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
     <section className="report-pro-contribution-journey" aria-labelledby="contribution-journey-title">
       <header className="contribution-journey-heading" data-tour="retiradas">
         <div>
-          <span className="contribution-journey-eyebrow">Recorrido del capital</span>
-          <h4 id="contribution-journey-title">Qué ocurrió con cada aportación</h4>
-          <p>Selecciona una aportación para consultar su capital activo, las retiradas imputadas y el valor que representa actualmente.</p>
+          <span className="contribution-journey-eyebrow">{t('Recorrido del capital')}</span>
+          <h4 id="contribution-journey-title">{t('Qué ocurrió con cada aportación')}</h4>
+          <p>{t('Selecciona una aportación para consultar su capital activo, las retiradas imputadas y el valor que representa actualmente.')}</p>
         </div>
         <details className="contribution-journey-method">
-          <summary>Criterio de cálculo</summary>
+          <summary>{t('Criterio de cálculo')}</summary>
           <p>
-            Las retiradas se imputan por orden cronológico: primero reducen la aportación más antigua y, cuando esta se
-            completa, continúan en la siguiente. El resultado atribuido se reconcilia con los cierres publicados.
+            {t('Las retiradas se imputan por orden cronológico: primero reducen la aportación más antigua y, cuando esta se completa, continúan en la siguiente. El resultado atribuido se reconcilia con los cierres publicados.')}
           </p>
         </details>
       </header>
 
-      <div className="contribution-journey-summary" aria-label="Resumen de aportaciones">
-        <article><span>Capital aportado</span><strong>{formatCurrency(model.grossCapital)}</strong></article>
-        <article><span>Capital retirado</span><strong>{formatCurrency(totalWithdrawn)}</strong></article>
-        <article><span>Beneficio acumulado</span><strong className={totalAttributedProfit >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(totalAttributedProfit)}</strong></article>
-        <article className="is-total"><span>Saldo conciliado</span><strong>{formatCurrency(totalAttributedValue)}</strong></article>
+      <div className="contribution-journey-summary" aria-label={t('Resumen de aportaciones')}>
+        <article><span>{t('Capital aportado')}</span><strong>{formatCurrency(model.grossCapital)}</strong></article>
+        <article><span>{t('Capital retirado')}</span><strong>{formatCurrency(totalWithdrawn)}</strong></article>
+        <article><span>{t('Beneficio acumulado')}</span><strong className={totalAttributedProfit >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(totalAttributedProfit)}</strong></article>
+        <article className="is-total"><span>{t('Saldo conciliado')}</span><strong>{formatCurrency(totalAttributedValue)}</strong></article>
       </div>
 
       <div className="contribution-journey-controls">
-        <div className="contribution-journey-filters" role="group" aria-label="Filtrar aportaciones">
-          <button type="button" className={filter === 'all' ? 'is-active' : ''} aria-pressed={filter === 'all'} onClick={() => chooseFilter('all')}>Todas</button>
-          <button type="button" className={filter === 'active' ? 'is-active' : ''} aria-pressed={filter === 'active'} onClick={() => chooseFilter('active')}>Activas</button>
-          <button type="button" className={filter === 'withdrawn' ? 'is-active' : ''} aria-pressed={filter === 'withdrawn'} onClick={() => chooseFilter('withdrawn')}>Con retiradas</button>
+        <div className="contribution-journey-filters" role="group" aria-label={t('Filtrar aportaciones')}>
+          <button type="button" className={filter === 'all' ? 'is-active' : ''} aria-pressed={filter === 'all'} onClick={() => chooseFilter('all')}>{t('Todas')}</button>
+          <button type="button" className={filter === 'active' ? 'is-active' : ''} aria-pressed={filter === 'active'} onClick={() => chooseFilter('active')}>{t('Activas')}</button>
+          <button type="button" className={filter === 'withdrawn' ? 'is-active' : ''} aria-pressed={filter === 'withdrawn'} onClick={() => chooseFilter('withdrawn')}>{t('Con retiradas')}</button>
         </div>
-        <span>{visibleLots.length} {visibleLots.length === 1 ? 'posición' : 'posiciones'}</span>
+        <span>{visibleLots.length === 1 ? t('{total} posición', { total: visibleLots.length }) : t('{total} posiciones', { total: visibleLots.length })}</span>
       </div>
 
       {visibleLots.length > 0 ? (
-        <div className="contribution-journey-map" role="list" aria-label="Recorrido de las aportaciones">
+        <div className="contribution-journey-map" role="list" aria-label={t('Recorrido de las aportaciones')}>
           {visibleLots.map((lot, index) => {
             const status = lotStatus(lot);
             const isSelected = selectedLot?.id === lot.id;
@@ -212,59 +213,59 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
                 >
                   <span className="contribution-journey-identity">
                     <i>{String(index + 1).padStart(2, '0')}</i>
-                    <small>Aportación {index + 1}</small>
+                    <small>{t('Aportación {numero}', { numero: index + 1 })}</small>
                     <strong>{formatDate(lot.iso)}</strong>
-                    <em className={`contribution-journey-status is-${status.tone}`}>{status.label}</em>
+                    <em className={`contribution-journey-status is-${status.tone}`}>{t(status.label)}</em>
                   </span>
                   <span className="contribution-journey-map-step is-origin">
-                    <small>Capital aportado</small>
+                    <small>{t('Capital aportado')}</small>
                     <strong>{formatCurrency(lot.amount)}</strong>
-                    <em>Importe incorporado</em>
+                    <em>{t('Importe incorporado')}</em>
                   </span>
                   <b aria-hidden="true">→</b>
                   <span className="contribution-journey-map-step is-withdrawal">
-                    <small>Capital retirado</small>
+                    <small>{t('Capital retirado')}</small>
                     <strong>{lot.allocatedWithdrawal > 0 ? `−${formatCurrency(lot.allocatedWithdrawal)}` : formatCurrency(0)}</strong>
-                    <em>{lot.allocatedWithdrawal > 0 ? 'Imputación cronológica' : 'Sin retiradas imputadas'}</em>
+                    <em>{lot.allocatedWithdrawal > 0 ? t('Imputación cronológica') : t('Sin retiradas imputadas')}</em>
                   </span>
                   <b aria-hidden="true">→</b>
                   <span className="contribution-journey-map-step is-result">
-                    <small>Beneficio atribuido</small>
+                    <small>{t('Beneficio atribuido')}</small>
                     <strong className={lot.attributedProfit >= 0 ? 'positive' : 'negative'}>{formatSignedCurrency(lot.attributedProfit)}</strong>
                     <em>{formatSignedPercent(lot.accumulatedReturnPct)}</em>
                   </span>
                   <b aria-hidden="true">→</b>
                   <span className="contribution-journey-map-step is-current">
-                    <small>Valor actual atribuido</small>
+                    <small>{t('Valor actual atribuido')}</small>
                     <strong>{formatCurrency(lot.currentValue)}</strong>
-                    <em>{lot.sharePct.toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 1, maximumFractionDigits: 1 }))} % del saldo</em>
+                    <em>{t('{porcentaje} % del saldo', { porcentaje: lot.sharePct.toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 1, maximumFractionDigits: 1 })) })}</em>
                   </span>
                   <span className="contribution-journey-map-formula">
-                    {formatCurrency(lot.amount)} aportados
-                    {lot.allocatedWithdrawal > 0 ? ` − ${formatCurrency(lot.allocatedWithdrawal)} retirados` : ''}
+                    {t('{importe} aportados', { importe: formatCurrency(lot.amount) })}
+                    {lot.allocatedWithdrawal > 0 ? ` − ${t('{importe} retirados', { importe: formatCurrency(lot.allocatedWithdrawal) })}` : ''}
                     {lot.attributedProfit >= 0
-                      ? ` + ${formatCurrency(lot.attributedProfit)} de beneficio`
-                      : ` − ${formatCurrency(Math.abs(lot.attributedProfit))} de resultado`}
+                      ? ` + ${t('{importe} de beneficio', { importe: formatCurrency(lot.attributedProfit) })}`
+                      : ` − ${t('{importe} de resultado', { importe: formatCurrency(Math.abs(lot.attributedProfit)) })}`}
                     {' = '}<strong>{formatCurrency(lot.currentValue)}</strong>
                   </span>
-                  <span className="contribution-journey-map-action">{isSelected ? 'Detalle abierto' : 'Ver detalle'}</span>
+                  <span className="contribution-journey-map-action">{isSelected ? t('Detalle abierto') : t('Ver detalle')}</span>
                 </button>
                 {isSelected ? (
                   <article className="contribution-journey-detail" aria-live="polite">
                     <div className="contribution-journey-detail-head">
                       <div>
-                        <span>Detalle de la aportación {index + 1}</span>
-                        <h5>Retiradas y posición actual</h5>
-                        <p>Capital incorporado el {formatDate(lot.iso)} · {lot.activeMonths} cierres publicados</p>
+                        <span>{t('Detalle de la aportación {numero}', { numero: index + 1 })}</span>
+                        <h5>{t('Retiradas y posición actual')}</h5>
+                        <p>{t('Capital incorporado el {fecha} · {cierres} cierres publicados', { fecha: formatDate(lot.iso), cierres: lot.activeMonths })}</p>
                       </div>
-                      <span className={`contribution-journey-status is-${status.tone}`}>{status.label}</span>
+                      <span className={`contribution-journey-status is-${status.tone}`}>{t(status.label)}</span>
                     </div>
 
                     {lot.withdrawalAllocations.length > 0 ? (
                       <div className="contribution-journey-withdrawals">
                         <div className="contribution-journey-withdrawals-head">
-                          <strong>Retiradas imputadas a esta aportación</strong>
-                          <span>Aplicadas por orden cronológico</span>
+                          <strong>{t('Retiradas imputadas a esta aportación')}</strong>
+                          <span>{t('Aplicadas por orden cronológico')}</span>
                         </div>
                         <div className="contribution-journey-withdrawal-list">
                           {lot.withdrawalAllocations.map((withdrawal) => (
@@ -272,12 +273,12 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
                               <span>{formatDate(withdrawal.iso)}</span>
                               <strong>−{formatGroupedCurrency(withdrawal.amount)}</strong>
                               <em>{withdrawal.pending
-                                ? 'Pendiente del próximo cierre'
+                                ? t('Pendiente del próximo cierre')
                                 : withdrawal.returnSinceEntryPct !== undefined
-                                  ? `Rentabilidad desde la aportación ${formatSignedPercent(withdrawal.returnSinceEntryPct)}`
-                                  : 'Sin rentabilidad específica registrada'}</em>
+                                  ? t('Rentabilidad desde la aportación {porcentaje}', { porcentaje: formatSignedPercent(withdrawal.returnSinceEntryPct) })
+                                  : t('Sin rentabilidad específica registrada')}</em>
                               {!withdrawal.pending && withdrawal.returnSinceEntryPct !== undefined ? (
-                                <small>Desde el {formatDate(lot.iso)}</small>
+                                <small>{t('Desde el {fecha}', { fecha: formatDate(lot.iso) })}</small>
                               ) : null}
                             </div>
                           ))}
@@ -285,20 +286,20 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
                       </div>
                     ) : (
                       <div className="contribution-journey-no-withdrawals">
-                        Esta aportación no tiene retiradas imputadas.
+                        {t('Esta aportación no tiene retiradas imputadas.')}
                       </div>
                     )}
 
                     <div className="contribution-journey-facts">
-                      <div><span>Capital todavía activo</span><strong>{formatCurrency(lot.remainingCapital)}</strong></div>
-                      <div><span>Rentabilidad atribuida</span><strong className={lot.accumulatedReturnPct >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(lot.accumulatedReturnPct)}</strong></div>
-                      <div><span>Peso sobre el saldo actual</span><strong>{lot.sharePct.toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 1, maximumFractionDigits: 1 }))} %</strong></div>
-                      <div><span>Cierres con actividad</span><strong>{lot.activeMonths}</strong></div>
+                      <div><span>{t('Capital todavía activo')}</span><strong>{formatCurrency(lot.remainingCapital)}</strong></div>
+                      <div><span>{t('Rentabilidad atribuida')}</span><strong className={lot.accumulatedReturnPct >= 0 ? 'positive' : 'negative'}>{formatSignedPercent(lot.accumulatedReturnPct)}</strong></div>
+                      <div><span>{t('Peso sobre el saldo actual')}</span><strong>{lot.sharePct.toLocaleString(NUMBER_LOCALE, withGrouping({ minimumFractionDigits: 1, maximumFractionDigits: 1 }))} %</strong></div>
+                      <div><span>{t('Cierres con actividad')}</span><strong>{lot.activeMonths}</strong></div>
                     </div>
 
                     {lot.specificEntryReturnPct !== undefined ? (
                       <p className="contribution-journey-entry-note">
-                        En el mes de entrada se aplicó una rentabilidad específica de <strong>{formatSignedPercent(lot.specificEntryReturnPct)}</strong>.
+                        {t('En el mes de entrada se aplicó una rentabilidad específica de')} <strong>{formatSignedPercent(lot.specificEntryReturnPct)}</strong>.
                       </p>
                     ) : null}
                   </article>
@@ -308,7 +309,7 @@ export const ContributionJourneyModule: React.FC<ContributionJourneyModuleProps>
           })}
         </div>
       ) : (
-        <div className="contribution-journey-empty">No hay aportaciones que coincidan con este filtro.</div>
+        <div className="contribution-journey-empty">{t('No hay aportaciones que coincidan con este filtro.')}</div>
       )}
     </section>
   );

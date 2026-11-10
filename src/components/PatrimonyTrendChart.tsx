@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatCurrency } from '../utils/format';
 import './PatrimonyTrendChart.css';
+import { useLang } from '../i18n';
+import { formatChartMonth } from '../utils/dateLabels';
 import { NUMBER_LOCALE, withGrouping } from '../utils/format';
 
 export interface PatrimonyTrendPoint {
@@ -102,6 +104,9 @@ const monotonePath = (pts: Array<{ x: number; y: number }>) => {
 };
 
 export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points, onHoverMonth, blueContributions = false }) => {
+  const { t, lang } = useLang();
+  // Meses del grafico: en castellano tal cual ("Mar 2026"), en catalan "Març 2026".
+  const ml = (label: string) => formatChartMonth(label, lang);
   const wrapRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const [wrapWidth, setWrapWidth] = useState(1100);
@@ -195,24 +200,24 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
     <div className={`pm-trend${blueContributions ? ' is-blue-inflow' : ''}`}>
       <div className="pm-trend-summary">
         <div>
-          <span>Saldo actual</span>
+          <span>{t('Saldo actual')}</span>
           <strong>{formatCurrency(last.balance)}</strong>
-          <small>Cierre {last.label}</small>
+          <small>{t('Cierre {mes}', { mes: ml(last.label) })}</small>
         </div>
         <div>
-          <span>Variación en el periodo</span>
+          <span>{t('Variación en el periodo')}</span>
           <strong className={periodChange >= 0 ? 'is-positive' : 'is-negative'}>{formatSignedEuro(periodChange)}</strong>
-          <small>Desde {first.label}{first.balance > 0 ? ` · ${formatSignedPct((periodChange / first.balance) * 100)}` : ''}</small>
+          <small>{t('Desde {mes}', { mes: ml(first.label) })}{first.balance > 0 ? ` · ${formatSignedPct((periodChange / first.balance) * 100)}` : ''}</small>
         </div>
         <div>
-          <span>Máximo del periodo</span>
+          <span>{t('Máximo del periodo')}</span>
           <strong>{formatCurrency(maxPoint.balance)}</strong>
-          <small>{maxPoint.label}</small>
+          <small>{ml(maxPoint.label)}</small>
         </div>
         <div>
-          <span>Meses mostrados</span>
+          <span>{t('Meses mostrados')}</span>
           <strong>{coords.length}</strong>
-          <small>{first.label} – {last.label}</small>
+          <small>{ml(first.label)} – {ml(last.label)}</small>
         </div>
       </div>
 
@@ -225,7 +230,7 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
             height={HEIGHT}
             viewBox={`0 0 ${width} ${HEIGHT}`}
             role="img"
-            aria-label={`Evolución del patrimonio de ${first.label} a ${last.label}: de ${formatEuro(first.balance)} a ${formatEuro(last.balance)}`}
+            aria-label={t('Evolución del patrimonio de {desde} a {hasta}: de {inicial} a {final}', { desde: ml(first.label), hasta: ml(last.label), inicial: formatEuro(first.balance), final: formatEuro(last.balance) })}
           >
             <defs>
               <linearGradient id="pmTrendArea" x1="0" y1="0" x2="0" y2="1">
@@ -268,7 +273,7 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
                     <rect x={label.centerX - label.boxWidth / 2} y={label.top} width={label.boxWidth} height={22} rx={11} />
                     <text x={label.centerX} y={label.top + 15} textAnchor="middle">{label.text}</text>
                   </g>
-                  <text className="pm-trend-month" x={point.x} y={plotBottom + 24} textAnchor="middle">{point.label}</text>
+                  <text className="pm-trend-month" x={point.x} y={plotBottom + 24} textAnchor="middle">{ml(point.label)}</text>
                   {point.returnPct !== undefined ? (
                     <text
                       className={`pm-trend-return ${point.returnPct >= 0 ? 'is-positive' : 'is-negative'}`}
@@ -323,19 +328,19 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
               }}
               role="status"
             >
-              <strong>{active.label}</strong>
-              <div><span>Saldo al cierre</span><b>{formatCurrency(active.balance)}</b></div>
+              <strong>{ml(active.label)}</strong>
+              <div><span>{t('Saldo al cierre')}</span><b>{formatCurrency(active.balance)}</b></div>
               {active.change !== undefined ? (
-                <div><span>Variación vs mes anterior</span><b className={active.change >= 0 ? 'is-positive' : 'is-negative'}>{formatSignedEuro(active.change)}</b></div>
+                <div><span>{t('Variación vs mes anterior')}</span><b className={active.change >= 0 ? 'is-positive' : 'is-negative'}>{formatSignedEuro(active.change)}</b></div>
               ) : null}
               {active.profit !== undefined ? (
-                <div><span>Beneficio del mes</span><b className={active.profit >= 0 ? 'is-positive' : 'is-negative'}>{formatSignedEuro(active.profit)}</b></div>
+                <div><span>{t('Beneficio del mes')}</span><b className={active.profit >= 0 ? 'is-positive' : 'is-negative'}>{formatSignedEuro(active.profit)}</b></div>
               ) : null}
               {active.returnPct !== undefined ? (
-                <div><span>Rentabilidad del mes</span><b className={active.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{formatSignedPct(active.returnPct)}</b></div>
+                <div><span>{t('Rentabilidad del mes')}</span><b className={active.returnPct >= 0 ? 'is-positive' : 'is-negative'}>{formatSignedPct(active.returnPct)}</b></div>
               ) : null}
-              {active.inflow > 0 ? <div><span>Aportaciones</span><b className={blueContributions ? 'is-inflow' : 'is-positive'}>{formatSignedEuro(active.inflow)}</b></div> : null}
-              {active.outflow > 0 ? <div><span>Retiradas</span><b className="is-negative">{formatSignedEuro(-active.outflow)}</b></div> : null}
+              {active.inflow > 0 ? <div><span>{t('Aportaciones')}</span><b className={blueContributions ? 'is-inflow' : 'is-positive'}>{formatSignedEuro(active.inflow)}</b></div> : null}
+              {active.outflow > 0 ? <div><span>{t('Retiradas')}</span><b className="is-negative">{formatSignedEuro(-active.outflow)}</b></div> : null}
             </div>
           ) : null}
         </div>
@@ -350,8 +355,8 @@ export const PatrimonyTrendChart: React.FC<PatrimonyTrendChartProps> = ({ points
       </svg>
       </div>
       <p className="pm-trend-footnote">
-        Debajo de cada mes: rentabilidad del mes y, si las hubo, <span className="pm-trend-in-mark">▲ aportaciones</span> y <span className="pm-trend-out-mark">▼ retiradas</span>.
-        {isScrollable ? ' Desliza para ver todos los meses.' : ''}
+        {t('Debajo de cada mes: rentabilidad del mes y, si las hubo,')} <span className="pm-trend-in-mark">▲ {t('aportaciones')}</span> {t('y')} <span className="pm-trend-out-mark">▼ {t('retiradas')}</span>.
+        {isScrollable ? ` ${t('Desliza para ver todos los meses.')}` : ''}
       </p>
     </div>
   );

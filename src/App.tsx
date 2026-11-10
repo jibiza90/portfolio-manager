@@ -3,7 +3,8 @@ import type { MouseEvent } from 'react';
 import dayjs from 'dayjs';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
-import { addClientProfile, CLIENTS, isDemoClient, PUBLICATION_CHECK_EXCLUDED_CLIENT_IDS, removeClientProfile } from './constants/clients';
+import { addClientProfile, CLIENTS, hasLanguageChoice, isDemoClient, PUBLICATION_CHECK_EXCLUDED_CLIENT_IDS, removeClientProfile } from './constants/clients';
+import { ClientLanguageField } from './components/ClientLanguageField';
 import { GENERAL_OPTION } from './constants/generalOption';
 import { usePortfolioStore, waitForPendingPortfolioSave } from './store/portfolio';
 import { formatCurrency, formatPercent, formatNumberEs, parseNumberEs } from './utils/format';
@@ -5638,6 +5639,7 @@ function InfoClientes({
                 {CLIENT_ORIGINS.map((origin) => <option key={origin} value={origin}>{origin}</option>)}
               </select>
             </label>
+            {hasLanguageChoice(selectedId) ? <ClientLanguageField clientId={selectedId} /> : null}
             <label>
               <span>Interes de ampliacion (€)</span>
               <input

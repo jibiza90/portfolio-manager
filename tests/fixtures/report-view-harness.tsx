@@ -2,6 +2,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ReportView } from '../../src/components/ReportView';
 import type { ReportData } from '../../src/services/reportLinks';
+import { LangProvider, translate, type Lang } from '../../src/i18n';
+import { LanguageGate, LanguageSwitch } from '../../src/components/LanguageChoice';
 
 const chartMonths = [
   { month: 'Mar 2025', balance: 49200, profit: 1200, profitPct: 2.5 },
@@ -83,6 +85,51 @@ export const mountReportView = (
       pendingCashMovements={[{ iso: '2026-04-10', type: 'increment', amount: 15000 }]}
     />
   );
+};
+
+// Informe en el idioma pedido (datos inventados de la prueba).
+export const mountReportViewInLang = (lang: Lang, monthCount = 13, clientId = 'client-001', showContributionJourney = true) => {
+  const root = document.getElementById('root');
+  if (!root) throw new Error('Missing root element');
+  root.innerHTML = '';
+  root.className = 'client-portal-page';
+  const reportData = buildReportData(monthCount);
+  createRoot(root).render(
+    <LangProvider lang={lang}>
+      <ReportView
+        reportData={{ ...reportData, clientId, showContributionJourney }}
+        pendingCashMovements={[{ iso: '2026-04-10', type: 'increment', amount: 15000 }]}
+      />
+    </LangProvider>
+  );
+};
+
+// Boton de idioma y eleccion de la primera vez, sin Firebase: guarda lo elegido en window.
+const LanguageDemo: React.FC<{ firstTime: boolean }> = ({ firstTime }) => {
+  const [saved, setSaved] = React.useState<Lang | null>(firstTime ? null : 'es');
+  const [once, setOnce] = React.useState<Lang | null>(null);
+  const lang = once ?? saved ?? 'es';
+  const record = (kind: string, value: Lang) => {
+    const log = ((window as unknown as { langLog?: string[] }).langLog ??= []);
+    log.push(`${kind}:${value}`);
+  };
+  return (
+    <LangProvider lang={lang}>
+      <LanguageSwitch
+        onSave={(value) => { record('save', value); setSaved(value); setOnce(null); }}
+        onUseOnce={(value) => { record('once', value); setOnce(value); }}
+      />
+      <p id="lang-sample">{translate(lang, 'Capital aportado')}</p>
+      {!saved && !once ? <LanguageGate onChoose={(value) => { record('save', value); setSaved(value); }} /> : null}
+    </LangProvider>
+  );
+};
+
+export const mountLanguageChoice = (firstTime = false) => {
+  const root = document.getElementById('root');
+  if (!root) throw new Error('Missing root element');
+  root.innerHTML = '';
+  createRoot(root).render(<LanguageDemo firstTime={firstTime} />);
 };
 
 export const mountContinuumStressReport = () => {

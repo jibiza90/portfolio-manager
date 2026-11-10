@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import './TextSizeControl.css';
+import { useLang } from '../i18n';
 
 // Tamaño de letra del area de cliente: el cliente elige Normal, Grande o Muy grande.
 // Se guarda solo en su navegador (no en la base de datos). Se aplica con "zoom" al contenido de la pagina;
@@ -68,8 +69,10 @@ interface TextSizeControlProps {
   onChange: (level: TextSizeLevel) => void;
 }
 
-export const TextSizeControl: React.FC<TextSizeControlProps> = ({ level, onChange }) => (
-  <section className="tsc-bar" data-tour="letra" aria-label="Tamaño de letra">
+export const TextSizeControl: React.FC<TextSizeControlProps> = ({ level, onChange }) => {
+  const { t } = useLang();
+  return (
+  <section className="tsc-bar" data-tour="letra" aria-label={t('Tamaño de letra')}>
     <div className="tsc-text">
       <span className="tsc-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -78,11 +81,11 @@ export const TextSizeControl: React.FC<TextSizeControlProps> = ({ level, onChang
         </svg>
       </span>
       <div>
-        <strong>Tamaño de letra</strong>
-        <span>¿Te cuesta leer? Pulsa un tamaño más grande.</span>
+        <strong>{t('Tamaño de letra')}</strong>
+        <span>{t('¿Te cuesta leer? Pulsa un tamaño más grande.')}</span>
       </div>
     </div>
-    <div className="tsc-options" role="radiogroup" aria-label="Elige el tamaño de letra">
+    <div className="tsc-options" role="radiogroup" aria-label={t('Elige el tamaño de letra')}>
       {LEVELS.map((item, index) => {
         const selected = item.id === level;
         return (
@@ -95,11 +98,12 @@ export const TextSizeControl: React.FC<TextSizeControlProps> = ({ level, onChang
             onClick={() => onChange(item.id)}
           >
             <span className={`tsc-letter is-${index}`} aria-hidden="true">A</span>
-            <span className="tsc-label">{item.label}</span>
+            <span className="tsc-label">{t(item.label)}</span>
             {selected ? <span className="tsc-check" aria-hidden="true">✓</span> : null}
           </button>
         );
       })}
     </div>
   </section>
-);
+  );
+};

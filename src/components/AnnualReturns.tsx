@@ -15,7 +15,8 @@ import {
 } from '../utils/annualReturns';
 import './AnnualReturns.css';
 import { esNumberFormat, NUMBER_LOCALE, withGrouping } from '../utils/format';
-import { formatMonth } from '../utils/dateLabels';
+import { formatLongDate, formatLongDay, formatMonth, formatMonthInSentence } from '../utils/dateLabels';
+import { useLang, type T } from '../i18n';
 
 // Datos publicados del cliente que necesita el informe (subconjunto del informe del area cliente).
 export interface AnnualReturnsSource {
@@ -45,7 +46,6 @@ const SINGLE_PAGE_ROWS = 6;
 const FIRST_PAGE_ROWS = 12;
 const MIDDLE_PAGE_ROWS = 30;
 const LAST_PAGE_ROWS = 16;
-const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 const amount = esNumberFormat({ minimumFractionDigits: 2, maximumFractionDigits: 2 });
 // es-ES no agrupa los miles en cifras de 4 digitos: se fuerza el punto.
@@ -56,18 +56,21 @@ const dateEs = (iso: string) => {
   const [y, m, d] = iso.split('-');
   return y && m && d ? `${d}/${m}/${y}` : iso;
 };
-const monthEnd = (key: string) => {
+// Ultimo dia del mes de un "2026-03": 2026-03-31.
+const monthEndIso = (key: string) => {
   const [y, m] = key.split('-').map(Number);
-  return `${new Date(y, m, 0).getDate()} de ${MONTH_NAMES[m - 1]} de ${y}`;
+  return `${key}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
 };
 
-const criterionText = (report: AnnualReport) => (report.mode === 'all'
-  ? 'Todo el beneficio generado por la inversión durante el año, se haya retirado o no.'
+const criterionText = (report: AnnualReport, t: T) => (report.mode === 'all'
+  ? t('Todo el beneficio generado por la inversión durante el año, se haya retirado o no.')
   : report.method === 'proportional'
-    ? 'Beneficio incluido en las retiradas del año. Cálculo proporcional: cada retirada incluye la parte de capital y de beneficio que tenía la inversión en ese momento.'
-    : 'Beneficio incluido en las retiradas del año. Cálculo «primero el capital»: lo retirado se considera capital hasta recuperar todo lo aportado; a partir de ahí, beneficio.');
+    ? t('Beneficio incluido en las retiradas del año. Cálculo proporcional: cada retirada incluye la parte de capital y de beneficio que tenía la inversión en ese momento.')
+    : t('Beneficio incluido en las retiradas del año. Cálculo «primero el capital»: lo retirado se considera capital hasta recuperar todo lo aportado; a partir de ahí, beneficio.'));
 
-const headlineLabel = (report: AnnualReport) => (report.mode === 'all' ? `Beneficio generado en ${report.year}` : `Beneficio incluido en lo retirado en ${report.year}`);
+const headlineLabel = (report: AnnualReport, t: T) => (report.mode === 'all'
+  ? t('Beneficio generado en {anio}', { anio: report.year })
+  : t('Beneficio incluido en lo retirado en {anio}', { anio: report.year }));
 
 interface DocumentProps {
   report: AnnualReport;
@@ -78,6 +81,7 @@ interface DocumentProps {
 }
 
 export const AnnualReturnsDocument = React.forwardRef<HTMLDivElement, DocumentProps>(({ report, holderName, clientCode, documentNumber, issuedAt }, ref) => {
+  const { t, lang } = useLang();
   const rows = report.mode === 'all' ? report.monthRows : report.withdrawals;
   const chunks: Array<typeof rows> = [];
   if (rows.length <= SINGLE_PAGE_ROWS) {
@@ -89,21 +93,23 @@ export const AnnualReturnsDocument = React.forwardRef<HTMLDivElement, DocumentPr
     chunks.push(rest);
   }
   const total = chunks.length;
-  const issued = issuedAt.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-  const endLabel = report.lastKey ? (report.provisional ? `Saldo al ${monthEnd(report.lastKey)}` : `Saldo al 31 de diciembre de ${report.year}`) : 'Saldo final';
+  const issued = formatLongDate(issuedAt, lang);
+  const endLabel = report.lastKey
+    ? (report.provisional ? t('Saldo al {fecha}', { fecha: formatLongDay(monthEndIso(report.lastKey), lang) }) : t('Saldo al 31 de diciembre de {anio}', { anio: report.year }))
+    : t('Saldo final');
 
   const detail = (pageRows: typeof rows) => (report.mode === 'all' ? (
     <table className="ar-table">
-      <thead><tr><th>Mes</th><th>Rentabilidad</th><th>Beneficio del mes</th></tr></thead>
+      <thead><tr><th>{t('Mes')}</th><th>{t('Rentabilidad')}</th><th>{t('Beneficio del mes')}</th></tr></thead>
       <tbody>
         {(pageRows as AnnualReport['monthRows']).map((row) => (
-          <tr key={row.key}><td>{formatMonth(row.label)}</td><td>{pct(row.returnPct)}</td><td className={row.profit < 0 ? 'is-neg' : ''}>{signed(row.profit)}</td></tr>
+          <tr key={row.key}><td>{formatMonth(row.label, lang)}</td><td>{pct(row.returnPct)}</td><td className={row.profit < 0 ? 'is-neg' : ''}>{signed(row.profit)}</td></tr>
         ))}
       </tbody>
     </table>
   ) : (
     <table className="ar-table">
-      <thead><tr><th>Fecha de la retirada</th><th>Importe retirado</th><th>Parte de capital</th><th>Parte de beneficio</th></tr></thead>
+      <thead><tr><th>{t('Fecha de la retirada')}</th><th>{t('Importe retirado')}</th><th>{t('Parte de capital')}</th><th>{t('Parte de beneficio')}</th></tr></thead>
       <tbody>
         {(pageRows as AnnualReport['withdrawals']).map((row) => (
           <tr key={row.iso}><td>{dateEs(row.iso)}</td><td>{eur(row.amount)}</td><td>{eur(row.capital)}</td><td className="is-strong">{eur(row.gain)}</td></tr>
@@ -119,58 +125,58 @@ export const AnnualReturnsDocument = React.forwardRef<HTMLDivElement, DocumentPr
         const isLast = pageIndex === total - 1;
         return (
           <section className="ar-page" key={pageIndex} style={{ width: PAGE_W, height: PAGE_H }}>
-            <header className="ar-head"><strong>{ISSUER.name}</strong><span>Licencia {ISSUER.license}</span></header>
+            <header className="ar-head"><strong>{ISSUER.name}</strong><span>{t('Licencia {numero}', { numero: ISSUER.license })}</span></header>
             <div className="ar-body">
               {isFirst ? (
                 <>
                   <div className="ar-title">
-                    <span>Informe anual de rendimientos</span>
-                    <h1>Ejercicio {report.year}</h1>
-                    {report.provisional ? <em className="ar-provisional">PROVISIONAL · datos hasta el último cierre publicado{report.lastKey ? `, ${MONTH_NAMES[Number(report.lastKey.slice(5)) - 1]} de ${report.lastKey.slice(0, 4)}` : ''}</em> : null}
+                    <span>{t('Informe anual de rendimientos')}</span>
+                    <h1>{t('Ejercicio {anio}', { anio: report.year })}</h1>
+                    {report.provisional ? <em className="ar-provisional">{t('PROVISIONAL · datos hasta el último cierre publicado')}{report.lastKey ? `, ${formatMonthInSentence(report.lastKey, lang)}` : ''}</em> : null}
                   </div>
                   <dl className="ar-meta">
-                    <div><dt>Titular</dt><dd>{holderName}</dd></div>
-                    <div><dt>Usuario</dt><dd>{clientCode}</dd></div>
-                    <div><dt>Documento nº</dt><dd>{documentNumber}</dd></div>
-                    <div><dt>Emitido</dt><dd>{issued}</dd></div>
+                    <div><dt>{t('Titular')}</dt><dd>{holderName}</dd></div>
+                    <div><dt>{t('Usuario')}</dt><dd>{clientCode}</dd></div>
+                    <div><dt>{t('Documento nº')}</dt><dd>{documentNumber}</dd></div>
+                    <div><dt>{t('Emitido')}</dt><dd>{issued}</dd></div>
                   </dl>
                   <div className="ar-headline">
-                    <span>{headlineLabel(report)}</span>
+                    <span>{headlineLabel(report, t)}</span>
                     <strong>{eur(report.headline)}</strong>
-                    <p>Criterio elegido por el titular: {criterionText(report)}</p>
+                    <p>{t('Criterio elegido por el titular:')} {criterionText(report, t)}</p>
                   </div>
                   <dl className="ar-strip">
-                    <div><dt>Saldo al 1 de enero de {report.year}</dt><dd>{eur(report.startBalance)}</dd></div>
-                    <div><dt>Aportaciones del año</dt><dd>{signed(report.increments)}</dd></div>
-                    <div><dt>Retiradas del año</dt><dd>{signed(-report.decrements)}</dd></div>
+                    <div><dt>{t('Saldo al 1 de enero de {anio}', { anio: report.year })}</dt><dd>{eur(report.startBalance)}</dd></div>
+                    <div><dt>{t('Aportaciones del año')}</dt><dd>{signed(report.increments)}</dd></div>
+                    <div><dt>{t('Retiradas del año')}</dt><dd>{signed(-report.decrements)}</dd></div>
                     <div><dt>{endLabel}</dt><dd>{eur(report.endBalance)}</dd></div>
                   </dl>
-                  <h2 className="ar-section">{report.mode === 'all' ? 'Detalle mensual' : 'Detalle de las retiradas'}</h2>
+                  <h2 className="ar-section">{report.mode === 'all' ? t('Detalle mensual') : t('Detalle de las retiradas')}</h2>
                 </>
-              ) : pageRows.length ? <h2 className="ar-section">{report.mode === 'all' ? 'Detalle mensual (continuación)' : 'Detalle de las retiradas (continuación)'}</h2> : null}
-              {pageRows.length ? detail(pageRows) : isFirst ? <p className="ar-empty">{report.mode === 'all' ? 'No hay cierres publicados en este año.' : 'No hay retiradas en este año.'}</p> : null}
+              ) : pageRows.length ? <h2 className="ar-section">{report.mode === 'all' ? t('Detalle mensual (continuación)') : t('Detalle de las retiradas (continuación)')}</h2> : null}
+              {pageRows.length ? detail(pageRows) : isFirst ? <p className="ar-empty">{report.mode === 'all' ? t('No hay cierres publicados en este año.') : t('No hay retiradas en este año.')}</p> : null}
               {isLast ? (
                 <>
-                  <h2 className="ar-section">Comisiones pagadas en el año</h2>
-                  {!report.commissionsAvailable ? <p className="ar-empty">Información de comisiones no disponible.</p> : report.commissions.length ? (
+                  <h2 className="ar-section">{t('Comisiones pagadas en el año')}</h2>
+                  {!report.commissionsAvailable ? <p className="ar-empty">{t('Información de comisiones no disponible.')}</p> : report.commissions.length ? (
                     <table className="ar-table">
-                      <thead><tr><th>Retirada</th><th>Importe retirado</th><th>Comisión pagada</th></tr></thead>
+                      <thead><tr><th>{t('Retirada')}</th><th>{t('Importe retirado')}</th><th>{t('Comisión pagada')}</th></tr></thead>
                       <tbody>
                         {report.commissions.map((row) => <tr key={row.iso}><td>{dateEs(row.iso)}</td><td>{eur(row.withdrawal)}</td><td>{eur(row.commission)}</td></tr>)}
-                        <tr className="ar-total"><td>Total</td><td /><td>{eur(report.commissionsTotal)}</td></tr>
+                        <tr className="ar-total"><td>{t('Total')}</td><td /><td>{eur(report.commissionsTotal)}</td></tr>
                       </tbody>
                     </table>
-                  ) : <p className="ar-empty">No consta ninguna comisión pagada en este año.</p>}
-                  <div className="ar-notice"><strong>Aviso</strong><p>{DISCLAIMER}</p></div>
-                  <p className="ar-method">Importes en euros calculados con los cierres mensuales y los movimientos publicados para el titular en su área de cliente.</p>
+                  ) : <p className="ar-empty">{t('No consta ninguna comisión pagada en este año.')}</p>}
+                  <div className="ar-notice"><strong>{t('Aviso')}</strong><p>{t(DISCLAIMER)}</p></div>
+                  <p className="ar-method">{t('Importes en euros calculados con los cierres mensuales y los movimientos publicados para el titular en su área de cliente.')}</p>
                   <div className="ar-sign">
-                    <div className="ar-issuer"><strong>{ISSUER.name}</strong><span>{ISSUER.address}</span><span>Licencia {ISSUER.license}</span></div>
-                    <div className="ar-marks"><img src={sealUrl} alt="Sello de JIGSA Capital Brokering" /><img src={signatureUrl} alt="Firma" /></div>
+                    <div className="ar-issuer"><strong>{ISSUER.name}</strong><span>{ISSUER.address}</span><span>{t('Licencia {numero}', { numero: ISSUER.license })}</span></div>
+                    <div className="ar-marks"><img src={sealUrl} alt={t('Sello de JIGSA Capital Brokering')} /><img src={signatureUrl} alt={t('Firma')} /></div>
                   </div>
                 </>
               ) : null}
             </div>
-            <footer className="ar-foot"><span>Informe anual de rendimientos · {report.year} · {documentNumber}</span><span>{pageIndex + 1} / {total}</span></footer>
+            <footer className="ar-foot"><span>{t('Informe anual de rendimientos')} · {report.year} · {documentNumber}</span><span>{pageIndex + 1} / {total}</span></footer>
           </section>
         );
       })}
@@ -222,6 +228,7 @@ interface PanelProps {
 
 // Selector + vista previa + descarga. Lo usan igual el area del cliente y el admin.
 export const AnnualReturnsPanel: React.FC<PanelProps> = ({ source, commissions, holderName, clientCode, clientId, onDownloaded }) => {
+  const { t } = useLang();
   const months = useMemo<AnnualMonthInput[]>(() => source.monthlyStats
     .filter((month) => month.hasData !== false && monthLabelToKey(month.month))
     .map((month) => ({ month: month.month, profit: month.profit ?? 0, profitPct: month.profitPct ?? 0, endBalance: month.endBalance ?? 0 })), [source.monthlyStats]);
@@ -268,39 +275,39 @@ export const AnnualReturnsPanel: React.FC<PanelProps> = ({ source, commissions, 
     }
   };
 
-  if (!report) return <p className="ar-panel-empty">Todavía no hay cierres publicados para preparar el informe.</p>;
+  if (!report) return <p className="ar-panel-empty">{t('Todavía no hay cierres publicados para preparar el informe.')}</p>;
 
   return (
     <div className="ar-panel">
       <form className="ar-controls" onSubmit={(event) => { event.preventDefault(); void download(); }}>
         <fieldset>
-          <legend>Año</legend>
+          <legend>{t('Año')}</legend>
           <div className="ar-years">
             {years.map((value) => (
               <button key={value} type="button" aria-pressed={value === year} onClick={() => setYear(value)}>
                 {value}
-                {provisionalYears.has(value) ? <small>Provisional</small> : null}
+                {provisionalYears.has(value) ? <small>{t('Provisional')}</small> : null}
               </button>
             ))}
           </div>
-          {years.length === 1 ? <span className="ar-years-note">Solo hay cierres publicados de {years[0]}.</span> : null}
+          {years.length === 1 ? <span className="ar-years-note">{t('Solo hay cierres publicados de {anio}.', { anio: years[0] })}</span> : null}
         </fieldset>
         <fieldset>
-          <legend>Qué quieres que conste</legend>
-          <label><input type="radio" name={`ar-mode-${clientId}`} checked={mode === 'withdrawn'} onChange={() => setMode('withdrawn')} />Solo lo retirado</label>
-          <label><input type="radio" name={`ar-mode-${clientId}`} checked={mode === 'all'} onChange={() => setMode('all')} />Todo lo ganado en el año</label>
+          <legend>{t('Qué quieres que conste')}</legend>
+          <label><input type="radio" name={`ar-mode-${clientId}`} checked={mode === 'withdrawn'} onChange={() => setMode('withdrawn')} />{t('Solo lo retirado')}</label>
+          <label><input type="radio" name={`ar-mode-${clientId}`} checked={mode === 'all'} onChange={() => setMode('all')} />{t('Todo lo ganado en el año')}</label>
         </fieldset>
         {mode === 'withdrawn' ? (
           <fieldset>
-            <legend>Cómo calcular lo retirado</legend>
-            <label><input type="radio" name={`ar-method-${clientId}`} checked={method === 'proportional'} onChange={() => setMethod('proportional')} />Proporcional</label>
-            <label><input type="radio" name={`ar-method-${clientId}`} checked={method === 'capital-first'} onChange={() => setMethod('capital-first')} />Primero el capital</label>
+            <legend>{t('Cómo calcular lo retirado')}</legend>
+            <label><input type="radio" name={`ar-method-${clientId}`} checked={method === 'proportional'} onChange={() => setMethod('proportional')} />{t('Proporcional')}</label>
+            <label><input type="radio" name={`ar-method-${clientId}`} checked={method === 'capital-first'} onChange={() => setMethod('capital-first')} />{t('Primero el capital')}</label>
           </fieldset>
         ) : null}
-        <p className="ar-controls-notice">{DISCLAIMER}</p>
-        <label className="ar-accept"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />He leído y acepto el aviso. La declaración y tributación de estos rendimientos son de mi exclusiva responsabilidad.</label>
-        <button type="submit" disabled={!accepted || busy}>{busy ? 'Generando PDF…' : 'Descargar PDF'}</button>
-        {error ? <p className="ar-error" role="alert">{error}</p> : null}
+        <p className="ar-controls-notice">{t(DISCLAIMER)}</p>
+        <label className="ar-accept"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />{t('He leído y acepto el aviso. La declaración y tributación de estos rendimientos son de mi exclusiva responsabilidad.')}</label>
+        <button type="submit" disabled={!accepted || busy}>{busy ? t('Generando PDF…') : t('Descargar PDF')}</button>
+        {error ? <p className="ar-error" role="alert">{t(error)}</p> : null}
       </form>
       <div className="ar-preview">
         <AnnualReturnsDocument ref={docRef} report={report} holderName={holderName} clientCode={clientCode} documentNumber={documentNumber} issuedAt={issuedAt} />
