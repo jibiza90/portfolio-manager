@@ -20,8 +20,9 @@ export const GUEST_CLIENT_ID = 'invitado';
 // Si hubiera que quitarselas a alguien, se hace aqui.
 export const hasNewReportFeatures = (_clientId: string) => true;
 
-// Area de cliente en catalan (elige idioma al entrar). De momento solo demo1; para todos, devolver true.
-export const hasLanguageChoice = (clientId: string) => clientId === DEMO_CLIENT_ID;
+// Area de cliente en catalan: cada cliente elige su idioma al entrar. Se probo en demo1 y desde el 10/11/2026
+// lo tienen todos los clientes (la demostracion /invitado va aparte y sigue en castellano).
+export const hasLanguageChoice = (clientId: string) => clientId !== GUEST_CLIENT_ID;
 
 // Clientes especiales que la comprobacion antes de publicar no revisa (llevan su propio calculo).
 export const PUBLICATION_CHECK_EXCLUDED_CLIENT_IDS = new Set(['client-012']);

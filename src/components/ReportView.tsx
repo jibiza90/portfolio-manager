@@ -696,7 +696,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (section.classList.contains('premium-v2-secondary-kpis')) return 'Indicadores acumulados premium';
       if (section.classList.contains('premium-v2-period-panel')) return 'Análisis por periodo premium';
       if (section.classList.contains('premium-v2-month-focus')) return 'Detalle mensual premium';
-      if (section.classList.contains('pv3-overview')) return 'Resumen vision anual';
+      if (section.classList.contains('pv3-overview')) return 'Resumen visión anual';
       if (section.classList.contains('pv3-matrix-section')) return 'Caleidoscopio anual';
       if (section.classList.contains('pv3-month-insight')) return 'Mes en contexto';
       if (section.classList.contains('pv3-year-digest')) return 'Lectura del periodo anual';
@@ -705,15 +705,15 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (section.classList.contains('pf4-inspector')) return 'Detalle de la aportación';
       if (section.classList.contains('pf4-register')) return 'Registro del capital';
       if (section.classList.contains('pn5-opening')) return 'Carta patrimonial';
-      if (section.classList.contains('pn5-chapter')) return section.querySelector('h2')?.textContent?.trim() || 'Capitulo narrativo';
+      if (section.classList.contains('pn5-chapter')) return section.querySelector('h2')?.textContent?.trim() || 'Capítulo narrativo';
       if (section.classList.contains('ledger-hero')) return 'Apertura del legajo';
       if (section.classList.contains('ledger-kpis')) return 'Resumen del legajo';
       if (section.classList.contains('ledger-global-equation')) return 'Reconciliación global';
       if (section.classList.contains('ledger-workspace')) return 'Extracto y dossier mensual';
       if (section.classList.contains('ledger-pending')) return 'Movimientos pendientes del legajo';
-      if (section.classList.contains('river-hero')) return 'Apertura del rio patrimonial';
-      if (section.classList.contains('river-kpis')) return 'Resumen del rio patrimonial';
-      if (section.classList.contains('river-chart-section')) return 'Rio patrimonial';
+      if (section.classList.contains('river-hero')) return 'Apertura del río patrimonial';
+      if (section.classList.contains('river-kpis')) return 'Resumen del río patrimonial';
+      if (section.classList.contains('river-chart-section')) return 'Río patrimonial';
       if (section.classList.contains('river-station')) return 'Estación de medición mensual';
       if (section.classList.contains('mosaic-hero')) return 'Apertura del mosaico patrimonial';
       if (section.classList.contains('mosaic-summary')) return 'Resumen del mosaico';
@@ -736,7 +736,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (section.classList.contains('strata-movements-section')) return 'Tesorería Aura Strata';
       if (section.classList.contains('strata-footer')) return 'Conciliación final Aura Strata';
       if (section.classList.contains('chronos-command-deck')) return 'Control temporal Chronos Orbit';
-      if (section.classList.contains('chronos-orbit-panel')) return 'Orbita patrimonial Chronos Orbit';
+      if (section.classList.contains('chronos-orbit-panel')) return 'Órbita patrimonial Chronos Orbit';
       if (section.classList.contains('chronos-telemetry')) return 'Telemetría Chronos Orbit';
       if (section.classList.contains('chronos-probe')) return 'Sonda temporal Chronos Orbit';
       if (section.classList.contains('chronos-flow-chronicle')) return 'Eventos de capital Chronos Orbit';
@@ -2787,7 +2787,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
               ) : null}
             </div>
           ) : (
-          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={t('Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, si depende de aportaciones y retiradas.')}><span>{t('Rentabilidad total')}</span><strong className={report.rentabilidadDisponible !== false ? (report.rentabilidad >= 0 ? 'positive' : 'negative') : ''}>{report.rentabilidadDisponible !== false ? formatSignedPercent(report.rentabilidad) : t('No aplicable')}</strong></div>
+          <div className="report-pro-kpi report-pro-info-card" tabIndex={0} data-tooltip={t('Beneficio acumulado dividido entre el capital neto aportado. A diferencia del TWR, sí depende de aportaciones y retiradas.')}><span>{t('Rentabilidad total')}</span><strong className={report.rentabilidadDisponible !== false ? (report.rentabilidad >= 0 ? 'positive' : 'negative') : ''}>{report.rentabilidadDisponible !== false ? formatSignedPercent(report.rentabilidad) : t('No aplicable')}</strong></div>
           )}
         </section>
 

@@ -49,7 +49,6 @@ const CommissionRows: React.FC<{ receipt: MovementReceiptData; detailed: boolean
     <>
       {showBreakdown ? (
         <>
-          <tr className="mr-sub"><td>{t('Capital pendiente de recuperar antes de esta retirada')}</td><td>{eur(commission.capitalPendingBefore)}</td></tr>
           <tr className="mr-sub"><td>{t('Parte de la retirada sujeta a comisión')}</td><td>{eur(commission.commissionableAmount)}</td></tr>
         </>
       ) : null}
@@ -71,9 +70,6 @@ const commissionNote = (receipt: MovementReceiptData, t: T) => {
       ? t('Con esta retirada se recupera la totalidad del capital aportado.')
       : t('El capital aportado ya se había recuperado con retiradas anteriores.');
     return `${t('La comisión de éxito solo se aplica a la parte retirada que supera el capital aportado.')} ${recovered}`;
-  }
-  if (commission.commissionableAmount <= 0) {
-    return t('Sin comisión: aún quedan {importe} de capital aportado por recuperar.', { importe: eur(receipt.capitalPendingAfter) });
   }
   return null;
 };
@@ -130,7 +126,6 @@ export const ExtendedReceipt = React.forwardRef<HTMLDivElement, DocProps>(({ rec
         <tbody>
           <tr><td className="mr-muted">{t('Capital aportado total')}</td><td>{eur(receipt.contributedAfter)}</td></tr>
           <tr><td className="mr-muted">{t('Capital retirado total')}</td><td>{eur(receipt.withdrawnAfter)}</td></tr>
-          <tr className="mr-total"><td>{t('Capital pendiente de recuperar')}</td><td>{eur(receipt.capitalPendingAfter)}</td></tr>
         </tbody>
       </table>
 
