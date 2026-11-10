@@ -20,6 +20,10 @@ export const translate = (lang: Lang, text: string, vars?: Vars) => {
   });
 };
 
+// Texto catalan -> original en castellano (para que la actividad del cliente se guarde siempre en castellano).
+const SPANISH_OF: Record<string, string> = Object.fromEntries(Object.entries(CA).map(([es, ca]) => [ca, es]));
+export const toSpanish = (text: string) => SPANISH_OF[text] ?? text;
+
 export type T = (text: string, vars?: Vars) => string;
 
 interface LangState {

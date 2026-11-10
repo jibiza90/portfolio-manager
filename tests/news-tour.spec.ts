@@ -123,3 +123,16 @@ test('news tour can be skipped and shows as a bottom card on phones', async ({ p
   await expect(bubble(page)).toHaveCount(0);
   expect(await page.evaluate(() => window.localStorage.getItem('jigsa-news-tour-seen'))).toBe('2026-11');
 });
+
+test('news tour counts as seen as soon as it appears, even if the page is closed without finishing', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1300, height: 900 });
+  await mountTour(page);
+  await expect(bubble(page)).toContainText(`1 de ${TITLES.length}`);
+  // Sin pulsar nada: ya consta como vista.
+  expect(await page.evaluate(() => window.localStorage.getItem('jigsa-news-tour-seen'))).toBe('2026-11');
+  await page.keyboard.press('Escape');
+  await expect(bubble(page)).toHaveCount(0);
+  expect(await page.evaluate(() => window.localStorage.getItem('jigsa-news-tour-seen'))).toBe('2026-11');
+});

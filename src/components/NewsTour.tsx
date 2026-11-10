@@ -17,7 +17,7 @@ export interface TourStep {
 }
 
 // Cambiar la version cuando haya novedades nuevas para que la visita vuelva a salir.
-const TOUR_VERSION = '2026-11';
+export const TOUR_VERSION = '2026-11';
 const STORAGE_KEY = 'jigsa-news-tour-seen';
 
 export const tourIcon = (path: React.ReactNode) => (
@@ -126,7 +126,7 @@ export const hasSeenNewsTour = () => {
   }
 };
 
-const markNewsTourSeen = () => {
+export const markNewsTourSeen = () => {
   try {
     window.localStorage.setItem(STORAGE_KEY, TOUR_VERSION);
   } catch {
@@ -181,12 +181,17 @@ interface GuidedTourProps extends TourEvents {
   eventType: string;
   // Al terminar o saltar la visita (no al cerrar la pagina a medias).
   onFinish?: () => void;
+  // Se llama una sola vez, cuando la visita ya se ve en pantalla.
+  onShown?: () => void;
 }
 
 // Visita generica: va paso a paso por los apartados que existan en la pagina.
-export const GuidedTour: React.FC<GuidedTourProps> = ({ steps: allSteps, badge, ariaLabel, eventType, onFinish, onClose, onEvent }) => {
+export const GuidedTour: React.FC<GuidedTourProps> = ({ steps: allSteps, badge, ariaLabel, eventType, onFinish, onShown, onClose, onEvent }) => {
   const { t } = useLang();
   const [steps, setSteps] = useState<TourStep[] | null>(null);
+  // Con referencia para no reiniciar la visita cada vez que la pagina se repinta.
+  const onShownRef = useRef(onShown);
+  onShownRef.current = onShown;
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const [paused, setPaused] = useState(false);
@@ -201,14 +206,18 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ steps: allSteps, badge, 
     let tries = 0;
     const check = () => {
       if (cancelled) return;
-      tries += 1;
+      // Mientras haya una ventana abierta (aviso legal, eleccion de idioma...) se espera sin limite.
+      if (!isModalOpen()) tries += 1;
       const ready = allSteps.some((step) => document.querySelector(step.target));
       if (ready && !isModalOpen()) {
         window.setTimeout(() => {
           if (cancelled) return;
           const available = allSteps.filter((step) => document.querySelector(step.target));
           if (available.length === 0) onClose();
-          else setSteps(available);
+          else {
+            setSteps(available);
+            onShownRef.current?.();
+          }
         }, 500);
         return;
       }
@@ -365,13 +374,15 @@ export const GuidedTour: React.FC<GuidedTourProps> = ({ steps: allSteps, badge, 
 };
 
 // Visita de novedades del area de cliente.
-export const NewsTour: React.FC<TourEvents> = ({ onClose, onEvent }) => (
+// En cuanto se ve queda marcada como vista (aunque se cierre con Esc, con la X o cerrando la pagina).
+export const NewsTour: React.FC<TourEvents & { onShown?: () => void }> = ({ onClose, onEvent, onShown }) => (
   <GuidedTour
     steps={STEPS}
     badge="Nuevo"
     ariaLabel="Novedades de la web"
     eventType="news_tour"
     onFinish={markNewsTourSeen}
+    onShown={() => { markNewsTourSeen(); onShown?.(); }}
     onClose={onClose}
     onEvent={onEvent}
   />

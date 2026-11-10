@@ -7,6 +7,7 @@ import { CLIENTS, DEMO_CLIENT_ID, hasLanguageChoice, hasNewReportFeatures, isDem
 import { formatDay, formatMonth } from './utils/dateLabels';
 import { LangProvider, localeOf, translate, useLang, type T } from './i18n';
 import { LanguageGate, LanguageSwitch, useClientLanguage } from './components/LanguageChoice';
+import { fetchNewsTourSeen, saveNewsTourSeen } from './services/languagePreference';
 import {
   buildClientAuthEmail,
   fetchClientAccessProfile,
@@ -1515,12 +1516,33 @@ const ClientPortal = ({
   const initialPosition = getInitialPositionFromOverview(overview);
   const showNewsTour = hasNewReportFeatures(clientId) && Boolean(report) && !initialPosition;
   const closeNewsTour = useCallback(() => setNewsTourOpen(false), []);
+  // Las novedades salen una sola vez por cliente: se recuerda en este navegador y en su ficha de Firebase,
+  // asi no se repiten aunque entre desde otro dispositivo.
+  const markNewsTourSeenForClient = useCallback(() => {
+    void import('./components/NewsTour')
+      .then(({ TOUR_VERSION }) => saveNewsTourSeen(clientId, TOUR_VERSION))
+      .catch((error) => console.warn('No se pudo guardar que las novedades ya se vieron', error));
+  }, [clientId]);
   useEffect(() => {
-    if (!showNewsTour) return;
-    void import('./components/NewsTour').then(({ hasSeenNewsTour }) => {
-      if (!hasSeenNewsTour()) setNewsTourOpen(true);
+    if (!showNewsTour) return undefined;
+    let cancelled = false;
+    void Promise.all([
+      import('./components/NewsTour'),
+      fetchNewsTourSeen(clientId).catch(() => null)
+    ]).then(([{ hasSeenNewsTour, markNewsTourSeen, TOUR_VERSION }, seenInCloud]) => {
+      if (cancelled) return;
+      if (seenInCloud === TOUR_VERSION) {
+        markNewsTourSeen();
+        return;
+      }
+      if (hasSeenNewsTour()) {
+        markNewsTourSeenForClient();
+        return;
+      }
+      setNewsTourOpen(true);
     });
-  }, [showNewsTour]);
+    return () => { cancelled = true; };
+  }, [clientId, markNewsTourSeenForClient, showNewsTour]);
   const pendingCashMovements = useMemo(
     () => getPendingCashMovements(overview),
     [overview]
@@ -2572,7 +2594,7 @@ const ClientPortal = ({
 
       {newsTourOpen && showNewsTour ? (
         <React.Suspense fallback={null}>
-          <NewsTour onClose={closeNewsTour} onEvent={trackClientUsage} />
+          <NewsTour onClose={closeNewsTour} onEvent={trackClientUsage} onShown={markNewsTourSeenForClient} />
         </React.Suspense>
       ) : null}
 

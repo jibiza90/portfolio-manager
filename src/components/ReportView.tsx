@@ -7,7 +7,7 @@ import { calculateTWR, calculateAllMonthsTWR } from '../utils/twr';
 import type { GeneralReferenceMonth } from '../services/cloudPortfolio';
 import { DEMO_CLIENT_ID, hasNewReportFeatures } from '../constants/clients';
 import { formatChartMonth, formatDay, formatLongDate, formatMonth, formatMonthInSentence, formatMonthRange } from '../utils/dateLabels';
-import { localeOf, useLang } from '../i18n';
+import { localeOf, toSpanish, useLang } from '../i18n';
 import { getViewportTooltipPosition, ViewportTooltipPlacement } from '../utils/viewportTooltip';
 import { ContributionJourneyModule } from './ContributionJourneyModule';
 import { PdfDesignStudio, PdfDesignId, PdfStudioMonth } from './PdfDesignStudio';
@@ -676,7 +676,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
     if (!analyticsEnabled || !onAnalyticsEvent || !reportRef.current) return undefined;
     const root = reportRef.current;
     const sections = Array.from(root.querySelectorAll<HTMLElement>(
-      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel, .premium-v2-primary-kpis, .premium-v2-secondary-kpis, .premium-v2-period-panel, .premium-v2-panel, .premium-v2-month-focus, .pv3-overview, .pv3-matrix-section, .pv3-month-insight, .pv3-year-digest, .pf4-hero, .pf4-engine-section, .pf4-inspector, .pf4-register, .pn5-opening, .pn5-chapter, .ledger-hero, .ledger-kpis, .ledger-global-equation, .ledger-workspace, .ledger-pending, .river-hero, .river-kpis, .river-chart-section, .river-station, .mosaic-hero, .mosaic-summary, .mosaic-gallery, .mosaic-detail, .mosaic-highlights, .mosaic-twr-note, .aura-executive, .aura-capital-core, .aura-twr-bridge, .aura-quantum-canvas, .aura-reconciliation, .aura-movements, .aura-global-equation, .strata-executive-grid, .strata-metrics-strip, .strata-didactic-box, .strata-canvas-container, .strata-audit-section, .strata-movements-section, .strata-footer, .chronos-command-deck, .chronos-orbit-panel, .chronos-telemetry, .chronos-probe, .chronos-flow-chronicle, .chronos-audit-footer'
+      '.report-pro-executive, .report-pro-kpis, .report-pro-note, .report-pro-capital-panel, .report-pro-demo-control-panel, .report-pro-panel, .report-pro-waterfall-panel'
     ));
     const visibleSections = new Map<HTMLElement, {
       ratio: number;
@@ -692,56 +692,7 @@ export const ReportView: React.FC<ReportViewProps> = ({
       if (section.classList.contains('report-pro-capital-panel')) return 'Capital y beneficio acumulado';
       if (section.classList.contains('report-pro-demo-control-panel')) return 'Análisis por periodo';
       if (section.classList.contains('report-pro-waterfall-panel')) return 'Resumen financiero';
-      if (section.classList.contains('premium-v2-primary-kpis')) return 'Resumen principal premium';
-      if (section.classList.contains('premium-v2-secondary-kpis')) return 'Indicadores acumulados premium';
-      if (section.classList.contains('premium-v2-period-panel')) return 'Análisis por periodo premium';
-      if (section.classList.contains('premium-v2-month-focus')) return 'Detalle mensual premium';
-      if (section.classList.contains('pv3-overview')) return 'Resumen visión anual';
-      if (section.classList.contains('pv3-matrix-section')) return 'Caleidoscopio anual';
-      if (section.classList.contains('pv3-month-insight')) return 'Mes en contexto';
-      if (section.classList.contains('pv3-year-digest')) return 'Lectura del periodo anual';
-      if (section.classList.contains('pf4-hero')) return 'Genealogía del saldo';
-      if (section.classList.contains('pf4-engine-section')) return 'Recorrido de las aportaciones';
-      if (section.classList.contains('pf4-inspector')) return 'Detalle de la aportación';
-      if (section.classList.contains('pf4-register')) return 'Registro del capital';
-      if (section.classList.contains('pn5-opening')) return 'Carta patrimonial';
-      if (section.classList.contains('pn5-chapter')) return section.querySelector('h2')?.textContent?.trim() || 'Capítulo narrativo';
-      if (section.classList.contains('ledger-hero')) return 'Apertura del legajo';
-      if (section.classList.contains('ledger-kpis')) return 'Resumen del legajo';
-      if (section.classList.contains('ledger-global-equation')) return 'Reconciliación global';
-      if (section.classList.contains('ledger-workspace')) return 'Extracto y dossier mensual';
-      if (section.classList.contains('ledger-pending')) return 'Movimientos pendientes del legajo';
-      if (section.classList.contains('river-hero')) return 'Apertura del río patrimonial';
-      if (section.classList.contains('river-kpis')) return 'Resumen del río patrimonial';
-      if (section.classList.contains('river-chart-section')) return 'Río patrimonial';
-      if (section.classList.contains('river-station')) return 'Estación de medición mensual';
-      if (section.classList.contains('mosaic-hero')) return 'Apertura del mosaico patrimonial';
-      if (section.classList.contains('mosaic-summary')) return 'Resumen del mosaico';
-      if (section.classList.contains('mosaic-gallery')) return 'Mosaico de cierres mensuales';
-      if (section.classList.contains('mosaic-detail')) return 'Detalle de la pieza mensual';
-      if (section.classList.contains('mosaic-highlights')) return 'Piezas destacadas';
-      if (section.classList.contains('mosaic-twr-note')) return 'Explicación TWR del mosaico';
-      if (section.classList.contains('aura-executive')) return 'Resumen ejecutivo Aura Quantum';
-      if (section.classList.contains('aura-capital-core')) return 'Atribución patrimonial Aura Quantum';
-      if (section.classList.contains('aura-twr-bridge')) return 'Comparativa de rentabilidades Aura Quantum';
-      if (section.classList.contains('aura-quantum-canvas')) return 'Lienzo cuántico patrimonial';
-      if (section.classList.contains('aura-reconciliation')) return 'Mesa de conciliación Aura Quantum';
-      if (section.classList.contains('aura-movements')) return 'Registro de movimientos Aura Quantum';
-      if (section.classList.contains('aura-global-equation')) return 'Conciliación integral Aura Quantum';
-      if (section.classList.contains('strata-executive-grid')) return 'Resumen ejecutivo Aura Strata';
-      if (section.classList.contains('strata-metrics-strip')) return 'Atribución patrimonial Aura Strata';
-      if (section.classList.contains('strata-didactic-box')) return 'Metodología TWR Aura Strata';
-      if (section.classList.contains('strata-canvas-container')) return 'Cordillera patrimonial Aura Strata';
-      if (section.classList.contains('strata-audit-section')) return 'Mesa de conciliación Aura Strata';
-      if (section.classList.contains('strata-movements-section')) return 'Tesorería Aura Strata';
-      if (section.classList.contains('strata-footer')) return 'Conciliación final Aura Strata';
-      if (section.classList.contains('chronos-command-deck')) return 'Control temporal Chronos Orbit';
-      if (section.classList.contains('chronos-orbit-panel')) return 'Órbita patrimonial Chronos Orbit';
-      if (section.classList.contains('chronos-telemetry')) return 'Telemetría Chronos Orbit';
-      if (section.classList.contains('chronos-probe')) return 'Sonda temporal Chronos Orbit';
-      if (section.classList.contains('chronos-flow-chronicle')) return 'Eventos de capital Chronos Orbit';
-      if (section.classList.contains('chronos-audit-footer')) return 'Conciliación Chronos Orbit';
-      return section.querySelector('h4, h3, h2')?.textContent?.trim() || 'Sección del informe';
+      return toSpanish(section.querySelector('h4, h3, h2')?.textContent?.trim() ?? '') || 'Sección del informe';
     };
 
     let currentSection: { label: string; durationMs: number; maxVisibilityPct: number } | null = null;

@@ -243,9 +243,7 @@ export const CA: Record<string, string> = {
     'Aquesta informació es pot actualitzar per canvis normatius, contractuals, operatius o tecnològics. Quan una modificació sigui rellevant, es mostrarà una versió nova al portal i es podrà sol·licitar una nova confirmació de lectura.',
 
   // --- Justificantes de movimientos ---
-  'Parte de la retirada sujeta a comisión': 'Part de la retirada subjecta a comissió',
   'Comisión de éxito': 'Comissió d\'èxit',
-  'sobre {importe}': 'sobre {importe}',
   'Con esta retirada se recupera la totalidad del capital aportado.': 'Amb aquesta retirada es recupera la totalitat del capital aportat.',
   'El capital aportado ya se había recuperado con retiradas anteriores.': 'El capital aportat ja s\'havia recuperat amb retirades anteriors.',
   'La comisión de éxito solo se aplica a la parte retirada que supera el capital aportado.': 'La comissió d\'èxit només s\'aplica a la part retirada que supera el capital aportat.',

@@ -58,7 +58,19 @@ export const fetchClientLanguage = async (clientId: string): Promise<Lang | null
 // El admin guarda sin tocar la copia de su propio navegador.
 export const saveClientLanguage = async (clientId: string, lang: Lang, options: { cacheInBrowser?: boolean } = {}) => {
   if (options.cacheInBrowser !== false) writeCachedLanguage(clientId, lang);
-  await db.collection(CLIENT_PREFERENCES_COLLECTION).doc(clientId).set({ clientId, language: lang, updatedAt: Date.now() });
+  await db.collection(CLIENT_PREFERENCES_COLLECTION).doc(clientId).set({ clientId, language: lang, updatedAt: Date.now() }, { merge: true });
+};
+
+// Novedades (globos): version que el cliente ya ha visto, guardada en su ficha para que no se repitan
+// aunque entre desde otro dispositivo o navegador.
+export const fetchNewsTourSeen = async (clientId: string): Promise<string | null> => {
+  const doc = await db.collection(CLIENT_PREFERENCES_COLLECTION).doc(clientId).get();
+  const value = doc.exists ? doc.data()?.newsTourSeen : null;
+  return typeof value === 'string' ? value : null;
+};
+
+export const saveNewsTourSeen = async (clientId: string, version: string) => {
+  await db.collection(CLIENT_PREFERENCES_COLLECTION).doc(clientId).set({ clientId, newsTourSeen: version, updatedAt: Date.now() }, { merge: true });
 };
 
 // Para la ficha del admin.

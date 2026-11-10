@@ -49,7 +49,7 @@ test('guest demo opens with the presentation, never talks to the database and wa
   expect(databaseRequests).toEqual([]);
 });
 
-test('guest withdrawal receipt shows the 8 % commission and the documents carry the watermark', async ({ page }, testInfo) => {
+test('guest withdrawal receipt shows the commission charged (not its percentage) and the documents carry the watermark', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'ipad-mini', 'Checked once on a representative viewport.');
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 1300, height: 900 });
@@ -58,7 +58,8 @@ test('guest withdrawal receipt shows the 8 % commission and the documents carry 
   await expect(page.locator('.report-pro-pending-cash')).toContainText('+5.000,00 €');
   await page.getByRole('button', { name: 'Descargar justificante de la retirada del 20/03/2026' }).click();
   const receipt = page.getByRole('dialog', { name: 'Justificante de operación' });
-  await expect(receipt.locator('.mr-compact')).toContainText('Comisión de éxito (8 %)');
+  await expect(receipt.locator('.mr-compact')).toContainText('Comisión de éxito');
+  await expect(receipt.locator('.mr-compact')).not.toContainText('%');
   await expect(receipt.locator('.mr-compact')).toContainText('240,00 €');
   await expect(receipt.locator('.mr-compact .mr-total')).toContainText('37.760,00 €');
   await expect(receipt.locator('.mr-compact')).toContainText('Laura Martín Vidal');

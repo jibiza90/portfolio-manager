@@ -49,9 +49,9 @@ test('receipt numbers look random, have 8 digits and never change for the same m
   expect(receiptNumber('client-002', '2026-10-15', 'decrement')).not.toBe(first);
 });
 
-const mountDialog = async (page: Page, index: number) => {
+const mountDialog = async (page: Page, index: number, knownCommissions?: typeof paid) => {
   await page.goto('/');
-  await page.evaluate(async ({ list, target }) => {
+  await page.evaluate(async ({ list, target, commissions }) => {
     const React = (await import('/node_modules/.vite/deps/react.js' as string)).default;
     const RDC = await import('/node_modules/.vite/deps/react-dom_client.js' as string);
     const createRoot = RDC.createRoot ?? RDC.default.createRoot;
@@ -59,9 +59,10 @@ const mountDialog = async (page: Page, index: number) => {
     const root = document.getElementById('root')!;
     root.innerHTML = '';
     createRoot(root).render(React.createElement(MovementReceiptDialog, {
-      clientId: 'client-001', holderName: 'Cliente Demo', clientCode: 'demo1', movements: list, movement: list[target], onClose: () => undefined
+      clientId: 'client-001', holderName: 'Cliente Demo', clientCode: 'demo1', movements: list, movement: list[target], onClose: () => undefined,
+      ...(commissions ? { knownCommissions: commissions } : {})
     }));
-  }, { list: movements, target: index });
+  }, { list: movements, target: index, commissions: knownCommissions });
 };
 
 test('receipt dialog previews both formats and downloads the chosen one', async ({ page }, testInfo) => {
@@ -122,4 +123,17 @@ test('every client has receipt buttons in the movement history', async ({ page }
   await expect(page.locator('.movements-table').first()).toBeVisible();
   await expect(page.getByRole('button', { name: /Descargar justificante/ }).first()).toBeVisible();
   await expect(page.locator('.movements-table th', { hasText: 'Justificante' })).toHaveCount(1);
+});
+
+// El cliente ve cuanto se le ha cobrado, pero no su porcentaje ni como se calcula (datos inventados).
+test('withdrawal receipt shows the commission charged without its percentage', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'ipad-mini', 'Dialog is checked once on a representative viewport.');
+  await page.setViewportSize({ width: 1300, height: 1000 });
+  await mountDialog(page, 3, paid);
+  const pages = page.locator('.mr-page');
+  await expect(pages.first()).toContainText('Comisión de éxito');
+  await expect(pages.first()).toContainText('150,00 €');
+  for (const text of await pages.allInnerTexts()) {
+    expect(text).not.toMatch(/%|sujeta a comisión|pendiente de recuperar|sobre 3.000/);
+  }
 });

@@ -21,7 +21,6 @@ const SIZES: Record<ReceiptFormat, { width: number; height: number }> = {
 
 const amountFormat = esNumberFormat({ minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const eur = (value: number) => `${amountFormat.format(Math.abs(value)).replace(/^(\d{1,3})(\d{3})(?=,)/, '$1.$2')} €`;
-const percent = (rate: number | null) => (rate === null ? '' : `${amountFormat.format(rate * 100).replace(/,00$/, '')} %`);
 const shortDate = (iso: string) => {
   const [year, month, day] = iso.split('-');
   return `${day}/${month}/${year}`;
@@ -40,22 +39,15 @@ const Marks: React.FC = () => {
   return <div className="mr-marks"><img src={sealUrl} alt={t('Sello de JIGSA Capital Brokering')} /><img src={signatureUrl} alt={t('Firma')} /></div>;
 };
 
-const CommissionRows: React.FC<{ receipt: MovementReceiptData; detailed: boolean }> = ({ receipt, detailed }) => {
+// El cliente ve el importe de la comision cobrada, nunca su porcentaje ni como se calcula.
+const CommissionRows: React.FC<{ receipt: MovementReceiptData }> = ({ receipt }) => {
   const { t } = useLang();
   const commission = receipt.commission;
   if (!commission) return null;
-  const showBreakdown = detailed && commission.paid && commission.amount > 0;
   return (
     <>
-      {showBreakdown ? (
-        <>
-          <tr className="mr-sub"><td>{t('Parte de la retirada sujeta a comisión')}</td><td>{eur(commission.commissionableAmount)}</td></tr>
-        </>
-      ) : null}
       <tr>
-        <td className="mr-muted">
-          {t('Comisión de éxito')}{commission.rate ? ` (${percent(commission.rate)}${showBreakdown ? ` ${t('sobre {importe}', { importe: eur(commission.commissionableAmount) })}` : ''})` : ''}
-        </td>
+        <td className="mr-muted">{t('Comisión de éxito')}</td>
         <td className={commission.amount > 0 ? 'mr-neg' : undefined}>{commission.amount > 0 ? `-${eur(commission.amount)}` : eur(0)}</td>
       </tr>
     </>
@@ -108,7 +100,7 @@ export const ExtendedReceipt = React.forwardRef<HTMLDivElement, DocProps>(({ rec
               {receipt.commission ? (
                 <>
                   <tr><td className="mr-muted">{t('Importe retirado')}</td><td>{eur(receipt.amount)}</td></tr>
-                  <CommissionRows receipt={receipt} detailed />
+                  <CommissionRows receipt={receipt} />
                   <tr className="mr-total"><td>{t('Total entregado')}</td><td>{eur(receipt.net)}</td></tr>
                 </>
               ) : (
@@ -160,7 +152,7 @@ export const CompactReceipt = React.forwardRef<HTMLDivElement, DocProps>(({ rece
                 {receipt.commission ? (
                   <>
                     <tr><td className="mr-muted">{t('Importe retirado')}</td><td>{eur(receipt.amount)}</td></tr>
-                    <CommissionRows receipt={receipt} detailed={false} />
+                    <CommissionRows receipt={receipt} />
                     <tr className="mr-total"><td>{t('Total entregado')}</td><td>{eur(receipt.net)}</td></tr>
                   </>
                 ) : (
